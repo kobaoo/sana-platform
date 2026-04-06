@@ -64,4 +64,3 @@ type ListOrgsResponse struct {
 type DeleteOrgResponse struct {
 	Message string `json:"message"`
 }
-
