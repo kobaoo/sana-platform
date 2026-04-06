@@ -10,9 +10,7 @@ import (
 
 // ════ DATABASE ════
 
-var db = sqldb.NewDatabase("organizations", sqldb.DatabaseConfig{
-	Migrations: "./migrations",
-})
+var db = sqldb.Named("lms")
 
 // ════ ENDPOINTS ════
 
