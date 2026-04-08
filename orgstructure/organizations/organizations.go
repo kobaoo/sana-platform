@@ -6,11 +6,25 @@ import (
 
 	"encore.dev/beta/errs"
 	"encore.dev/storage/sqldb"
+	"entgo.io/ent/dialect"
+	entsql "entgo.io/ent/dialect/sql"
+	"github.com/google/uuid"
+
+	"encore.app/orgstructure/organizations/ent"
+	"encore.app/orgstructure/organizations/ent/organization"
 )
 
 // ════ DATABASE ════
 
-var db = sqldb.Named("lms")
+var (
+	db     = sqldb.Named("lms")
+	Client = newEntClient()
+)
+
+func newEntClient() *ent.Client {
+	drv := entsql.OpenDB(dialect.Postgres, db.Stdlib())
+	return ent.NewClient(ent.Driver(drv))
+}
 
 // ════ ENDPOINTS ════
 
@@ -93,124 +107,160 @@ func DeleteOrg(ctx context.Context, id string) (*DeleteOrgResponse, error) {
 // ════ INTERNAL ════
 
 func insertOrg(ctx context.Context, req *CreateOrgRequest) (*Organization, error) {
-	var org Organization
-	err := db.QueryRow(ctx, `
-		INSERT INTO organizations (name, code, parent_id, type)
-		VALUES ($1, $2, $3, $4)
-		RETURNING id, name, code, parent_id, type, is_active, created_at, updated_at
-	`, req.Name, req.Code, req.ParentID, req.Type).Scan(
-		&org.ID, &org.Name, &org.Code, &org.ParentID,
-		&org.Type, &org.IsActive, &org.CreatedAt, &org.UpdatedAt,
-	)
+	builder := Client.Organization.
+		Create().
+		SetName(req.Name).
+		SetCode(req.Code).
+		SetType(string(req.Type))
+
+	if req.ParentID != nil {
+		parentUUID, err := uuid.Parse(*req.ParentID)
+		if err != nil {
+			return nil, errs.B().Code(errs.InvalidArgument).Msg("invalid parent_id format").Err()
+		}
+		builder = builder.SetParentID(parentUUID)
+	}
+
+	row, err := builder.Save(ctx)
 	if err != nil {
-		if isUniqueViolation(err) {
+		if ent.IsConstraintError(err) {
 			return nil, errs.B().Code(errs.AlreadyExists).Msg("organization with this code already exists").Err()
 		}
 		return nil, errs.B().Code(errs.Internal).Msg("failed to create organization").Cause(err).Err()
 	}
-	return &org, nil
+
+	return entToOrg(row), nil
 }
 
 func queryActiveOrgs(ctx context.Context) ([]Organization, error) {
-	rows, err := db.Query(ctx, `
-		SELECT id, name, code, parent_id, type, is_active, created_at, updated_at
-		FROM organizations
-		WHERE is_active = TRUE
-		ORDER BY created_at ASC
-	`)
+	rows, err := Client.Organization.
+		Query().
+		Where(organization.IsActiveEQ(true)).
+		Order(ent.Asc(organization.FieldCreatedAt)).
+		All(ctx)
 	if err != nil {
 		return nil, errs.B().Code(errs.Internal).Msg("failed to list organizations").Cause(err).Err()
 	}
-	defer rows.Close()
 
-	orgs := []Organization{}
-	for rows.Next() {
-		var org Organization
-		if err := rows.Scan(
-			&org.ID, &org.Name, &org.Code, &org.ParentID,
-			&org.Type, &org.IsActive, &org.CreatedAt, &org.UpdatedAt,
-		); err != nil {
-			return nil, errs.B().Code(errs.Internal).Msg("failed to scan organization").Cause(err).Err()
-		}
-		orgs = append(orgs, org)
-	}
-	if err := rows.Err(); err != nil {
-		return nil, errs.B().Code(errs.Internal).Msg("error iterating organizations").Cause(err).Err()
+	orgs := make([]Organization, 0, len(rows))
+	for _, row := range rows {
+		orgs = append(orgs, *entToOrg(row))
 	}
 
 	return orgs, nil
 }
 
 func queryOrgByID(ctx context.Context, id string) (*Organization, error) {
-	var org Organization
-	err := db.QueryRow(ctx, `
-		SELECT id, name, code, parent_id, type, is_active, created_at, updated_at
-		FROM organizations
-		WHERE id = $1
-	`, id).Scan(
-		&org.ID, &org.Name, &org.Code, &org.ParentID,
-		&org.Type, &org.IsActive, &org.CreatedAt, &org.UpdatedAt,
-	)
+	uid, err := uuid.Parse(id)
 	if err != nil {
-		if isNotFound(err) {
+		return nil, errs.B().Code(errs.InvalidArgument).Msg("invalid id format").Err()
+	}
+
+	row, err := Client.Organization.
+		Query().
+		Where(organization.IDEQ(uid)).
+		Only(ctx)
+	if err != nil {
+		if ent.IsNotFound(err) {
 			return nil, errs.B().Code(errs.NotFound).Msg("organization not found").Err()
 		}
 		return nil, errs.B().Code(errs.Internal).Msg("failed to get organization").Cause(err).Err()
 	}
-	return &org, nil
+
+	return entToOrg(row), nil
 }
 
 func updateOrg(ctx context.Context, id string, req *UpdateOrgRequest) (*Organization, error) {
-	var org Organization
-	err := db.QueryRow(ctx, `
-		UPDATE organizations
-		SET
-			name       = COALESCE($2, name),
-			code       = COALESCE($3, code),
-			parent_id  = COALESCE($4, parent_id),
-			type       = COALESCE($5, type),
-			is_active  = COALESCE($6, is_active),
-			updated_at = NOW()
-		WHERE id = $1
-		RETURNING id, name, code, parent_id, type, is_active, created_at, updated_at
-	`, id, req.Name, req.Code, req.ParentID, req.Type, req.IsActive).Scan(
-		&org.ID, &org.Name, &org.Code, &org.ParentID,
-		&org.Type, &org.IsActive, &org.CreatedAt, &org.UpdatedAt,
-	)
+	uid, err := uuid.Parse(id)
 	if err != nil {
-		if isNotFound(err) {
+		return nil, errs.B().Code(errs.InvalidArgument).Msg("invalid id format").Err()
+	}
+
+	builder := Client.Organization.UpdateOneID(uid)
+
+	if req.Name != nil {
+		builder = builder.SetName(*req.Name)
+	}
+	if req.Code != nil {
+		builder = builder.SetCode(*req.Code)
+	}
+	if req.ParentID != nil {
+		parentUUID, err := uuid.Parse(*req.ParentID)
+		if err != nil {
+			return nil, errs.B().Code(errs.InvalidArgument).Msg("invalid parent_id format").Err()
+		}
+		builder = builder.SetParentID(parentUUID)
+	}
+	if req.Type != nil {
+		builder = builder.SetType(string(*req.Type))
+	}
+	if req.IsActive != nil {
+		builder = builder.SetIsActive(*req.IsActive)
+	}
+
+	row, err := builder.Save(ctx)
+	if err != nil {
+		if ent.IsNotFound(err) {
 			return nil, errs.B().Code(errs.NotFound).Msg("organization not found").Err()
 		}
-		if isUniqueViolation(err) {
+		if ent.IsConstraintError(err) {
 			return nil, errs.B().Code(errs.AlreadyExists).Msg("organization with this code already exists").Err()
 		}
 		return nil, errs.B().Code(errs.Internal).Msg("failed to update organization").Cause(err).Err()
 	}
-	return &org, nil
+
+	return entToOrg(row), nil
 }
 
 func softDeleteOrg(ctx context.Context, id string) error {
-	result, err := db.Exec(ctx, `
-		UPDATE organizations
-		SET is_active = FALSE, updated_at = NOW()
-		WHERE id = $1 AND is_active = TRUE
-	`, id)
+	uid, err := uuid.Parse(id)
+	if err != nil {
+		return errs.B().Code(errs.InvalidArgument).Msg("invalid id format").Err()
+	}
+
+	exists, err := Client.Organization.
+		Query().
+		Where(
+			organization.IDEQ(uid),
+			organization.IsActiveEQ(true),
+		).
+		Exist(ctx)
 	if err != nil {
 		return errs.B().Code(errs.Internal).Msg("failed to delete organization").Cause(err).Err()
 	}
-
-	if n := result.RowsAffected(); n == 0 {
+	if !exists {
 		return errs.B().Code(errs.NotFound).Msg("organization not found").Err()
+	}
+
+	err = Client.Organization.
+		UpdateOneID(uid).
+		SetIsActive(false).
+		Exec(ctx)
+	if err != nil {
+		return errs.B().Code(errs.Internal).Msg("failed to delete organization").Cause(err).Err()
 	}
 
 	return nil
 }
 
-func isUniqueViolation(err error) bool {
-	s := err.Error()
-	return strings.Contains(s, "23505") || strings.Contains(s, "unique constraint")
-}
+// ════ HELPERS ════
 
-func isNotFound(err error) bool {
-	return strings.Contains(err.Error(), "sql: no rows in result set")
+// entToOrg maps an ent.Organization to the domain Organization model.
+func entToOrg(e *ent.Organization) *Organization {
+	var parentID *string
+	if e.ParentID != nil {
+		s := e.ParentID.String()
+		parentID = &s
+	}
+
+	return &Organization{
+		ID:        e.ID.String(),
+		Name:      e.Name,
+		Code:      e.Code,
+		ParentID:  parentID,
+		Type:      OrgType(e.Type),
+		IsActive:  e.IsActive,
+		CreatedAt: e.CreatedAt,
+		UpdatedAt: e.UpdatedAt,
+	}
 }
