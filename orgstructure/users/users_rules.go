@@ -1,39 +1,71 @@
 package users
 
-// Thin wrappers around encore.app/orgstructure/users/policy so the users
-// package can call rule functions without an extra import alias.
-
 import (
+	"errors"
+
 	"encore.dev/beta/errs"
 
 	"encore.app/auth/authhandler"
-	"encore.app/orgstructure/users/policy"
 )
 
 func CanViewUsers(role authhandler.UserRole) bool {
-	return policy.CanViewUsers(role)
+	return role == authhandler.RoleSA || role == authhandler.RoleADM
 }
 
 func CanManageUsers(role authhandler.UserRole) bool {
-	return policy.CanManageUsers(role)
+	return role == authhandler.RoleSA || role == authhandler.RoleADM
 }
 
+// CanAssignRole returns true if callerRole may assign targetRole.
+// SA can assign any role; ADM can only assign HR.
 func CanAssignRole(callerRole, targetRole authhandler.UserRole) bool {
-	return policy.CanAssignRole(callerRole, targetRole)
+	if callerRole == authhandler.RoleSA {
+		return true
+	}
+	if callerRole == authhandler.RoleADM && targetRole == authhandler.RoleHR {
+		return true
+	}
+	return false
 }
 
+// CanAccessUser returns true if the caller may read or modify the target.
+// SA has unrestricted access; ADM is scoped to their own DZO.
 func CanAccessUser(callerRole authhandler.UserRole, callerDzoID, targetDzoID *string) bool {
-	return policy.CanAccessUser(callerRole, callerDzoID, targetDzoID)
+	if callerRole == authhandler.RoleSA {
+		return true
+	}
+	if callerRole == authhandler.RoleADM {
+		if callerDzoID == nil || targetDzoID == nil {
+			return false
+		}
+		return *callerDzoID == *targetDzoID
+	}
+	return false
 }
 
+// AutoProvisionRole returns RoleEMP. Trusting JWT claims for provisioning would
+// allow privilege escalation; explicit elevation must go through AssignRole.
 func AutoProvisionRole() authhandler.UserRole {
-	return policy.AutoProvisionRole()
+	return authhandler.RoleEMP
 }
 
-// CheckUserAccess converts policy.ErrUserBlocked into an Encore PermissionDenied error.
+// IsPendingActivation returns true for admins registered by SA who have not
+// yet logged in. State matrix:
+//
+//	is_onboarded=false, is_active=false → PENDING  (auto-activate on first login)
+//	is_onboarded=true,  is_active=true  → ACTIVE
+//	is_onboarded=true,  is_active=false → BLOCKED
+func IsPendingActivation(isOnboarded, isActive bool) bool {
+	return !isOnboarded && !isActive
+}
+
+// ErrUserBlocked is returned by checkUserAccess when the user is blocked.
+var ErrUserBlocked = errors.New("user is blocked")
+
+// CheckUserAccess returns PermissionDenied when the user is blocked.
 func CheckUserAccess(u *User) error {
-	if err := policy.CheckUserAccess(u.IsActive); err != nil {
-		return errs.B().Code(errs.PermissionDenied).Msg(err.Error()).Err()
+	if !u.IsActive {
+		return errs.B().Code(errs.PermissionDenied).Msg(ErrUserBlocked.Error()).Err()
 	}
 	return nil
 }

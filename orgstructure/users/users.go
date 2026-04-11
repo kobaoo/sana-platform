@@ -14,7 +14,6 @@ import (
 	"encore.app/auth/authhandler"
 	"encore.app/orgstructure/users/ent"
 	"encore.app/orgstructure/users/ent/user"
-	"encore.app/orgstructure/users/policy"
 )
 
 var (
@@ -277,7 +276,7 @@ func resolveCurrentUser(ctx context.Context, ad *authhandler.AuthData) (*User, e
 		}
 	}
 
-	if policy.IsPendingActivation(u.IsOnboarded, u.IsActive) {
+	if IsPendingActivation(u.IsOnboarded, u.IsActive) {
 		u, err = activateOnboarding(ctx, u.ID)
 		if err != nil {
 			return nil, err

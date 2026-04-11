@@ -1,9 +1,7 @@
 // Package users tests.
 //
 // This file imports encore.dev/storage/sqldb and cannot be run with plain go test.
-// Use encore test ./orgstructure/users/... or run pure rule tests via:
-//
-//	go test ./orgstructure/users/policy/... -v
+// Use encore test ./orgstructure/users/... to run these tests.
 package users
 
 import (
