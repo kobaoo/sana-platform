@@ -5,6 +5,7 @@ go 1.26.1
 require (
 	encore.dev v1.52.1
 	entgo.io/ent v0.14.6
+	github.com/golang-jwt/jwt/v5 v5.3.1
 	github.com/google/uuid v1.3.0
 )
 

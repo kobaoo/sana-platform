@@ -1,0 +1,46 @@
+package authhandler
+
+// UserRole is a user role in the system.
+type UserRole string
+
+const (
+	RoleSA  UserRole = "SA"
+	RoleADM UserRole = "ADM"
+	RoleHR  UserRole = "HR"
+	RoleEMP UserRole = "EMP"
+)
+
+// IsValid reports whether the role is a known business role.
+func (r UserRole) IsValid() bool {
+	switch r {
+	case RoleSA, RoleADM, RoleHR, RoleEMP:
+		return true
+	}
+	return false
+}
+
+// Priority returns a numeric priority (higher = more privileged).
+func (r UserRole) Priority() int {
+	switch r {
+	case RoleSA:
+		return 4
+	case RoleADM:
+		return 3
+	case RoleHR:
+		return 2
+	case RoleEMP:
+		return 1
+	default:
+		return 0
+	}
+}
+
+// AuthData holds the authenticated user's identity extracted from the JWT.
+// Available via auth.Data() in every authenticated endpoint.
+type AuthData struct {
+	KeycloakUserID string   `json:"keycloak_user_id"`
+	Email          string   `json:"email"`
+	Role           UserRole `json:"role"`
+	CompanyID      string   `json:"company_id"`
+	DzoID          string   `json:"dzo_id"`
+}

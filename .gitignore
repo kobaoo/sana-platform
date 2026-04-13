@@ -7,3 +7,6 @@ encore.gen.cue
 
 CLAUDE.md
 AGENTS.md
+
+.secrets.local.cue
+.env
