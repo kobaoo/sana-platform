@@ -30,7 +30,7 @@ func newEntClient() *ent.Client {
 
 // CreateOrg creates a new organization.
 //
-//encore:api public method=POST path=/organizations
+//encore:api auth method=POST path=/organizations
 func CreateOrg(ctx context.Context, req *CreateOrgRequest) (*GetOrgResponse, error) {
 	if strings.TrimSpace(req.Name) == "" {
 		return nil, errs.B().Code(errs.InvalidArgument).Msg("name is required").Err()
@@ -52,7 +52,7 @@ func CreateOrg(ctx context.Context, req *CreateOrgRequest) (*GetOrgResponse, err
 
 // ListOrgs returns all active organizations.
 //
-//encore:api public method=GET path=/organizations
+//encore:api auth method=GET path=/organizations
 func ListOrgs(ctx context.Context) (*ListOrgsResponse, error) {
 	orgs, err := queryActiveOrgs(ctx)
 	if err != nil {
@@ -67,7 +67,7 @@ func ListOrgs(ctx context.Context) (*ListOrgsResponse, error) {
 
 // GetOrg returns a single organization by ID.
 //
-//encore:api public method=GET path=/organizations/:id
+//encore:api auth method=GET path=/organizations/:id
 func GetOrg(ctx context.Context, id string) (*GetOrgResponse, error) {
 	org, err := queryOrgByID(ctx, id)
 	if err != nil {
@@ -79,7 +79,7 @@ func GetOrg(ctx context.Context, id string) (*GetOrgResponse, error) {
 
 // UpdateOrg partially updates an organization.
 //
-//encore:api public method=PUT path=/organizations/:id
+//encore:api auth method=PUT path=/organizations/:id
 func UpdateOrg(ctx context.Context, id string, req *UpdateOrgRequest) (*GetOrgResponse, error) {
 	if req.Type != nil && !req.Type.IsValid() {
 		return nil, errs.B().Code(errs.InvalidArgument).Msg("invalid organization type").Err()
@@ -95,7 +95,7 @@ func UpdateOrg(ctx context.Context, id string, req *UpdateOrgRequest) (*GetOrgRe
 
 // DeleteOrg soft-deletes an organization by setting is_active=false.
 //
-//encore:api public method=DELETE path=/organizations/:id
+//encore:api auth method=DELETE path=/organizations/:id
 func DeleteOrg(ctx context.Context, id string) (*DeleteOrgResponse, error) {
 	if err := softDeleteOrg(ctx, id); err != nil {
 		return nil, err
