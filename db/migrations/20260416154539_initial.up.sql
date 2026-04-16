@@ -1,4 +1,4 @@
--- Create "organizations" table
+-- create "organizations" table
 CREATE TABLE "public"."organizations" (
   "id" uuid NOT NULL,
   "name" character varying NOT NULL,
@@ -11,12 +11,13 @@ CREATE TABLE "public"."organizations" (
   PRIMARY KEY ("id"),
   CONSTRAINT "organizations_organizations_children" FOREIGN KEY ("parent_id") REFERENCES "public"."organizations" ("id") ON UPDATE NO ACTION ON DELETE SET NULL
 );
--- Create index "organization_code" to table: "organizations"
+-- create index "organization_code" to table: "organizations"
 CREATE INDEX "organization_code" ON "public"."organizations" ("code");
--- Create index "organization_parent_id" to table: "organizations"
+-- create index "organization_parent_id" to table: "organizations"
 CREATE INDEX "organization_parent_id" ON "public"."organizations" ("parent_id");
--- Create index "organizations_code_key" to table: "organizations"
+-- create index "organizations_code_key" to table: "organizations"
 CREATE UNIQUE INDEX "organizations_code_key" ON "public"."organizations" ("code");
+<<<<<<<< HEAD:db/migrations/20260416162209_initial.sql
 -- Create "training_events" table
 CREATE TABLE "public"."training_events" (
   "id" uuid NOT NULL,
@@ -51,6 +52,9 @@ CREATE TABLE "public"."training_participants" (
   PRIMARY KEY ("id")
 );
 -- Create "users" table
+========
+-- create "users" table
+>>>>>>>> origin/dev:db/migrations/20260416154539_initial.up.sql
 CREATE TABLE "public"."users" (
   "id" uuid NOT NULL,
   "keycloak_user_id" character varying NOT NULL,
@@ -63,11 +67,11 @@ CREATE TABLE "public"."users" (
   "updated_at" timestamptz NOT NULL,
   PRIMARY KEY ("id")
 );
--- Create index "user_dzo_id" to table: "users"
+-- create index "user_dzo_id" to table: "users"
 CREATE INDEX "user_dzo_id" ON "public"."users" ("dzo_id");
--- Create index "user_email" to table: "users"
+-- create index "user_email" to table: "users"
 CREATE INDEX "user_email" ON "public"."users" ("email");
--- Create index "users_keycloak_user_id_key" to table: "users"
+-- create index "users_keycloak_user_id_key" to table: "users"
 CREATE UNIQUE INDEX "users_keycloak_user_id_key" ON "public"."users" ("keycloak_user_id");
 -- Create "requests" table
 CREATE TABLE "public"."requests" (
