@@ -14,13 +14,11 @@ INSERT INTO training_events (
     dzo_id,
     participants_count
 ) VALUES
-('11111111-1111-1111-1111-111111111111', 'Go Backend Basics', NOW(), NOW(), 'offline', 'Astana', 'cat-1', 'IT', 'dzo-1', 10),
-('22222222-1111-1111-1111-111111111111', 'Docker Fundamentals', NOW(), NOW(), 'online', 'Almaty', 'cat-2', 'DevOps', 'dzo-2', 15),
-('33333333-1111-1111-1111-111111111111', 'Kubernetes Intro', NOW(), NOW(), 'offline', 'Astana', 'cat-3', 'DevOps', 'dzo-1', 12),
-('44444444-1111-1111-1111-111111111111', 'React Basics', NOW(), NOW(), 'online', 'Astana', 'cat-4', 'Frontend', 'dzo-3', 20),
-('55555555-1111-1111-1111-111111111111', 'System Design', NOW(), NOW(), 'offline', 'Almaty', 'cat-5', 'Architecture', 'dzo-2', 8);
-
-
+('aaaa1111-1111-1111-1111-111111111111', 'Go Backend Basics', NOW(), NOW(), 'offline', 'Astana', '66666666-aaaa-aaaa-aaaa-aaaaaaaaaaaa', 'IT', '77777777-bbbb-bbbb-bbbb-bbbbbbbbbbbb', 10),
+('bbbb2222-2222-2222-2222-222222222222', 'Docker Fundamentals', NOW(), NOW(), 'online', 'Almaty', '66666666-aaaa-aaaa-aaaa-aaaaaaaaaaaa', 'DevOps', '77777777-bbbb-bbbb-bbbb-bbbbbbbbbbbb', 15),
+('cccc3333-3333-3333-3333-333333333333', 'Kubernetes Intro', NOW(), NOW(), 'offline', 'Astana', '66666666-aaaa-aaaa-aaaa-aaaaaaaaaaaa', 'DevOps', '77777777-bbbb-bbbb-bbbb-bbbbbbbbbbbb', 12),
+('dddd4444-4444-4444-4444-444444444444', 'React Basics', NOW(), NOW(), 'online', 'Astana', '66666666-aaaa-aaaa-aaaa-aaaaaaaaaaaa', 'Frontend', '77777777-bbbb-bbbb-bbbb-bbbbbbbbbbbb', 20),
+('eeee5555-5555-5555-5555-555555555555', 'System Design', NOW(), NOW(), 'offline', 'Almaty', '66666666-aaaa-aaaa-aaaa-aaaaaaaaaaaa', 'Architecture', '77777777-bbbb-bbbb-bbbb-bbbbbbbbbbbb', 8);
 
 -- ==========================================
 -- SEED: requests
@@ -35,11 +33,11 @@ INSERT INTO requests (
     created_at,
     status
 ) VALUES
-('r1111111-1111-1111-1111-111111111111', 'cccccccc-cccc-cccc-cccc-cccccccccccc', '11111111-1111-1111-1111-111111111111', 'training_event', 1, NOW(), 'draft'),
-('r2222222-2222-2222-2222-222222222222', 'aaaaaaaa-aaaa-aaaa-aaaa-aaaaaaaaaaaa', '22222222-1111-1111-1111-111111111111', 'training_event', 1, NOW(), 'submitted'),
-('r3333333-3333-3333-3333-333333333333', 'bbbbbbbb-bbbb-bbbb-bbbb-bbbbbbbbbbbb', '33333333-1111-1111-1111-111111111111', 'training_event', 2, NOW(), 'approved'),
-('r4444444-4444-4444-4444-444444444444', 'cccccccc-cccc-cccc-cccc-cccccccccccc', '44444444-1111-1111-1111-111111111111', 'training_event', 1, NOW(), 'draft'),
-('r5555555-5555-5555-5555-555555555555', 'aaaaaaaa-aaaa-aaaa-aaaa-aaaaaaaaaaaa', '55555555-1111-1111-1111-111111111111', 'training_event', 3, NOW(), 'rejected');
+('aaaa0001-0000-0000-0000-000000000001', '11111111-aaaa-aaaa-aaaa-aaaaaaaaaaaa', 'aaaa1111-1111-1111-1111-111111111111', 'training_event', 1, NOW(), 'draft'),
+('aaaa0002-0000-0000-0000-000000000002', '22222222-bbbb-bbbb-bbbb-bbbbbbbbbbbb', 'bbbb2222-2222-2222-2222-222222222222', 'training_event', 1, NOW(), 'submitted'),
+('aaaa0003-0000-0000-0000-000000000003', '11111111-aaaa-aaaa-aaaa-aaaaaaaaaaaa', 'cccc3333-3333-3333-3333-333333333333', 'training_event', 2, NOW(), 'approved'),
+('aaaa0004-0000-0000-0000-000000000004', '22222222-bbbb-bbbb-bbbb-bbbbbbbbbbbb', 'dddd4444-4444-4444-4444-444444444444', 'training_event', 1, NOW(), 'draft'),
+('aaaa0005-0000-0000-0000-000000000005', '11111111-aaaa-aaaa-aaaa-aaaaaaaaaaaa', 'eeee5555-5555-5555-5555-555555555555', 'training_event', 3, NOW(), 'rejected');
 
 
 
@@ -53,8 +51,8 @@ INSERT INTO training_participants (
     employee_id,
     status
 ) VALUES
-('p1111111-1111-1111-1111-111111111111', '11111111-1111-1111-1111-111111111111', 'dddddddd-dddd-dddd-dddd-dddddddddddd', 'registered'),
-('p2222222-2222-2222-2222-222222222222', '11111111-1111-1111-1111-111111111111', 'eeeeeeee-eeee-eeee-eeee-eeeeeeeeeeee', 'completed'),
-('p3333333-3333-3333-3333-333333333333', '22222222-1111-1111-1111-111111111111', 'dddddddd-dddd-dddd-dddd-dddddddddddd', 'registered'),
-('p4444444-4444-4444-4444-444444444444', '33333333-1111-1111-1111-111111111111', 'eeeeeeee-eeee-eeee-eeee-eeeeeeeeeeee', 'completed'),
-('p5555555-5555-5555-5555-555555555555', '44444444-1111-1111-1111-111111111111', 'dddddddd-dddd-dddd-dddd-dddddddddddd', 'registered');
+('bbbb0001-0000-0000-0000-000000000001', 'aaaa1111-1111-1111-1111-111111111111', '33333333-cccc-cccc-cccc-cccccccccccc', 'registered'),
+('bbbb0002-0000-0000-0000-000000000002', 'aaaa1111-1111-1111-1111-111111111111', '44444444-dddd-dddd-dddd-dddddddddddd', 'completed'),
+('bbbb0003-0000-0000-0000-000000000003', 'bbbb2222-2222-2222-2222-222222222222', '33333333-cccc-cccc-cccc-cccccccccccc', 'registered'),
+('bbbb0004-0000-0000-0000-000000000004', 'cccc3333-3333-3333-3333-333333333333', '44444444-dddd-dddd-dddd-dddddddddddd', 'completed'),
+('bbbb0005-0000-0000-0000-000000000005', 'dddd4444-4444-4444-4444-444444444444', '33333333-cccc-cccc-cccc-cccccccccccc', 'registered');
