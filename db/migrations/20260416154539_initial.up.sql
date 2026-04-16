@@ -17,8 +17,7 @@ CREATE INDEX "organization_code" ON "public"."organizations" ("code");
 CREATE INDEX "organization_parent_id" ON "public"."organizations" ("parent_id");
 -- create index "organizations_code_key" to table: "organizations"
 CREATE UNIQUE INDEX "organizations_code_key" ON "public"."organizations" ("code");
-<<<<<<<< HEAD:db/migrations/20260416162209_initial.sql
--- Create "training_events" table
+-- create "training_events" table
 CREATE TABLE "public"."training_events" (
   "id" uuid NOT NULL,
   "title" character varying NOT NULL,
@@ -42,7 +41,7 @@ CREATE TABLE "public"."training_events" (
   "local_content_pct" double precision NULL,
   PRIMARY KEY ("id")
 );
--- Create "training_participants" table
+-- create "training_participants" table
 CREATE TABLE "public"."training_participants" (
   "id" uuid NOT NULL,
   "event_id" uuid NOT NULL,
@@ -51,10 +50,7 @@ CREATE TABLE "public"."training_participants" (
   "certificate_id" uuid NULL,
   PRIMARY KEY ("id")
 );
--- Create "users" table
-========
 -- create "users" table
->>>>>>>> origin/dev:db/migrations/20260416154539_initial.up.sql
 CREATE TABLE "public"."users" (
   "id" uuid NOT NULL,
   "keycloak_user_id" character varying NOT NULL,
@@ -73,7 +69,7 @@ CREATE INDEX "user_dzo_id" ON "public"."users" ("dzo_id");
 CREATE INDEX "user_email" ON "public"."users" ("email");
 -- create index "users_keycloak_user_id_key" to table: "users"
 CREATE UNIQUE INDEX "users_keycloak_user_id_key" ON "public"."users" ("keycloak_user_id");
--- Create "requests" table
+-- create "requests" table
 CREATE TABLE "public"."requests" (
   "id" uuid NOT NULL,
   "entity_id" uuid NOT NULL,

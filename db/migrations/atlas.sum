@@ -1,2 +1,4 @@
-h1:V0Tj0XVCY3eeNwYZgAvpTJjwu1D0I0C8yKIBMDeh+i4=
-20260416154539_initial.up.sql h1:SPW5GsUYvthUCGI972fD41HyxIL3JVdgorwNchcBJG4=
+h1:W1E0rjEDO7wVoQF9rmSiNZ1/GujlgJ9DsgE9NIK7vRI=
+20260416154539_initial.up.sql h1:FlF1lN2VOhFHXnG41Cav/uIv8h3RlnhU0MHKM1A53pM=
+20260416170000_seed_users.up.sql h1:kfWgbL8FYYeatgUGeus5e0EK9mRVgpzlw9+AFC1ubgk=
+20260416170500_seed_training_and_requests.up.sql h1:IdnmWHWsiUAmc1okNo5+T5uOz62xd5xmbd3BmmUZKI0=
