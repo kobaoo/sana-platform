@@ -1,50 +1,109 @@
 # Миграции (Ent + Atlas)
 
-## Что это
-- Ent — описываем таблицы Go-кодом в `<сервис>/ent/schema/`
-- Atlas — собирает ent-схемы **всех** сервисов из `db/atlas.hcl` и генерирует SQL-миграцию
-- Все миграции лежат в `db/migrations/` — единая БД
+## Архитектура
+
+| Что | Где |
+|---|---|
+| Схемы сущностей | `db/ent/schema/*.go` |
+| Генерация ent-кода | `go generate ./db/ent/...` |
+| Atlas конфиг | `db/atlas.hcl` |
+| SQL-миграции | `db/migrations/` |
+| Dev-база для Atlas | `db/docker-compose.yml` (postgres:16, port 54320) |
+
+Один `db/ent/schema/` — единый источник истины для всех сущностей.  
+Один `db/migrations/` — все SQL-миграции для всех сервисов.
+
+---
 
 ## Требования
-- Docker Desktop должен быть запущен
 
-## Добавить/изменить таблицу — 4 шага
+- Docker Desktop запущен
+- Atlas dev-база запущена (один раз, держи в фоне):
+  ```bash
+  cd db && docker compose up -d
+  ```
+
+---
+
+## Добавить/изменить поле или таблицу — 3 шага
 
 ### 1. Отредактировать схему
-Схема живёт внутри сервиса: `orgstructure/organizations/ent/schema/organization.go`
+
+Схемы живут в `db/ent/schema/`. Добавить поле или создать новый файл:
+
+```go
+// db/ent/schema/organization.go
+func (Organization) Fields() []ent.Field {
+    return []ent.Field{
+        field.String("new_field")...,
+    }
+}
+```
 
 ### 2. Перегенерировать Ent-код
-```
-cd orgstructure/organizations
-go generate ./ent/...
+
+```bash
+go generate ./db/ent/...
 ```
 
-### 3. Сгенерировать SQL-миграцию через Atlas
-```
-cd db
-atlas migrate diff --env local
-```
-Новый файл появится в `db/migrations/`
+Обновит все файлы в `db/ent/` автоматически.
 
-### 4. Применить
+### 3. Сгенерировать SQL-миграцию
+
+```bash
+cd db && atlas migrate diff <описание_изменения> --env local
 ```
+
+Новый файл появится в `db/migrations/`. Закоммить его.
+
+### Применить
+
+```bash
 encore run
 ```
-Encore автоматически применяет миграции из `db/migrations/`
 
-## Добавить новый сервис с таблицами
+Encore автоматически применяет все миграции из `db/migrations/` при старте.
 
-1. Создать ent-схему: `<группа>/<сервис>/ent/schema/<entity>.go`
-2. Добавить путь в `db/atlas.hcl`:
-   ```hcl
-   src = [
-     "ent://../orgstructure/organizations/ent/schema",
-     "ent://../<группа>/<сервис>/ent/schema",
-   ]
-   ```
-3. Сгенерировать миграцию: `cd db && atlas migrate diff --env local`
+---
 
-## Важно
-- Никогда не редактировать уже существующие файлы миграций
-- Файлы внутри `ent/` кроме `ent/schema/` — генерируются автоматически, не трогать руками
-- Миграции создаются только в `db/migrations/`, не в сервисах
+## Добавить новый сервис с новой сущностью
+
+1. Создать файл схемы: `db/ent/schema/<entity>.go`
+2. `go generate ./db/ent/...`
+3. `cd db && atlas migrate diff add_<entity> --env local`
+4. Реализовать сервис, импортируя ent из `encore.app/db/ent`
+
+Пример импорта в сервисе:
+
+```go
+import (
+    "encore.app/db/ent"
+    "encore.app/db/ent/organization"
+)
+```
+
+---
+
+## Правила
+
+- **Никогда не редактировать** уже существующие файлы миграций — создавай новый `diff`
+- **Никогда не удалять** файлы миграций вручную через `rm` — ломает `atlas.sum`. Если удалил случайно: `cd db && atlas migrate hash` восстановит контрольные суммы
+- **Файлы `db/ent/`** (кроме `db/ent/schema/`) — автогенерируемые, не трогай руками
+- **Схемы сущностей** — только в `db/ent/schema/`, не в папках сервисов
+- **`db/migrations/atlas.sum`** — коммитить, Atlas использует его для проверки целостности
+
+---
+
+## Снос локальной БД (если нужно применить миграции заново)
+
+```bash
+encore db shell lms
+```
+
+```sql
+DROP SCHEMA public CASCADE;
+CREATE SCHEMA public;
+\q
+```
+
+После этого `encore run` создаст всё заново.

@@ -10,8 +10,8 @@ import (
 	entsql "entgo.io/ent/dialect/sql"
 	"github.com/google/uuid"
 
-	"encore.app/orgstructure/organizations/ent"
-	"encore.app/orgstructure/organizations/ent/organization"
+	"encore.app/db/ent"
+	"encore.app/db/ent/organization"
 )
 
 // ════ DATABASE ════
