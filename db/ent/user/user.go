@@ -6,6 +6,7 @@ import (
 	"time"
 
 	"entgo.io/ent/dialect/sql"
+	"entgo.io/ent/dialect/sql/sqlgraph"
 	"github.com/google/uuid"
 )
 
@@ -30,8 +31,17 @@ const (
 	FieldCreatedAt = "created_at"
 	// FieldUpdatedAt holds the string denoting the updated_at field in the database.
 	FieldUpdatedAt = "updated_at"
+	// EdgeRequests holds the string denoting the requests edge name in mutations.
+	EdgeRequests = "requests"
 	// Table holds the table name of the user in the database.
 	Table = "users"
+	// RequestsTable is the table that holds the requests relation/edge.
+	RequestsTable = "requests"
+	// RequestsInverseTable is the table name for the Request entity.
+	// It exists in this package in order to avoid circular dependency with the "request" package.
+	RequestsInverseTable = "requests"
+	// RequestsColumn is the table column denoting the requests relation/edge.
+	RequestsColumn = "initiator_id"
 )
 
 // Columns holds all SQL columns for user fields.
@@ -126,4 +136,25 @@ func ByCreatedAt(opts ...sql.OrderTermOption) OrderOption {
 // ByUpdatedAt orders the results by the updated_at field.
 func ByUpdatedAt(opts ...sql.OrderTermOption) OrderOption {
 	return sql.OrderByField(FieldUpdatedAt, opts...).ToFunc()
+}
+
+// ByRequestsCount orders the results by requests count.
+func ByRequestsCount(opts ...sql.OrderTermOption) OrderOption {
+	return func(s *sql.Selector) {
+		sqlgraph.OrderByNeighborsCount(s, newRequestsStep(), opts...)
+	}
+}
+
+// ByRequests orders the results by requests terms.
+func ByRequests(term sql.OrderTerm, terms ...sql.OrderTerm) OrderOption {
+	return func(s *sql.Selector) {
+		sqlgraph.OrderByNeighborTerms(s, newRequestsStep(), append([]sql.OrderTerm{term}, terms...)...)
+	}
+}
+func newRequestsStep() *sqlgraph.Step {
+	return sqlgraph.NewStep(
+		sqlgraph.From(Table, FieldID),
+		sqlgraph.To(RequestsInverseTable, FieldID),
+		sqlgraph.Edge(sqlgraph.O2M, false, RequestsTable, RequestsColumn),
+	)
 }

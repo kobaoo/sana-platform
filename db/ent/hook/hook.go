@@ -21,6 +21,42 @@ func (f OrganizationFunc) Mutate(ctx context.Context, m ent.Mutation) (ent.Value
 	return nil, fmt.Errorf("unexpected mutation type %T. expect *ent.OrganizationMutation", m)
 }
 
+// The RequestFunc type is an adapter to allow the use of ordinary
+// function as Request mutator.
+type RequestFunc func(context.Context, *ent.RequestMutation) (ent.Value, error)
+
+// Mutate calls f(ctx, m).
+func (f RequestFunc) Mutate(ctx context.Context, m ent.Mutation) (ent.Value, error) {
+	if mv, ok := m.(*ent.RequestMutation); ok {
+		return f(ctx, mv)
+	}
+	return nil, fmt.Errorf("unexpected mutation type %T. expect *ent.RequestMutation", m)
+}
+
+// The TrainingEventFunc type is an adapter to allow the use of ordinary
+// function as TrainingEvent mutator.
+type TrainingEventFunc func(context.Context, *ent.TrainingEventMutation) (ent.Value, error)
+
+// Mutate calls f(ctx, m).
+func (f TrainingEventFunc) Mutate(ctx context.Context, m ent.Mutation) (ent.Value, error) {
+	if mv, ok := m.(*ent.TrainingEventMutation); ok {
+		return f(ctx, mv)
+	}
+	return nil, fmt.Errorf("unexpected mutation type %T. expect *ent.TrainingEventMutation", m)
+}
+
+// The TrainingParticipantFunc type is an adapter to allow the use of ordinary
+// function as TrainingParticipant mutator.
+type TrainingParticipantFunc func(context.Context, *ent.TrainingParticipantMutation) (ent.Value, error)
+
+// Mutate calls f(ctx, m).
+func (f TrainingParticipantFunc) Mutate(ctx context.Context, m ent.Mutation) (ent.Value, error) {
+	if mv, ok := m.(*ent.TrainingParticipantMutation); ok {
+		return f(ctx, mv)
+	}
+	return nil, fmt.Errorf("unexpected mutation type %T. expect *ent.TrainingParticipantMutation", m)
+}
+
 // The UserFunc type is an adapter to allow the use of ordinary
 // function as User mutator.
 type UserFunc func(context.Context, *ent.UserMutation) (ent.Value, error)

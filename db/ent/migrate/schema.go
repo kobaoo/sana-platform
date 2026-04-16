@@ -45,6 +45,73 @@ var (
 			},
 		},
 	}
+	// RequestsColumns holds the columns for the "requests" table.
+	RequestsColumns = []*schema.Column{
+		{Name: "id", Type: field.TypeUUID},
+		{Name: "entity_id", Type: field.TypeUUID},
+		{Name: "entity_type", Type: field.TypeString},
+		{Name: "step", Type: field.TypeInt},
+		{Name: "created_at", Type: field.TypeTime},
+		{Name: "status", Type: field.TypeString},
+		{Name: "initiator_id", Type: field.TypeUUID},
+	}
+	// RequestsTable holds the schema information for the "requests" table.
+	RequestsTable = &schema.Table{
+		Name:       "requests",
+		Columns:    RequestsColumns,
+		PrimaryKey: []*schema.Column{RequestsColumns[0]},
+		ForeignKeys: []*schema.ForeignKey{
+			{
+				Symbol:     "requests_users_requests",
+				Columns:    []*schema.Column{RequestsColumns[6]},
+				RefColumns: []*schema.Column{UsersColumns[0]},
+				OnDelete:   schema.NoAction,
+			},
+		},
+	}
+	// TrainingEventsColumns holds the columns for the "training_events" table.
+	TrainingEventsColumns = []*schema.Column{
+		{Name: "id", Type: field.TypeUUID},
+		{Name: "title", Type: field.TypeString},
+		{Name: "start_date", Type: field.TypeTime},
+		{Name: "end_date", Type: field.TypeTime},
+		{Name: "location_type", Type: field.TypeString},
+		{Name: "location_city", Type: field.TypeString, Nullable: true},
+		{Name: "category_id", Type: field.TypeUUID},
+		{Name: "direction", Type: field.TypeString, Nullable: true},
+		{Name: "dzo_id", Type: field.TypeUUID},
+		{Name: "dzo_contract_id", Type: field.TypeUUID, Nullable: true},
+		{Name: "participants_count", Type: field.TypeInt},
+		{Name: "cost_per_person_vat", Type: field.TypeFloat64, Nullable: true},
+		{Name: "cost_group_vat", Type: field.TypeFloat64, Nullable: true},
+		{Name: "kyu_hourly_rate", Type: field.TypeFloat64, Nullable: true},
+		{Name: "supplier_id", Type: field.TypeUUID, Nullable: true},
+		{Name: "supplier_contract_id", Type: field.TypeUUID, Nullable: true},
+		{Name: "supplier_cost_vat", Type: field.TypeFloat64, Nullable: true},
+		{Name: "supplier_cost_currency", Type: field.TypeFloat64, Nullable: true},
+		{Name: "supplier_currency", Type: field.TypeString, Nullable: true},
+		{Name: "local_content_pct", Type: field.TypeFloat64, Nullable: true},
+	}
+	// TrainingEventsTable holds the schema information for the "training_events" table.
+	TrainingEventsTable = &schema.Table{
+		Name:       "training_events",
+		Columns:    TrainingEventsColumns,
+		PrimaryKey: []*schema.Column{TrainingEventsColumns[0]},
+	}
+	// TrainingParticipantsColumns holds the columns for the "training_participants" table.
+	TrainingParticipantsColumns = []*schema.Column{
+		{Name: "id", Type: field.TypeUUID},
+		{Name: "event_id", Type: field.TypeUUID},
+		{Name: "employee_id", Type: field.TypeUUID},
+		{Name: "status", Type: field.TypeString},
+		{Name: "certificate_id", Type: field.TypeUUID, Nullable: true},
+	}
+	// TrainingParticipantsTable holds the schema information for the "training_participants" table.
+	TrainingParticipantsTable = &schema.Table{
+		Name:       "training_participants",
+		Columns:    TrainingParticipantsColumns,
+		PrimaryKey: []*schema.Column{TrainingParticipantsColumns[0]},
+	}
 	// UsersColumns holds the columns for the "users" table.
 	UsersColumns = []*schema.Column{
 		{Name: "id", Type: field.TypeUUID, Unique: true},
@@ -78,10 +145,14 @@ var (
 	// Tables holds all the tables in the schema.
 	Tables = []*schema.Table{
 		OrganizationsTable,
+		RequestsTable,
+		TrainingEventsTable,
+		TrainingParticipantsTable,
 		UsersTable,
 	}
 )
 
 func init() {
 	OrganizationsTable.ForeignKeys[0].RefTable = OrganizationsTable
+	RequestsTable.ForeignKeys[0].RefTable = UsersTable
 }
