@@ -12,8 +12,8 @@ import (
 	"github.com/google/uuid"
 
 	"encore.app/auth/authhandler"
-	"encore.app/orgstructure/users/ent"
-	"encore.app/orgstructure/users/ent/user"
+	"encore.app/db/ent"
+	"encore.app/db/ent/user"
 )
 
 var (
