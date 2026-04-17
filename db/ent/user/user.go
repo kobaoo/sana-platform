@@ -6,6 +6,7 @@ import (
 	"time"
 
 	"entgo.io/ent/dialect/sql"
+	"entgo.io/ent/dialect/sql/sqlgraph"
 	"github.com/google/uuid"
 )
 
@@ -30,8 +31,26 @@ const (
 	FieldCreatedAt = "created_at"
 	// FieldUpdatedAt holds the string denoting the updated_at field in the database.
 	FieldUpdatedAt = "updated_at"
+	// EdgeHostedEvents holds the string denoting the hosted_events edge name in mutations.
+	EdgeHostedEvents = "hosted_events"
+	// EdgeReviewedParticipations holds the string denoting the reviewed_participations edge name in mutations.
+	EdgeReviewedParticipations = "reviewed_participations"
 	// Table holds the table name of the user in the database.
 	Table = "users"
+	// HostedEventsTable is the table that holds the hosted_events relation/edge.
+	HostedEventsTable = "events"
+	// HostedEventsInverseTable is the table name for the Event entity.
+	// It exists in this package in order to avoid circular dependency with the "event" package.
+	HostedEventsInverseTable = "events"
+	// HostedEventsColumn is the table column denoting the hosted_events relation/edge.
+	HostedEventsColumn = "host_id"
+	// ReviewedParticipationsTable is the table that holds the reviewed_participations relation/edge.
+	ReviewedParticipationsTable = "event_participants"
+	// ReviewedParticipationsInverseTable is the table name for the EventParticipant entity.
+	// It exists in this package in order to avoid circular dependency with the "eventparticipant" package.
+	ReviewedParticipationsInverseTable = "event_participants"
+	// ReviewedParticipationsColumn is the table column denoting the reviewed_participations relation/edge.
+	ReviewedParticipationsColumn = "reviewed_by"
 )
 
 // Columns holds all SQL columns for user fields.
@@ -126,4 +145,46 @@ func ByCreatedAt(opts ...sql.OrderTermOption) OrderOption {
 // ByUpdatedAt orders the results by the updated_at field.
 func ByUpdatedAt(opts ...sql.OrderTermOption) OrderOption {
 	return sql.OrderByField(FieldUpdatedAt, opts...).ToFunc()
+}
+
+// ByHostedEventsCount orders the results by hosted_events count.
+func ByHostedEventsCount(opts ...sql.OrderTermOption) OrderOption {
+	return func(s *sql.Selector) {
+		sqlgraph.OrderByNeighborsCount(s, newHostedEventsStep(), opts...)
+	}
+}
+
+// ByHostedEvents orders the results by hosted_events terms.
+func ByHostedEvents(term sql.OrderTerm, terms ...sql.OrderTerm) OrderOption {
+	return func(s *sql.Selector) {
+		sqlgraph.OrderByNeighborTerms(s, newHostedEventsStep(), append([]sql.OrderTerm{term}, terms...)...)
+	}
+}
+
+// ByReviewedParticipationsCount orders the results by reviewed_participations count.
+func ByReviewedParticipationsCount(opts ...sql.OrderTermOption) OrderOption {
+	return func(s *sql.Selector) {
+		sqlgraph.OrderByNeighborsCount(s, newReviewedParticipationsStep(), opts...)
+	}
+}
+
+// ByReviewedParticipations orders the results by reviewed_participations terms.
+func ByReviewedParticipations(term sql.OrderTerm, terms ...sql.OrderTerm) OrderOption {
+	return func(s *sql.Selector) {
+		sqlgraph.OrderByNeighborTerms(s, newReviewedParticipationsStep(), append([]sql.OrderTerm{term}, terms...)...)
+	}
+}
+func newHostedEventsStep() *sqlgraph.Step {
+	return sqlgraph.NewStep(
+		sqlgraph.From(Table, FieldID),
+		sqlgraph.To(HostedEventsInverseTable, FieldID),
+		sqlgraph.Edge(sqlgraph.O2M, false, HostedEventsTable, HostedEventsColumn),
+	)
+}
+func newReviewedParticipationsStep() *sqlgraph.Step {
+	return sqlgraph.NewStep(
+		sqlgraph.From(Table, FieldID),
+		sqlgraph.To(ReviewedParticipationsInverseTable, FieldID),
+		sqlgraph.Edge(sqlgraph.O2M, false, ReviewedParticipationsTable, ReviewedParticipationsColumn),
+	)
 }

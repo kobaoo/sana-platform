@@ -8,6 +8,8 @@ import (
 	"fmt"
 	"time"
 
+	"encore.app/db/ent/event"
+	"encore.app/db/ent/eventparticipant"
 	"encore.app/db/ent/user"
 	"entgo.io/ent/dialect/sql/sqlgraph"
 	"entgo.io/ent/schema/field"
@@ -129,6 +131,36 @@ func (_c *UserCreate) SetNillableID(v *uuid.UUID) *UserCreate {
 		_c.SetID(*v)
 	}
 	return _c
+}
+
+// AddHostedEventIDs adds the "hosted_events" edge to the Event entity by IDs.
+func (_c *UserCreate) AddHostedEventIDs(ids ...uuid.UUID) *UserCreate {
+	_c.mutation.AddHostedEventIDs(ids...)
+	return _c
+}
+
+// AddHostedEvents adds the "hosted_events" edges to the Event entity.
+func (_c *UserCreate) AddHostedEvents(v ...*Event) *UserCreate {
+	ids := make([]uuid.UUID, len(v))
+	for i := range v {
+		ids[i] = v[i].ID
+	}
+	return _c.AddHostedEventIDs(ids...)
+}
+
+// AddReviewedParticipationIDs adds the "reviewed_participations" edge to the EventParticipant entity by IDs.
+func (_c *UserCreate) AddReviewedParticipationIDs(ids ...uuid.UUID) *UserCreate {
+	_c.mutation.AddReviewedParticipationIDs(ids...)
+	return _c
+}
+
+// AddReviewedParticipations adds the "reviewed_participations" edges to the EventParticipant entity.
+func (_c *UserCreate) AddReviewedParticipations(v ...*EventParticipant) *UserCreate {
+	ids := make([]uuid.UUID, len(v))
+	for i := range v {
+		ids[i] = v[i].ID
+	}
+	return _c.AddReviewedParticipationIDs(ids...)
 }
 
 // Mutation returns the UserMutation object of the builder.
@@ -296,6 +328,38 @@ func (_c *UserCreate) createSpec() (*User, *sqlgraph.CreateSpec) {
 	if value, ok := _c.mutation.UpdatedAt(); ok {
 		_spec.SetField(user.FieldUpdatedAt, field.TypeTime, value)
 		_node.UpdatedAt = value
+	}
+	if nodes := _c.mutation.HostedEventsIDs(); len(nodes) > 0 {
+		edge := &sqlgraph.EdgeSpec{
+			Rel:     sqlgraph.O2M,
+			Inverse: false,
+			Table:   user.HostedEventsTable,
+			Columns: []string{user.HostedEventsColumn},
+			Bidi:    false,
+			Target: &sqlgraph.EdgeTarget{
+				IDSpec: sqlgraph.NewFieldSpec(event.FieldID, field.TypeUUID),
+			},
+		}
+		for _, k := range nodes {
+			edge.Target.Nodes = append(edge.Target.Nodes, k)
+		}
+		_spec.Edges = append(_spec.Edges, edge)
+	}
+	if nodes := _c.mutation.ReviewedParticipationsIDs(); len(nodes) > 0 {
+		edge := &sqlgraph.EdgeSpec{
+			Rel:     sqlgraph.O2M,
+			Inverse: false,
+			Table:   user.ReviewedParticipationsTable,
+			Columns: []string{user.ReviewedParticipationsColumn},
+			Bidi:    false,
+			Target: &sqlgraph.EdgeTarget{
+				IDSpec: sqlgraph.NewFieldSpec(eventparticipant.FieldID, field.TypeUUID),
+			},
+		}
+		for _, k := range nodes {
+			edge.Target.Nodes = append(edge.Target.Nodes, k)
+		}
+		_spec.Edges = append(_spec.Edges, edge)
 	}
 	return _node, _spec
 }

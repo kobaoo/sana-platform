@@ -8,6 +8,102 @@ import (
 )
 
 var (
+	// ClientsColumns holds the columns for the "clients" table.
+	ClientsColumns = []*schema.Column{
+		{Name: "id", Type: field.TypeUUID, Unique: true},
+		{Name: "name", Type: field.TypeString, Size: 255},
+		{Name: "domain", Type: field.TypeString, Nullable: true, Size: 100},
+		{Name: "is_active", Type: field.TypeBool, Default: true},
+		{Name: "created_at", Type: field.TypeTime, SchemaType: map[string]string{"postgres": "timestamptz"}},
+	}
+	// ClientsTable holds the schema information for the "clients" table.
+	ClientsTable = &schema.Table{
+		Name:       "clients",
+		Columns:    ClientsColumns,
+		PrimaryKey: []*schema.Column{ClientsColumns[0]},
+	}
+	// EmployeesColumns holds the columns for the "employees" table.
+	EmployeesColumns = []*schema.Column{
+		{Name: "id", Type: field.TypeUUID, Unique: true},
+	}
+	// EmployeesTable holds the schema information for the "employees" table.
+	EmployeesTable = &schema.Table{
+		Name:       "employees",
+		Columns:    EmployeesColumns,
+		PrimaryKey: []*schema.Column{EmployeesColumns[0]},
+	}
+	// EventsColumns holds the columns for the "events" table.
+	EventsColumns = []*schema.Column{
+		{Name: "id", Type: field.TypeUUID, Unique: true},
+		{Name: "title", Type: field.TypeString},
+		{Name: "description", Type: field.TypeString, Nullable: true},
+		{Name: "zoom_link", Type: field.TypeString, Nullable: true},
+		{Name: "event_date", Type: field.TypeTime, SchemaType: map[string]string{"postgres": "timestamptz"}},
+		{Name: "materials_url", Type: field.TypeString, Nullable: true},
+		{Name: "status", Type: field.TypeEnum, Enums: []string{"DRAFT", "ACTIVE", "COMPLETED", "CANCELLED"}, Default: "DRAFT"},
+		{Name: "created_at", Type: field.TypeTime},
+		{Name: "updated_at", Type: field.TypeTime},
+		{Name: "client_id", Type: field.TypeUUID},
+		{Name: "host_id", Type: field.TypeUUID},
+	}
+	// EventsTable holds the schema information for the "events" table.
+	EventsTable = &schema.Table{
+		Name:       "events",
+		Columns:    EventsColumns,
+		PrimaryKey: []*schema.Column{EventsColumns[0]},
+		ForeignKeys: []*schema.ForeignKey{
+			{
+				Symbol:     "events_clients_events",
+				Columns:    []*schema.Column{EventsColumns[9]},
+				RefColumns: []*schema.Column{ClientsColumns[0]},
+				OnDelete:   schema.NoAction,
+			},
+			{
+				Symbol:     "events_users_hosted_events",
+				Columns:    []*schema.Column{EventsColumns[10]},
+				RefColumns: []*schema.Column{UsersColumns[0]},
+				OnDelete:   schema.NoAction,
+			},
+		},
+	}
+	// EventParticipantsColumns holds the columns for the "event_participants" table.
+	EventParticipantsColumns = []*schema.Column{
+		{Name: "id", Type: field.TypeUUID, Unique: true},
+		{Name: "joined_at", Type: field.TypeTime, Nullable: true, SchemaType: map[string]string{"postgres": "timestamptz"}},
+		{Name: "attendance_status", Type: field.TypeEnum, Enums: []string{"PENDING", "ATTENDED", "MISSED"}, Default: "PENDING"},
+		{Name: "reviewed_at", Type: field.TypeTime, Nullable: true, SchemaType: map[string]string{"postgres": "timestamptz"}},
+		{Name: "created_at", Type: field.TypeTime},
+		{Name: "updated_at", Type: field.TypeTime},
+		{Name: "employee_id", Type: field.TypeUUID},
+		{Name: "event_id", Type: field.TypeUUID},
+		{Name: "reviewed_by", Type: field.TypeUUID, Nullable: true},
+	}
+	// EventParticipantsTable holds the schema information for the "event_participants" table.
+	EventParticipantsTable = &schema.Table{
+		Name:       "event_participants",
+		Columns:    EventParticipantsColumns,
+		PrimaryKey: []*schema.Column{EventParticipantsColumns[0]},
+		ForeignKeys: []*schema.ForeignKey{
+			{
+				Symbol:     "event_participants_employees_event_participations",
+				Columns:    []*schema.Column{EventParticipantsColumns[6]},
+				RefColumns: []*schema.Column{EmployeesColumns[0]},
+				OnDelete:   schema.NoAction,
+			},
+			{
+				Symbol:     "event_participants_events_participants",
+				Columns:    []*schema.Column{EventParticipantsColumns[7]},
+				RefColumns: []*schema.Column{EventsColumns[0]},
+				OnDelete:   schema.NoAction,
+			},
+			{
+				Symbol:     "event_participants_users_reviewed_participations",
+				Columns:    []*schema.Column{EventParticipantsColumns[8]},
+				RefColumns: []*schema.Column{UsersColumns[0]},
+				OnDelete:   schema.SetNull,
+			},
+		},
+	}
 	// OrganizationsColumns holds the columns for the "organizations" table.
 	OrganizationsColumns = []*schema.Column{
 		{Name: "id", Type: field.TypeUUID, Unique: true},
@@ -77,11 +173,20 @@ var (
 	}
 	// Tables holds all the tables in the schema.
 	Tables = []*schema.Table{
+		ClientsTable,
+		EmployeesTable,
+		EventsTable,
+		EventParticipantsTable,
 		OrganizationsTable,
 		UsersTable,
 	}
 )
 
 func init() {
+	EventsTable.ForeignKeys[0].RefTable = ClientsTable
+	EventsTable.ForeignKeys[1].RefTable = UsersTable
+	EventParticipantsTable.ForeignKeys[0].RefTable = EmployeesTable
+	EventParticipantsTable.ForeignKeys[1].RefTable = EventsTable
+	EventParticipantsTable.ForeignKeys[2].RefTable = UsersTable
 	OrganizationsTable.ForeignKeys[0].RefTable = OrganizationsTable
 }
