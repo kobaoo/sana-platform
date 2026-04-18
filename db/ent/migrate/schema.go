@@ -8,6 +8,42 @@ import (
 )
 
 var (
+	// CertificatesColumns holds the columns for the "certificates" table.
+	CertificatesColumns = []*schema.Column{
+		{Name: "id", Type: field.TypeUUID, Unique: true},
+		{Name: "employee_id", Type: field.TypeInt64},
+		{Name: "dzo_id", Type: field.TypeInt64, Nullable: true},
+		{Name: "title", Type: field.TypeString, Size: 255},
+		{Name: "file_url", Type: field.TypeString},
+		{Name: "issue_date", Type: field.TypeTime, SchemaType: map[string]string{"postgres": "timestamptz"}},
+		{Name: "expiration_date", Type: field.TypeTime, Nullable: true, SchemaType: map[string]string{"postgres": "timestamptz"}},
+		{Name: "is_active", Type: field.TypeBool, Default: true},
+		{Name: "created_at", Type: field.TypeTime, SchemaType: map[string]string{"postgres": "timestamptz"}},
+		{Name: "updated_at", Type: field.TypeTime, SchemaType: map[string]string{"postgres": "timestamptz"}},
+	}
+	// CertificatesTable holds the schema information for the "certificates" table.
+	CertificatesTable = &schema.Table{
+		Name:       "certificates",
+		Columns:    CertificatesColumns,
+		PrimaryKey: []*schema.Column{CertificatesColumns[0]},
+		Indexes: []*schema.Index{
+			{
+				Name:    "certificate_employee_id",
+				Unique:  false,
+				Columns: []*schema.Column{CertificatesColumns[1]},
+			},
+			{
+				Name:    "certificate_dzo_id",
+				Unique:  false,
+				Columns: []*schema.Column{CertificatesColumns[2]},
+			},
+			{
+				Name:    "certificate_is_active",
+				Unique:  false,
+				Columns: []*schema.Column{CertificatesColumns[7]},
+			},
+		},
+	}
 	// OrganizationsColumns holds the columns for the "organizations" table.
 	OrganizationsColumns = []*schema.Column{
 		{Name: "id", Type: field.TypeUUID, Unique: true},
@@ -77,6 +113,7 @@ var (
 	}
 	// Tables holds all the tables in the schema.
 	Tables = []*schema.Table{
+		CertificatesTable,
 		OrganizationsTable,
 		UsersTable,
 	}

@@ -5,6 +5,7 @@ package ent
 import (
 	"time"
 
+	"encore.app/db/ent/certificate"
 	"encore.app/db/ent/organization"
 	"encore.app/db/ent/schema"
 	"encore.app/db/ent/user"
@@ -15,6 +16,48 @@ import (
 // (default values, validators, hooks and policies) and stitches it
 // to their package variables.
 func init() {
+	certificateFields := schema.Certificate{}.Fields()
+	_ = certificateFields
+	// certificateDescTitle is the schema descriptor for title field.
+	certificateDescTitle := certificateFields[3].Descriptor()
+	// certificate.TitleValidator is a validator for the "title" field. It is called by the builders before save.
+	certificate.TitleValidator = func() func(string) error {
+		validators := certificateDescTitle.Validators
+		fns := [...]func(string) error{
+			validators[0].(func(string) error),
+			validators[1].(func(string) error),
+		}
+		return func(title string) error {
+			for _, fn := range fns {
+				if err := fn(title); err != nil {
+					return err
+				}
+			}
+			return nil
+		}
+	}()
+	// certificateDescFileURL is the schema descriptor for file_url field.
+	certificateDescFileURL := certificateFields[4].Descriptor()
+	// certificate.FileURLValidator is a validator for the "file_url" field. It is called by the builders before save.
+	certificate.FileURLValidator = certificateDescFileURL.Validators[0].(func(string) error)
+	// certificateDescIsActive is the schema descriptor for is_active field.
+	certificateDescIsActive := certificateFields[7].Descriptor()
+	// certificate.DefaultIsActive holds the default value on creation for the is_active field.
+	certificate.DefaultIsActive = certificateDescIsActive.Default.(bool)
+	// certificateDescCreatedAt is the schema descriptor for created_at field.
+	certificateDescCreatedAt := certificateFields[8].Descriptor()
+	// certificate.DefaultCreatedAt holds the default value on creation for the created_at field.
+	certificate.DefaultCreatedAt = certificateDescCreatedAt.Default.(func() time.Time)
+	// certificateDescUpdatedAt is the schema descriptor for updated_at field.
+	certificateDescUpdatedAt := certificateFields[9].Descriptor()
+	// certificate.DefaultUpdatedAt holds the default value on creation for the updated_at field.
+	certificate.DefaultUpdatedAt = certificateDescUpdatedAt.Default.(func() time.Time)
+	// certificate.UpdateDefaultUpdatedAt holds the default value on update for the updated_at field.
+	certificate.UpdateDefaultUpdatedAt = certificateDescUpdatedAt.UpdateDefault.(func() time.Time)
+	// certificateDescID is the schema descriptor for id field.
+	certificateDescID := certificateFields[0].Descriptor()
+	// certificate.DefaultID holds the default value on creation for the id field.
+	certificate.DefaultID = certificateDescID.Default.(func() uuid.UUID)
 	organizationFields := schema.Organization{}.Fields()
 	_ = organizationFields
 	// organizationDescName is the schema descriptor for name field.
