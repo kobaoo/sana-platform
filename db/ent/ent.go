@@ -10,6 +10,7 @@ import (
 	"sync"
 
 	"encore.app/db/ent/organization"
+	"encore.app/db/ent/request"
 	"encore.app/db/ent/user"
 	"entgo.io/ent"
 	"entgo.io/ent/dialect/sql"
@@ -75,6 +76,7 @@ func checkColumn(t, c string) error {
 	initCheck.Do(func() {
 		columnCheck = sql.NewColumnCheck(map[string]func(string) bool{
 			organization.Table: organization.ValidColumn,
+			request.Table:      request.ValidColumn,
 			user.Table:         user.ValidColumn,
 		})
 	})

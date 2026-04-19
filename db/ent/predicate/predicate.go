@@ -9,5 +9,8 @@ import (
 // Organization is the predicate function for organization builders.
 type Organization func(*sql.Selector)
 
+// Request is the predicate function for request builders.
+type Request func(*sql.Selector)
+
 // User is the predicate function for user builders.
 type User func(*sql.Selector)

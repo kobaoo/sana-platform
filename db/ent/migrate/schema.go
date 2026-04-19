@@ -45,6 +45,44 @@ var (
 			},
 		},
 	}
+	// RequestsColumns holds the columns for the "requests" table.
+	RequestsColumns = []*schema.Column{
+		{Name: "id", Type: field.TypeUUID, Unique: true},
+		{Name: "initiator_id", Type: field.TypeUUID},
+		{Name: "entity_id", Type: field.TypeUUID},
+		{Name: "entity_type", Type: field.TypeString, Size: 50},
+		{Name: "step", Type: field.TypeInt, Default: 0},
+		{Name: "created_at", Type: field.TypeTime, SchemaType: map[string]string{"postgres": "timestamptz"}},
+		{Name: "status", Type: field.TypeString, Size: 50, Default: "PENDING"},
+	}
+	// RequestsTable holds the schema information for the "requests" table.
+	RequestsTable = &schema.Table{
+		Name:       "requests",
+		Columns:    RequestsColumns,
+		PrimaryKey: []*schema.Column{RequestsColumns[0]},
+		Indexes: []*schema.Index{
+			{
+				Name:    "request_initiator_id",
+				Unique:  false,
+				Columns: []*schema.Column{RequestsColumns[1]},
+			},
+			{
+				Name:    "request_entity_id",
+				Unique:  false,
+				Columns: []*schema.Column{RequestsColumns[2]},
+			},
+			{
+				Name:    "request_status",
+				Unique:  false,
+				Columns: []*schema.Column{RequestsColumns[6]},
+			},
+			{
+				Name:    "request_step",
+				Unique:  false,
+				Columns: []*schema.Column{RequestsColumns[4]},
+			},
+		},
+	}
 	// UsersColumns holds the columns for the "users" table.
 	UsersColumns = []*schema.Column{
 		{Name: "id", Type: field.TypeUUID, Unique: true},
@@ -78,6 +116,7 @@ var (
 	// Tables holds all the tables in the schema.
 	Tables = []*schema.Table{
 		OrganizationsTable,
+		RequestsTable,
 		UsersTable,
 	}
 )
