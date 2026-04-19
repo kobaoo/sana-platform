@@ -5,6 +5,7 @@ package ent
 import (
 	"time"
 
+	"encore.app/db/ent/company"
 	"encore.app/db/ent/organization"
 	"encore.app/db/ent/schema"
 	"encore.app/db/ent/user"
@@ -15,6 +16,42 @@ import (
 // (default values, validators, hooks and policies) and stitches it
 // to their package variables.
 func init() {
+	companyFields := schema.Company{}.Fields()
+	_ = companyFields
+	// companyDescName is the schema descriptor for name field.
+	companyDescName := companyFields[1].Descriptor()
+	// company.NameValidator is a validator for the "name" field. It is called by the builders before save.
+	company.NameValidator = func() func(string) error {
+		validators := companyDescName.Validators
+		fns := [...]func(string) error{
+			validators[0].(func(string) error),
+			validators[1].(func(string) error),
+		}
+		return func(name string) error {
+			for _, fn := range fns {
+				if err := fn(name); err != nil {
+					return err
+				}
+			}
+			return nil
+		}
+	}()
+	// companyDescDomain is the schema descriptor for domain field.
+	companyDescDomain := companyFields[2].Descriptor()
+	// company.DomainValidator is a validator for the "domain" field. It is called by the builders before save.
+	company.DomainValidator = companyDescDomain.Validators[0].(func(string) error)
+	// companyDescIsActive is the schema descriptor for is_active field.
+	companyDescIsActive := companyFields[3].Descriptor()
+	// company.DefaultIsActive holds the default value on creation for the is_active field.
+	company.DefaultIsActive = companyDescIsActive.Default.(bool)
+	// companyDescCreatedAt is the schema descriptor for created_at field.
+	companyDescCreatedAt := companyFields[4].Descriptor()
+	// company.DefaultCreatedAt holds the default value on creation for the created_at field.
+	company.DefaultCreatedAt = companyDescCreatedAt.Default.(func() time.Time)
+	// companyDescID is the schema descriptor for id field.
+	companyDescID := companyFields[0].Descriptor()
+	// company.DefaultID holds the default value on creation for the id field.
+	company.DefaultID = companyDescID.Default.(func() uuid.UUID)
 	organizationFields := schema.Organization{}.Fields()
 	_ = organizationFields
 	// organizationDescName is the schema descriptor for name field.

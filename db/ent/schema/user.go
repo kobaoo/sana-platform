@@ -5,6 +5,7 @@ import (
 
 	"entgo.io/ent"
 	"entgo.io/ent/dialect"
+	"entgo.io/ent/schema/edge"
 	"entgo.io/ent/schema/field"
 	"entgo.io/ent/schema/index"
 	"github.com/google/uuid"
@@ -55,11 +56,19 @@ func (User) Fields() []ent.Field {
 			SchemaType(map[string]string{
 				dialect.Postgres: "timestamptz",
 			}),
+		field.UUID("client_id", uuid.UUID{}).
+			Comment("Reference to clients.id").
+			Optional(),
 	}
 }
 
 func (User) Edges() []ent.Edge {
-	return nil
+	return []ent.Edge{
+		edge.From("client", Company.Type).
+			Ref("users").
+			Field("client_id").
+			Unique(),
+	}
 }
 
 func (User) Indexes() []ent.Index {
