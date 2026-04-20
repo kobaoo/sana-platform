@@ -35,3 +35,15 @@ type RequestResponse struct {
 type ListRequestsResponse struct {
 	Items []*RequestResponse `json:"items"`
 }
+
+type CreateCertificateRenewalRequest struct {
+	EntityID uuid.UUID `json:"entity_id"`
+}
+
+type PatchCertificateRenewalStatusRequest struct {
+	Status string `json:"status"`
+}
+
+type ListCertificateRenewalsParams struct {
+	InitiatorID string `query:"initiator_id"`
+}
