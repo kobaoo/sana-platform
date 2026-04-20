@@ -20,37 +20,46 @@ func (Certificate) Fields() []ent.Field {
 			Default(uuid.New).
 			Unique().
 			Immutable(),
-		field.Int64("employee_id"),
-		field.Int64("dzo_id").Optional(), // Добавлено для фильтрации по организациям
+		field.UUID("employee_id", uuid.UUID{}), // Изменено на UUID по ТЗ
+		// field.UUID("dzo_id", uuid.UUID{}).Optional().Nillable(), // Закомментировал
+		field.Enum("type").
+			Values("EXTERNAL", "SCORM"), // Добавлено из Data Dictionary
 		field.String("title").
-			MaxLen(255).
+			MaxLen(300). // VARCHAR(300) по ТЗ
 			NotEmpty(),
-		field.String("file_url").
-			NotEmpty(),
-		field.Time("issue_date").
-			SchemaType(map[string]string{
-				dialect.Postgres: "timestamptz",
+		field.Time("issued_date"). // Переименовано
+						SchemaType(map[string]string{
+				dialect.Postgres: "date", // В ДД указан тип DATE
 			}),
-		field.Time("expiration_date").
+		field.Time("expiry_date"). // Переименовано
+						Optional().
+						Nillable().
+						SchemaType(map[string]string{
+				dialect.Postgres: "date",
+			}),
+		field.Text("file_url"). // Сделано Optional/Nillable
+					Optional().
+					Nillable(),
+		field.UUID("uploaded_by", uuid.UUID{}).
 			Optional().
-			Nillable().
-			SchemaType(map[string]string{
-				dialect.Postgres: "timestamptz",
-			}),
+			Nillable(), // Добавлено по ТЗ
+		field.UUID("event_id", uuid.UUID{}).
+			Optional().
+			Nillable(), // Добавлено по ТЗ
+		field.UUID("scorm_course_id", uuid.UUID{}).
+			Optional().
+			Nillable(), // Добавлено по ТЗ
+		field.Enum("entity_type").
+			Values("SCORM_COURSE", "TRAINING_EVENT"), // Добавлено
+		field.UUID("entity_id", uuid.UUID{}), // Добавлено
 		field.Bool("is_active").
 			Default(true),
 		field.Time("created_at").
 			Default(time.Now).
-			Immutable().
-			SchemaType(map[string]string{
-				dialect.Postgres: "timestamptz",
-			}),
+			Immutable(),
 		field.Time("updated_at").
 			Default(time.Now).
-			UpdateDefault(time.Now).
-			SchemaType(map[string]string{
-				dialect.Postgres: "timestamptz",
-			}),
+			UpdateDefault(time.Now),
 	}
 }
 
@@ -61,7 +70,6 @@ func (Certificate) Edges() []ent.Edge {
 func (Certificate) Indexes() []ent.Index {
 	return []ent.Index{
 		index.Fields("employee_id"),
-		index.Fields("dzo_id"),
 		index.Fields("is_active"),
 	}
 }

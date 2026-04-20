@@ -22,22 +22,14 @@ type CertificateCreate struct {
 }
 
 // SetEmployeeID sets the "employee_id" field.
-func (_c *CertificateCreate) SetEmployeeID(v int64) *CertificateCreate {
+func (_c *CertificateCreate) SetEmployeeID(v uuid.UUID) *CertificateCreate {
 	_c.mutation.SetEmployeeID(v)
 	return _c
 }
 
-// SetDzoID sets the "dzo_id" field.
-func (_c *CertificateCreate) SetDzoID(v int64) *CertificateCreate {
-	_c.mutation.SetDzoID(v)
-	return _c
-}
-
-// SetNillableDzoID sets the "dzo_id" field if the given value is not nil.
-func (_c *CertificateCreate) SetNillableDzoID(v *int64) *CertificateCreate {
-	if v != nil {
-		_c.SetDzoID(*v)
-	}
+// SetType sets the "type" field.
+func (_c *CertificateCreate) SetType(v certificate.Type) *CertificateCreate {
+	_c.mutation.SetType(v)
 	return _c
 }
 
@@ -47,29 +39,91 @@ func (_c *CertificateCreate) SetTitle(v string) *CertificateCreate {
 	return _c
 }
 
+// SetIssuedDate sets the "issued_date" field.
+func (_c *CertificateCreate) SetIssuedDate(v time.Time) *CertificateCreate {
+	_c.mutation.SetIssuedDate(v)
+	return _c
+}
+
+// SetExpiryDate sets the "expiry_date" field.
+func (_c *CertificateCreate) SetExpiryDate(v time.Time) *CertificateCreate {
+	_c.mutation.SetExpiryDate(v)
+	return _c
+}
+
+// SetNillableExpiryDate sets the "expiry_date" field if the given value is not nil.
+func (_c *CertificateCreate) SetNillableExpiryDate(v *time.Time) *CertificateCreate {
+	if v != nil {
+		_c.SetExpiryDate(*v)
+	}
+	return _c
+}
+
 // SetFileURL sets the "file_url" field.
 func (_c *CertificateCreate) SetFileURL(v string) *CertificateCreate {
 	_c.mutation.SetFileURL(v)
 	return _c
 }
 
-// SetIssueDate sets the "issue_date" field.
-func (_c *CertificateCreate) SetIssueDate(v time.Time) *CertificateCreate {
-	_c.mutation.SetIssueDate(v)
-	return _c
-}
-
-// SetExpirationDate sets the "expiration_date" field.
-func (_c *CertificateCreate) SetExpirationDate(v time.Time) *CertificateCreate {
-	_c.mutation.SetExpirationDate(v)
-	return _c
-}
-
-// SetNillableExpirationDate sets the "expiration_date" field if the given value is not nil.
-func (_c *CertificateCreate) SetNillableExpirationDate(v *time.Time) *CertificateCreate {
+// SetNillableFileURL sets the "file_url" field if the given value is not nil.
+func (_c *CertificateCreate) SetNillableFileURL(v *string) *CertificateCreate {
 	if v != nil {
-		_c.SetExpirationDate(*v)
+		_c.SetFileURL(*v)
 	}
+	return _c
+}
+
+// SetUploadedBy sets the "uploaded_by" field.
+func (_c *CertificateCreate) SetUploadedBy(v uuid.UUID) *CertificateCreate {
+	_c.mutation.SetUploadedBy(v)
+	return _c
+}
+
+// SetNillableUploadedBy sets the "uploaded_by" field if the given value is not nil.
+func (_c *CertificateCreate) SetNillableUploadedBy(v *uuid.UUID) *CertificateCreate {
+	if v != nil {
+		_c.SetUploadedBy(*v)
+	}
+	return _c
+}
+
+// SetEventID sets the "event_id" field.
+func (_c *CertificateCreate) SetEventID(v uuid.UUID) *CertificateCreate {
+	_c.mutation.SetEventID(v)
+	return _c
+}
+
+// SetNillableEventID sets the "event_id" field if the given value is not nil.
+func (_c *CertificateCreate) SetNillableEventID(v *uuid.UUID) *CertificateCreate {
+	if v != nil {
+		_c.SetEventID(*v)
+	}
+	return _c
+}
+
+// SetScormCourseID sets the "scorm_course_id" field.
+func (_c *CertificateCreate) SetScormCourseID(v uuid.UUID) *CertificateCreate {
+	_c.mutation.SetScormCourseID(v)
+	return _c
+}
+
+// SetNillableScormCourseID sets the "scorm_course_id" field if the given value is not nil.
+func (_c *CertificateCreate) SetNillableScormCourseID(v *uuid.UUID) *CertificateCreate {
+	if v != nil {
+		_c.SetScormCourseID(*v)
+	}
+	return _c
+}
+
+// SetEntityType sets the "entity_type" field.
+func (_c *CertificateCreate) SetEntityType(v certificate.EntityType) *CertificateCreate {
+	_c.mutation.SetEntityType(v)
+	return _c
+}
+
+// SetEntityID sets the "entity_id" field.
+func (_c *CertificateCreate) SetEntityID(v uuid.UUID) *CertificateCreate {
+	_c.mutation.SetEntityID(v)
 	return _c
 }
 
@@ -187,6 +241,14 @@ func (_c *CertificateCreate) check() error {
 	if _, ok := _c.mutation.EmployeeID(); !ok {
 		return &ValidationError{Name: "employee_id", err: errors.New(`ent: missing required field "Certificate.employee_id"`)}
 	}
+	if _, ok := _c.mutation.GetType(); !ok {
+		return &ValidationError{Name: "type", err: errors.New(`ent: missing required field "Certificate.type"`)}
+	}
+	if v, ok := _c.mutation.GetType(); ok {
+		if err := certificate.TypeValidator(v); err != nil {
+			return &ValidationError{Name: "type", err: fmt.Errorf(`ent: validator failed for field "Certificate.type": %w`, err)}
+		}
+	}
 	if _, ok := _c.mutation.Title(); !ok {
 		return &ValidationError{Name: "title", err: errors.New(`ent: missing required field "Certificate.title"`)}
 	}
@@ -195,16 +257,19 @@ func (_c *CertificateCreate) check() error {
 			return &ValidationError{Name: "title", err: fmt.Errorf(`ent: validator failed for field "Certificate.title": %w`, err)}
 		}
 	}
-	if _, ok := _c.mutation.FileURL(); !ok {
-		return &ValidationError{Name: "file_url", err: errors.New(`ent: missing required field "Certificate.file_url"`)}
+	if _, ok := _c.mutation.IssuedDate(); !ok {
+		return &ValidationError{Name: "issued_date", err: errors.New(`ent: missing required field "Certificate.issued_date"`)}
 	}
-	if v, ok := _c.mutation.FileURL(); ok {
-		if err := certificate.FileURLValidator(v); err != nil {
-			return &ValidationError{Name: "file_url", err: fmt.Errorf(`ent: validator failed for field "Certificate.file_url": %w`, err)}
+	if _, ok := _c.mutation.EntityType(); !ok {
+		return &ValidationError{Name: "entity_type", err: errors.New(`ent: missing required field "Certificate.entity_type"`)}
+	}
+	if v, ok := _c.mutation.EntityType(); ok {
+		if err := certificate.EntityTypeValidator(v); err != nil {
+			return &ValidationError{Name: "entity_type", err: fmt.Errorf(`ent: validator failed for field "Certificate.entity_type": %w`, err)}
 		}
 	}
-	if _, ok := _c.mutation.IssueDate(); !ok {
-		return &ValidationError{Name: "issue_date", err: errors.New(`ent: missing required field "Certificate.issue_date"`)}
+	if _, ok := _c.mutation.EntityID(); !ok {
+		return &ValidationError{Name: "entity_id", err: errors.New(`ent: missing required field "Certificate.entity_id"`)}
 	}
 	if _, ok := _c.mutation.IsActive(); !ok {
 		return &ValidationError{Name: "is_active", err: errors.New(`ent: missing required field "Certificate.is_active"`)}
@@ -251,28 +316,48 @@ func (_c *CertificateCreate) createSpec() (*Certificate, *sqlgraph.CreateSpec) {
 		_spec.ID.Value = &id
 	}
 	if value, ok := _c.mutation.EmployeeID(); ok {
-		_spec.SetField(certificate.FieldEmployeeID, field.TypeInt64, value)
+		_spec.SetField(certificate.FieldEmployeeID, field.TypeUUID, value)
 		_node.EmployeeID = value
 	}
-	if value, ok := _c.mutation.DzoID(); ok {
-		_spec.SetField(certificate.FieldDzoID, field.TypeInt64, value)
-		_node.DzoID = value
+	if value, ok := _c.mutation.GetType(); ok {
+		_spec.SetField(certificate.FieldType, field.TypeEnum, value)
+		_node.Type = value
 	}
 	if value, ok := _c.mutation.Title(); ok {
 		_spec.SetField(certificate.FieldTitle, field.TypeString, value)
 		_node.Title = value
 	}
+	if value, ok := _c.mutation.IssuedDate(); ok {
+		_spec.SetField(certificate.FieldIssuedDate, field.TypeTime, value)
+		_node.IssuedDate = value
+	}
+	if value, ok := _c.mutation.ExpiryDate(); ok {
+		_spec.SetField(certificate.FieldExpiryDate, field.TypeTime, value)
+		_node.ExpiryDate = &value
+	}
 	if value, ok := _c.mutation.FileURL(); ok {
 		_spec.SetField(certificate.FieldFileURL, field.TypeString, value)
-		_node.FileURL = value
+		_node.FileURL = &value
 	}
-	if value, ok := _c.mutation.IssueDate(); ok {
-		_spec.SetField(certificate.FieldIssueDate, field.TypeTime, value)
-		_node.IssueDate = value
+	if value, ok := _c.mutation.UploadedBy(); ok {
+		_spec.SetField(certificate.FieldUploadedBy, field.TypeUUID, value)
+		_node.UploadedBy = &value
 	}
-	if value, ok := _c.mutation.ExpirationDate(); ok {
-		_spec.SetField(certificate.FieldExpirationDate, field.TypeTime, value)
-		_node.ExpirationDate = &value
+	if value, ok := _c.mutation.EventID(); ok {
+		_spec.SetField(certificate.FieldEventID, field.TypeUUID, value)
+		_node.EventID = &value
+	}
+	if value, ok := _c.mutation.ScormCourseID(); ok {
+		_spec.SetField(certificate.FieldScormCourseID, field.TypeUUID, value)
+		_node.ScormCourseID = &value
+	}
+	if value, ok := _c.mutation.EntityType(); ok {
+		_spec.SetField(certificate.FieldEntityType, field.TypeEnum, value)
+		_node.EntityType = value
+	}
+	if value, ok := _c.mutation.EntityID(); ok {
+		_spec.SetField(certificate.FieldEntityID, field.TypeUUID, value)
+		_node.EntityID = value
 	}
 	if value, ok := _c.mutation.IsActive(); ok {
 		_spec.SetField(certificate.FieldIsActive, field.TypeBool, value)

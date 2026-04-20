@@ -36,20 +36,16 @@ func init() {
 			return nil
 		}
 	}()
-	// certificateDescFileURL is the schema descriptor for file_url field.
-	certificateDescFileURL := certificateFields[4].Descriptor()
-	// certificate.FileURLValidator is a validator for the "file_url" field. It is called by the builders before save.
-	certificate.FileURLValidator = certificateDescFileURL.Validators[0].(func(string) error)
 	// certificateDescIsActive is the schema descriptor for is_active field.
-	certificateDescIsActive := certificateFields[7].Descriptor()
+	certificateDescIsActive := certificateFields[12].Descriptor()
 	// certificate.DefaultIsActive holds the default value on creation for the is_active field.
 	certificate.DefaultIsActive = certificateDescIsActive.Default.(bool)
 	// certificateDescCreatedAt is the schema descriptor for created_at field.
-	certificateDescCreatedAt := certificateFields[8].Descriptor()
+	certificateDescCreatedAt := certificateFields[13].Descriptor()
 	// certificate.DefaultCreatedAt holds the default value on creation for the created_at field.
 	certificate.DefaultCreatedAt = certificateDescCreatedAt.Default.(func() time.Time)
 	// certificateDescUpdatedAt is the schema descriptor for updated_at field.
-	certificateDescUpdatedAt := certificateFields[9].Descriptor()
+	certificateDescUpdatedAt := certificateFields[14].Descriptor()
 	// certificate.DefaultUpdatedAt holds the default value on creation for the updated_at field.
 	certificate.DefaultUpdatedAt = certificateDescUpdatedAt.Default.(func() time.Time)
 	// certificate.UpdateDefaultUpdatedAt holds the default value on update for the updated_at field.

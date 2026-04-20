@@ -56,13 +56,8 @@ func IDLTE(id uuid.UUID) predicate.Certificate {
 }
 
 // EmployeeID applies equality check predicate on the "employee_id" field. It's identical to EmployeeIDEQ.
-func EmployeeID(v int64) predicate.Certificate {
+func EmployeeID(v uuid.UUID) predicate.Certificate {
 	return predicate.Certificate(sql.FieldEQ(FieldEmployeeID, v))
-}
-
-// DzoID applies equality check predicate on the "dzo_id" field. It's identical to DzoIDEQ.
-func DzoID(v int64) predicate.Certificate {
-	return predicate.Certificate(sql.FieldEQ(FieldDzoID, v))
 }
 
 // Title applies equality check predicate on the "title" field. It's identical to TitleEQ.
@@ -70,19 +65,39 @@ func Title(v string) predicate.Certificate {
 	return predicate.Certificate(sql.FieldEQ(FieldTitle, v))
 }
 
+// IssuedDate applies equality check predicate on the "issued_date" field. It's identical to IssuedDateEQ.
+func IssuedDate(v time.Time) predicate.Certificate {
+	return predicate.Certificate(sql.FieldEQ(FieldIssuedDate, v))
+}
+
+// ExpiryDate applies equality check predicate on the "expiry_date" field. It's identical to ExpiryDateEQ.
+func ExpiryDate(v time.Time) predicate.Certificate {
+	return predicate.Certificate(sql.FieldEQ(FieldExpiryDate, v))
+}
+
 // FileURL applies equality check predicate on the "file_url" field. It's identical to FileURLEQ.
 func FileURL(v string) predicate.Certificate {
 	return predicate.Certificate(sql.FieldEQ(FieldFileURL, v))
 }
 
-// IssueDate applies equality check predicate on the "issue_date" field. It's identical to IssueDateEQ.
-func IssueDate(v time.Time) predicate.Certificate {
-	return predicate.Certificate(sql.FieldEQ(FieldIssueDate, v))
+// UploadedBy applies equality check predicate on the "uploaded_by" field. It's identical to UploadedByEQ.
+func UploadedBy(v uuid.UUID) predicate.Certificate {
+	return predicate.Certificate(sql.FieldEQ(FieldUploadedBy, v))
 }
 
-// ExpirationDate applies equality check predicate on the "expiration_date" field. It's identical to ExpirationDateEQ.
-func ExpirationDate(v time.Time) predicate.Certificate {
-	return predicate.Certificate(sql.FieldEQ(FieldExpirationDate, v))
+// EventID applies equality check predicate on the "event_id" field. It's identical to EventIDEQ.
+func EventID(v uuid.UUID) predicate.Certificate {
+	return predicate.Certificate(sql.FieldEQ(FieldEventID, v))
+}
+
+// ScormCourseID applies equality check predicate on the "scorm_course_id" field. It's identical to ScormCourseIDEQ.
+func ScormCourseID(v uuid.UUID) predicate.Certificate {
+	return predicate.Certificate(sql.FieldEQ(FieldScormCourseID, v))
+}
+
+// EntityID applies equality check predicate on the "entity_id" field. It's identical to EntityIDEQ.
+func EntityID(v uuid.UUID) predicate.Certificate {
+	return predicate.Certificate(sql.FieldEQ(FieldEntityID, v))
 }
 
 // IsActive applies equality check predicate on the "is_active" field. It's identical to IsActiveEQ.
@@ -101,93 +116,63 @@ func UpdatedAt(v time.Time) predicate.Certificate {
 }
 
 // EmployeeIDEQ applies the EQ predicate on the "employee_id" field.
-func EmployeeIDEQ(v int64) predicate.Certificate {
+func EmployeeIDEQ(v uuid.UUID) predicate.Certificate {
 	return predicate.Certificate(sql.FieldEQ(FieldEmployeeID, v))
 }
 
 // EmployeeIDNEQ applies the NEQ predicate on the "employee_id" field.
-func EmployeeIDNEQ(v int64) predicate.Certificate {
+func EmployeeIDNEQ(v uuid.UUID) predicate.Certificate {
 	return predicate.Certificate(sql.FieldNEQ(FieldEmployeeID, v))
 }
 
 // EmployeeIDIn applies the In predicate on the "employee_id" field.
-func EmployeeIDIn(vs ...int64) predicate.Certificate {
+func EmployeeIDIn(vs ...uuid.UUID) predicate.Certificate {
 	return predicate.Certificate(sql.FieldIn(FieldEmployeeID, vs...))
 }
 
 // EmployeeIDNotIn applies the NotIn predicate on the "employee_id" field.
-func EmployeeIDNotIn(vs ...int64) predicate.Certificate {
+func EmployeeIDNotIn(vs ...uuid.UUID) predicate.Certificate {
 	return predicate.Certificate(sql.FieldNotIn(FieldEmployeeID, vs...))
 }
 
 // EmployeeIDGT applies the GT predicate on the "employee_id" field.
-func EmployeeIDGT(v int64) predicate.Certificate {
+func EmployeeIDGT(v uuid.UUID) predicate.Certificate {
 	return predicate.Certificate(sql.FieldGT(FieldEmployeeID, v))
 }
 
 // EmployeeIDGTE applies the GTE predicate on the "employee_id" field.
-func EmployeeIDGTE(v int64) predicate.Certificate {
+func EmployeeIDGTE(v uuid.UUID) predicate.Certificate {
 	return predicate.Certificate(sql.FieldGTE(FieldEmployeeID, v))
 }
 
 // EmployeeIDLT applies the LT predicate on the "employee_id" field.
-func EmployeeIDLT(v int64) predicate.Certificate {
+func EmployeeIDLT(v uuid.UUID) predicate.Certificate {
 	return predicate.Certificate(sql.FieldLT(FieldEmployeeID, v))
 }
 
 // EmployeeIDLTE applies the LTE predicate on the "employee_id" field.
-func EmployeeIDLTE(v int64) predicate.Certificate {
+func EmployeeIDLTE(v uuid.UUID) predicate.Certificate {
 	return predicate.Certificate(sql.FieldLTE(FieldEmployeeID, v))
 }
 
-// DzoIDEQ applies the EQ predicate on the "dzo_id" field.
-func DzoIDEQ(v int64) predicate.Certificate {
-	return predicate.Certificate(sql.FieldEQ(FieldDzoID, v))
+// TypeEQ applies the EQ predicate on the "type" field.
+func TypeEQ(v Type) predicate.Certificate {
+	return predicate.Certificate(sql.FieldEQ(FieldType, v))
 }
 
-// DzoIDNEQ applies the NEQ predicate on the "dzo_id" field.
-func DzoIDNEQ(v int64) predicate.Certificate {
-	return predicate.Certificate(sql.FieldNEQ(FieldDzoID, v))
+// TypeNEQ applies the NEQ predicate on the "type" field.
+func TypeNEQ(v Type) predicate.Certificate {
+	return predicate.Certificate(sql.FieldNEQ(FieldType, v))
 }
 
-// DzoIDIn applies the In predicate on the "dzo_id" field.
-func DzoIDIn(vs ...int64) predicate.Certificate {
-	return predicate.Certificate(sql.FieldIn(FieldDzoID, vs...))
+// TypeIn applies the In predicate on the "type" field.
+func TypeIn(vs ...Type) predicate.Certificate {
+	return predicate.Certificate(sql.FieldIn(FieldType, vs...))
 }
 
-// DzoIDNotIn applies the NotIn predicate on the "dzo_id" field.
-func DzoIDNotIn(vs ...int64) predicate.Certificate {
-	return predicate.Certificate(sql.FieldNotIn(FieldDzoID, vs...))
-}
-
-// DzoIDGT applies the GT predicate on the "dzo_id" field.
-func DzoIDGT(v int64) predicate.Certificate {
-	return predicate.Certificate(sql.FieldGT(FieldDzoID, v))
-}
-
-// DzoIDGTE applies the GTE predicate on the "dzo_id" field.
-func DzoIDGTE(v int64) predicate.Certificate {
-	return predicate.Certificate(sql.FieldGTE(FieldDzoID, v))
-}
-
-// DzoIDLT applies the LT predicate on the "dzo_id" field.
-func DzoIDLT(v int64) predicate.Certificate {
-	return predicate.Certificate(sql.FieldLT(FieldDzoID, v))
-}
-
-// DzoIDLTE applies the LTE predicate on the "dzo_id" field.
-func DzoIDLTE(v int64) predicate.Certificate {
-	return predicate.Certificate(sql.FieldLTE(FieldDzoID, v))
-}
-
-// DzoIDIsNil applies the IsNil predicate on the "dzo_id" field.
-func DzoIDIsNil() predicate.Certificate {
-	return predicate.Certificate(sql.FieldIsNull(FieldDzoID))
-}
-
-// DzoIDNotNil applies the NotNil predicate on the "dzo_id" field.
-func DzoIDNotNil() predicate.Certificate {
-	return predicate.Certificate(sql.FieldNotNull(FieldDzoID))
+// TypeNotIn applies the NotIn predicate on the "type" field.
+func TypeNotIn(vs ...Type) predicate.Certificate {
+	return predicate.Certificate(sql.FieldNotIn(FieldType, vs...))
 }
 
 // TitleEQ applies the EQ predicate on the "title" field.
@@ -255,6 +240,96 @@ func TitleContainsFold(v string) predicate.Certificate {
 	return predicate.Certificate(sql.FieldContainsFold(FieldTitle, v))
 }
 
+// IssuedDateEQ applies the EQ predicate on the "issued_date" field.
+func IssuedDateEQ(v time.Time) predicate.Certificate {
+	return predicate.Certificate(sql.FieldEQ(FieldIssuedDate, v))
+}
+
+// IssuedDateNEQ applies the NEQ predicate on the "issued_date" field.
+func IssuedDateNEQ(v time.Time) predicate.Certificate {
+	return predicate.Certificate(sql.FieldNEQ(FieldIssuedDate, v))
+}
+
+// IssuedDateIn applies the In predicate on the "issued_date" field.
+func IssuedDateIn(vs ...time.Time) predicate.Certificate {
+	return predicate.Certificate(sql.FieldIn(FieldIssuedDate, vs...))
+}
+
+// IssuedDateNotIn applies the NotIn predicate on the "issued_date" field.
+func IssuedDateNotIn(vs ...time.Time) predicate.Certificate {
+	return predicate.Certificate(sql.FieldNotIn(FieldIssuedDate, vs...))
+}
+
+// IssuedDateGT applies the GT predicate on the "issued_date" field.
+func IssuedDateGT(v time.Time) predicate.Certificate {
+	return predicate.Certificate(sql.FieldGT(FieldIssuedDate, v))
+}
+
+// IssuedDateGTE applies the GTE predicate on the "issued_date" field.
+func IssuedDateGTE(v time.Time) predicate.Certificate {
+	return predicate.Certificate(sql.FieldGTE(FieldIssuedDate, v))
+}
+
+// IssuedDateLT applies the LT predicate on the "issued_date" field.
+func IssuedDateLT(v time.Time) predicate.Certificate {
+	return predicate.Certificate(sql.FieldLT(FieldIssuedDate, v))
+}
+
+// IssuedDateLTE applies the LTE predicate on the "issued_date" field.
+func IssuedDateLTE(v time.Time) predicate.Certificate {
+	return predicate.Certificate(sql.FieldLTE(FieldIssuedDate, v))
+}
+
+// ExpiryDateEQ applies the EQ predicate on the "expiry_date" field.
+func ExpiryDateEQ(v time.Time) predicate.Certificate {
+	return predicate.Certificate(sql.FieldEQ(FieldExpiryDate, v))
+}
+
+// ExpiryDateNEQ applies the NEQ predicate on the "expiry_date" field.
+func ExpiryDateNEQ(v time.Time) predicate.Certificate {
+	return predicate.Certificate(sql.FieldNEQ(FieldExpiryDate, v))
+}
+
+// ExpiryDateIn applies the In predicate on the "expiry_date" field.
+func ExpiryDateIn(vs ...time.Time) predicate.Certificate {
+	return predicate.Certificate(sql.FieldIn(FieldExpiryDate, vs...))
+}
+
+// ExpiryDateNotIn applies the NotIn predicate on the "expiry_date" field.
+func ExpiryDateNotIn(vs ...time.Time) predicate.Certificate {
+	return predicate.Certificate(sql.FieldNotIn(FieldExpiryDate, vs...))
+}
+
+// ExpiryDateGT applies the GT predicate on the "expiry_date" field.
+func ExpiryDateGT(v time.Time) predicate.Certificate {
+	return predicate.Certificate(sql.FieldGT(FieldExpiryDate, v))
+}
+
+// ExpiryDateGTE applies the GTE predicate on the "expiry_date" field.
+func ExpiryDateGTE(v time.Time) predicate.Certificate {
+	return predicate.Certificate(sql.FieldGTE(FieldExpiryDate, v))
+}
+
+// ExpiryDateLT applies the LT predicate on the "expiry_date" field.
+func ExpiryDateLT(v time.Time) predicate.Certificate {
+	return predicate.Certificate(sql.FieldLT(FieldExpiryDate, v))
+}
+
+// ExpiryDateLTE applies the LTE predicate on the "expiry_date" field.
+func ExpiryDateLTE(v time.Time) predicate.Certificate {
+	return predicate.Certificate(sql.FieldLTE(FieldExpiryDate, v))
+}
+
+// ExpiryDateIsNil applies the IsNil predicate on the "expiry_date" field.
+func ExpiryDateIsNil() predicate.Certificate {
+	return predicate.Certificate(sql.FieldIsNull(FieldExpiryDate))
+}
+
+// ExpiryDateNotNil applies the NotNil predicate on the "expiry_date" field.
+func ExpiryDateNotNil() predicate.Certificate {
+	return predicate.Certificate(sql.FieldNotNull(FieldExpiryDate))
+}
+
 // FileURLEQ applies the EQ predicate on the "file_url" field.
 func FileURLEQ(v string) predicate.Certificate {
 	return predicate.Certificate(sql.FieldEQ(FieldFileURL, v))
@@ -310,6 +385,16 @@ func FileURLHasSuffix(v string) predicate.Certificate {
 	return predicate.Certificate(sql.FieldHasSuffix(FieldFileURL, v))
 }
 
+// FileURLIsNil applies the IsNil predicate on the "file_url" field.
+func FileURLIsNil() predicate.Certificate {
+	return predicate.Certificate(sql.FieldIsNull(FieldFileURL))
+}
+
+// FileURLNotNil applies the NotNil predicate on the "file_url" field.
+func FileURLNotNil() predicate.Certificate {
+	return predicate.Certificate(sql.FieldNotNull(FieldFileURL))
+}
+
 // FileURLEqualFold applies the EqualFold predicate on the "file_url" field.
 func FileURLEqualFold(v string) predicate.Certificate {
 	return predicate.Certificate(sql.FieldEqualFold(FieldFileURL, v))
@@ -320,94 +405,214 @@ func FileURLContainsFold(v string) predicate.Certificate {
 	return predicate.Certificate(sql.FieldContainsFold(FieldFileURL, v))
 }
 
-// IssueDateEQ applies the EQ predicate on the "issue_date" field.
-func IssueDateEQ(v time.Time) predicate.Certificate {
-	return predicate.Certificate(sql.FieldEQ(FieldIssueDate, v))
+// UploadedByEQ applies the EQ predicate on the "uploaded_by" field.
+func UploadedByEQ(v uuid.UUID) predicate.Certificate {
+	return predicate.Certificate(sql.FieldEQ(FieldUploadedBy, v))
 }
 
-// IssueDateNEQ applies the NEQ predicate on the "issue_date" field.
-func IssueDateNEQ(v time.Time) predicate.Certificate {
-	return predicate.Certificate(sql.FieldNEQ(FieldIssueDate, v))
+// UploadedByNEQ applies the NEQ predicate on the "uploaded_by" field.
+func UploadedByNEQ(v uuid.UUID) predicate.Certificate {
+	return predicate.Certificate(sql.FieldNEQ(FieldUploadedBy, v))
 }
 
-// IssueDateIn applies the In predicate on the "issue_date" field.
-func IssueDateIn(vs ...time.Time) predicate.Certificate {
-	return predicate.Certificate(sql.FieldIn(FieldIssueDate, vs...))
+// UploadedByIn applies the In predicate on the "uploaded_by" field.
+func UploadedByIn(vs ...uuid.UUID) predicate.Certificate {
+	return predicate.Certificate(sql.FieldIn(FieldUploadedBy, vs...))
 }
 
-// IssueDateNotIn applies the NotIn predicate on the "issue_date" field.
-func IssueDateNotIn(vs ...time.Time) predicate.Certificate {
-	return predicate.Certificate(sql.FieldNotIn(FieldIssueDate, vs...))
+// UploadedByNotIn applies the NotIn predicate on the "uploaded_by" field.
+func UploadedByNotIn(vs ...uuid.UUID) predicate.Certificate {
+	return predicate.Certificate(sql.FieldNotIn(FieldUploadedBy, vs...))
 }
 
-// IssueDateGT applies the GT predicate on the "issue_date" field.
-func IssueDateGT(v time.Time) predicate.Certificate {
-	return predicate.Certificate(sql.FieldGT(FieldIssueDate, v))
+// UploadedByGT applies the GT predicate on the "uploaded_by" field.
+func UploadedByGT(v uuid.UUID) predicate.Certificate {
+	return predicate.Certificate(sql.FieldGT(FieldUploadedBy, v))
 }
 
-// IssueDateGTE applies the GTE predicate on the "issue_date" field.
-func IssueDateGTE(v time.Time) predicate.Certificate {
-	return predicate.Certificate(sql.FieldGTE(FieldIssueDate, v))
+// UploadedByGTE applies the GTE predicate on the "uploaded_by" field.
+func UploadedByGTE(v uuid.UUID) predicate.Certificate {
+	return predicate.Certificate(sql.FieldGTE(FieldUploadedBy, v))
 }
 
-// IssueDateLT applies the LT predicate on the "issue_date" field.
-func IssueDateLT(v time.Time) predicate.Certificate {
-	return predicate.Certificate(sql.FieldLT(FieldIssueDate, v))
+// UploadedByLT applies the LT predicate on the "uploaded_by" field.
+func UploadedByLT(v uuid.UUID) predicate.Certificate {
+	return predicate.Certificate(sql.FieldLT(FieldUploadedBy, v))
 }
 
-// IssueDateLTE applies the LTE predicate on the "issue_date" field.
-func IssueDateLTE(v time.Time) predicate.Certificate {
-	return predicate.Certificate(sql.FieldLTE(FieldIssueDate, v))
+// UploadedByLTE applies the LTE predicate on the "uploaded_by" field.
+func UploadedByLTE(v uuid.UUID) predicate.Certificate {
+	return predicate.Certificate(sql.FieldLTE(FieldUploadedBy, v))
 }
 
-// ExpirationDateEQ applies the EQ predicate on the "expiration_date" field.
-func ExpirationDateEQ(v time.Time) predicate.Certificate {
-	return predicate.Certificate(sql.FieldEQ(FieldExpirationDate, v))
+// UploadedByIsNil applies the IsNil predicate on the "uploaded_by" field.
+func UploadedByIsNil() predicate.Certificate {
+	return predicate.Certificate(sql.FieldIsNull(FieldUploadedBy))
 }
 
-// ExpirationDateNEQ applies the NEQ predicate on the "expiration_date" field.
-func ExpirationDateNEQ(v time.Time) predicate.Certificate {
-	return predicate.Certificate(sql.FieldNEQ(FieldExpirationDate, v))
+// UploadedByNotNil applies the NotNil predicate on the "uploaded_by" field.
+func UploadedByNotNil() predicate.Certificate {
+	return predicate.Certificate(sql.FieldNotNull(FieldUploadedBy))
 }
 
-// ExpirationDateIn applies the In predicate on the "expiration_date" field.
-func ExpirationDateIn(vs ...time.Time) predicate.Certificate {
-	return predicate.Certificate(sql.FieldIn(FieldExpirationDate, vs...))
+// EventIDEQ applies the EQ predicate on the "event_id" field.
+func EventIDEQ(v uuid.UUID) predicate.Certificate {
+	return predicate.Certificate(sql.FieldEQ(FieldEventID, v))
 }
 
-// ExpirationDateNotIn applies the NotIn predicate on the "expiration_date" field.
-func ExpirationDateNotIn(vs ...time.Time) predicate.Certificate {
-	return predicate.Certificate(sql.FieldNotIn(FieldExpirationDate, vs...))
+// EventIDNEQ applies the NEQ predicate on the "event_id" field.
+func EventIDNEQ(v uuid.UUID) predicate.Certificate {
+	return predicate.Certificate(sql.FieldNEQ(FieldEventID, v))
 }
 
-// ExpirationDateGT applies the GT predicate on the "expiration_date" field.
-func ExpirationDateGT(v time.Time) predicate.Certificate {
-	return predicate.Certificate(sql.FieldGT(FieldExpirationDate, v))
+// EventIDIn applies the In predicate on the "event_id" field.
+func EventIDIn(vs ...uuid.UUID) predicate.Certificate {
+	return predicate.Certificate(sql.FieldIn(FieldEventID, vs...))
 }
 
-// ExpirationDateGTE applies the GTE predicate on the "expiration_date" field.
-func ExpirationDateGTE(v time.Time) predicate.Certificate {
-	return predicate.Certificate(sql.FieldGTE(FieldExpirationDate, v))
+// EventIDNotIn applies the NotIn predicate on the "event_id" field.
+func EventIDNotIn(vs ...uuid.UUID) predicate.Certificate {
+	return predicate.Certificate(sql.FieldNotIn(FieldEventID, vs...))
 }
 
-// ExpirationDateLT applies the LT predicate on the "expiration_date" field.
-func ExpirationDateLT(v time.Time) predicate.Certificate {
-	return predicate.Certificate(sql.FieldLT(FieldExpirationDate, v))
+// EventIDGT applies the GT predicate on the "event_id" field.
+func EventIDGT(v uuid.UUID) predicate.Certificate {
+	return predicate.Certificate(sql.FieldGT(FieldEventID, v))
 }
 
-// ExpirationDateLTE applies the LTE predicate on the "expiration_date" field.
-func ExpirationDateLTE(v time.Time) predicate.Certificate {
-	return predicate.Certificate(sql.FieldLTE(FieldExpirationDate, v))
+// EventIDGTE applies the GTE predicate on the "event_id" field.
+func EventIDGTE(v uuid.UUID) predicate.Certificate {
+	return predicate.Certificate(sql.FieldGTE(FieldEventID, v))
 }
 
-// ExpirationDateIsNil applies the IsNil predicate on the "expiration_date" field.
-func ExpirationDateIsNil() predicate.Certificate {
-	return predicate.Certificate(sql.FieldIsNull(FieldExpirationDate))
+// EventIDLT applies the LT predicate on the "event_id" field.
+func EventIDLT(v uuid.UUID) predicate.Certificate {
+	return predicate.Certificate(sql.FieldLT(FieldEventID, v))
 }
 
-// ExpirationDateNotNil applies the NotNil predicate on the "expiration_date" field.
-func ExpirationDateNotNil() predicate.Certificate {
-	return predicate.Certificate(sql.FieldNotNull(FieldExpirationDate))
+// EventIDLTE applies the LTE predicate on the "event_id" field.
+func EventIDLTE(v uuid.UUID) predicate.Certificate {
+	return predicate.Certificate(sql.FieldLTE(FieldEventID, v))
+}
+
+// EventIDIsNil applies the IsNil predicate on the "event_id" field.
+func EventIDIsNil() predicate.Certificate {
+	return predicate.Certificate(sql.FieldIsNull(FieldEventID))
+}
+
+// EventIDNotNil applies the NotNil predicate on the "event_id" field.
+func EventIDNotNil() predicate.Certificate {
+	return predicate.Certificate(sql.FieldNotNull(FieldEventID))
+}
+
+// ScormCourseIDEQ applies the EQ predicate on the "scorm_course_id" field.
+func ScormCourseIDEQ(v uuid.UUID) predicate.Certificate {
+	return predicate.Certificate(sql.FieldEQ(FieldScormCourseID, v))
+}
+
+// ScormCourseIDNEQ applies the NEQ predicate on the "scorm_course_id" field.
+func ScormCourseIDNEQ(v uuid.UUID) predicate.Certificate {
+	return predicate.Certificate(sql.FieldNEQ(FieldScormCourseID, v))
+}
+
+// ScormCourseIDIn applies the In predicate on the "scorm_course_id" field.
+func ScormCourseIDIn(vs ...uuid.UUID) predicate.Certificate {
+	return predicate.Certificate(sql.FieldIn(FieldScormCourseID, vs...))
+}
+
+// ScormCourseIDNotIn applies the NotIn predicate on the "scorm_course_id" field.
+func ScormCourseIDNotIn(vs ...uuid.UUID) predicate.Certificate {
+	return predicate.Certificate(sql.FieldNotIn(FieldScormCourseID, vs...))
+}
+
+// ScormCourseIDGT applies the GT predicate on the "scorm_course_id" field.
+func ScormCourseIDGT(v uuid.UUID) predicate.Certificate {
+	return predicate.Certificate(sql.FieldGT(FieldScormCourseID, v))
+}
+
+// ScormCourseIDGTE applies the GTE predicate on the "scorm_course_id" field.
+func ScormCourseIDGTE(v uuid.UUID) predicate.Certificate {
+	return predicate.Certificate(sql.FieldGTE(FieldScormCourseID, v))
+}
+
+// ScormCourseIDLT applies the LT predicate on the "scorm_course_id" field.
+func ScormCourseIDLT(v uuid.UUID) predicate.Certificate {
+	return predicate.Certificate(sql.FieldLT(FieldScormCourseID, v))
+}
+
+// ScormCourseIDLTE applies the LTE predicate on the "scorm_course_id" field.
+func ScormCourseIDLTE(v uuid.UUID) predicate.Certificate {
+	return predicate.Certificate(sql.FieldLTE(FieldScormCourseID, v))
+}
+
+// ScormCourseIDIsNil applies the IsNil predicate on the "scorm_course_id" field.
+func ScormCourseIDIsNil() predicate.Certificate {
+	return predicate.Certificate(sql.FieldIsNull(FieldScormCourseID))
+}
+
+// ScormCourseIDNotNil applies the NotNil predicate on the "scorm_course_id" field.
+func ScormCourseIDNotNil() predicate.Certificate {
+	return predicate.Certificate(sql.FieldNotNull(FieldScormCourseID))
+}
+
+// EntityTypeEQ applies the EQ predicate on the "entity_type" field.
+func EntityTypeEQ(v EntityType) predicate.Certificate {
+	return predicate.Certificate(sql.FieldEQ(FieldEntityType, v))
+}
+
+// EntityTypeNEQ applies the NEQ predicate on the "entity_type" field.
+func EntityTypeNEQ(v EntityType) predicate.Certificate {
+	return predicate.Certificate(sql.FieldNEQ(FieldEntityType, v))
+}
+
+// EntityTypeIn applies the In predicate on the "entity_type" field.
+func EntityTypeIn(vs ...EntityType) predicate.Certificate {
+	return predicate.Certificate(sql.FieldIn(FieldEntityType, vs...))
+}
+
+// EntityTypeNotIn applies the NotIn predicate on the "entity_type" field.
+func EntityTypeNotIn(vs ...EntityType) predicate.Certificate {
+	return predicate.Certificate(sql.FieldNotIn(FieldEntityType, vs...))
+}
+
+// EntityIDEQ applies the EQ predicate on the "entity_id" field.
+func EntityIDEQ(v uuid.UUID) predicate.Certificate {
+	return predicate.Certificate(sql.FieldEQ(FieldEntityID, v))
+}
+
+// EntityIDNEQ applies the NEQ predicate on the "entity_id" field.
+func EntityIDNEQ(v uuid.UUID) predicate.Certificate {
+	return predicate.Certificate(sql.FieldNEQ(FieldEntityID, v))
+}
+
+// EntityIDIn applies the In predicate on the "entity_id" field.
+func EntityIDIn(vs ...uuid.UUID) predicate.Certificate {
+	return predicate.Certificate(sql.FieldIn(FieldEntityID, vs...))
+}
+
+// EntityIDNotIn applies the NotIn predicate on the "entity_id" field.
+func EntityIDNotIn(vs ...uuid.UUID) predicate.Certificate {
+	return predicate.Certificate(sql.FieldNotIn(FieldEntityID, vs...))
+}
+
+// EntityIDGT applies the GT predicate on the "entity_id" field.
+func EntityIDGT(v uuid.UUID) predicate.Certificate {
+	return predicate.Certificate(sql.FieldGT(FieldEntityID, v))
+}
+
+// EntityIDGTE applies the GTE predicate on the "entity_id" field.
+func EntityIDGTE(v uuid.UUID) predicate.Certificate {
+	return predicate.Certificate(sql.FieldGTE(FieldEntityID, v))
+}
+
+// EntityIDLT applies the LT predicate on the "entity_id" field.
+func EntityIDLT(v uuid.UUID) predicate.Certificate {
+	return predicate.Certificate(sql.FieldLT(FieldEntityID, v))
+}
+
+// EntityIDLTE applies the LTE predicate on the "entity_id" field.
+func EntityIDLTE(v uuid.UUID) predicate.Certificate {
+	return predicate.Certificate(sql.FieldLTE(FieldEntityID, v))
 }
 
 // IsActiveEQ applies the EQ predicate on the "is_active" field.
