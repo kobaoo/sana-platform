@@ -15,6 +15,7 @@ type Certificate struct {
 	FileURL    *string    `json:"file_url"`
 	IssuedDate time.Time  `json:"issued_date"`
 	ExpiryDate *time.Time `json:"expiry_date"`
+	UploadedBy *string    `json:"uploaded_by,omitempty"`
 	EntityType string     `json:"entity_type"`
 	EntityID   string     `json:"entity_id"`
 	IsActive   bool       `json:"is_active"`
@@ -28,6 +29,7 @@ type CreateRequest struct {
 	FileURL    *string    `json:"file_url"`
 	IssuedDate time.Time  `json:"issued_date"`
 	ExpiryDate *time.Time `json:"expiry_date"`
+	UploadedBy *uuid.UUID `json:"uploaded_by,omitempty"`
 	EntityType string     `json:"entity_type"`
 	EntityID   uuid.UUID  `json:"entity_id"`
 }

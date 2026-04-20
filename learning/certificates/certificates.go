@@ -175,6 +175,7 @@ func insertCert(ctx context.Context, req *CreateRequest) (*Certificate, error) {
 		SetNillableFileURL(req.FileURL).
 		SetIssuedDate(req.IssuedDate).
 		SetNillableExpiryDate(req.ExpiryDate).
+		SetNillableUploadedBy(req.UploadedBy).
 		SetEntityType(certificate.EntityType(req.EntityType)).
 		SetEntityID(req.EntityID).
 		Save(ctx)
@@ -202,7 +203,7 @@ func queryCertByID(ctx context.Context, id string) (*Certificate, error) {
 }
 
 func queryExpiringCerts(ctx context.Context) ([]Certificate, error) {
-	threshold := time.Now().AddDate(0, 0, 180)
+	threshold := time.Now().AddDate(0, 6, 0)
 	rows, err := Client.Certificate.Query().
 		Where(certificate.ExpiryDateLTE(threshold), certificate.IsActiveEQ(true)).
 		All(ctx)
@@ -221,14 +222,29 @@ func softDeleteCert(ctx context.Context, id string) error {
 	if err != nil {
 		return errs.B().Code(errs.InvalidArgument).Msg("invalid id format").Err()
 	}
-	exists, _ := Client.Certificate.Query().Where(certificate.IDEQ(uid), certificate.IsActiveEQ(true)).Exist(ctx)
+
+	exists, err := Client.Certificate.Query().
+		Where(certificate.IDEQ(uid), certificate.IsActiveEQ(true)).
+		Exist(ctx)
+	if err != nil {
+		return errs.B().Code(errs.Internal).Msg("failed to delete certificate").Cause(err).Err()
+	}
 	if !exists {
 		return errs.B().Code(errs.NotFound).Msg("certificate not found").Err()
 	}
+
 	return Client.Certificate.UpdateOneID(uid).SetIsActive(false).Exec(ctx)
 }
 
+// ════ HELPERS ════
+
 func entToCert(e *ent.Certificate) *Certificate {
+	var uploadedBy *string
+	if e.UploadedBy != nil {
+		s := e.UploadedBy.String()
+		uploadedBy = &s
+	}
+
 	return &Certificate{
 		ID:         e.ID.String(),
 		EmployeeID: e.EmployeeID.String(),
@@ -237,6 +253,7 @@ func entToCert(e *ent.Certificate) *Certificate {
 		FileURL:    e.FileURL,
 		IssuedDate: e.IssuedDate,
 		ExpiryDate: e.ExpiryDate,
+		UploadedBy: uploadedBy,
 		EntityType: string(e.EntityType),
 		EntityID:   e.EntityID.String(),
 		IsActive:   e.IsActive,
