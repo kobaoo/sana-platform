@@ -41,7 +41,7 @@ func Create(ctx context.Context, req *CreateRequest) (*GetCertResponse, error) {
 	return &GetCertResponse{Certificate: *cert}, nil
 }
 
-// GetExpiring returns certificates that are about to expire.
+// GetExpiring returns certificates expiring within the next 6 months.
 //
 //encore:api auth method=GET path=/certificates/expiring
 func GetExpiring(ctx context.Context) (*ListResponse, error) {
@@ -76,7 +76,6 @@ func Delete(ctx context.Context, id string) (*DeleteResponse, error) {
 // ════ INTERNAL ════
 
 func insertCert(ctx context.Context, req *CreateRequest) (*Certificate, error) {
-	// Добавлено приведение типов для Enum полей: certificate.Type(...) и certificate.EntityType(...)
 	row, err := Client.Certificate.Create().
 		SetEmployeeID(req.EmployeeID).
 		SetType(certificate.Type(req.Type)).
@@ -84,6 +83,7 @@ func insertCert(ctx context.Context, req *CreateRequest) (*Certificate, error) {
 		SetNillableFileURL(req.FileURL).
 		SetIssuedDate(req.IssuedDate).
 		SetNillableExpiryDate(req.ExpiryDate).
+		SetNillableUploadedBy(req.UploadedBy).
 		SetEntityType(certificate.EntityType(req.EntityType)).
 		SetEntityID(req.EntityID).
 		Save(ctx)
@@ -112,7 +112,7 @@ func queryCertByID(ctx context.Context, id string) (*Certificate, error) {
 }
 
 func queryExpiringCerts(ctx context.Context) ([]Certificate, error) {
-	threshold := time.Now().AddDate(0, 0, 180)
+	threshold := time.Now().AddDate(0, 6, 0)
 	rows, err := Client.Certificate.Query().
 		Where(
 			certificate.ExpiryDateLTE(threshold),
@@ -134,10 +134,29 @@ func softDeleteCert(ctx context.Context, id string) error {
 	if err != nil {
 		return errs.B().Code(errs.InvalidArgument).Msg("invalid id format").Err()
 	}
+
+	exists, err := Client.Certificate.Query().
+		Where(certificate.IDEQ(uid), certificate.IsActiveEQ(true)).
+		Exist(ctx)
+	if err != nil {
+		return errs.B().Code(errs.Internal).Msg("failed to delete certificate").Cause(err).Err()
+	}
+	if !exists {
+		return errs.B().Code(errs.NotFound).Msg("certificate not found").Err()
+	}
+
 	return Client.Certificate.UpdateOneID(uid).SetIsActive(false).Exec(ctx)
 }
 
+// ════ HELPERS ════
+
 func entToCert(e *ent.Certificate) *Certificate {
+	var uploadedBy *string
+	if e.UploadedBy != nil {
+		s := e.UploadedBy.String()
+		uploadedBy = &s
+	}
+
 	return &Certificate{
 		ID:         e.ID.String(),
 		EmployeeID: e.EmployeeID.String(),
@@ -146,6 +165,7 @@ func entToCert(e *ent.Certificate) *Certificate {
 		FileURL:    e.FileURL,
 		IssuedDate: e.IssuedDate,
 		ExpiryDate: e.ExpiryDate,
+		UploadedBy: uploadedBy,
 		EntityType: string(e.EntityType),
 		EntityID:   e.EntityID.String(),
 		IsActive:   e.IsActive,
