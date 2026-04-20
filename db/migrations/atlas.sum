@@ -1,2 +1,4 @@
-h1:tr9t+X8V9i36FI0DlozdHZpWLpptwf51e4a/zoZEsUM=
-001_create_organizations.up.sql h1:zpWEbarsY34r5meqWaGoJ8B3/S7LD7HuNSMbVGASP3A=
+h1:2Kg/3YcsPzP2WuIIdXvoXWfnqOzT4UIXcLqQfWe8TS8=
+001_create_organizations.up.sql h1:MnicbozfogvQ0OUi8V6ECHZegjCfWQZshXCAtV1ldKc=
+002_create_users.up.sql h1:A6j/Qsdz06hLQPfeKf1kkovz27GeSXdSZtgvmIx4RH0=
+003_create_contracts_dzo.up.sql h1:a6+Ln7Mc1aQX3BkmfroyMm5c/CNM8iwtQ+hw2tXqfiw=
