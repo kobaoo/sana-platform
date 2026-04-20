@@ -36,6 +36,13 @@ func (Company) Fields() []ent.Field {
 			MaxLen(100).
 			Optional().
 			Nillable(),
+		field.String("language").
+			MaxLen(10).
+			Optional().
+			Nillable(),
+		field.Int("user_limit").
+			Optional().
+			Nillable(),
 		field.Bool("is_active").
 			Default(true),
 		field.Time("created_at").

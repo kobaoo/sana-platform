@@ -3,6 +3,8 @@ CREATE TABLE "clients" (
   "id" uuid NOT NULL,
   "name" character varying(255) NOT NULL,
   "domain" character varying(100) NULL,
+  "language" character varying(10) NULL,
+  "user_limit" integer NULL,
   "is_active" boolean NOT NULL DEFAULT true,
   "created_at" timestamptz NOT NULL,
   PRIMARY KEY ("id")

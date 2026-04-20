@@ -15,6 +15,8 @@ type Client struct {
 	ID        string    `json:"id"`
 	Name      string    `json:"name"`
 	Domain    *string   `json:"domain"`
+	Language  *string   `json:"language"`
+	UserLimit *int      `json:"user_limit"`
 	IsActive  bool      `json:"is_active"`
 	CreatedAt time.Time `json:"created_at"`
 }

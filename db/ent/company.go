@@ -22,6 +22,10 @@ type Company struct {
 	Name string `json:"name,omitempty"`
 	// Domain holds the value of the "domain" field.
 	Domain *string `json:"domain,omitempty"`
+	// Language holds the value of the "language" field.
+	Language *string `json:"language,omitempty"`
+	// UserLimit holds the value of the "user_limit" field.
+	UserLimit *int `json:"user_limit,omitempty"`
 	// IsActive holds the value of the "is_active" field.
 	IsActive bool `json:"is_active,omitempty"`
 	// CreatedAt holds the value of the "created_at" field.
@@ -57,7 +61,9 @@ func (*Company) scanValues(columns []string) ([]any, error) {
 		switch columns[i] {
 		case company.FieldIsActive:
 			values[i] = new(sql.NullBool)
-		case company.FieldName, company.FieldDomain:
+		case company.FieldUserLimit:
+			values[i] = new(sql.NullInt64)
+		case company.FieldName, company.FieldDomain, company.FieldLanguage:
 			values[i] = new(sql.NullString)
 		case company.FieldCreatedAt:
 			values[i] = new(sql.NullTime)
@@ -96,6 +102,20 @@ func (_m *Company) assignValues(columns []string, values []any) error {
 			} else if value.Valid {
 				_m.Domain = new(string)
 				*_m.Domain = value.String
+			}
+		case company.FieldLanguage:
+			if value, ok := values[i].(*sql.NullString); !ok {
+				return fmt.Errorf("unexpected type %T for field language", values[i])
+			} else if value.Valid {
+				_m.Language = new(string)
+				*_m.Language = value.String
+			}
+		case company.FieldUserLimit:
+			if value, ok := values[i].(*sql.NullInt64); !ok {
+				return fmt.Errorf("unexpected type %T for field user_limit", values[i])
+			} else if value.Valid {
+				_m.UserLimit = new(int)
+				*_m.UserLimit = int(value.Int64)
 			}
 		case company.FieldIsActive:
 			if value, ok := values[i].(*sql.NullBool); !ok {
@@ -156,6 +176,16 @@ func (_m *Company) String() string {
 	if v := _m.Domain; v != nil {
 		builder.WriteString("domain=")
 		builder.WriteString(*v)
+	}
+	builder.WriteString(", ")
+	if v := _m.Language; v != nil {
+		builder.WriteString("language=")
+		builder.WriteString(*v)
+	}
+	builder.WriteString(", ")
+	if v := _m.UserLimit; v != nil {
+		builder.WriteString("user_limit=")
+		builder.WriteString(fmt.Sprintf("%v", *v))
 	}
 	builder.WriteString(", ")
 	builder.WriteString("is_active=")

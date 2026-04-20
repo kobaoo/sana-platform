@@ -14,6 +14,8 @@ var (
 		{Name: "id", Type: field.TypeUUID, Unique: true},
 		{Name: "name", Type: field.TypeString, Size: 255},
 		{Name: "domain", Type: field.TypeString, Nullable: true, Size: 100},
+		{Name: "language", Type: field.TypeString, Nullable: true, Size: 10},
+		{Name: "user_limit", Type: field.TypeInt, Nullable: true},
 		{Name: "is_active", Type: field.TypeBool, Default: true},
 		{Name: "created_at", Type: field.TypeTime, SchemaType: map[string]string{"postgres": "timestamptz"}},
 	}

@@ -42,6 +42,34 @@ func (_c *CompanyCreate) SetNillableDomain(v *string) *CompanyCreate {
 	return _c
 }
 
+// SetLanguage sets the "language" field.
+func (_c *CompanyCreate) SetLanguage(v string) *CompanyCreate {
+	_c.mutation.SetLanguage(v)
+	return _c
+}
+
+// SetNillableLanguage sets the "language" field if the given value is not nil.
+func (_c *CompanyCreate) SetNillableLanguage(v *string) *CompanyCreate {
+	if v != nil {
+		_c.SetLanguage(*v)
+	}
+	return _c
+}
+
+// SetUserLimit sets the "user_limit" field.
+func (_c *CompanyCreate) SetUserLimit(v int) *CompanyCreate {
+	_c.mutation.SetUserLimit(v)
+	return _c
+}
+
+// SetNillableUserLimit sets the "user_limit" field if the given value is not nil.
+func (_c *CompanyCreate) SetNillableUserLimit(v *int) *CompanyCreate {
+	if v != nil {
+		_c.SetUserLimit(*v)
+	}
+	return _c
+}
+
 // SetIsActive sets the "is_active" field.
 func (_c *CompanyCreate) SetIsActive(v bool) *CompanyCreate {
 	_c.mutation.SetIsActive(v)
@@ -163,6 +191,11 @@ func (_c *CompanyCreate) check() error {
 			return &ValidationError{Name: "domain", err: fmt.Errorf(`ent: validator failed for field "Company.domain": %w`, err)}
 		}
 	}
+	if v, ok := _c.mutation.Language(); ok {
+		if err := company.LanguageValidator(v); err != nil {
+			return &ValidationError{Name: "language", err: fmt.Errorf(`ent: validator failed for field "Company.language": %w`, err)}
+		}
+	}
 	if _, ok := _c.mutation.IsActive(); !ok {
 		return &ValidationError{Name: "is_active", err: errors.New(`ent: missing required field "Company.is_active"`)}
 	}
@@ -211,6 +244,14 @@ func (_c *CompanyCreate) createSpec() (*Company, *sqlgraph.CreateSpec) {
 	if value, ok := _c.mutation.Domain(); ok {
 		_spec.SetField(company.FieldDomain, field.TypeString, value)
 		_node.Domain = &value
+	}
+	if value, ok := _c.mutation.Language(); ok {
+		_spec.SetField(company.FieldLanguage, field.TypeString, value)
+		_node.Language = &value
+	}
+	if value, ok := _c.mutation.UserLimit(); ok {
+		_spec.SetField(company.FieldUserLimit, field.TypeInt, value)
+		_node.UserLimit = &value
 	}
 	if value, ok := _c.mutation.IsActive(); ok {
 		_spec.SetField(company.FieldIsActive, field.TypeBool, value)

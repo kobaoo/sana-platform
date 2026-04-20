@@ -40,6 +40,9 @@ type CompanyMutation struct {
 	id            *uuid.UUID
 	name          *string
 	domain        *string
+	language      *string
+	user_limit    *int
+	adduser_limit *int
 	is_active     *bool
 	created_at    *time.Time
 	clearedFields map[string]struct{}
@@ -240,6 +243,125 @@ func (m *CompanyMutation) ResetDomain() {
 	delete(m.clearedFields, company.FieldDomain)
 }
 
+// SetLanguage sets the "language" field.
+func (m *CompanyMutation) SetLanguage(s string) {
+	m.language = &s
+}
+
+// Language returns the value of the "language" field in the mutation.
+func (m *CompanyMutation) Language() (r string, exists bool) {
+	v := m.language
+	if v == nil {
+		return
+	}
+	return *v, true
+}
+
+// OldLanguage returns the old "language" field's value of the Company entity.
+// If the Company object wasn't provided to the builder, the object is fetched from the database.
+// An error is returned if the mutation operation is not UpdateOne, or the database query fails.
+func (m *CompanyMutation) OldLanguage(ctx context.Context) (v *string, err error) {
+	if !m.op.Is(OpUpdateOne) {
+		return v, errors.New("OldLanguage is only allowed on UpdateOne operations")
+	}
+	if m.id == nil || m.oldValue == nil {
+		return v, errors.New("OldLanguage requires an ID field in the mutation")
+	}
+	oldValue, err := m.oldValue(ctx)
+	if err != nil {
+		return v, fmt.Errorf("querying old value for OldLanguage: %w", err)
+	}
+	return oldValue.Language, nil
+}
+
+// ClearLanguage clears the value of the "language" field.
+func (m *CompanyMutation) ClearLanguage() {
+	m.language = nil
+	m.clearedFields[company.FieldLanguage] = struct{}{}
+}
+
+// LanguageCleared returns if the "language" field was cleared in this mutation.
+func (m *CompanyMutation) LanguageCleared() bool {
+	_, ok := m.clearedFields[company.FieldLanguage]
+	return ok
+}
+
+// ResetLanguage resets all changes to the "language" field.
+func (m *CompanyMutation) ResetLanguage() {
+	m.language = nil
+	delete(m.clearedFields, company.FieldLanguage)
+}
+
+// SetUserLimit sets the "user_limit" field.
+func (m *CompanyMutation) SetUserLimit(i int) {
+	m.user_limit = &i
+	m.adduser_limit = nil
+}
+
+// UserLimit returns the value of the "user_limit" field in the mutation.
+func (m *CompanyMutation) UserLimit() (r int, exists bool) {
+	v := m.user_limit
+	if v == nil {
+		return
+	}
+	return *v, true
+}
+
+// OldUserLimit returns the old "user_limit" field's value of the Company entity.
+// If the Company object wasn't provided to the builder, the object is fetched from the database.
+// An error is returned if the mutation operation is not UpdateOne, or the database query fails.
+func (m *CompanyMutation) OldUserLimit(ctx context.Context) (v *int, err error) {
+	if !m.op.Is(OpUpdateOne) {
+		return v, errors.New("OldUserLimit is only allowed on UpdateOne operations")
+	}
+	if m.id == nil || m.oldValue == nil {
+		return v, errors.New("OldUserLimit requires an ID field in the mutation")
+	}
+	oldValue, err := m.oldValue(ctx)
+	if err != nil {
+		return v, fmt.Errorf("querying old value for OldUserLimit: %w", err)
+	}
+	return oldValue.UserLimit, nil
+}
+
+// AddUserLimit adds i to the "user_limit" field.
+func (m *CompanyMutation) AddUserLimit(i int) {
+	if m.adduser_limit != nil {
+		*m.adduser_limit += i
+	} else {
+		m.adduser_limit = &i
+	}
+}
+
+// AddedUserLimit returns the value that was added to the "user_limit" field in this mutation.
+func (m *CompanyMutation) AddedUserLimit() (r int, exists bool) {
+	v := m.adduser_limit
+	if v == nil {
+		return
+	}
+	return *v, true
+}
+
+// ClearUserLimit clears the value of the "user_limit" field.
+func (m *CompanyMutation) ClearUserLimit() {
+	m.user_limit = nil
+	m.adduser_limit = nil
+	m.clearedFields[company.FieldUserLimit] = struct{}{}
+}
+
+// UserLimitCleared returns if the "user_limit" field was cleared in this mutation.
+func (m *CompanyMutation) UserLimitCleared() bool {
+	_, ok := m.clearedFields[company.FieldUserLimit]
+	return ok
+}
+
+// ResetUserLimit resets all changes to the "user_limit" field.
+func (m *CompanyMutation) ResetUserLimit() {
+	m.user_limit = nil
+	m.adduser_limit = nil
+	delete(m.clearedFields, company.FieldUserLimit)
+}
+
 // SetIsActive sets the "is_active" field.
 func (m *CompanyMutation) SetIsActive(b bool) {
 	m.is_active = &b
@@ -400,12 +522,18 @@ func (m *CompanyMutation) Type() string {
 // order to get all numeric fields that were incremented/decremented, call
 // AddedFields().
 func (m *CompanyMutation) Fields() []string {
-	fields := make([]string, 0, 4)
+	fields := make([]string, 0, 6)
 	if m.name != nil {
 		fields = append(fields, company.FieldName)
 	}
 	if m.domain != nil {
 		fields = append(fields, company.FieldDomain)
+	}
+	if m.language != nil {
+		fields = append(fields, company.FieldLanguage)
+	}
+	if m.user_limit != nil {
+		fields = append(fields, company.FieldUserLimit)
 	}
 	if m.is_active != nil {
 		fields = append(fields, company.FieldIsActive)
@@ -425,6 +553,10 @@ func (m *CompanyMutation) Field(name string) (ent.Value, bool) {
 		return m.Name()
 	case company.FieldDomain:
 		return m.Domain()
+	case company.FieldLanguage:
+		return m.Language()
+	case company.FieldUserLimit:
+		return m.UserLimit()
 	case company.FieldIsActive:
 		return m.IsActive()
 	case company.FieldCreatedAt:
@@ -442,6 +574,10 @@ func (m *CompanyMutation) OldField(ctx context.Context, name string) (ent.Value,
 		return m.OldName(ctx)
 	case company.FieldDomain:
 		return m.OldDomain(ctx)
+	case company.FieldLanguage:
+		return m.OldLanguage(ctx)
+	case company.FieldUserLimit:
+		return m.OldUserLimit(ctx)
 	case company.FieldIsActive:
 		return m.OldIsActive(ctx)
 	case company.FieldCreatedAt:
@@ -469,6 +605,20 @@ func (m *CompanyMutation) SetField(name string, value ent.Value) error {
 		}
 		m.SetDomain(v)
 		return nil
+	case company.FieldLanguage:
+		v, ok := value.(string)
+		if !ok {
+			return fmt.Errorf("unexpected type %T for field %s", value, name)
+		}
+		m.SetLanguage(v)
+		return nil
+	case company.FieldUserLimit:
+		v, ok := value.(int)
+		if !ok {
+			return fmt.Errorf("unexpected type %T for field %s", value, name)
+		}
+		m.SetUserLimit(v)
+		return nil
 	case company.FieldIsActive:
 		v, ok := value.(bool)
 		if !ok {
@@ -490,13 +640,21 @@ func (m *CompanyMutation) SetField(name string, value ent.Value) error {
 // AddedFields returns all numeric fields that were incremented/decremented during
 // this mutation.
 func (m *CompanyMutation) AddedFields() []string {
-	return nil
+	var fields []string
+	if m.adduser_limit != nil {
+		fields = append(fields, company.FieldUserLimit)
+	}
+	return fields
 }
 
 // AddedField returns the numeric value that was incremented/decremented on a field
 // with the given name. The second boolean return value indicates that this field
 // was not set, or was not defined in the schema.
 func (m *CompanyMutation) AddedField(name string) (ent.Value, bool) {
+	switch name {
+	case company.FieldUserLimit:
+		return m.AddedUserLimit()
+	}
 	return nil, false
 }
 
@@ -505,6 +663,13 @@ func (m *CompanyMutation) AddedField(name string) (ent.Value, bool) {
 // type.
 func (m *CompanyMutation) AddField(name string, value ent.Value) error {
 	switch name {
+	case company.FieldUserLimit:
+		v, ok := value.(int)
+		if !ok {
+			return fmt.Errorf("unexpected type %T for field %s", value, name)
+		}
+		m.AddUserLimit(v)
+		return nil
 	}
 	return fmt.Errorf("unknown Company numeric field %s", name)
 }
@@ -515,6 +680,12 @@ func (m *CompanyMutation) ClearedFields() []string {
 	var fields []string
 	if m.FieldCleared(company.FieldDomain) {
 		fields = append(fields, company.FieldDomain)
+	}
+	if m.FieldCleared(company.FieldLanguage) {
+		fields = append(fields, company.FieldLanguage)
+	}
+	if m.FieldCleared(company.FieldUserLimit) {
+		fields = append(fields, company.FieldUserLimit)
 	}
 	return fields
 }
@@ -533,6 +704,12 @@ func (m *CompanyMutation) ClearField(name string) error {
 	case company.FieldDomain:
 		m.ClearDomain()
 		return nil
+	case company.FieldLanguage:
+		m.ClearLanguage()
+		return nil
+	case company.FieldUserLimit:
+		m.ClearUserLimit()
+		return nil
 	}
 	return fmt.Errorf("unknown Company nullable field %s", name)
 }
@@ -546,6 +723,12 @@ func (m *CompanyMutation) ResetField(name string) error {
 		return nil
 	case company.FieldDomain:
 		m.ResetDomain()
+		return nil
+	case company.FieldLanguage:
+		m.ResetLanguage()
+		return nil
+	case company.FieldUserLimit:
+		m.ResetUserLimit()
 		return nil
 	case company.FieldIsActive:
 		m.ResetIsActive()

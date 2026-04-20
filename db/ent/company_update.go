@@ -63,6 +63,53 @@ func (_u *CompanyUpdate) ClearDomain() *CompanyUpdate {
 	return _u
 }
 
+// SetLanguage sets the "language" field.
+func (_u *CompanyUpdate) SetLanguage(v string) *CompanyUpdate {
+	_u.mutation.SetLanguage(v)
+	return _u
+}
+
+// SetNillableLanguage sets the "language" field if the given value is not nil.
+func (_u *CompanyUpdate) SetNillableLanguage(v *string) *CompanyUpdate {
+	if v != nil {
+		_u.SetLanguage(*v)
+	}
+	return _u
+}
+
+// ClearLanguage clears the value of the "language" field.
+func (_u *CompanyUpdate) ClearLanguage() *CompanyUpdate {
+	_u.mutation.ClearLanguage()
+	return _u
+}
+
+// SetUserLimit sets the "user_limit" field.
+func (_u *CompanyUpdate) SetUserLimit(v int) *CompanyUpdate {
+	_u.mutation.ResetUserLimit()
+	_u.mutation.SetUserLimit(v)
+	return _u
+}
+
+// SetNillableUserLimit sets the "user_limit" field if the given value is not nil.
+func (_u *CompanyUpdate) SetNillableUserLimit(v *int) *CompanyUpdate {
+	if v != nil {
+		_u.SetUserLimit(*v)
+	}
+	return _u
+}
+
+// AddUserLimit adds value to the "user_limit" field.
+func (_u *CompanyUpdate) AddUserLimit(v int) *CompanyUpdate {
+	_u.mutation.AddUserLimit(v)
+	return _u
+}
+
+// ClearUserLimit clears the value of the "user_limit" field.
+func (_u *CompanyUpdate) ClearUserLimit() *CompanyUpdate {
+	_u.mutation.ClearUserLimit()
+	return _u
+}
+
 // SetIsActive sets the "is_active" field.
 func (_u *CompanyUpdate) SetIsActive(v bool) *CompanyUpdate {
 	_u.mutation.SetIsActive(v)
@@ -157,6 +204,11 @@ func (_u *CompanyUpdate) check() error {
 			return &ValidationError{Name: "domain", err: fmt.Errorf(`ent: validator failed for field "Company.domain": %w`, err)}
 		}
 	}
+	if v, ok := _u.mutation.Language(); ok {
+		if err := company.LanguageValidator(v); err != nil {
+			return &ValidationError{Name: "language", err: fmt.Errorf(`ent: validator failed for field "Company.language": %w`, err)}
+		}
+	}
 	return nil
 }
 
@@ -180,6 +232,21 @@ func (_u *CompanyUpdate) sqlSave(ctx context.Context) (_node int, err error) {
 	}
 	if _u.mutation.DomainCleared() {
 		_spec.ClearField(company.FieldDomain, field.TypeString)
+	}
+	if value, ok := _u.mutation.Language(); ok {
+		_spec.SetField(company.FieldLanguage, field.TypeString, value)
+	}
+	if _u.mutation.LanguageCleared() {
+		_spec.ClearField(company.FieldLanguage, field.TypeString)
+	}
+	if value, ok := _u.mutation.UserLimit(); ok {
+		_spec.SetField(company.FieldUserLimit, field.TypeInt, value)
+	}
+	if value, ok := _u.mutation.AddedUserLimit(); ok {
+		_spec.AddField(company.FieldUserLimit, field.TypeInt, value)
+	}
+	if _u.mutation.UserLimitCleared() {
+		_spec.ClearField(company.FieldUserLimit, field.TypeInt)
 	}
 	if value, ok := _u.mutation.IsActive(); ok {
 		_spec.SetField(company.FieldIsActive, field.TypeBool, value)
@@ -280,6 +347,53 @@ func (_u *CompanyUpdateOne) SetNillableDomain(v *string) *CompanyUpdateOne {
 // ClearDomain clears the value of the "domain" field.
 func (_u *CompanyUpdateOne) ClearDomain() *CompanyUpdateOne {
 	_u.mutation.ClearDomain()
+	return _u
+}
+
+// SetLanguage sets the "language" field.
+func (_u *CompanyUpdateOne) SetLanguage(v string) *CompanyUpdateOne {
+	_u.mutation.SetLanguage(v)
+	return _u
+}
+
+// SetNillableLanguage sets the "language" field if the given value is not nil.
+func (_u *CompanyUpdateOne) SetNillableLanguage(v *string) *CompanyUpdateOne {
+	if v != nil {
+		_u.SetLanguage(*v)
+	}
+	return _u
+}
+
+// ClearLanguage clears the value of the "language" field.
+func (_u *CompanyUpdateOne) ClearLanguage() *CompanyUpdateOne {
+	_u.mutation.ClearLanguage()
+	return _u
+}
+
+// SetUserLimit sets the "user_limit" field.
+func (_u *CompanyUpdateOne) SetUserLimit(v int) *CompanyUpdateOne {
+	_u.mutation.ResetUserLimit()
+	_u.mutation.SetUserLimit(v)
+	return _u
+}
+
+// SetNillableUserLimit sets the "user_limit" field if the given value is not nil.
+func (_u *CompanyUpdateOne) SetNillableUserLimit(v *int) *CompanyUpdateOne {
+	if v != nil {
+		_u.SetUserLimit(*v)
+	}
+	return _u
+}
+
+// AddUserLimit adds value to the "user_limit" field.
+func (_u *CompanyUpdateOne) AddUserLimit(v int) *CompanyUpdateOne {
+	_u.mutation.AddUserLimit(v)
+	return _u
+}
+
+// ClearUserLimit clears the value of the "user_limit" field.
+func (_u *CompanyUpdateOne) ClearUserLimit() *CompanyUpdateOne {
+	_u.mutation.ClearUserLimit()
 	return _u
 }
 
@@ -390,6 +504,11 @@ func (_u *CompanyUpdateOne) check() error {
 			return &ValidationError{Name: "domain", err: fmt.Errorf(`ent: validator failed for field "Company.domain": %w`, err)}
 		}
 	}
+	if v, ok := _u.mutation.Language(); ok {
+		if err := company.LanguageValidator(v); err != nil {
+			return &ValidationError{Name: "language", err: fmt.Errorf(`ent: validator failed for field "Company.language": %w`, err)}
+		}
+	}
 	return nil
 }
 
@@ -430,6 +549,21 @@ func (_u *CompanyUpdateOne) sqlSave(ctx context.Context) (_node *Company, err er
 	}
 	if _u.mutation.DomainCleared() {
 		_spec.ClearField(company.FieldDomain, field.TypeString)
+	}
+	if value, ok := _u.mutation.Language(); ok {
+		_spec.SetField(company.FieldLanguage, field.TypeString, value)
+	}
+	if _u.mutation.LanguageCleared() {
+		_spec.ClearField(company.FieldLanguage, field.TypeString)
+	}
+	if value, ok := _u.mutation.UserLimit(); ok {
+		_spec.SetField(company.FieldUserLimit, field.TypeInt, value)
+	}
+	if value, ok := _u.mutation.AddedUserLimit(); ok {
+		_spec.AddField(company.FieldUserLimit, field.TypeInt, value)
+	}
+	if _u.mutation.UserLimitCleared() {
+		_spec.ClearField(company.FieldUserLimit, field.TypeInt)
 	}
 	if value, ok := _u.mutation.IsActive(); ok {
 		_spec.SetField(company.FieldIsActive, field.TypeBool, value)

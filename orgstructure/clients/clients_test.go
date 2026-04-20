@@ -33,10 +33,13 @@ func TestCreateClient_Success(t *testing.T) {
 	domain := "example.com"
 	limit := 100
 
+	lang := "ru"
+
 	resp, err := CreateClient(ctx, &CreateClientRequest{
 		Name:      "Test Client",
 		Domain:    &domain,
-		UserLimit: &limit, // Note: validated but not persisted
+		Language:  &lang,
+		UserLimit: &limit,
 	})
 	if err != nil {
 		t.Fatalf("unexpected error: %v", err)
@@ -47,6 +50,12 @@ func TestCreateClient_Success(t *testing.T) {
 	}
 	if resp.Client.Domain == nil || *resp.Client.Domain != "example.com" {
 		t.Errorf("expected domain 'example.com'")
+	}
+	if resp.Client.Language == nil || *resp.Client.Language != "ru" {
+		t.Errorf("expected language 'ru'")
+	}
+	if resp.Client.UserLimit == nil || *resp.Client.UserLimit != 100 {
+		t.Errorf("expected user_limit 100")
 	}
 	if !resp.Client.IsActive {
 		t.Error("expected new client to be active")

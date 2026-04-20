@@ -101,6 +101,13 @@ func insertClient(ctx context.Context, req *CreateClientRequest) (*ClientRespons
 		domainStr := strings.TrimSpace(*req.Domain)
 		builder = builder.SetDomain(domainStr)
 	}
+	if req.Language != nil && strings.TrimSpace(*req.Language) != "" {
+		lang := strings.TrimSpace(*req.Language)
+		builder = builder.SetLanguage(lang)
+	}
+	if req.UserLimit != nil {
+		builder = builder.SetUserLimit(*req.UserLimit)
+	}
 
 	row, err := builder.Save(ctx)
 	if err != nil {
@@ -135,10 +142,22 @@ func entToClient(e *ent.Company) *ClientResponseDomain {
 		d := *e.Domain
 		domain = &d
 	}
+	var language *string
+	if e.Language != nil {
+		l := *e.Language
+		language = &l
+	}
+	var ul *int
+	if e.UserLimit != nil {
+		u := *e.UserLimit
+		ul = &u
+	}
 	return &ClientResponseDomain{
 		ID:        e.ID.String(),
 		Name:      e.Name,
 		Domain:    domain,
+		Language:  language,
+		UserLimit: ul,
 		IsActive:  e.IsActive,
 		CreatedAt: e.CreatedAt,
 	}

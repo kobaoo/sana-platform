@@ -66,6 +66,16 @@ func Domain(v string) predicate.Company {
 	return predicate.Company(sql.FieldEQ(FieldDomain, v))
 }
 
+// Language applies equality check predicate on the "language" field. It's identical to LanguageEQ.
+func Language(v string) predicate.Company {
+	return predicate.Company(sql.FieldEQ(FieldLanguage, v))
+}
+
+// UserLimit applies equality check predicate on the "user_limit" field. It's identical to UserLimitEQ.
+func UserLimit(v int) predicate.Company {
+	return predicate.Company(sql.FieldEQ(FieldUserLimit, v))
+}
+
 // IsActive applies equality check predicate on the "is_active" field. It's identical to IsActiveEQ.
 func IsActive(v bool) predicate.Company {
 	return predicate.Company(sql.FieldEQ(FieldIsActive, v))
@@ -214,6 +224,131 @@ func DomainEqualFold(v string) predicate.Company {
 // DomainContainsFold applies the ContainsFold predicate on the "domain" field.
 func DomainContainsFold(v string) predicate.Company {
 	return predicate.Company(sql.FieldContainsFold(FieldDomain, v))
+}
+
+// LanguageEQ applies the EQ predicate on the "language" field.
+func LanguageEQ(v string) predicate.Company {
+	return predicate.Company(sql.FieldEQ(FieldLanguage, v))
+}
+
+// LanguageNEQ applies the NEQ predicate on the "language" field.
+func LanguageNEQ(v string) predicate.Company {
+	return predicate.Company(sql.FieldNEQ(FieldLanguage, v))
+}
+
+// LanguageIn applies the In predicate on the "language" field.
+func LanguageIn(vs ...string) predicate.Company {
+	return predicate.Company(sql.FieldIn(FieldLanguage, vs...))
+}
+
+// LanguageNotIn applies the NotIn predicate on the "language" field.
+func LanguageNotIn(vs ...string) predicate.Company {
+	return predicate.Company(sql.FieldNotIn(FieldLanguage, vs...))
+}
+
+// LanguageGT applies the GT predicate on the "language" field.
+func LanguageGT(v string) predicate.Company {
+	return predicate.Company(sql.FieldGT(FieldLanguage, v))
+}
+
+// LanguageGTE applies the GTE predicate on the "language" field.
+func LanguageGTE(v string) predicate.Company {
+	return predicate.Company(sql.FieldGTE(FieldLanguage, v))
+}
+
+// LanguageLT applies the LT predicate on the "language" field.
+func LanguageLT(v string) predicate.Company {
+	return predicate.Company(sql.FieldLT(FieldLanguage, v))
+}
+
+// LanguageLTE applies the LTE predicate on the "language" field.
+func LanguageLTE(v string) predicate.Company {
+	return predicate.Company(sql.FieldLTE(FieldLanguage, v))
+}
+
+// LanguageContains applies the Contains predicate on the "language" field.
+func LanguageContains(v string) predicate.Company {
+	return predicate.Company(sql.FieldContains(FieldLanguage, v))
+}
+
+// LanguageHasPrefix applies the HasPrefix predicate on the "language" field.
+func LanguageHasPrefix(v string) predicate.Company {
+	return predicate.Company(sql.FieldHasPrefix(FieldLanguage, v))
+}
+
+// LanguageHasSuffix applies the HasSuffix predicate on the "language" field.
+func LanguageHasSuffix(v string) predicate.Company {
+	return predicate.Company(sql.FieldHasSuffix(FieldLanguage, v))
+}
+
+// LanguageIsNil applies the IsNil predicate on the "language" field.
+func LanguageIsNil() predicate.Company {
+	return predicate.Company(sql.FieldIsNull(FieldLanguage))
+}
+
+// LanguageNotNil applies the NotNil predicate on the "language" field.
+func LanguageNotNil() predicate.Company {
+	return predicate.Company(sql.FieldNotNull(FieldLanguage))
+}
+
+// LanguageEqualFold applies the EqualFold predicate on the "language" field.
+func LanguageEqualFold(v string) predicate.Company {
+	return predicate.Company(sql.FieldEqualFold(FieldLanguage, v))
+}
+
+// LanguageContainsFold applies the ContainsFold predicate on the "language" field.
+func LanguageContainsFold(v string) predicate.Company {
+	return predicate.Company(sql.FieldContainsFold(FieldLanguage, v))
+}
+
+// UserLimitEQ applies the EQ predicate on the "user_limit" field.
+func UserLimitEQ(v int) predicate.Company {
+	return predicate.Company(sql.FieldEQ(FieldUserLimit, v))
+}
+
+// UserLimitNEQ applies the NEQ predicate on the "user_limit" field.
+func UserLimitNEQ(v int) predicate.Company {
+	return predicate.Company(sql.FieldNEQ(FieldUserLimit, v))
+}
+
+// UserLimitIn applies the In predicate on the "user_limit" field.
+func UserLimitIn(vs ...int) predicate.Company {
+	return predicate.Company(sql.FieldIn(FieldUserLimit, vs...))
+}
+
+// UserLimitNotIn applies the NotIn predicate on the "user_limit" field.
+func UserLimitNotIn(vs ...int) predicate.Company {
+	return predicate.Company(sql.FieldNotIn(FieldUserLimit, vs...))
+}
+
+// UserLimitGT applies the GT predicate on the "user_limit" field.
+func UserLimitGT(v int) predicate.Company {
+	return predicate.Company(sql.FieldGT(FieldUserLimit, v))
+}
+
+// UserLimitGTE applies the GTE predicate on the "user_limit" field.
+func UserLimitGTE(v int) predicate.Company {
+	return predicate.Company(sql.FieldGTE(FieldUserLimit, v))
+}
+
+// UserLimitLT applies the LT predicate on the "user_limit" field.
+func UserLimitLT(v int) predicate.Company {
+	return predicate.Company(sql.FieldLT(FieldUserLimit, v))
+}
+
+// UserLimitLTE applies the LTE predicate on the "user_limit" field.
+func UserLimitLTE(v int) predicate.Company {
+	return predicate.Company(sql.FieldLTE(FieldUserLimit, v))
+}
+
+// UserLimitIsNil applies the IsNil predicate on the "user_limit" field.
+func UserLimitIsNil() predicate.Company {
+	return predicate.Company(sql.FieldIsNull(FieldUserLimit))
+}
+
+// UserLimitNotNil applies the NotNil predicate on the "user_limit" field.
+func UserLimitNotNil() predicate.Company {
+	return predicate.Company(sql.FieldNotNull(FieldUserLimit))
 }
 
 // IsActiveEQ applies the EQ predicate on the "is_active" field.

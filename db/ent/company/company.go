@@ -19,6 +19,10 @@ const (
 	FieldName = "name"
 	// FieldDomain holds the string denoting the domain field in the database.
 	FieldDomain = "domain"
+	// FieldLanguage holds the string denoting the language field in the database.
+	FieldLanguage = "language"
+	// FieldUserLimit holds the string denoting the user_limit field in the database.
+	FieldUserLimit = "user_limit"
 	// FieldIsActive holds the string denoting the is_active field in the database.
 	FieldIsActive = "is_active"
 	// FieldCreatedAt holds the string denoting the created_at field in the database.
@@ -41,6 +45,8 @@ var Columns = []string{
 	FieldID,
 	FieldName,
 	FieldDomain,
+	FieldLanguage,
+	FieldUserLimit,
 	FieldIsActive,
 	FieldCreatedAt,
 }
@@ -60,6 +66,8 @@ var (
 	NameValidator func(string) error
 	// DomainValidator is a validator for the "domain" field. It is called by the builders before save.
 	DomainValidator func(string) error
+	// LanguageValidator is a validator for the "language" field. It is called by the builders before save.
+	LanguageValidator func(string) error
 	// DefaultIsActive holds the default value on creation for the "is_active" field.
 	DefaultIsActive bool
 	// DefaultCreatedAt holds the default value on creation for the "created_at" field.
@@ -84,6 +92,16 @@ func ByName(opts ...sql.OrderTermOption) OrderOption {
 // ByDomain orders the results by the domain field.
 func ByDomain(opts ...sql.OrderTermOption) OrderOption {
 	return sql.OrderByField(FieldDomain, opts...).ToFunc()
+}
+
+// ByLanguage orders the results by the language field.
+func ByLanguage(opts ...sql.OrderTermOption) OrderOption {
+	return sql.OrderByField(FieldLanguage, opts...).ToFunc()
+}
+
+// ByUserLimit orders the results by the user_limit field.
+func ByUserLimit(opts ...sql.OrderTermOption) OrderOption {
+	return sql.OrderByField(FieldUserLimit, opts...).ToFunc()
 }
 
 // ByIsActive orders the results by the is_active field.
