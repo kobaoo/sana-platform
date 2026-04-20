@@ -2,6 +2,11 @@ package certificates
 
 import (
 	"context"
+	"fmt"
+	"io"
+	"net/http"
+	"os"
+	"path/filepath"
 	"time"
 
 	"encore.app/db/ent"
@@ -27,7 +32,7 @@ func newEntClient() *ent.Client {
 
 // ════ ENDPOINTS ════
 
-// Create creates a new certificate.
+// Create создает новый сертификат.
 //
 //encore:api auth method=POST path=/certificates
 func Create(ctx context.Context, req *CreateRequest) (*GetCertResponse, error) {
@@ -41,7 +46,7 @@ func Create(ctx context.Context, req *CreateRequest) (*GetCertResponse, error) {
 	return &GetCertResponse{Certificate: *cert}, nil
 }
 
-// GetExpiring returns certificates that are about to expire.
+// GetExpiring возвращает сертификаты, у которых истекает срок (180 дней).
 //
 //encore:api auth method=GET path=/certificates/expiring
 func GetExpiring(ctx context.Context) (*ListResponse, error) {
@@ -52,7 +57,7 @@ func GetExpiring(ctx context.Context) (*ListResponse, error) {
 	return &ListResponse{Certificates: rows, Total: len(rows)}, nil
 }
 
-// GetByID returns a single certificate by ID.
+// GetByID возвращает один сертификат по ID.
 //
 //encore:api auth method=GET path=/certificates/i/:id
 func GetByID(ctx context.Context, id string) (*GetCertResponse, error) {
@@ -63,7 +68,7 @@ func GetByID(ctx context.Context, id string) (*GetCertResponse, error) {
 	return &GetCertResponse{Certificate: *cert}, nil
 }
 
-// Delete soft-deletes a certificate.
+// Delete выполняет мягкое удаление сертификата.
 //
 //encore:api auth method=DELETE path=/certificates/:id
 func Delete(ctx context.Context, id string) (*DeleteResponse, error) {
@@ -73,10 +78,96 @@ func Delete(ctx context.Context, id string) (*DeleteResponse, error) {
 	return &DeleteResponse{Message: "certificate deleted successfully"}, nil
 }
 
+// обновлённый сертификат в JSON.
+//
+//encore:api auth raw method=POST path=/certificates/:id/upload
+func UploadFile(w http.ResponseWriter, r *http.Request) {
+	handleUpload(w, r)
+}
+
+func handleUpload(w http.ResponseWriter, r *http.Request) {
+	ctx := r.Context()
+
+	idStr := r.PathValue("id")
+	if idStr == "" {
+		http.Error(w, "path parameter 'id' is required", http.StatusBadRequest)
+		return
+	}
+
+	uid, err := uuid.Parse(idStr)
+	if err != nil {
+		http.Error(w, "invalid id format", http.StatusBadRequest)
+		return
+	}
+
+	exists, err := Client.Certificate.Query().
+		Where(certificate.IDEQ(uid), certificate.IsActiveEQ(true)).
+		Exist(ctx)
+	if err != nil {
+		http.Error(w, "database error", http.StatusInternalServerError)
+		return
+	}
+	if !exists {
+		http.Error(w, "certificate not found", http.StatusNotFound)
+		return
+	}
+
+	if err := r.ParseMultipartForm(10 << 20); err != nil {
+		http.Error(w, "failed to parse multipart form", http.StatusBadRequest)
+		return
+	}
+
+	file, header, err := r.FormFile("file")
+	if err != nil {
+		http.Error(w, "file field is required", http.StatusBadRequest)
+		return
+	}
+	defer file.Close()
+
+	if header.Header.Get("Content-Type") != "application/pdf" {
+		http.Error(w, "only PDF files are allowed", http.StatusUnsupportedMediaType)
+		return
+	}
+
+	dir := "/tmp/certificates"
+	if err := os.MkdirAll(dir, 0755); err != nil {
+		http.Error(w, "failed to create directory", http.StatusInternalServerError)
+		return
+	}
+	filePath := filepath.Join(dir, uid.String()+".pdf")
+
+	dst, err := os.Create(filePath)
+	if err != nil {
+		http.Error(w, "failed to create file", http.StatusInternalServerError)
+		return
+	}
+	defer dst.Close()
+
+	if _, err := io.Copy(dst, file); err != nil {
+		http.Error(w, "failed to save file", http.StatusInternalServerError)
+		return
+	}
+
+	updated, err := Client.Certificate.UpdateOneID(uid).SetFileURL(filePath).Save(ctx)
+	if err != nil {
+		http.Error(w, "database update error", http.StatusInternalServerError)
+		return
+	}
+
+	cert := entToCert(updated)
+	fileURL := ""
+	if cert.FileURL != nil {
+		fileURL = *cert.FileURL
+	}
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(http.StatusOK)
+	fmt.Fprintf(w, `{"id":%q,"title":%q,"file_url":%q,"is_active":%v}`,
+		cert.ID, cert.Title, fileURL, cert.IsActive)
+}
+
 // ════ INTERNAL ════
 
 func insertCert(ctx context.Context, req *CreateRequest) (*Certificate, error) {
-	// Добавлено приведение типов для Enum полей: certificate.Type(...) и certificate.EntityType(...)
 	row, err := Client.Certificate.Create().
 		SetEmployeeID(req.EmployeeID).
 		SetType(certificate.Type(req.Type)).
@@ -98,7 +189,6 @@ func queryCertByID(ctx context.Context, id string) (*Certificate, error) {
 	if err != nil {
 		return nil, errs.B().Code(errs.InvalidArgument).Msg("invalid id format").Err()
 	}
-
 	row, err := Client.Certificate.Query().
 		Where(certificate.IDEQ(uid), certificate.IsActiveEQ(true)).
 		Only(ctx)
@@ -114,14 +204,11 @@ func queryCertByID(ctx context.Context, id string) (*Certificate, error) {
 func queryExpiringCerts(ctx context.Context) ([]Certificate, error) {
 	threshold := time.Now().AddDate(0, 0, 180)
 	rows, err := Client.Certificate.Query().
-		Where(
-			certificate.ExpiryDateLTE(threshold),
-			certificate.IsActiveEQ(true),
-		).All(ctx)
+		Where(certificate.ExpiryDateLTE(threshold), certificate.IsActiveEQ(true)).
+		All(ctx)
 	if err != nil {
 		return nil, errs.B().Code(errs.Internal).Err()
 	}
-
 	certs := make([]Certificate, 0, len(rows))
 	for _, r := range rows {
 		certs = append(certs, *entToCert(r))
@@ -133,6 +220,10 @@ func softDeleteCert(ctx context.Context, id string) error {
 	uid, err := uuid.Parse(id)
 	if err != nil {
 		return errs.B().Code(errs.InvalidArgument).Msg("invalid id format").Err()
+	}
+	exists, _ := Client.Certificate.Query().Where(certificate.IDEQ(uid), certificate.IsActiveEQ(true)).Exist(ctx)
+	if !exists {
+		return errs.B().Code(errs.NotFound).Msg("certificate not found").Err()
 	}
 	return Client.Certificate.UpdateOneID(uid).SetIsActive(false).Exec(ctx)
 }
