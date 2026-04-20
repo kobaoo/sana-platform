@@ -263,7 +263,7 @@ func (_q *CertificateQuery) Clone() *CertificateQuery {
 // Example:
 //
 //	var v []struct {
-//		EmployeeID int64 `json:"employee_id,omitempty"`
+//		EmployeeID uuid.UUID `json:"employee_id,omitempty"`
 //		Count int `json:"count,omitempty"`
 //	}
 //
@@ -286,7 +286,7 @@ func (_q *CertificateQuery) GroupBy(field string, fields ...string) *Certificate
 // Example:
 //
 //	var v []struct {
-//		EmployeeID int64 `json:"employee_id,omitempty"`
+//		EmployeeID uuid.UUID `json:"employee_id,omitempty"`
 //	}
 //
 //	client.Certificate.Query().

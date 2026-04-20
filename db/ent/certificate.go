@@ -19,17 +19,27 @@ type Certificate struct {
 	// ID of the ent.
 	ID uuid.UUID `json:"id,omitempty"`
 	// EmployeeID holds the value of the "employee_id" field.
-	EmployeeID int64 `json:"employee_id,omitempty"`
-	// DzoID holds the value of the "dzo_id" field.
-	DzoID int64 `json:"dzo_id,omitempty"`
+	EmployeeID uuid.UUID `json:"employee_id,omitempty"`
+	// Type holds the value of the "type" field.
+	Type certificate.Type `json:"type,omitempty"`
 	// Title holds the value of the "title" field.
 	Title string `json:"title,omitempty"`
+	// IssuedDate holds the value of the "issued_date" field.
+	IssuedDate time.Time `json:"issued_date,omitempty"`
+	// ExpiryDate holds the value of the "expiry_date" field.
+	ExpiryDate *time.Time `json:"expiry_date,omitempty"`
 	// FileURL holds the value of the "file_url" field.
-	FileURL string `json:"file_url,omitempty"`
-	// IssueDate holds the value of the "issue_date" field.
-	IssueDate time.Time `json:"issue_date,omitempty"`
-	// ExpirationDate holds the value of the "expiration_date" field.
-	ExpirationDate *time.Time `json:"expiration_date,omitempty"`
+	FileURL *string `json:"file_url,omitempty"`
+	// UploadedBy holds the value of the "uploaded_by" field.
+	UploadedBy *uuid.UUID `json:"uploaded_by,omitempty"`
+	// EventID holds the value of the "event_id" field.
+	EventID *uuid.UUID `json:"event_id,omitempty"`
+	// ScormCourseID holds the value of the "scorm_course_id" field.
+	ScormCourseID *uuid.UUID `json:"scorm_course_id,omitempty"`
+	// EntityType holds the value of the "entity_type" field.
+	EntityType certificate.EntityType `json:"entity_type,omitempty"`
+	// EntityID holds the value of the "entity_id" field.
+	EntityID uuid.UUID `json:"entity_id,omitempty"`
 	// IsActive holds the value of the "is_active" field.
 	IsActive bool `json:"is_active,omitempty"`
 	// CreatedAt holds the value of the "created_at" field.
@@ -44,15 +54,15 @@ func (*Certificate) scanValues(columns []string) ([]any, error) {
 	values := make([]any, len(columns))
 	for i := range columns {
 		switch columns[i] {
+		case certificate.FieldUploadedBy, certificate.FieldEventID, certificate.FieldScormCourseID:
+			values[i] = &sql.NullScanner{S: new(uuid.UUID)}
 		case certificate.FieldIsActive:
 			values[i] = new(sql.NullBool)
-		case certificate.FieldEmployeeID, certificate.FieldDzoID:
-			values[i] = new(sql.NullInt64)
-		case certificate.FieldTitle, certificate.FieldFileURL:
+		case certificate.FieldType, certificate.FieldTitle, certificate.FieldFileURL, certificate.FieldEntityType:
 			values[i] = new(sql.NullString)
-		case certificate.FieldIssueDate, certificate.FieldExpirationDate, certificate.FieldCreatedAt, certificate.FieldUpdatedAt:
+		case certificate.FieldIssuedDate, certificate.FieldExpiryDate, certificate.FieldCreatedAt, certificate.FieldUpdatedAt:
 			values[i] = new(sql.NullTime)
-		case certificate.FieldID:
+		case certificate.FieldID, certificate.FieldEmployeeID, certificate.FieldEntityID:
 			values[i] = new(uuid.UUID)
 		default:
 			values[i] = new(sql.UnknownType)
@@ -76,16 +86,16 @@ func (_m *Certificate) assignValues(columns []string, values []any) error {
 				_m.ID = *value
 			}
 		case certificate.FieldEmployeeID:
-			if value, ok := values[i].(*sql.NullInt64); !ok {
+			if value, ok := values[i].(*uuid.UUID); !ok {
 				return fmt.Errorf("unexpected type %T for field employee_id", values[i])
-			} else if value.Valid {
-				_m.EmployeeID = value.Int64
+			} else if value != nil {
+				_m.EmployeeID = *value
 			}
-		case certificate.FieldDzoID:
-			if value, ok := values[i].(*sql.NullInt64); !ok {
-				return fmt.Errorf("unexpected type %T for field dzo_id", values[i])
+		case certificate.FieldType:
+			if value, ok := values[i].(*sql.NullString); !ok {
+				return fmt.Errorf("unexpected type %T for field type", values[i])
 			} else if value.Valid {
-				_m.DzoID = value.Int64
+				_m.Type = certificate.Type(value.String)
 			}
 		case certificate.FieldTitle:
 			if value, ok := values[i].(*sql.NullString); !ok {
@@ -93,24 +103,58 @@ func (_m *Certificate) assignValues(columns []string, values []any) error {
 			} else if value.Valid {
 				_m.Title = value.String
 			}
+		case certificate.FieldIssuedDate:
+			if value, ok := values[i].(*sql.NullTime); !ok {
+				return fmt.Errorf("unexpected type %T for field issued_date", values[i])
+			} else if value.Valid {
+				_m.IssuedDate = value.Time
+			}
+		case certificate.FieldExpiryDate:
+			if value, ok := values[i].(*sql.NullTime); !ok {
+				return fmt.Errorf("unexpected type %T for field expiry_date", values[i])
+			} else if value.Valid {
+				_m.ExpiryDate = new(time.Time)
+				*_m.ExpiryDate = value.Time
+			}
 		case certificate.FieldFileURL:
 			if value, ok := values[i].(*sql.NullString); !ok {
 				return fmt.Errorf("unexpected type %T for field file_url", values[i])
 			} else if value.Valid {
-				_m.FileURL = value.String
+				_m.FileURL = new(string)
+				*_m.FileURL = value.String
 			}
-		case certificate.FieldIssueDate:
-			if value, ok := values[i].(*sql.NullTime); !ok {
-				return fmt.Errorf("unexpected type %T for field issue_date", values[i])
+		case certificate.FieldUploadedBy:
+			if value, ok := values[i].(*sql.NullScanner); !ok {
+				return fmt.Errorf("unexpected type %T for field uploaded_by", values[i])
 			} else if value.Valid {
-				_m.IssueDate = value.Time
+				_m.UploadedBy = new(uuid.UUID)
+				*_m.UploadedBy = *value.S.(*uuid.UUID)
 			}
-		case certificate.FieldExpirationDate:
-			if value, ok := values[i].(*sql.NullTime); !ok {
-				return fmt.Errorf("unexpected type %T for field expiration_date", values[i])
+		case certificate.FieldEventID:
+			if value, ok := values[i].(*sql.NullScanner); !ok {
+				return fmt.Errorf("unexpected type %T for field event_id", values[i])
 			} else if value.Valid {
-				_m.ExpirationDate = new(time.Time)
-				*_m.ExpirationDate = value.Time
+				_m.EventID = new(uuid.UUID)
+				*_m.EventID = *value.S.(*uuid.UUID)
+			}
+		case certificate.FieldScormCourseID:
+			if value, ok := values[i].(*sql.NullScanner); !ok {
+				return fmt.Errorf("unexpected type %T for field scorm_course_id", values[i])
+			} else if value.Valid {
+				_m.ScormCourseID = new(uuid.UUID)
+				*_m.ScormCourseID = *value.S.(*uuid.UUID)
+			}
+		case certificate.FieldEntityType:
+			if value, ok := values[i].(*sql.NullString); !ok {
+				return fmt.Errorf("unexpected type %T for field entity_type", values[i])
+			} else if value.Valid {
+				_m.EntityType = certificate.EntityType(value.String)
+			}
+		case certificate.FieldEntityID:
+			if value, ok := values[i].(*uuid.UUID); !ok {
+				return fmt.Errorf("unexpected type %T for field entity_id", values[i])
+			} else if value != nil {
+				_m.EntityID = *value
 			}
 		case certificate.FieldIsActive:
 			if value, ok := values[i].(*sql.NullBool); !ok {
@@ -169,22 +213,45 @@ func (_m *Certificate) String() string {
 	builder.WriteString("employee_id=")
 	builder.WriteString(fmt.Sprintf("%v", _m.EmployeeID))
 	builder.WriteString(", ")
-	builder.WriteString("dzo_id=")
-	builder.WriteString(fmt.Sprintf("%v", _m.DzoID))
+	builder.WriteString("type=")
+	builder.WriteString(fmt.Sprintf("%v", _m.Type))
 	builder.WriteString(", ")
 	builder.WriteString("title=")
 	builder.WriteString(_m.Title)
 	builder.WriteString(", ")
-	builder.WriteString("file_url=")
-	builder.WriteString(_m.FileURL)
+	builder.WriteString("issued_date=")
+	builder.WriteString(_m.IssuedDate.Format(time.ANSIC))
 	builder.WriteString(", ")
-	builder.WriteString("issue_date=")
-	builder.WriteString(_m.IssueDate.Format(time.ANSIC))
-	builder.WriteString(", ")
-	if v := _m.ExpirationDate; v != nil {
-		builder.WriteString("expiration_date=")
+	if v := _m.ExpiryDate; v != nil {
+		builder.WriteString("expiry_date=")
 		builder.WriteString(v.Format(time.ANSIC))
 	}
+	builder.WriteString(", ")
+	if v := _m.FileURL; v != nil {
+		builder.WriteString("file_url=")
+		builder.WriteString(*v)
+	}
+	builder.WriteString(", ")
+	if v := _m.UploadedBy; v != nil {
+		builder.WriteString("uploaded_by=")
+		builder.WriteString(fmt.Sprintf("%v", *v))
+	}
+	builder.WriteString(", ")
+	if v := _m.EventID; v != nil {
+		builder.WriteString("event_id=")
+		builder.WriteString(fmt.Sprintf("%v", *v))
+	}
+	builder.WriteString(", ")
+	if v := _m.ScormCourseID; v != nil {
+		builder.WriteString("scorm_course_id=")
+		builder.WriteString(fmt.Sprintf("%v", *v))
+	}
+	builder.WriteString(", ")
+	builder.WriteString("entity_type=")
+	builder.WriteString(fmt.Sprintf("%v", _m.EntityType))
+	builder.WriteString(", ")
+	builder.WriteString("entity_id=")
+	builder.WriteString(fmt.Sprintf("%v", _m.EntityID))
 	builder.WriteString(", ")
 	builder.WriteString("is_active=")
 	builder.WriteString(fmt.Sprintf("%v", _m.IsActive))
