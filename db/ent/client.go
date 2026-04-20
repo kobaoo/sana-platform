@@ -12,6 +12,8 @@ import (
 	"encore.app/db/ent/migrate"
 	"github.com/google/uuid"
 
+	"encore.app/db/ent/dzoorganization"
+	"encore.app/db/ent/employee"
 	"encore.app/db/ent/organization"
 	"encore.app/db/ent/user"
 	"entgo.io/ent"
@@ -25,6 +27,10 @@ type Client struct {
 	config
 	// Schema is the client for creating, migrating and dropping schema.
 	Schema *migrate.Schema
+	// DzoOrganization is the client for interacting with the DzoOrganization builders.
+	DzoOrganization *DzoOrganizationClient
+	// Employee is the client for interacting with the Employee builders.
+	Employee *EmployeeClient
 	// Organization is the client for interacting with the Organization builders.
 	Organization *OrganizationClient
 	// User is the client for interacting with the User builders.
@@ -40,6 +46,8 @@ func NewClient(opts ...Option) *Client {
 
 func (c *Client) init() {
 	c.Schema = migrate.NewSchema(c.driver)
+	c.DzoOrganization = NewDzoOrganizationClient(c.config)
+	c.Employee = NewEmployeeClient(c.config)
 	c.Organization = NewOrganizationClient(c.config)
 	c.User = NewUserClient(c.config)
 }
@@ -132,10 +140,12 @@ func (c *Client) Tx(ctx context.Context) (*Tx, error) {
 	cfg := c.config
 	cfg.driver = tx
 	return &Tx{
-		ctx:          ctx,
-		config:       cfg,
-		Organization: NewOrganizationClient(cfg),
-		User:         NewUserClient(cfg),
+		ctx:             ctx,
+		config:          cfg,
+		DzoOrganization: NewDzoOrganizationClient(cfg),
+		Employee:        NewEmployeeClient(cfg),
+		Organization:    NewOrganizationClient(cfg),
+		User:            NewUserClient(cfg),
 	}, nil
 }
 
@@ -153,17 +163,19 @@ func (c *Client) BeginTx(ctx context.Context, opts *sql.TxOptions) (*Tx, error) 
 	cfg := c.config
 	cfg.driver = &txDriver{tx: tx, drv: c.driver}
 	return &Tx{
-		ctx:          ctx,
-		config:       cfg,
-		Organization: NewOrganizationClient(cfg),
-		User:         NewUserClient(cfg),
+		ctx:             ctx,
+		config:          cfg,
+		DzoOrganization: NewDzoOrganizationClient(cfg),
+		Employee:        NewEmployeeClient(cfg),
+		Organization:    NewOrganizationClient(cfg),
+		User:            NewUserClient(cfg),
 	}, nil
 }
 
 // Debug returns a new debug-client. It's used to get verbose logging on specific operations.
 //
 //	client.Debug().
-//		Organization.
+//		DzoOrganization.
 //		Query().
 //		Count(ctx)
 func (c *Client) Debug() *Client {
@@ -185,6 +197,8 @@ func (c *Client) Close() error {
 // Use adds the mutation hooks to all the entity clients.
 // In order to add hooks to a specific client, call: `client.Node.Use(...)`.
 func (c *Client) Use(hooks ...Hook) {
+	c.DzoOrganization.Use(hooks...)
+	c.Employee.Use(hooks...)
 	c.Organization.Use(hooks...)
 	c.User.Use(hooks...)
 }
@@ -192,6 +206,8 @@ func (c *Client) Use(hooks ...Hook) {
 // Intercept adds the query interceptors to all the entity clients.
 // In order to add interceptors to a specific client, call: `client.Node.Intercept(...)`.
 func (c *Client) Intercept(interceptors ...Interceptor) {
+	c.DzoOrganization.Intercept(interceptors...)
+	c.Employee.Intercept(interceptors...)
 	c.Organization.Intercept(interceptors...)
 	c.User.Intercept(interceptors...)
 }
@@ -199,12 +215,314 @@ func (c *Client) Intercept(interceptors ...Interceptor) {
 // Mutate implements the ent.Mutator interface.
 func (c *Client) Mutate(ctx context.Context, m Mutation) (Value, error) {
 	switch m := m.(type) {
+	case *DzoOrganizationMutation:
+		return c.DzoOrganization.mutate(ctx, m)
+	case *EmployeeMutation:
+		return c.Employee.mutate(ctx, m)
 	case *OrganizationMutation:
 		return c.Organization.mutate(ctx, m)
 	case *UserMutation:
 		return c.User.mutate(ctx, m)
 	default:
 		return nil, fmt.Errorf("ent: unknown mutation type %T", m)
+	}
+}
+
+// DzoOrganizationClient is a client for the DzoOrganization schema.
+type DzoOrganizationClient struct {
+	config
+}
+
+// NewDzoOrganizationClient returns a client for the DzoOrganization from the given config.
+func NewDzoOrganizationClient(c config) *DzoOrganizationClient {
+	return &DzoOrganizationClient{config: c}
+}
+
+// Use adds a list of mutation hooks to the hooks stack.
+// A call to `Use(f, g, h)` equals to `dzoorganization.Hooks(f(g(h())))`.
+func (c *DzoOrganizationClient) Use(hooks ...Hook) {
+	c.hooks.DzoOrganization = append(c.hooks.DzoOrganization, hooks...)
+}
+
+// Intercept adds a list of query interceptors to the interceptors stack.
+// A call to `Intercept(f, g, h)` equals to `dzoorganization.Intercept(f(g(h())))`.
+func (c *DzoOrganizationClient) Intercept(interceptors ...Interceptor) {
+	c.inters.DzoOrganization = append(c.inters.DzoOrganization, interceptors...)
+}
+
+// Create returns a builder for creating a DzoOrganization entity.
+func (c *DzoOrganizationClient) Create() *DzoOrganizationCreate {
+	mutation := newDzoOrganizationMutation(c.config, OpCreate)
+	return &DzoOrganizationCreate{config: c.config, hooks: c.Hooks(), mutation: mutation}
+}
+
+// CreateBulk returns a builder for creating a bulk of DzoOrganization entities.
+func (c *DzoOrganizationClient) CreateBulk(builders ...*DzoOrganizationCreate) *DzoOrganizationCreateBulk {
+	return &DzoOrganizationCreateBulk{config: c.config, builders: builders}
+}
+
+// MapCreateBulk creates a bulk creation builder from the given slice. For each item in the slice, the function creates
+// a builder and applies setFunc on it.
+func (c *DzoOrganizationClient) MapCreateBulk(slice any, setFunc func(*DzoOrganizationCreate, int)) *DzoOrganizationCreateBulk {
+	rv := reflect.ValueOf(slice)
+	if rv.Kind() != reflect.Slice {
+		return &DzoOrganizationCreateBulk{err: fmt.Errorf("calling to DzoOrganizationClient.MapCreateBulk with wrong type %T, need slice", slice)}
+	}
+	builders := make([]*DzoOrganizationCreate, rv.Len())
+	for i := 0; i < rv.Len(); i++ {
+		builders[i] = c.Create()
+		setFunc(builders[i], i)
+	}
+	return &DzoOrganizationCreateBulk{config: c.config, builders: builders}
+}
+
+// Update returns an update builder for DzoOrganization.
+func (c *DzoOrganizationClient) Update() *DzoOrganizationUpdate {
+	mutation := newDzoOrganizationMutation(c.config, OpUpdate)
+	return &DzoOrganizationUpdate{config: c.config, hooks: c.Hooks(), mutation: mutation}
+}
+
+// UpdateOne returns an update builder for the given entity.
+func (c *DzoOrganizationClient) UpdateOne(_m *DzoOrganization) *DzoOrganizationUpdateOne {
+	mutation := newDzoOrganizationMutation(c.config, OpUpdateOne, withDzoOrganization(_m))
+	return &DzoOrganizationUpdateOne{config: c.config, hooks: c.Hooks(), mutation: mutation}
+}
+
+// UpdateOneID returns an update builder for the given id.
+func (c *DzoOrganizationClient) UpdateOneID(id uuid.UUID) *DzoOrganizationUpdateOne {
+	mutation := newDzoOrganizationMutation(c.config, OpUpdateOne, withDzoOrganizationID(id))
+	return &DzoOrganizationUpdateOne{config: c.config, hooks: c.Hooks(), mutation: mutation}
+}
+
+// Delete returns a delete builder for DzoOrganization.
+func (c *DzoOrganizationClient) Delete() *DzoOrganizationDelete {
+	mutation := newDzoOrganizationMutation(c.config, OpDelete)
+	return &DzoOrganizationDelete{config: c.config, hooks: c.Hooks(), mutation: mutation}
+}
+
+// DeleteOne returns a builder for deleting the given entity.
+func (c *DzoOrganizationClient) DeleteOne(_m *DzoOrganization) *DzoOrganizationDeleteOne {
+	return c.DeleteOneID(_m.ID)
+}
+
+// DeleteOneID returns a builder for deleting the given entity by its id.
+func (c *DzoOrganizationClient) DeleteOneID(id uuid.UUID) *DzoOrganizationDeleteOne {
+	builder := c.Delete().Where(dzoorganization.ID(id))
+	builder.mutation.id = &id
+	builder.mutation.op = OpDeleteOne
+	return &DzoOrganizationDeleteOne{builder}
+}
+
+// Query returns a query builder for DzoOrganization.
+func (c *DzoOrganizationClient) Query() *DzoOrganizationQuery {
+	return &DzoOrganizationQuery{
+		config: c.config,
+		ctx:    &QueryContext{Type: TypeDzoOrganization},
+		inters: c.Interceptors(),
+	}
+}
+
+// Get returns a DzoOrganization entity by its id.
+func (c *DzoOrganizationClient) Get(ctx context.Context, id uuid.UUID) (*DzoOrganization, error) {
+	return c.Query().Where(dzoorganization.ID(id)).Only(ctx)
+}
+
+// GetX is like Get, but panics if an error occurs.
+func (c *DzoOrganizationClient) GetX(ctx context.Context, id uuid.UUID) *DzoOrganization {
+	obj, err := c.Get(ctx, id)
+	if err != nil {
+		panic(err)
+	}
+	return obj
+}
+
+// QueryEmployees queries the employees edge of a DzoOrganization.
+func (c *DzoOrganizationClient) QueryEmployees(_m *DzoOrganization) *EmployeeQuery {
+	query := (&EmployeeClient{config: c.config}).Query()
+	query.path = func(context.Context) (fromV *sql.Selector, _ error) {
+		id := _m.ID
+		step := sqlgraph.NewStep(
+			sqlgraph.From(dzoorganization.Table, dzoorganization.FieldID, id),
+			sqlgraph.To(employee.Table, employee.FieldID),
+			sqlgraph.Edge(sqlgraph.O2M, false, dzoorganization.EmployeesTable, dzoorganization.EmployeesColumn),
+		)
+		fromV = sqlgraph.Neighbors(_m.driver.Dialect(), step)
+		return fromV, nil
+	}
+	return query
+}
+
+// Hooks returns the client hooks.
+func (c *DzoOrganizationClient) Hooks() []Hook {
+	return c.hooks.DzoOrganization
+}
+
+// Interceptors returns the client interceptors.
+func (c *DzoOrganizationClient) Interceptors() []Interceptor {
+	return c.inters.DzoOrganization
+}
+
+func (c *DzoOrganizationClient) mutate(ctx context.Context, m *DzoOrganizationMutation) (Value, error) {
+	switch m.Op() {
+	case OpCreate:
+		return (&DzoOrganizationCreate{config: c.config, hooks: c.Hooks(), mutation: m}).Save(ctx)
+	case OpUpdate:
+		return (&DzoOrganizationUpdate{config: c.config, hooks: c.Hooks(), mutation: m}).Save(ctx)
+	case OpUpdateOne:
+		return (&DzoOrganizationUpdateOne{config: c.config, hooks: c.Hooks(), mutation: m}).Save(ctx)
+	case OpDelete, OpDeleteOne:
+		return (&DzoOrganizationDelete{config: c.config, hooks: c.Hooks(), mutation: m}).Exec(ctx)
+	default:
+		return nil, fmt.Errorf("ent: unknown DzoOrganization mutation op: %q", m.Op())
+	}
+}
+
+// EmployeeClient is a client for the Employee schema.
+type EmployeeClient struct {
+	config
+}
+
+// NewEmployeeClient returns a client for the Employee from the given config.
+func NewEmployeeClient(c config) *EmployeeClient {
+	return &EmployeeClient{config: c}
+}
+
+// Use adds a list of mutation hooks to the hooks stack.
+// A call to `Use(f, g, h)` equals to `employee.Hooks(f(g(h())))`.
+func (c *EmployeeClient) Use(hooks ...Hook) {
+	c.hooks.Employee = append(c.hooks.Employee, hooks...)
+}
+
+// Intercept adds a list of query interceptors to the interceptors stack.
+// A call to `Intercept(f, g, h)` equals to `employee.Intercept(f(g(h())))`.
+func (c *EmployeeClient) Intercept(interceptors ...Interceptor) {
+	c.inters.Employee = append(c.inters.Employee, interceptors...)
+}
+
+// Create returns a builder for creating a Employee entity.
+func (c *EmployeeClient) Create() *EmployeeCreate {
+	mutation := newEmployeeMutation(c.config, OpCreate)
+	return &EmployeeCreate{config: c.config, hooks: c.Hooks(), mutation: mutation}
+}
+
+// CreateBulk returns a builder for creating a bulk of Employee entities.
+func (c *EmployeeClient) CreateBulk(builders ...*EmployeeCreate) *EmployeeCreateBulk {
+	return &EmployeeCreateBulk{config: c.config, builders: builders}
+}
+
+// MapCreateBulk creates a bulk creation builder from the given slice. For each item in the slice, the function creates
+// a builder and applies setFunc on it.
+func (c *EmployeeClient) MapCreateBulk(slice any, setFunc func(*EmployeeCreate, int)) *EmployeeCreateBulk {
+	rv := reflect.ValueOf(slice)
+	if rv.Kind() != reflect.Slice {
+		return &EmployeeCreateBulk{err: fmt.Errorf("calling to EmployeeClient.MapCreateBulk with wrong type %T, need slice", slice)}
+	}
+	builders := make([]*EmployeeCreate, rv.Len())
+	for i := 0; i < rv.Len(); i++ {
+		builders[i] = c.Create()
+		setFunc(builders[i], i)
+	}
+	return &EmployeeCreateBulk{config: c.config, builders: builders}
+}
+
+// Update returns an update builder for Employee.
+func (c *EmployeeClient) Update() *EmployeeUpdate {
+	mutation := newEmployeeMutation(c.config, OpUpdate)
+	return &EmployeeUpdate{config: c.config, hooks: c.Hooks(), mutation: mutation}
+}
+
+// UpdateOne returns an update builder for the given entity.
+func (c *EmployeeClient) UpdateOne(_m *Employee) *EmployeeUpdateOne {
+	mutation := newEmployeeMutation(c.config, OpUpdateOne, withEmployee(_m))
+	return &EmployeeUpdateOne{config: c.config, hooks: c.Hooks(), mutation: mutation}
+}
+
+// UpdateOneID returns an update builder for the given id.
+func (c *EmployeeClient) UpdateOneID(id uuid.UUID) *EmployeeUpdateOne {
+	mutation := newEmployeeMutation(c.config, OpUpdateOne, withEmployeeID(id))
+	return &EmployeeUpdateOne{config: c.config, hooks: c.Hooks(), mutation: mutation}
+}
+
+// Delete returns a delete builder for Employee.
+func (c *EmployeeClient) Delete() *EmployeeDelete {
+	mutation := newEmployeeMutation(c.config, OpDelete)
+	return &EmployeeDelete{config: c.config, hooks: c.Hooks(), mutation: mutation}
+}
+
+// DeleteOne returns a builder for deleting the given entity.
+func (c *EmployeeClient) DeleteOne(_m *Employee) *EmployeeDeleteOne {
+	return c.DeleteOneID(_m.ID)
+}
+
+// DeleteOneID returns a builder for deleting the given entity by its id.
+func (c *EmployeeClient) DeleteOneID(id uuid.UUID) *EmployeeDeleteOne {
+	builder := c.Delete().Where(employee.ID(id))
+	builder.mutation.id = &id
+	builder.mutation.op = OpDeleteOne
+	return &EmployeeDeleteOne{builder}
+}
+
+// Query returns a query builder for Employee.
+func (c *EmployeeClient) Query() *EmployeeQuery {
+	return &EmployeeQuery{
+		config: c.config,
+		ctx:    &QueryContext{Type: TypeEmployee},
+		inters: c.Interceptors(),
+	}
+}
+
+// Get returns a Employee entity by its id.
+func (c *EmployeeClient) Get(ctx context.Context, id uuid.UUID) (*Employee, error) {
+	return c.Query().Where(employee.ID(id)).Only(ctx)
+}
+
+// GetX is like Get, but panics if an error occurs.
+func (c *EmployeeClient) GetX(ctx context.Context, id uuid.UUID) *Employee {
+	obj, err := c.Get(ctx, id)
+	if err != nil {
+		panic(err)
+	}
+	return obj
+}
+
+// QueryDzo queries the dzo edge of a Employee.
+func (c *EmployeeClient) QueryDzo(_m *Employee) *DzoOrganizationQuery {
+	query := (&DzoOrganizationClient{config: c.config}).Query()
+	query.path = func(context.Context) (fromV *sql.Selector, _ error) {
+		id := _m.ID
+		step := sqlgraph.NewStep(
+			sqlgraph.From(employee.Table, employee.FieldID, id),
+			sqlgraph.To(dzoorganization.Table, dzoorganization.FieldID),
+			sqlgraph.Edge(sqlgraph.M2O, true, employee.DzoTable, employee.DzoColumn),
+		)
+		fromV = sqlgraph.Neighbors(_m.driver.Dialect(), step)
+		return fromV, nil
+	}
+	return query
+}
+
+// Hooks returns the client hooks.
+func (c *EmployeeClient) Hooks() []Hook {
+	return c.hooks.Employee
+}
+
+// Interceptors returns the client interceptors.
+func (c *EmployeeClient) Interceptors() []Interceptor {
+	return c.inters.Employee
+}
+
+func (c *EmployeeClient) mutate(ctx context.Context, m *EmployeeMutation) (Value, error) {
+	switch m.Op() {
+	case OpCreate:
+		return (&EmployeeCreate{config: c.config, hooks: c.Hooks(), mutation: m}).Save(ctx)
+	case OpUpdate:
+		return (&EmployeeUpdate{config: c.config, hooks: c.Hooks(), mutation: m}).Save(ctx)
+	case OpUpdateOne:
+		return (&EmployeeUpdateOne{config: c.config, hooks: c.Hooks(), mutation: m}).Save(ctx)
+	case OpDelete, OpDeleteOne:
+		return (&EmployeeDelete{config: c.config, hooks: c.Hooks(), mutation: m}).Exec(ctx)
+	default:
+		return nil, fmt.Errorf("ent: unknown Employee mutation op: %q", m.Op())
 	}
 }
 
@@ -509,9 +827,9 @@ func (c *UserClient) mutate(ctx context.Context, m *UserMutation) (Value, error)
 // hooks and interceptors per client, for fast access.
 type (
 	hooks struct {
-		Organization, User []ent.Hook
+		DzoOrganization, Employee, Organization, User []ent.Hook
 	}
 	inters struct {
-		Organization, User []ent.Interceptor
+		DzoOrganization, Employee, Organization, User []ent.Interceptor
 	}
 )
