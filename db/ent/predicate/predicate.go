@@ -6,6 +6,12 @@ import (
 	"entgo.io/ent/dialect/sql"
 )
 
+// ContractSupplier is the predicate function for contractsupplier builders.
+type ContractSupplier func(*sql.Selector)
+
+// ContractSupplierHistory is the predicate function for contractsupplierhistory builders.
+type ContractSupplierHistory func(*sql.Selector)
+
 // Organization is the predicate function for organization builders.
 type Organization func(*sql.Selector)
 

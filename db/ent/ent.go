@@ -9,6 +9,8 @@ import (
 	"reflect"
 	"sync"
 
+	"encore.app/db/ent/contractsupplier"
+	"encore.app/db/ent/contractsupplierhistory"
 	"encore.app/db/ent/organization"
 	"encore.app/db/ent/user"
 	"entgo.io/ent"
@@ -74,8 +76,10 @@ var (
 func checkColumn(t, c string) error {
 	initCheck.Do(func() {
 		columnCheck = sql.NewColumnCheck(map[string]func(string) bool{
-			organization.Table: organization.ValidColumn,
-			user.Table:         user.ValidColumn,
+			contractsupplier.Table:        contractsupplier.ValidColumn,
+			contractsupplierhistory.Table: contractsupplierhistory.ValidColumn,
+			organization.Table:            organization.ValidColumn,
+			user.Table:                    user.ValidColumn,
 		})
 	})
 	return columnCheck(t, c)

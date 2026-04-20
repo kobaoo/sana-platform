@@ -9,6 +9,30 @@ import (
 	"encore.app/db/ent"
 )
 
+// The ContractSupplierFunc type is an adapter to allow the use of ordinary
+// function as ContractSupplier mutator.
+type ContractSupplierFunc func(context.Context, *ent.ContractSupplierMutation) (ent.Value, error)
+
+// Mutate calls f(ctx, m).
+func (f ContractSupplierFunc) Mutate(ctx context.Context, m ent.Mutation) (ent.Value, error) {
+	if mv, ok := m.(*ent.ContractSupplierMutation); ok {
+		return f(ctx, mv)
+	}
+	return nil, fmt.Errorf("unexpected mutation type %T. expect *ent.ContractSupplierMutation", m)
+}
+
+// The ContractSupplierHistoryFunc type is an adapter to allow the use of ordinary
+// function as ContractSupplierHistory mutator.
+type ContractSupplierHistoryFunc func(context.Context, *ent.ContractSupplierHistoryMutation) (ent.Value, error)
+
+// Mutate calls f(ctx, m).
+func (f ContractSupplierHistoryFunc) Mutate(ctx context.Context, m ent.Mutation) (ent.Value, error) {
+	if mv, ok := m.(*ent.ContractSupplierHistoryMutation); ok {
+		return f(ctx, mv)
+	}
+	return nil, fmt.Errorf("unexpected mutation type %T. expect *ent.ContractSupplierHistoryMutation", m)
+}
+
 // The OrganizationFunc type is an adapter to allow the use of ordinary
 // function as Organization mutator.
 type OrganizationFunc func(context.Context, *ent.OrganizationMutation) (ent.Value, error)

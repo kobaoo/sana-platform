@@ -12,6 +12,8 @@ import (
 	"encore.app/db/ent/migrate"
 	"github.com/google/uuid"
 
+	"encore.app/db/ent/contractsupplier"
+	"encore.app/db/ent/contractsupplierhistory"
 	"encore.app/db/ent/organization"
 	"encore.app/db/ent/user"
 	"entgo.io/ent"
@@ -25,6 +27,10 @@ type Client struct {
 	config
 	// Schema is the client for creating, migrating and dropping schema.
 	Schema *migrate.Schema
+	// ContractSupplier is the client for interacting with the ContractSupplier builders.
+	ContractSupplier *ContractSupplierClient
+	// ContractSupplierHistory is the client for interacting with the ContractSupplierHistory builders.
+	ContractSupplierHistory *ContractSupplierHistoryClient
 	// Organization is the client for interacting with the Organization builders.
 	Organization *OrganizationClient
 	// User is the client for interacting with the User builders.
@@ -40,6 +46,8 @@ func NewClient(opts ...Option) *Client {
 
 func (c *Client) init() {
 	c.Schema = migrate.NewSchema(c.driver)
+	c.ContractSupplier = NewContractSupplierClient(c.config)
+	c.ContractSupplierHistory = NewContractSupplierHistoryClient(c.config)
 	c.Organization = NewOrganizationClient(c.config)
 	c.User = NewUserClient(c.config)
 }
@@ -132,10 +140,12 @@ func (c *Client) Tx(ctx context.Context) (*Tx, error) {
 	cfg := c.config
 	cfg.driver = tx
 	return &Tx{
-		ctx:          ctx,
-		config:       cfg,
-		Organization: NewOrganizationClient(cfg),
-		User:         NewUserClient(cfg),
+		ctx:                     ctx,
+		config:                  cfg,
+		ContractSupplier:        NewContractSupplierClient(cfg),
+		ContractSupplierHistory: NewContractSupplierHistoryClient(cfg),
+		Organization:            NewOrganizationClient(cfg),
+		User:                    NewUserClient(cfg),
 	}, nil
 }
 
@@ -153,17 +163,19 @@ func (c *Client) BeginTx(ctx context.Context, opts *sql.TxOptions) (*Tx, error) 
 	cfg := c.config
 	cfg.driver = &txDriver{tx: tx, drv: c.driver}
 	return &Tx{
-		ctx:          ctx,
-		config:       cfg,
-		Organization: NewOrganizationClient(cfg),
-		User:         NewUserClient(cfg),
+		ctx:                     ctx,
+		config:                  cfg,
+		ContractSupplier:        NewContractSupplierClient(cfg),
+		ContractSupplierHistory: NewContractSupplierHistoryClient(cfg),
+		Organization:            NewOrganizationClient(cfg),
+		User:                    NewUserClient(cfg),
 	}, nil
 }
 
 // Debug returns a new debug-client. It's used to get verbose logging on specific operations.
 //
 //	client.Debug().
-//		Organization.
+//		ContractSupplier.
 //		Query().
 //		Count(ctx)
 func (c *Client) Debug() *Client {
@@ -185,6 +197,8 @@ func (c *Client) Close() error {
 // Use adds the mutation hooks to all the entity clients.
 // In order to add hooks to a specific client, call: `client.Node.Use(...)`.
 func (c *Client) Use(hooks ...Hook) {
+	c.ContractSupplier.Use(hooks...)
+	c.ContractSupplierHistory.Use(hooks...)
 	c.Organization.Use(hooks...)
 	c.User.Use(hooks...)
 }
@@ -192,6 +206,8 @@ func (c *Client) Use(hooks ...Hook) {
 // Intercept adds the query interceptors to all the entity clients.
 // In order to add interceptors to a specific client, call: `client.Node.Intercept(...)`.
 func (c *Client) Intercept(interceptors ...Interceptor) {
+	c.ContractSupplier.Intercept(interceptors...)
+	c.ContractSupplierHistory.Intercept(interceptors...)
 	c.Organization.Intercept(interceptors...)
 	c.User.Intercept(interceptors...)
 }
@@ -199,12 +215,282 @@ func (c *Client) Intercept(interceptors ...Interceptor) {
 // Mutate implements the ent.Mutator interface.
 func (c *Client) Mutate(ctx context.Context, m Mutation) (Value, error) {
 	switch m := m.(type) {
+	case *ContractSupplierMutation:
+		return c.ContractSupplier.mutate(ctx, m)
+	case *ContractSupplierHistoryMutation:
+		return c.ContractSupplierHistory.mutate(ctx, m)
 	case *OrganizationMutation:
 		return c.Organization.mutate(ctx, m)
 	case *UserMutation:
 		return c.User.mutate(ctx, m)
 	default:
 		return nil, fmt.Errorf("ent: unknown mutation type %T", m)
+	}
+}
+
+// ContractSupplierClient is a client for the ContractSupplier schema.
+type ContractSupplierClient struct {
+	config
+}
+
+// NewContractSupplierClient returns a client for the ContractSupplier from the given config.
+func NewContractSupplierClient(c config) *ContractSupplierClient {
+	return &ContractSupplierClient{config: c}
+}
+
+// Use adds a list of mutation hooks to the hooks stack.
+// A call to `Use(f, g, h)` equals to `contractsupplier.Hooks(f(g(h())))`.
+func (c *ContractSupplierClient) Use(hooks ...Hook) {
+	c.hooks.ContractSupplier = append(c.hooks.ContractSupplier, hooks...)
+}
+
+// Intercept adds a list of query interceptors to the interceptors stack.
+// A call to `Intercept(f, g, h)` equals to `contractsupplier.Intercept(f(g(h())))`.
+func (c *ContractSupplierClient) Intercept(interceptors ...Interceptor) {
+	c.inters.ContractSupplier = append(c.inters.ContractSupplier, interceptors...)
+}
+
+// Create returns a builder for creating a ContractSupplier entity.
+func (c *ContractSupplierClient) Create() *ContractSupplierCreate {
+	mutation := newContractSupplierMutation(c.config, OpCreate)
+	return &ContractSupplierCreate{config: c.config, hooks: c.Hooks(), mutation: mutation}
+}
+
+// CreateBulk returns a builder for creating a bulk of ContractSupplier entities.
+func (c *ContractSupplierClient) CreateBulk(builders ...*ContractSupplierCreate) *ContractSupplierCreateBulk {
+	return &ContractSupplierCreateBulk{config: c.config, builders: builders}
+}
+
+// MapCreateBulk creates a bulk creation builder from the given slice. For each item in the slice, the function creates
+// a builder and applies setFunc on it.
+func (c *ContractSupplierClient) MapCreateBulk(slice any, setFunc func(*ContractSupplierCreate, int)) *ContractSupplierCreateBulk {
+	rv := reflect.ValueOf(slice)
+	if rv.Kind() != reflect.Slice {
+		return &ContractSupplierCreateBulk{err: fmt.Errorf("calling to ContractSupplierClient.MapCreateBulk with wrong type %T, need slice", slice)}
+	}
+	builders := make([]*ContractSupplierCreate, rv.Len())
+	for i := 0; i < rv.Len(); i++ {
+		builders[i] = c.Create()
+		setFunc(builders[i], i)
+	}
+	return &ContractSupplierCreateBulk{config: c.config, builders: builders}
+}
+
+// Update returns an update builder for ContractSupplier.
+func (c *ContractSupplierClient) Update() *ContractSupplierUpdate {
+	mutation := newContractSupplierMutation(c.config, OpUpdate)
+	return &ContractSupplierUpdate{config: c.config, hooks: c.Hooks(), mutation: mutation}
+}
+
+// UpdateOne returns an update builder for the given entity.
+func (c *ContractSupplierClient) UpdateOne(_m *ContractSupplier) *ContractSupplierUpdateOne {
+	mutation := newContractSupplierMutation(c.config, OpUpdateOne, withContractSupplier(_m))
+	return &ContractSupplierUpdateOne{config: c.config, hooks: c.Hooks(), mutation: mutation}
+}
+
+// UpdateOneID returns an update builder for the given id.
+func (c *ContractSupplierClient) UpdateOneID(id uuid.UUID) *ContractSupplierUpdateOne {
+	mutation := newContractSupplierMutation(c.config, OpUpdateOne, withContractSupplierID(id))
+	return &ContractSupplierUpdateOne{config: c.config, hooks: c.Hooks(), mutation: mutation}
+}
+
+// Delete returns a delete builder for ContractSupplier.
+func (c *ContractSupplierClient) Delete() *ContractSupplierDelete {
+	mutation := newContractSupplierMutation(c.config, OpDelete)
+	return &ContractSupplierDelete{config: c.config, hooks: c.Hooks(), mutation: mutation}
+}
+
+// DeleteOne returns a builder for deleting the given entity.
+func (c *ContractSupplierClient) DeleteOne(_m *ContractSupplier) *ContractSupplierDeleteOne {
+	return c.DeleteOneID(_m.ID)
+}
+
+// DeleteOneID returns a builder for deleting the given entity by its id.
+func (c *ContractSupplierClient) DeleteOneID(id uuid.UUID) *ContractSupplierDeleteOne {
+	builder := c.Delete().Where(contractsupplier.ID(id))
+	builder.mutation.id = &id
+	builder.mutation.op = OpDeleteOne
+	return &ContractSupplierDeleteOne{builder}
+}
+
+// Query returns a query builder for ContractSupplier.
+func (c *ContractSupplierClient) Query() *ContractSupplierQuery {
+	return &ContractSupplierQuery{
+		config: c.config,
+		ctx:    &QueryContext{Type: TypeContractSupplier},
+		inters: c.Interceptors(),
+	}
+}
+
+// Get returns a ContractSupplier entity by its id.
+func (c *ContractSupplierClient) Get(ctx context.Context, id uuid.UUID) (*ContractSupplier, error) {
+	return c.Query().Where(contractsupplier.ID(id)).Only(ctx)
+}
+
+// GetX is like Get, but panics if an error occurs.
+func (c *ContractSupplierClient) GetX(ctx context.Context, id uuid.UUID) *ContractSupplier {
+	obj, err := c.Get(ctx, id)
+	if err != nil {
+		panic(err)
+	}
+	return obj
+}
+
+// Hooks returns the client hooks.
+func (c *ContractSupplierClient) Hooks() []Hook {
+	return c.hooks.ContractSupplier
+}
+
+// Interceptors returns the client interceptors.
+func (c *ContractSupplierClient) Interceptors() []Interceptor {
+	return c.inters.ContractSupplier
+}
+
+func (c *ContractSupplierClient) mutate(ctx context.Context, m *ContractSupplierMutation) (Value, error) {
+	switch m.Op() {
+	case OpCreate:
+		return (&ContractSupplierCreate{config: c.config, hooks: c.Hooks(), mutation: m}).Save(ctx)
+	case OpUpdate:
+		return (&ContractSupplierUpdate{config: c.config, hooks: c.Hooks(), mutation: m}).Save(ctx)
+	case OpUpdateOne:
+		return (&ContractSupplierUpdateOne{config: c.config, hooks: c.Hooks(), mutation: m}).Save(ctx)
+	case OpDelete, OpDeleteOne:
+		return (&ContractSupplierDelete{config: c.config, hooks: c.Hooks(), mutation: m}).Exec(ctx)
+	default:
+		return nil, fmt.Errorf("ent: unknown ContractSupplier mutation op: %q", m.Op())
+	}
+}
+
+// ContractSupplierHistoryClient is a client for the ContractSupplierHistory schema.
+type ContractSupplierHistoryClient struct {
+	config
+}
+
+// NewContractSupplierHistoryClient returns a client for the ContractSupplierHistory from the given config.
+func NewContractSupplierHistoryClient(c config) *ContractSupplierHistoryClient {
+	return &ContractSupplierHistoryClient{config: c}
+}
+
+// Use adds a list of mutation hooks to the hooks stack.
+// A call to `Use(f, g, h)` equals to `contractsupplierhistory.Hooks(f(g(h())))`.
+func (c *ContractSupplierHistoryClient) Use(hooks ...Hook) {
+	c.hooks.ContractSupplierHistory = append(c.hooks.ContractSupplierHistory, hooks...)
+}
+
+// Intercept adds a list of query interceptors to the interceptors stack.
+// A call to `Intercept(f, g, h)` equals to `contractsupplierhistory.Intercept(f(g(h())))`.
+func (c *ContractSupplierHistoryClient) Intercept(interceptors ...Interceptor) {
+	c.inters.ContractSupplierHistory = append(c.inters.ContractSupplierHistory, interceptors...)
+}
+
+// Create returns a builder for creating a ContractSupplierHistory entity.
+func (c *ContractSupplierHistoryClient) Create() *ContractSupplierHistoryCreate {
+	mutation := newContractSupplierHistoryMutation(c.config, OpCreate)
+	return &ContractSupplierHistoryCreate{config: c.config, hooks: c.Hooks(), mutation: mutation}
+}
+
+// CreateBulk returns a builder for creating a bulk of ContractSupplierHistory entities.
+func (c *ContractSupplierHistoryClient) CreateBulk(builders ...*ContractSupplierHistoryCreate) *ContractSupplierHistoryCreateBulk {
+	return &ContractSupplierHistoryCreateBulk{config: c.config, builders: builders}
+}
+
+// MapCreateBulk creates a bulk creation builder from the given slice. For each item in the slice, the function creates
+// a builder and applies setFunc on it.
+func (c *ContractSupplierHistoryClient) MapCreateBulk(slice any, setFunc func(*ContractSupplierHistoryCreate, int)) *ContractSupplierHistoryCreateBulk {
+	rv := reflect.ValueOf(slice)
+	if rv.Kind() != reflect.Slice {
+		return &ContractSupplierHistoryCreateBulk{err: fmt.Errorf("calling to ContractSupplierHistoryClient.MapCreateBulk with wrong type %T, need slice", slice)}
+	}
+	builders := make([]*ContractSupplierHistoryCreate, rv.Len())
+	for i := 0; i < rv.Len(); i++ {
+		builders[i] = c.Create()
+		setFunc(builders[i], i)
+	}
+	return &ContractSupplierHistoryCreateBulk{config: c.config, builders: builders}
+}
+
+// Update returns an update builder for ContractSupplierHistory.
+func (c *ContractSupplierHistoryClient) Update() *ContractSupplierHistoryUpdate {
+	mutation := newContractSupplierHistoryMutation(c.config, OpUpdate)
+	return &ContractSupplierHistoryUpdate{config: c.config, hooks: c.Hooks(), mutation: mutation}
+}
+
+// UpdateOne returns an update builder for the given entity.
+func (c *ContractSupplierHistoryClient) UpdateOne(_m *ContractSupplierHistory) *ContractSupplierHistoryUpdateOne {
+	mutation := newContractSupplierHistoryMutation(c.config, OpUpdateOne, withContractSupplierHistory(_m))
+	return &ContractSupplierHistoryUpdateOne{config: c.config, hooks: c.Hooks(), mutation: mutation}
+}
+
+// UpdateOneID returns an update builder for the given id.
+func (c *ContractSupplierHistoryClient) UpdateOneID(id int) *ContractSupplierHistoryUpdateOne {
+	mutation := newContractSupplierHistoryMutation(c.config, OpUpdateOne, withContractSupplierHistoryID(id))
+	return &ContractSupplierHistoryUpdateOne{config: c.config, hooks: c.Hooks(), mutation: mutation}
+}
+
+// Delete returns a delete builder for ContractSupplierHistory.
+func (c *ContractSupplierHistoryClient) Delete() *ContractSupplierHistoryDelete {
+	mutation := newContractSupplierHistoryMutation(c.config, OpDelete)
+	return &ContractSupplierHistoryDelete{config: c.config, hooks: c.Hooks(), mutation: mutation}
+}
+
+// DeleteOne returns a builder for deleting the given entity.
+func (c *ContractSupplierHistoryClient) DeleteOne(_m *ContractSupplierHistory) *ContractSupplierHistoryDeleteOne {
+	return c.DeleteOneID(_m.ID)
+}
+
+// DeleteOneID returns a builder for deleting the given entity by its id.
+func (c *ContractSupplierHistoryClient) DeleteOneID(id int) *ContractSupplierHistoryDeleteOne {
+	builder := c.Delete().Where(contractsupplierhistory.ID(id))
+	builder.mutation.id = &id
+	builder.mutation.op = OpDeleteOne
+	return &ContractSupplierHistoryDeleteOne{builder}
+}
+
+// Query returns a query builder for ContractSupplierHistory.
+func (c *ContractSupplierHistoryClient) Query() *ContractSupplierHistoryQuery {
+	return &ContractSupplierHistoryQuery{
+		config: c.config,
+		ctx:    &QueryContext{Type: TypeContractSupplierHistory},
+		inters: c.Interceptors(),
+	}
+}
+
+// Get returns a ContractSupplierHistory entity by its id.
+func (c *ContractSupplierHistoryClient) Get(ctx context.Context, id int) (*ContractSupplierHistory, error) {
+	return c.Query().Where(contractsupplierhistory.ID(id)).Only(ctx)
+}
+
+// GetX is like Get, but panics if an error occurs.
+func (c *ContractSupplierHistoryClient) GetX(ctx context.Context, id int) *ContractSupplierHistory {
+	obj, err := c.Get(ctx, id)
+	if err != nil {
+		panic(err)
+	}
+	return obj
+}
+
+// Hooks returns the client hooks.
+func (c *ContractSupplierHistoryClient) Hooks() []Hook {
+	return c.hooks.ContractSupplierHistory
+}
+
+// Interceptors returns the client interceptors.
+func (c *ContractSupplierHistoryClient) Interceptors() []Interceptor {
+	return c.inters.ContractSupplierHistory
+}
+
+func (c *ContractSupplierHistoryClient) mutate(ctx context.Context, m *ContractSupplierHistoryMutation) (Value, error) {
+	switch m.Op() {
+	case OpCreate:
+		return (&ContractSupplierHistoryCreate{config: c.config, hooks: c.Hooks(), mutation: m}).Save(ctx)
+	case OpUpdate:
+		return (&ContractSupplierHistoryUpdate{config: c.config, hooks: c.Hooks(), mutation: m}).Save(ctx)
+	case OpUpdateOne:
+		return (&ContractSupplierHistoryUpdateOne{config: c.config, hooks: c.Hooks(), mutation: m}).Save(ctx)
+	case OpDelete, OpDeleteOne:
+		return (&ContractSupplierHistoryDelete{config: c.config, hooks: c.Hooks(), mutation: m}).Exec(ctx)
+	default:
+		return nil, fmt.Errorf("ent: unknown ContractSupplierHistory mutation op: %q", m.Op())
 	}
 }
 
@@ -509,9 +795,9 @@ func (c *UserClient) mutate(ctx context.Context, m *UserMutation) (Value, error)
 // hooks and interceptors per client, for fast access.
 type (
 	hooks struct {
-		Organization, User []ent.Hook
+		ContractSupplier, ContractSupplierHistory, Organization, User []ent.Hook
 	}
 	inters struct {
-		Organization, User []ent.Interceptor
+		ContractSupplier, ContractSupplierHistory, Organization, User []ent.Interceptor
 	}
 )
