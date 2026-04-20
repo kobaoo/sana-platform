@@ -8,6 +8,42 @@ import (
 )
 
 var (
+	// CertificatesColumns holds the columns for the "certificates" table.
+	CertificatesColumns = []*schema.Column{
+		{Name: "id", Type: field.TypeUUID, Unique: true},
+		{Name: "employee_id", Type: field.TypeUUID},
+		{Name: "type", Type: field.TypeEnum, Enums: []string{"EXTERNAL", "SCORM"}},
+		{Name: "title", Type: field.TypeString, Size: 300},
+		{Name: "issued_date", Type: field.TypeTime, SchemaType: map[string]string{"postgres": "date"}},
+		{Name: "expiry_date", Type: field.TypeTime, Nullable: true, SchemaType: map[string]string{"postgres": "date"}},
+		{Name: "file_url", Type: field.TypeString, Nullable: true, Size: 2147483647},
+		{Name: "uploaded_by", Type: field.TypeUUID, Nullable: true},
+		{Name: "event_id", Type: field.TypeUUID, Nullable: true},
+		{Name: "scorm_course_id", Type: field.TypeUUID, Nullable: true},
+		{Name: "entity_type", Type: field.TypeEnum, Enums: []string{"SCORM_COURSE", "TRAINING_EVENT"}},
+		{Name: "entity_id", Type: field.TypeUUID},
+		{Name: "is_active", Type: field.TypeBool, Default: true},
+		{Name: "created_at", Type: field.TypeTime},
+		{Name: "updated_at", Type: field.TypeTime},
+	}
+	// CertificatesTable holds the schema information for the "certificates" table.
+	CertificatesTable = &schema.Table{
+		Name:       "certificates",
+		Columns:    CertificatesColumns,
+		PrimaryKey: []*schema.Column{CertificatesColumns[0]},
+		Indexes: []*schema.Index{
+			{
+				Name:    "certificate_employee_id",
+				Unique:  false,
+				Columns: []*schema.Column{CertificatesColumns[1]},
+			},
+			{
+				Name:    "certificate_is_active",
+				Unique:  false,
+				Columns: []*schema.Column{CertificatesColumns[12]},
+			},
+		},
+	}
 	// OrganizationsColumns holds the columns for the "organizations" table.
 	OrganizationsColumns = []*schema.Column{
 		{Name: "id", Type: field.TypeUUID, Unique: true},
@@ -77,6 +113,7 @@ var (
 	}
 	// Tables holds all the tables in the schema.
 	Tables = []*schema.Table{
+		CertificatesTable,
 		OrganizationsTable,
 		UsersTable,
 	}
