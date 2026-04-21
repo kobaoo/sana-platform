@@ -4,12 +4,14 @@ import (
 	"context"
 	"strings"
 
+	"encore.dev/beta/auth"
 	"encore.dev/beta/errs"
 	"encore.dev/storage/sqldb"
 	"entgo.io/ent/dialect"
 	entsql "entgo.io/ent/dialect/sql"
 	"github.com/google/uuid"
 
+	"encore.app/auth/authhandler"
 	"encore.app/db/ent"
 	"encore.app/db/ent/organization"
 )
@@ -28,10 +30,13 @@ func newEntClient() *ent.Client {
 
 // ════ ENDPOINTS ════
 
-// CreateOrg creates a new organization.
+// CreateOrg creates a new organization. SA only.
 //
 //encore:api auth method=POST path=/organizations
 func CreateOrg(ctx context.Context, req *CreateOrgRequest) (*GetOrgResponse, error) {
+	if err := requireRole(authhandler.RoleSA); err != nil {
+		return nil, err
+	}
 	if strings.TrimSpace(req.Name) == "" {
 		return nil, errs.B().Code(errs.InvalidArgument).Msg("name is required").Err()
 	}
@@ -50,10 +55,13 @@ func CreateOrg(ctx context.Context, req *CreateOrgRequest) (*GetOrgResponse, err
 	return &GetOrgResponse{Organization: *org}, nil
 }
 
-// ListOrgs returns all active organizations.
+// ListOrgs returns all active organizations. SA and ADM only.
 //
 //encore:api auth method=GET path=/organizations
 func ListOrgs(ctx context.Context) (*ListOrgsResponse, error) {
+	if err := requireRole(authhandler.RoleSA, authhandler.RoleADM); err != nil {
+		return nil, err
+	}
 	orgs, err := queryActiveOrgs(ctx)
 	if err != nil {
 		return nil, err
@@ -65,10 +73,13 @@ func ListOrgs(ctx context.Context) (*ListOrgsResponse, error) {
 	}, nil
 }
 
-// GetOrg returns a single organization by ID.
+// GetOrg returns a single organization by ID. SA and ADM only.
 //
 //encore:api auth method=GET path=/organizations/:id
 func GetOrg(ctx context.Context, id string) (*GetOrgResponse, error) {
+	if err := requireRole(authhandler.RoleSA, authhandler.RoleADM); err != nil {
+		return nil, err
+	}
 	org, err := queryOrgByID(ctx, id)
 	if err != nil {
 		return nil, err
@@ -77,10 +88,13 @@ func GetOrg(ctx context.Context, id string) (*GetOrgResponse, error) {
 	return &GetOrgResponse{Organization: *org}, nil
 }
 
-// UpdateOrg partially updates an organization.
+// UpdateOrg partially updates an organization. SA only.
 //
 //encore:api auth method=PUT path=/organizations/:id
 func UpdateOrg(ctx context.Context, id string, req *UpdateOrgRequest) (*GetOrgResponse, error) {
+	if err := requireRole(authhandler.RoleSA); err != nil {
+		return nil, err
+	}
 	if req.Type != nil && !req.Type.IsValid() {
 		return nil, errs.B().Code(errs.InvalidArgument).Msg("invalid organization type").Err()
 	}
@@ -93,10 +107,13 @@ func UpdateOrg(ctx context.Context, id string, req *UpdateOrgRequest) (*GetOrgRe
 	return &GetOrgResponse{Organization: *org}, nil
 }
 
-// DeleteOrg soft-deletes an organization by setting is_active=false.
+// DeleteOrg soft-deletes an organization by setting is_active=false. SA only.
 //
 //encore:api auth method=DELETE path=/organizations/:id
 func DeleteOrg(ctx context.Context, id string) (*DeleteOrgResponse, error) {
+	if err := requireRole(authhandler.RoleSA); err != nil {
+		return nil, err
+	}
 	if err := softDeleteOrg(ctx, id); err != nil {
 		return nil, err
 	}
@@ -241,6 +258,29 @@ func softDeleteOrg(ctx context.Context, id string) error {
 	}
 
 	return nil
+}
+
+// ════ AUTH HELPERS ════
+
+func getAuthData() (*authhandler.AuthData, error) {
+	ad, ok := auth.Data().(*authhandler.AuthData)
+	if !ok {
+		return nil, errs.B().Code(errs.Unauthenticated).Msg("not authenticated").Err()
+	}
+	return ad, nil
+}
+
+func requireRole(allowed ...authhandler.UserRole) error {
+	ad, err := getAuthData()
+	if err != nil {
+		return err
+	}
+	for _, r := range allowed {
+		if ad.Role == r {
+			return nil
+		}
+	}
+	return errs.B().Code(errs.PermissionDenied).Msg("insufficient permissions").Err()
 }
 
 // ════ HELPERS ════

@@ -53,12 +53,6 @@ func CreateEmployee(ctx context.Context, req *CreateEmployeeRequest) (*GetEmploy
 	if err != nil {
 		return nil, errs.B().Code(errs.InvalidArgument).Msg("invalid dzo_id format").Err()
 	}
-	if err := checkDzoExists(ctx, dzoUID); err != nil {
-		return nil, err
-	}
-	if err := checkEmailUnique(ctx, req.Email, nil); err != nil {
-		return nil, err
-	}
 
 	ad, err := getAuthData()
 	if err != nil {
@@ -67,6 +61,22 @@ func CreateEmployee(ctx context.Context, req *CreateEmployeeRequest) (*GetEmploy
 	if err := requireRole(ad, authhandler.RoleSA, authhandler.RoleADM); err != nil {
 		return nil, err
 	}
+
+	// ADM can only create employees in DZOs within their own client.
+	if ad.Role == authhandler.RoleADM {
+		if err := checkDzoExistsForClient(ctx, dzoUID, ad.CompanyID); err != nil {
+			return nil, err
+		}
+	} else {
+		if err := checkDzoExists(ctx, dzoUID); err != nil {
+			return nil, err
+		}
+	}
+
+	if err := checkEmailUnique(ctx, req.Email, nil); err != nil {
+		return nil, err
+	}
+
 	clientUID, err := uuid.Parse(ad.CompanyID)
 	if err != nil {
 		return nil, errs.B().Code(errs.InvalidArgument).Msg("invalid company_id in token").Err()
@@ -80,6 +90,7 @@ func CreateEmployee(ctx context.Context, req *CreateEmployeeRequest) (*GetEmploy
 }
 
 // ListEmployees returns all active employees, with an optional search filter.
+// SA sees all; ADM is scoped to their client; HR is scoped to their DZO.
 //
 //encore:api auth method=GET path=/employees
 func ListEmployees(ctx context.Context, params *ListEmployeesParams) (*ListEmployeesResponse, error) {
@@ -88,16 +99,24 @@ func ListEmployees(ctx context.Context, params *ListEmployeesParams) (*ListEmplo
 		return nil, err
 	}
 
-	dzoFilter := strings.TrimSpace(params.DzoID)
-
 	if err := requireRole(ad, authhandler.RoleSA, authhandler.RoleADM, authhandler.RoleHR); err != nil {
 		return nil, err
 	}
-	if ad.Role == authhandler.RoleHR {
+
+	dzoFilter := strings.TrimSpace(params.DzoID)
+	clientFilter := ""
+
+	switch ad.Role {
+	case authhandler.RoleHR:
+		// HR can only see employees in their assigned DZO.
 		dzoFilter = ad.DzoID
+		clientFilter = ""
+	case authhandler.RoleADM:
+		// ADM can only see employees within their client; optional DZO sub-filter is allowed.
+		clientFilter = ad.CompanyID
 	}
 
-	emps, err := queryActiveEmployees(ctx, strings.TrimSpace(params.Search), dzoFilter)
+	emps, err := queryActiveEmployees(ctx, strings.TrimSpace(params.Search), dzoFilter, clientFilter)
 	if err != nil {
 		return nil, err
 	}
@@ -109,6 +128,7 @@ func ListEmployees(ctx context.Context, params *ListEmployeesParams) (*ListEmplo
 }
 
 // GetEmployee returns a single employee by ID.
+// ADM is scoped to their client; HR is scoped to their DZO.
 //
 //encore:api auth method=GET path=/employees/:id
 func GetEmployee(ctx context.Context, id string) (*GetEmployeeResponse, error) {
@@ -117,22 +137,26 @@ func GetEmployee(ctx context.Context, id string) (*GetEmployeeResponse, error) {
 		return nil, err
 	}
 
+	if err := requireRole(ad, authhandler.RoleSA, authhandler.RoleADM, authhandler.RoleHR); err != nil {
+		return nil, err
+	}
+
 	emp, err := queryEmployeeByID(ctx, id)
 	if err != nil {
 		return nil, err
 	}
 
-	if err := requireRole(ad, authhandler.RoleSA, authhandler.RoleADM, authhandler.RoleHR); err != nil {
-		return nil, err
-	}
 	if ad.Role == authhandler.RoleHR && emp.DzoID != ad.DzoID {
+		return nil, errs.B().Code(errs.NotFound).Msg("employee not found").Err()
+	}
+	if ad.Role == authhandler.RoleADM && emp.ClientID != ad.CompanyID {
 		return nil, errs.B().Code(errs.NotFound).Msg("employee not found").Err()
 	}
 
 	return &GetEmployeeResponse{Employee: *emp}, nil
 }
 
-// PatchEmployee partially updates an employee.
+// PatchEmployee partially updates an employee. ADM is scoped to their client.
 //
 //encore:api auth method=PATCH path=/employees/:id
 func PatchEmployee(ctx context.Context, id string, req *UpdateEmployeeRequest) (*GetEmployeeResponse, error) {
@@ -147,6 +171,11 @@ func PatchEmployee(ctx context.Context, id string, req *UpdateEmployeeRequest) (
 	emp, err := queryEmployeeByID(ctx, id)
 	if err != nil {
 		return nil, err
+	}
+
+	// ADM can only update employees within their own client.
+	if ad.Role == authhandler.RoleADM && emp.ClientID != ad.CompanyID {
+		return nil, errs.B().Code(errs.NotFound).Msg("employee not found").Err()
 	}
 
 	if req.Email != nil {
@@ -173,6 +202,7 @@ func PatchEmployee(ctx context.Context, id string, req *UpdateEmployeeRequest) (
 }
 
 // DeleteEmployee soft-deletes an employee by setting is_deleted=true.
+// ADM is scoped to their client.
 //
 //encore:api auth method=DELETE path=/employees/:id
 func DeleteEmployee(ctx context.Context, id string) (*DeleteEmployeeResponse, error) {
@@ -182,6 +212,17 @@ func DeleteEmployee(ctx context.Context, id string) (*DeleteEmployeeResponse, er
 	}
 	if err := requireRole(ad, authhandler.RoleSA, authhandler.RoleADM); err != nil {
 		return nil, err
+	}
+
+	// ADM can only delete employees within their own client.
+	if ad.Role == authhandler.RoleADM {
+		emp, err := queryEmployeeByID(ctx, id)
+		if err != nil {
+			return nil, err
+		}
+		if emp.ClientID != ad.CompanyID {
+			return nil, errs.B().Code(errs.NotFound).Msg("employee not found").Err()
+		}
 	}
 
 	if err := softDeleteEmployee(ctx, id); err != nil {
@@ -215,7 +256,12 @@ func UploadEmployees(ctx context.Context, req *UploadEmployeesRequest) (*UploadR
 		return nil, err
 	}
 
-	parsedRows, previewRows, validationErrors, err = applyUploadBusinessRules(ctx, parsedRows, previewRows, validationErrors)
+	// For ADM, DZO validation is restricted to their client's DZOs.
+	clientFilter := ""
+	if ad.Role == authhandler.RoleADM {
+		clientFilter = ad.CompanyID
+	}
+	parsedRows, previewRows, validationErrors, err = applyUploadBusinessRules(ctx, parsedRows, previewRows, validationErrors, clientFilter)
 	if err != nil {
 		return nil, err
 	}
@@ -261,7 +307,12 @@ func ImportEmployees(ctx context.Context, req *ImportEmployeesRequest) (*ImportR
 		return nil, err
 	}
 
-	rows, _, validationErrors, err = applyUploadBusinessRules(ctx, rows, previewRows, validationErrors)
+	// For ADM, DZO validation is restricted to their client's DZOs.
+	clientFilter := ""
+	if ad.Role == authhandler.RoleADM {
+		clientFilter = ad.CompanyID
+	}
+	rows, _, validationErrors, err = applyUploadBusinessRules(ctx, rows, previewRows, validationErrors, clientFilter)
 	if err != nil {
 		return nil, err
 	}
@@ -301,7 +352,12 @@ func ImportCountedRows(ctx context.Context, rowsToImport []parsedEmployeeRow, im
 		return 0, nil, errs.B().Code(errs.InvalidArgument).Msg("invalid company_id in token").Err()
 	}
 
-	dzoMap, err := getDzoNameToIDMap(ctx)
+	// For ADM, only DZOs within their client are accessible.
+	clientFilter := ""
+	if ad.Role == authhandler.RoleADM {
+		clientFilter = ad.CompanyID
+	}
+	dzoMap, err := getDzoNameToIDMap(ctx, clientFilter)
 	if err != nil {
 		return 0, nil, errs.B().Code(errs.Internal).Msg("failed to load dzo map").Cause(err).Err()
 	}
@@ -403,7 +459,7 @@ func insertEmployee(ctx context.Context, clientID, dzoID uuid.UUID, req *CreateE
 	return entToEmployee(row), nil
 }
 
-func queryActiveEmployees(ctx context.Context, search string, dzoID string) ([]Employee, error) {
+func queryActiveEmployees(ctx context.Context, search string, dzoID string, clientID string) ([]Employee, error) {
 	q := Client.Employee.
 		Query().
 		WithDzo().
@@ -421,6 +477,13 @@ func queryActiveEmployees(ctx context.Context, search string, dzoID string) ([]E
 		uid, err := uuid.Parse(dzoID)
 		if err == nil {
 			q = q.Where(employee.DzoIDEQ(uid))
+		}
+	}
+
+	if clientID != "" {
+		uid, err := uuid.Parse(clientID)
+		if err == nil {
+			q = q.Where(employee.ClientIDEQ(uid))
 		}
 	}
 
@@ -608,31 +671,61 @@ func checkDzoExists(ctx context.Context, dzoID uuid.UUID) error {
 	}
 	return nil
 }
-func getDzoNameToIDMap(ctx context.Context) (map[string]uuid.UUID, error) {
-	dzos, err := Client.DzoOrganization.
+
+// checkDzoExistsForClient ensures the DZO exists and belongs to the given client.
+// Used to prevent ADM from creating employees in DZOs outside their client.
+func checkDzoExistsForClient(ctx context.Context, dzoID uuid.UUID, clientID string) error {
+	clientUID, err := uuid.Parse(clientID)
+	if err != nil {
+		return errs.B().Code(errs.InvalidArgument).Msg("invalid company_id in token").Err()
+	}
+	exists, err := Client.DzoOrganization.
 		Query().
-		Where(dzoorganization.IsActiveEQ(true)).
-		All(ctx)
+		Where(
+			dzoorganization.IDEQ(dzoID),
+			dzoorganization.IsActiveEQ(true),
+			dzoorganization.ClientIDEQ(clientUID),
+		).
+		Exist(ctx)
+	if err != nil {
+		return errs.B().Code(errs.Internal).Msg("failed to validate dzo_id").Cause(err).Err()
+	}
+	if !exists {
+		return errs.B().Code(errs.InvalidArgument).Msg("dzo not found or not in your client").Err()
+	}
+	return nil
+}
+func getDzoNameToIDMap(ctx context.Context, clientID string) (map[string]uuid.UUID, error) {
+	q := Client.DzoOrganization.Query().Where(dzoorganization.IsActiveEQ(true))
+	if clientID != "" {
+		uid, err := uuid.Parse(clientID)
+		if err == nil {
+			q = q.Where(dzoorganization.ClientIDEQ(uid))
+		}
+	}
+	dzos, err := q.All(ctx)
 	if err != nil {
 		return nil, err
 	}
 
 	dzoMap := make(map[string]uuid.UUID, len(dzos))
-
 	for _, dzo := range dzos {
-		name := normalizeHeader(dzo.Name) // важно для совпадения с Excel
+		name := normalizeHeader(dzo.Name)
 		dzoMap[name] = dzo.ID
 	}
 
 	return dzoMap, nil
 }
 
-func getExistingDzoNames(ctx context.Context) (map[string]bool, error) {
-	names, err := Client.DzoOrganization.
-		Query().
-		Where(dzoorganization.IsActiveEQ(true)).
-		Select(dzoorganization.FieldName).
-		Strings(ctx)
+func getExistingDzoNames(ctx context.Context, clientID string) (map[string]bool, error) {
+	q := Client.DzoOrganization.Query().Where(dzoorganization.IsActiveEQ(true))
+	if clientID != "" {
+		uid, err := uuid.Parse(clientID)
+		if err == nil {
+			q = q.Where(dzoorganization.ClientIDEQ(uid))
+		}
+	}
+	names, err := q.Select(dzoorganization.FieldName).Strings(ctx)
 	if err != nil {
 		return nil, err
 	}
@@ -727,7 +820,7 @@ func parseAndValidateEmployeeExcel(fileData []byte) ([]parsedEmployeeRow, []Uplo
 	return parsedRows, previewRows, validationErrors, totalRows, nil
 }
 
-func applyUploadBusinessRules(ctx context.Context, parsedRows []parsedEmployeeRow, previewRows []UploadEmployeeRow, validationErrors []string) ([]parsedEmployeeRow, []UploadEmployeeRow, []string, error) {
+func applyUploadBusinessRules(ctx context.Context, parsedRows []parsedEmployeeRow, previewRows []UploadEmployeeRow, validationErrors []string, clientID string) ([]parsedEmployeeRow, []UploadEmployeeRow, []string, error) {
 	rowIndex := make(map[int]int, len(previewRows))
 	for i := range previewRows {
 		rowIndex[previewRows[i].RowNumber] = i
@@ -747,7 +840,7 @@ func applyUploadBusinessRules(ctx context.Context, parsedRows []parsedEmployeeRo
 		invalidRows[rowNumber] = struct{}{}
 	}
 
-	employees, err := queryActiveEmployees(ctx, "", "")
+	employees, err := queryActiveEmployees(ctx, "", "", "")
 	if err != nil {
 		return nil, nil, nil, err
 	}
@@ -781,7 +874,7 @@ func applyUploadBusinessRules(ctx context.Context, parsedRows []parsedEmployeeRo
 		}
 	}
 
-	dzoNames, err := getExistingDzoNames(ctx)
+	dzoNames, err := getExistingDzoNames(ctx, clientID)
 	if err != nil {
 		return nil, nil, nil, err
 	}
