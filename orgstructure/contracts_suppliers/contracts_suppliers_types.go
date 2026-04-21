@@ -28,12 +28,14 @@ func (s ContractStatus) IsValid() bool {
 // cost_per_person, head_count, local_content_share_pct, contract_category,
 // actual_spent, uso_lektor_cost (see calc-logic spreadsheet).
 type ContractSupplier struct {
-	ID                 string     `json:"id"`
-	SupplierID         string     `json:"supplier_id"`
-	ContractNumber     string     `json:"contract_number"`
-	VatFlag            bool       `json:"vat_flag"`
-	SignedDate         time.Time  `json:"signed_date"`
-	Amount             float64    `json:"amount"`
+	ID                 string         `json:"id"`
+	SupplierID         string         `json:"supplier_id"`
+	ContractNumber     string         `json:"contract_number"`
+	VatFlag            bool           `json:"vat_flag"`
+	SignedDate         time.Time      `json:"signed_date"`
+	EndDate            *time.Time     `json:"end_date,omitempty"`
+	Status             ContractStatus `json:"status"`
+	Amount             float64        `json:"amount"`
 	AmountCurrency     *float64   `json:"amount_currency,omitempty"`
 	Currency           *string    `json:"currency,omitempty"`
 	BalanceAtYearEnd   *float64   `json:"balance_at_year_end,omitempty"`
@@ -59,6 +61,7 @@ type CreateContractRequest struct {
 	ContractNumber   string     `json:"contract_number"`
 	VatFlag          bool       `json:"vat_flag"`
 	SignedDate       time.Time  `json:"signed_date"`
+	EndDate          *time.Time `json:"end_date,omitempty"`
 	Amount           float64    `json:"amount"`
 	AmountCurrency   *float64   `json:"amount_currency,omitempty"`
 	Currency         *string    `json:"currency,omitempty"`
@@ -75,6 +78,7 @@ type UpdateContractRequest struct {
 	ContractNumber   *string    `json:"contract_number,omitempty"`
 	VatFlag          *bool      `json:"vat_flag,omitempty"`
 	SignedDate       *time.Time `json:"signed_date,omitempty"`
+	EndDate          *time.Time `json:"end_date,omitempty"`
 	AmountCurrency   *float64   `json:"amount_currency,omitempty"`
 	Currency         *string    `json:"currency,omitempty"`
 	BalanceAtYearEnd *float64   `json:"balance_at_year_end,omitempty"`

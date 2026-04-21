@@ -329,7 +329,25 @@ const (
 	defaultPage  = 1
 	defaultLimit = 20
 	maxLimit     = 100
+
+	// expiringSoonWindow is the threshold for marking a contract EXPIRING_SOON.
+	expiringSoonWindow = 30 * 24 * time.Hour
 )
+
+// computeStatus derives the lifecycle status from end_date.
+// Contracts without end_date are treated as ACTIVE.
+func computeStatus(now time.Time, endDate *time.Time) ContractStatus {
+	if endDate == nil {
+		return StatusActive
+	}
+	if !now.Before(*endDate) {
+		return StatusExpired
+	}
+	if endDate.Sub(now) <= expiringSoonWindow {
+		return StatusExpiringSoon
+	}
+	return StatusActive
+}
 
 // applyFilterDefaults normalizes page and limit: page >= 1, limit in [1, 100].
 func applyFilterDefaults(page, limit int) (int, int) {
@@ -363,6 +381,35 @@ func queryContractsFiltered(ctx context.Context, filter *ListContractsFilter, pa
 		q = q.Where(contractsupplier.ContractNumberContainsFold(search))
 	}
 
+	if status := strings.TrimSpace(filter.Status); status != "" {
+		s := ContractStatus(status)
+		if !s.IsValid() {
+			return nil, 0, errs.B().Code(errs.InvalidArgument).Msg("invalid status; allowed: ACTIVE, EXPIRED, EXPIRING_SOON").Err()
+		}
+		now := time.Now()
+		switch s {
+		case StatusExpired:
+			q = q.Where(contractsupplier.EndDateLTE(now))
+		case StatusExpiringSoon:
+			q = q.Where(
+				contractsupplier.EndDateGT(now),
+				contractsupplier.EndDateLTE(now.Add(expiringSoonWindow)),
+			)
+		case StatusActive:
+			q = q.Where(contractsupplier.Or(
+				contractsupplier.EndDateIsNil(),
+				contractsupplier.EndDateGT(now.Add(expiringSoonWindow)),
+			))
+		}
+	}
+
+	if !filter.ExpiryDateFrom.IsZero() {
+		q = q.Where(contractsupplier.EndDateGTE(filter.ExpiryDateFrom))
+	}
+	if !filter.ExpiryDateTo.IsZero() {
+		q = q.Where(contractsupplier.EndDateLTE(filter.ExpiryDateTo))
+	}
+
 	total, err := q.Count(ctx)
 	if err != nil {
 		return nil, 0, errs.B().Code(errs.Internal).Msg("failed to count contracts").Cause(err).Err()
@@ -384,7 +431,7 @@ func validateUpdateRequest(req *UpdateContractRequest) error {
 	if req == nil {
 		return errs.B().Code(errs.InvalidArgument).Msg("request body is required").Err()
 	}
-	if req.ContractNumber == nil && req.VatFlag == nil && req.SignedDate == nil &&
+	if req.ContractNumber == nil && req.VatFlag == nil && req.SignedDate == nil && req.EndDate == nil &&
 		req.AmountCurrency == nil && req.Currency == nil && req.BalanceAtYearEnd == nil {
 		return errs.B().Code(errs.InvalidArgument).Msg("no fields to update").Err()
 	}
@@ -393,6 +440,9 @@ func validateUpdateRequest(req *UpdateContractRequest) error {
 	}
 	if req.SignedDate != nil && req.SignedDate.IsZero() {
 		return errs.B().Code(errs.InvalidArgument).Msg("signed_date cannot be zero").Err()
+	}
+	if req.EndDate != nil && req.EndDate.IsZero() {
+		return errs.B().Code(errs.InvalidArgument).Msg("end_date cannot be zero").Err()
 	}
 	return nil
 }
@@ -408,6 +458,9 @@ func updateContract(ctx context.Context, row *ent.ContractSupplier, req *UpdateC
 	}
 	if req.SignedDate != nil {
 		upd.SetSignedDate(*req.SignedDate)
+	}
+	if req.EndDate != nil {
+		upd.SetEndDate(*req.EndDate)
 	}
 	if req.AmountCurrency != nil {
 		upd.SetAmountCurrency(*req.AmountCurrency)
@@ -563,6 +616,9 @@ func validateCreateRequest(req *CreateContractRequest) error {
 	if req.SignedDate.IsZero() {
 		return errs.B().Code(errs.InvalidArgument).Msg("signed_date is required").Err()
 	}
+	if req.EndDate != nil && !req.EndDate.After(req.SignedDate) {
+		return errs.B().Code(errs.InvalidArgument).Msg("end_date must be after signed_date").Err()
+	}
 	return nil
 }
 
@@ -577,6 +633,7 @@ func insertContract(ctx context.Context, supplierID string, req *CreateContractR
 		SetContractNumber(strings.TrimSpace(req.ContractNumber)).
 		SetVatFlag(req.VatFlag).
 		SetSignedDate(req.SignedDate).
+		SetNillableEndDate(req.EndDate).
 		SetAmount(req.Amount).
 		SetNillableAmountCurrency(req.AmountCurrency).
 		SetNillableCurrency(req.Currency).
@@ -598,6 +655,8 @@ func entToContract(e *ent.ContractSupplier) *ContractSupplier {
 		ContractNumber:     e.ContractNumber,
 		VatFlag:            e.VatFlag,
 		SignedDate:         e.SignedDate,
+		EndDate:            e.EndDate,
+		Status:             computeStatus(time.Now(), e.EndDate),
 		Amount:             e.Amount,
 		AmountCurrency:     e.AmountCurrency,
 		Currency:           e.Currency,

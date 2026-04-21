@@ -30,21 +30,52 @@ func TestContractStatus_IsValid(t *testing.T) {
 	}
 }
 
+func TestComputeStatus(t *testing.T) {
+	now := time.Date(2026, 4, 22, 12, 0, 0, 0, time.UTC)
+	timeP := func(t time.Time) *time.Time { return &t }
+
+	tests := []struct {
+		name    string
+		endDate *time.Time
+		want    ContractStatus
+	}{
+		{"nil end_date is ACTIVE", nil, StatusActive},
+		{"end_date in the past is EXPIRED", timeP(now.Add(-24 * time.Hour)), StatusExpired},
+		{"end_date == now is EXPIRED", timeP(now), StatusExpired},
+		{"end_date within 30 days is EXPIRING_SOON", timeP(now.Add(15 * 24 * time.Hour)), StatusExpiringSoon},
+		{"end_date exactly at 30 days is EXPIRING_SOON", timeP(now.Add(30 * 24 * time.Hour)), StatusExpiringSoon},
+		{"end_date past 30 days is ACTIVE", timeP(now.Add(31 * 24 * time.Hour)), StatusActive},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			if got := computeStatus(now, tt.endDate); got != tt.want {
+				t.Errorf("computeStatus() = %v, want %v", got, tt.want)
+			}
+		})
+	}
+}
+
 // ════ ENDPOINT STUBS — TODO ════
 
 func TestValidateCreateRequest(t *testing.T) {
 	validDate := time.Date(2025, 1, 15, 0, 0, 0, 0, time.UTC)
+	endAfter := time.Date(2026, 1, 15, 0, 0, 0, 0, time.UTC)
+	endBefore := time.Date(2024, 12, 31, 0, 0, 0, 0, time.UTC)
+	timeP := func(t time.Time) *time.Time { return &t }
 	tests := []struct {
 		name    string
 		req     *CreateContractRequest
 		wantErr bool
 	}{
 		{"valid", &CreateContractRequest{ContractNumber: "№123/2025", Amount: 100, SignedDate: validDate}, false},
+		{"valid with end_date", &CreateContractRequest{ContractNumber: "№123/2025", Amount: 100, SignedDate: validDate, EndDate: timeP(endAfter)}, false},
 		{"zero amount is allowed", &CreateContractRequest{ContractNumber: "№123/2025", Amount: 0, SignedDate: validDate}, false},
 		{"nil request", nil, true},
 		{"empty contract_number", &CreateContractRequest{ContractNumber: "   ", Amount: 100, SignedDate: validDate}, true},
 		{"negative amount", &CreateContractRequest{ContractNumber: "№123/2025", Amount: -0.01, SignedDate: validDate}, true},
 		{"zero signed_date", &CreateContractRequest{ContractNumber: "№123/2025", Amount: 100}, true},
+		{"end_date before signed_date", &CreateContractRequest{ContractNumber: "№123/2025", Amount: 100, SignedDate: validDate, EndDate: timeP(endBefore)}, true},
+		{"end_date equal to signed_date", &CreateContractRequest{ContractNumber: "№123/2025", Amount: 100, SignedDate: validDate, EndDate: timeP(validDate)}, true},
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
