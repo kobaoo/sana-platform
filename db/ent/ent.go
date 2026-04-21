@@ -15,6 +15,7 @@ import (
 	"encore.app/db/ent/dzoorganization"
 	"encore.app/db/ent/employee"
 	"encore.app/db/ent/organization"
+	"encore.app/db/ent/supplier"
 	"encore.app/db/ent/user"
 	"entgo.io/ent"
 	"entgo.io/ent/dialect/sql"
@@ -85,6 +86,7 @@ func checkColumn(t, c string) error {
 			dzoorganization.Table:         dzoorganization.ValidColumn,
 			employee.Table:                employee.ValidColumn,
 			organization.Table:            organization.ValidColumn,
+			supplier.Table:                supplier.ValidColumn,
 			user.Table:                    user.ValidColumn,
 		})
 	})

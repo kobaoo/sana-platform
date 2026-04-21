@@ -24,5 +24,8 @@ type Employee func(*sql.Selector)
 // Organization is the predicate function for organization builders.
 type Organization func(*sql.Selector)
 
+// Supplier is the predicate function for supplier builders.
+type Supplier func(*sql.Selector)
+
 // User is the predicate function for user builders.
 type User func(*sql.Selector)
