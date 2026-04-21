@@ -9,16 +9,40 @@ import (
 	"encore.app/db/ent"
 )
 
-// The CertificateFunc type is an adapter to allow the use of ordinary
-// function as Certificate mutator.
-type CertificateFunc func(context.Context, *ent.CertificateMutation) (ent.Value, error)
+// The CompanyFunc type is an adapter to allow the use of ordinary
+// function as Company mutator.
+type CompanyFunc func(context.Context, *ent.CompanyMutation) (ent.Value, error)
 
 // Mutate calls f(ctx, m).
-func (f CertificateFunc) Mutate(ctx context.Context, m ent.Mutation) (ent.Value, error) {
-	if mv, ok := m.(*ent.CertificateMutation); ok {
+func (f CompanyFunc) Mutate(ctx context.Context, m ent.Mutation) (ent.Value, error) {
+	if mv, ok := m.(*ent.CompanyMutation); ok {
 		return f(ctx, mv)
 	}
-	return nil, fmt.Errorf("unexpected mutation type %T. expect *ent.CertificateMutation", m)
+	return nil, fmt.Errorf("unexpected mutation type %T. expect *ent.CompanyMutation", m)
+}
+
+// The DzoOrganizationFunc type is an adapter to allow the use of ordinary
+// function as DzoOrganization mutator.
+type DzoOrganizationFunc func(context.Context, *ent.DzoOrganizationMutation) (ent.Value, error)
+
+// Mutate calls f(ctx, m).
+func (f DzoOrganizationFunc) Mutate(ctx context.Context, m ent.Mutation) (ent.Value, error) {
+	if mv, ok := m.(*ent.DzoOrganizationMutation); ok {
+		return f(ctx, mv)
+	}
+	return nil, fmt.Errorf("unexpected mutation type %T. expect *ent.DzoOrganizationMutation", m)
+}
+
+// The EmployeeFunc type is an adapter to allow the use of ordinary
+// function as Employee mutator.
+type EmployeeFunc func(context.Context, *ent.EmployeeMutation) (ent.Value, error)
+
+// Mutate calls f(ctx, m).
+func (f EmployeeFunc) Mutate(ctx context.Context, m ent.Mutation) (ent.Value, error) {
+	if mv, ok := m.(*ent.EmployeeMutation); ok {
+		return f(ctx, mv)
+	}
+	return nil, fmt.Errorf("unexpected mutation type %T. expect *ent.EmployeeMutation", m)
 }
 
 // The OrganizationFunc type is an adapter to allow the use of ordinary
@@ -31,6 +55,18 @@ func (f OrganizationFunc) Mutate(ctx context.Context, m ent.Mutation) (ent.Value
 		return f(ctx, mv)
 	}
 	return nil, fmt.Errorf("unexpected mutation type %T. expect *ent.OrganizationMutation", m)
+}
+
+// The RequestFunc type is an adapter to allow the use of ordinary
+// function as Request mutator.
+type RequestFunc func(context.Context, *ent.RequestMutation) (ent.Value, error)
+
+// Mutate calls f(ctx, m).
+func (f RequestFunc) Mutate(ctx context.Context, m ent.Mutation) (ent.Value, error) {
+	if mv, ok := m.(*ent.RequestMutation); ok {
+		return f(ctx, mv)
+	}
+	return nil, fmt.Errorf("unexpected mutation type %T. expect *ent.RequestMutation", m)
 }
 
 // The UserFunc type is an adapter to allow the use of ordinary
