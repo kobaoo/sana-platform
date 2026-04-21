@@ -25,6 +25,52 @@ var (
 		Columns:    ClientsColumns,
 		PrimaryKey: []*schema.Column{ClientsColumns[0]},
 	}
+	// DzoOrganizationsColumns holds the columns for the "dzo_organizations" table.
+	DzoOrganizationsColumns = []*schema.Column{
+		{Name: "id", Type: field.TypeUUID},
+		{Name: "client_id", Type: field.TypeUUID},
+		{Name: "name", Type: field.TypeString, Size: 300},
+		{Name: "short_name", Type: field.TypeString, Nullable: true, Size: 100},
+		{Name: "bin", Type: field.TypeString, Nullable: true, Size: 12},
+		{Name: "is_active", Type: field.TypeBool, Default: true},
+	}
+	// DzoOrganizationsTable holds the schema information for the "dzo_organizations" table.
+	DzoOrganizationsTable = &schema.Table{
+		Name:       "dzo_organizations",
+		Columns:    DzoOrganizationsColumns,
+		PrimaryKey: []*schema.Column{DzoOrganizationsColumns[0]},
+	}
+	// EmployeesColumns holds the columns for the "employees" table.
+	EmployeesColumns = []*schema.Column{
+		{Name: "id", Type: field.TypeUUID},
+		{Name: "client_id", Type: field.TypeUUID},
+		{Name: "position", Type: field.TypeString, Nullable: true, Size: 300},
+		{Name: "full_name", Type: field.TypeString, Size: 300},
+		{Name: "short_name", Type: field.TypeString, Nullable: true, Size: 100},
+		{Name: "department", Type: field.TypeString, Nullable: true, Size: 200},
+		{Name: "direction", Type: field.TypeString, Nullable: true, Size: 100},
+		{Name: "email", Type: field.TypeString, Size: 255},
+		{Name: "internal_phone", Type: field.TypeString, Nullable: true, Size: 20},
+		{Name: "birth_date", Type: field.TypeTime, Nullable: true, SchemaType: map[string]string{"postgres": "date"}},
+		{Name: "is_active", Type: field.TypeBool, Default: true},
+		{Name: "user_id", Type: field.TypeUUID, Nullable: true},
+		{Name: "is_deleted", Type: field.TypeBool, Default: false},
+		{Name: "dzo_id", Type: field.TypeUUID},
+	}
+	// EmployeesTable holds the schema information for the "employees" table.
+	EmployeesTable = &schema.Table{
+		Name:       "employees",
+		Columns:    EmployeesColumns,
+		PrimaryKey: []*schema.Column{EmployeesColumns[0]},
+		ForeignKeys: []*schema.ForeignKey{
+			{
+				Symbol:     "employees_dzo_organizations_employees",
+				Columns:    []*schema.Column{EmployeesColumns[13]},
+				RefColumns: []*schema.Column{DzoOrganizationsColumns[0]},
+				OnDelete:   schema.NoAction,
+			},
+		},
+	}
 	// OrganizationsColumns holds the columns for the "organizations" table.
 	OrganizationsColumns = []*schema.Column{
 		{Name: "id", Type: field.TypeUUID, Unique: true},
@@ -104,6 +150,8 @@ var (
 	// Tables holds all the tables in the schema.
 	Tables = []*schema.Table{
 		ClientsTable,
+		DzoOrganizationsTable,
+		EmployeesTable,
 		OrganizationsTable,
 		UsersTable,
 	}
@@ -112,6 +160,13 @@ var (
 func init() {
 	ClientsTable.Annotation = &entsql.Annotation{
 		Table: "clients",
+	}
+	DzoOrganizationsTable.Annotation = &entsql.Annotation{
+		Table: "dzo_organizations",
+	}
+	EmployeesTable.ForeignKeys[0].RefTable = DzoOrganizationsTable
+	EmployeesTable.Annotation = &entsql.Annotation{
+		Table: "employees",
 	}
 	OrganizationsTable.ForeignKeys[0].RefTable = OrganizationsTable
 	UsersTable.ForeignKeys[0].RefTable = ClientsTable

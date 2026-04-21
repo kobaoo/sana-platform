@@ -14,6 +14,10 @@ type Tx struct {
 	config
 	// Company is the client for interacting with the Company builders.
 	Company *CompanyClient
+	// DzoOrganization is the client for interacting with the DzoOrganization builders.
+	DzoOrganization *DzoOrganizationClient
+	// Employee is the client for interacting with the Employee builders.
+	Employee *EmployeeClient
 	// Organization is the client for interacting with the Organization builders.
 	Organization *OrganizationClient
 	// User is the client for interacting with the User builders.
@@ -150,6 +154,8 @@ func (tx *Tx) Client() *Client {
 
 func (tx *Tx) init() {
 	tx.Company = NewCompanyClient(tx.config)
+	tx.DzoOrganization = NewDzoOrganizationClient(tx.config)
+	tx.Employee = NewEmployeeClient(tx.config)
 	tx.Organization = NewOrganizationClient(tx.config)
 	tx.User = NewUserClient(tx.config)
 }
