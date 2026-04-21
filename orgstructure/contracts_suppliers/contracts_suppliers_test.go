@@ -147,14 +147,6 @@ func TestValidateAmendmentRequest(t *testing.T) {
 	}
 }
 
-func TestSpend_DecreasesRemaining(t *testing.T) {
-	t.Skip("TODO: implement once Spend updates remaining_amount")
-}
-
-func TestSpend_OverflowRejected(t *testing.T) {
-	t.Skip("TODO: implement once Spend validates amount <= remaining")
-}
-
 func TestUploadFile(t *testing.T) {
 	t.Skip("TODO: implement once UploadFile stores objects")
 }

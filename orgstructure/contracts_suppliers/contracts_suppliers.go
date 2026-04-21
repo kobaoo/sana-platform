@@ -209,16 +209,6 @@ func AddAmendment(ctx context.Context, id string, req *AmendmentRequest) (*GetCo
 	return &GetContractResponse{Contract: *entToContract(rowAfter)}, nil
 }
 
-// Spend decreases the contract's remaining budget.
-//
-//encore:api auth method=POST path=/contracts-suppliers/id/:id/spend
-func Spend(ctx context.Context, id string, req *SpendRequest) (*GetContractResponse, error) {
-	if _, err := requirePermission(); err != nil {
-		return nil, err
-	}
-	return nil, errs.B().Code(errs.Unimplemented).Msg("Spend not implemented").Err()
-}
-
 // UploadFile attaches a contract document (pdf/jpg/png).
 //
 //encore:api auth method=POST path=/contracts-suppliers/id/:id/upload-file

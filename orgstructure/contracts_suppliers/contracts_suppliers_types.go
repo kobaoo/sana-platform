@@ -83,13 +83,6 @@ type AmendmentRequest struct {
 	AmendmentAmount float64   `json:"amendment_amount"`
 }
 
-// SpendRequest is the body for POST /contracts-suppliers/id/:id/spend.
-// Decreases remaining_amount by the given amount.
-type SpendRequest struct {
-	Amount float64 `json:"amount"`
-	Reason string  `json:"reason,omitempty"`
-}
-
 // ListContractsFilter holds query-string filters for GET /contracts-suppliers.
 // Encore binds query params from the struct fields. Encore only allows
 // non-pointer built-in types in query params, so "not provided" is detected
