@@ -153,7 +153,7 @@ func DeleteSupplier(ctx context.Context, id string) (*DeleteSupplierResponse, er
 
 // UploadSuppliers validates uploaded suppliers .xlsx or .csv file before import.
 //
-//encore:api auth method=POST path=/suppliers/upload
+//encore:api auth method=POST path=/suppliers-import/upload
 func UploadSuppliers(ctx context.Context, req *UploadSuppliersRequest) (*UploadSuppliersResponse, error) {
 	ud, ok := auth.Data().(*authhandler.AuthData)
 	if !ok || ud.CompanyID == "" {
@@ -186,7 +186,7 @@ func UploadSuppliers(ctx context.Context, req *UploadSuppliersRequest) (*UploadS
 
 // ImportSuppliers imports suppliers from uploaded .xlsx or .csv file.
 //
-//encore:api auth method=POST path=/suppliers/import
+//encore:api auth method=POST path=/suppliers-import/import
 func ImportSuppliers(ctx context.Context, req *ImportSuppliersRequest) (*ImportSuppliersResponse, error) {
 	ud, ok := auth.Data().(*authhandler.AuthData)
 	if !ok || ud.CompanyID == "" {
