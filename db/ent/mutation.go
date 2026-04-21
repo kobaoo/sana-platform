@@ -859,6 +859,11 @@ type ContractSupplierMutation struct {
 	addtotal_with_amendment *float64
 	remaining_amount        *float64
 	addremaining_amount     *float64
+	file_key                *string
+	file_name               *string
+	file_size               *int64
+	addfile_size            *int64
+	file_mime_type          *string
 	is_active               *bool
 	created_at              *time.Time
 	updated_at              *time.Time
@@ -1641,6 +1646,223 @@ func (m *ContractSupplierMutation) ResetRemainingAmount() {
 	m.addremaining_amount = nil
 }
 
+// SetFileKey sets the "file_key" field.
+func (m *ContractSupplierMutation) SetFileKey(s string) {
+	m.file_key = &s
+}
+
+// FileKey returns the value of the "file_key" field in the mutation.
+func (m *ContractSupplierMutation) FileKey() (r string, exists bool) {
+	v := m.file_key
+	if v == nil {
+		return
+	}
+	return *v, true
+}
+
+// OldFileKey returns the old "file_key" field's value of the ContractSupplier entity.
+// If the ContractSupplier object wasn't provided to the builder, the object is fetched from the database.
+// An error is returned if the mutation operation is not UpdateOne, or the database query fails.
+func (m *ContractSupplierMutation) OldFileKey(ctx context.Context) (v *string, err error) {
+	if !m.op.Is(OpUpdateOne) {
+		return v, errors.New("OldFileKey is only allowed on UpdateOne operations")
+	}
+	if m.id == nil || m.oldValue == nil {
+		return v, errors.New("OldFileKey requires an ID field in the mutation")
+	}
+	oldValue, err := m.oldValue(ctx)
+	if err != nil {
+		return v, fmt.Errorf("querying old value for OldFileKey: %w", err)
+	}
+	return oldValue.FileKey, nil
+}
+
+// ClearFileKey clears the value of the "file_key" field.
+func (m *ContractSupplierMutation) ClearFileKey() {
+	m.file_key = nil
+	m.clearedFields[contractsupplier.FieldFileKey] = struct{}{}
+}
+
+// FileKeyCleared returns if the "file_key" field was cleared in this mutation.
+func (m *ContractSupplierMutation) FileKeyCleared() bool {
+	_, ok := m.clearedFields[contractsupplier.FieldFileKey]
+	return ok
+}
+
+// ResetFileKey resets all changes to the "file_key" field.
+func (m *ContractSupplierMutation) ResetFileKey() {
+	m.file_key = nil
+	delete(m.clearedFields, contractsupplier.FieldFileKey)
+}
+
+// SetFileName sets the "file_name" field.
+func (m *ContractSupplierMutation) SetFileName(s string) {
+	m.file_name = &s
+}
+
+// FileName returns the value of the "file_name" field in the mutation.
+func (m *ContractSupplierMutation) FileName() (r string, exists bool) {
+	v := m.file_name
+	if v == nil {
+		return
+	}
+	return *v, true
+}
+
+// OldFileName returns the old "file_name" field's value of the ContractSupplier entity.
+// If the ContractSupplier object wasn't provided to the builder, the object is fetched from the database.
+// An error is returned if the mutation operation is not UpdateOne, or the database query fails.
+func (m *ContractSupplierMutation) OldFileName(ctx context.Context) (v *string, err error) {
+	if !m.op.Is(OpUpdateOne) {
+		return v, errors.New("OldFileName is only allowed on UpdateOne operations")
+	}
+	if m.id == nil || m.oldValue == nil {
+		return v, errors.New("OldFileName requires an ID field in the mutation")
+	}
+	oldValue, err := m.oldValue(ctx)
+	if err != nil {
+		return v, fmt.Errorf("querying old value for OldFileName: %w", err)
+	}
+	return oldValue.FileName, nil
+}
+
+// ClearFileName clears the value of the "file_name" field.
+func (m *ContractSupplierMutation) ClearFileName() {
+	m.file_name = nil
+	m.clearedFields[contractsupplier.FieldFileName] = struct{}{}
+}
+
+// FileNameCleared returns if the "file_name" field was cleared in this mutation.
+func (m *ContractSupplierMutation) FileNameCleared() bool {
+	_, ok := m.clearedFields[contractsupplier.FieldFileName]
+	return ok
+}
+
+// ResetFileName resets all changes to the "file_name" field.
+func (m *ContractSupplierMutation) ResetFileName() {
+	m.file_name = nil
+	delete(m.clearedFields, contractsupplier.FieldFileName)
+}
+
+// SetFileSize sets the "file_size" field.
+func (m *ContractSupplierMutation) SetFileSize(i int64) {
+	m.file_size = &i
+	m.addfile_size = nil
+}
+
+// FileSize returns the value of the "file_size" field in the mutation.
+func (m *ContractSupplierMutation) FileSize() (r int64, exists bool) {
+	v := m.file_size
+	if v == nil {
+		return
+	}
+	return *v, true
+}
+
+// OldFileSize returns the old "file_size" field's value of the ContractSupplier entity.
+// If the ContractSupplier object wasn't provided to the builder, the object is fetched from the database.
+// An error is returned if the mutation operation is not UpdateOne, or the database query fails.
+func (m *ContractSupplierMutation) OldFileSize(ctx context.Context) (v *int64, err error) {
+	if !m.op.Is(OpUpdateOne) {
+		return v, errors.New("OldFileSize is only allowed on UpdateOne operations")
+	}
+	if m.id == nil || m.oldValue == nil {
+		return v, errors.New("OldFileSize requires an ID field in the mutation")
+	}
+	oldValue, err := m.oldValue(ctx)
+	if err != nil {
+		return v, fmt.Errorf("querying old value for OldFileSize: %w", err)
+	}
+	return oldValue.FileSize, nil
+}
+
+// AddFileSize adds i to the "file_size" field.
+func (m *ContractSupplierMutation) AddFileSize(i int64) {
+	if m.addfile_size != nil {
+		*m.addfile_size += i
+	} else {
+		m.addfile_size = &i
+	}
+}
+
+// AddedFileSize returns the value that was added to the "file_size" field in this mutation.
+func (m *ContractSupplierMutation) AddedFileSize() (r int64, exists bool) {
+	v := m.addfile_size
+	if v == nil {
+		return
+	}
+	return *v, true
+}
+
+// ClearFileSize clears the value of the "file_size" field.
+func (m *ContractSupplierMutation) ClearFileSize() {
+	m.file_size = nil
+	m.addfile_size = nil
+	m.clearedFields[contractsupplier.FieldFileSize] = struct{}{}
+}
+
+// FileSizeCleared returns if the "file_size" field was cleared in this mutation.
+func (m *ContractSupplierMutation) FileSizeCleared() bool {
+	_, ok := m.clearedFields[contractsupplier.FieldFileSize]
+	return ok
+}
+
+// ResetFileSize resets all changes to the "file_size" field.
+func (m *ContractSupplierMutation) ResetFileSize() {
+	m.file_size = nil
+	m.addfile_size = nil
+	delete(m.clearedFields, contractsupplier.FieldFileSize)
+}
+
+// SetFileMimeType sets the "file_mime_type" field.
+func (m *ContractSupplierMutation) SetFileMimeType(s string) {
+	m.file_mime_type = &s
+}
+
+// FileMimeType returns the value of the "file_mime_type" field in the mutation.
+func (m *ContractSupplierMutation) FileMimeType() (r string, exists bool) {
+	v := m.file_mime_type
+	if v == nil {
+		return
+	}
+	return *v, true
+}
+
+// OldFileMimeType returns the old "file_mime_type" field's value of the ContractSupplier entity.
+// If the ContractSupplier object wasn't provided to the builder, the object is fetched from the database.
+// An error is returned if the mutation operation is not UpdateOne, or the database query fails.
+func (m *ContractSupplierMutation) OldFileMimeType(ctx context.Context) (v *string, err error) {
+	if !m.op.Is(OpUpdateOne) {
+		return v, errors.New("OldFileMimeType is only allowed on UpdateOne operations")
+	}
+	if m.id == nil || m.oldValue == nil {
+		return v, errors.New("OldFileMimeType requires an ID field in the mutation")
+	}
+	oldValue, err := m.oldValue(ctx)
+	if err != nil {
+		return v, fmt.Errorf("querying old value for OldFileMimeType: %w", err)
+	}
+	return oldValue.FileMimeType, nil
+}
+
+// ClearFileMimeType clears the value of the "file_mime_type" field.
+func (m *ContractSupplierMutation) ClearFileMimeType() {
+	m.file_mime_type = nil
+	m.clearedFields[contractsupplier.FieldFileMimeType] = struct{}{}
+}
+
+// FileMimeTypeCleared returns if the "file_mime_type" field was cleared in this mutation.
+func (m *ContractSupplierMutation) FileMimeTypeCleared() bool {
+	_, ok := m.clearedFields[contractsupplier.FieldFileMimeType]
+	return ok
+}
+
+// ResetFileMimeType resets all changes to the "file_mime_type" field.
+func (m *ContractSupplierMutation) ResetFileMimeType() {
+	m.file_mime_type = nil
+	delete(m.clearedFields, contractsupplier.FieldFileMimeType)
+}
+
 // SetIsActive sets the "is_active" field.
 func (m *ContractSupplierMutation) SetIsActive(b bool) {
 	m.is_active = &b
@@ -1783,7 +2005,7 @@ func (m *ContractSupplierMutation) Type() string {
 // order to get all numeric fields that were incremented/decremented, call
 // AddedFields().
 func (m *ContractSupplierMutation) Fields() []string {
-	fields := make([]string, 0, 16)
+	fields := make([]string, 0, 20)
 	if m.supplier_id != nil {
 		fields = append(fields, contractsupplier.FieldSupplierID)
 	}
@@ -1822,6 +2044,18 @@ func (m *ContractSupplierMutation) Fields() []string {
 	}
 	if m.remaining_amount != nil {
 		fields = append(fields, contractsupplier.FieldRemainingAmount)
+	}
+	if m.file_key != nil {
+		fields = append(fields, contractsupplier.FieldFileKey)
+	}
+	if m.file_name != nil {
+		fields = append(fields, contractsupplier.FieldFileName)
+	}
+	if m.file_size != nil {
+		fields = append(fields, contractsupplier.FieldFileSize)
+	}
+	if m.file_mime_type != nil {
+		fields = append(fields, contractsupplier.FieldFileMimeType)
 	}
 	if m.is_active != nil {
 		fields = append(fields, contractsupplier.FieldIsActive)
@@ -1866,6 +2100,14 @@ func (m *ContractSupplierMutation) Field(name string) (ent.Value, bool) {
 		return m.TotalWithAmendment()
 	case contractsupplier.FieldRemainingAmount:
 		return m.RemainingAmount()
+	case contractsupplier.FieldFileKey:
+		return m.FileKey()
+	case contractsupplier.FieldFileName:
+		return m.FileName()
+	case contractsupplier.FieldFileSize:
+		return m.FileSize()
+	case contractsupplier.FieldFileMimeType:
+		return m.FileMimeType()
 	case contractsupplier.FieldIsActive:
 		return m.IsActive()
 	case contractsupplier.FieldCreatedAt:
@@ -1907,6 +2149,14 @@ func (m *ContractSupplierMutation) OldField(ctx context.Context, name string) (e
 		return m.OldTotalWithAmendment(ctx)
 	case contractsupplier.FieldRemainingAmount:
 		return m.OldRemainingAmount(ctx)
+	case contractsupplier.FieldFileKey:
+		return m.OldFileKey(ctx)
+	case contractsupplier.FieldFileName:
+		return m.OldFileName(ctx)
+	case contractsupplier.FieldFileSize:
+		return m.OldFileSize(ctx)
+	case contractsupplier.FieldFileMimeType:
+		return m.OldFileMimeType(ctx)
 	case contractsupplier.FieldIsActive:
 		return m.OldIsActive(ctx)
 	case contractsupplier.FieldCreatedAt:
@@ -2013,6 +2263,34 @@ func (m *ContractSupplierMutation) SetField(name string, value ent.Value) error 
 		}
 		m.SetRemainingAmount(v)
 		return nil
+	case contractsupplier.FieldFileKey:
+		v, ok := value.(string)
+		if !ok {
+			return fmt.Errorf("unexpected type %T for field %s", value, name)
+		}
+		m.SetFileKey(v)
+		return nil
+	case contractsupplier.FieldFileName:
+		v, ok := value.(string)
+		if !ok {
+			return fmt.Errorf("unexpected type %T for field %s", value, name)
+		}
+		m.SetFileName(v)
+		return nil
+	case contractsupplier.FieldFileSize:
+		v, ok := value.(int64)
+		if !ok {
+			return fmt.Errorf("unexpected type %T for field %s", value, name)
+		}
+		m.SetFileSize(v)
+		return nil
+	case contractsupplier.FieldFileMimeType:
+		v, ok := value.(string)
+		if !ok {
+			return fmt.Errorf("unexpected type %T for field %s", value, name)
+		}
+		m.SetFileMimeType(v)
+		return nil
 	case contractsupplier.FieldIsActive:
 		v, ok := value.(bool)
 		if !ok {
@@ -2060,6 +2338,9 @@ func (m *ContractSupplierMutation) AddedFields() []string {
 	if m.addremaining_amount != nil {
 		fields = append(fields, contractsupplier.FieldRemainingAmount)
 	}
+	if m.addfile_size != nil {
+		fields = append(fields, contractsupplier.FieldFileSize)
+	}
 	return fields
 }
 
@@ -2080,6 +2361,8 @@ func (m *ContractSupplierMutation) AddedField(name string) (ent.Value, bool) {
 		return m.AddedTotalWithAmendment()
 	case contractsupplier.FieldRemainingAmount:
 		return m.AddedRemainingAmount()
+	case contractsupplier.FieldFileSize:
+		return m.AddedFileSize()
 	}
 	return nil, false
 }
@@ -2131,6 +2414,13 @@ func (m *ContractSupplierMutation) AddField(name string, value ent.Value) error 
 		}
 		m.AddRemainingAmount(v)
 		return nil
+	case contractsupplier.FieldFileSize:
+		v, ok := value.(int64)
+		if !ok {
+			return fmt.Errorf("unexpected type %T for field %s", value, name)
+		}
+		m.AddFileSize(v)
+		return nil
 	}
 	return fmt.Errorf("unknown ContractSupplier numeric field %s", name)
 }
@@ -2156,6 +2446,18 @@ func (m *ContractSupplierMutation) ClearedFields() []string {
 	}
 	if m.FieldCleared(contractsupplier.FieldAmendmentAmount) {
 		fields = append(fields, contractsupplier.FieldAmendmentAmount)
+	}
+	if m.FieldCleared(contractsupplier.FieldFileKey) {
+		fields = append(fields, contractsupplier.FieldFileKey)
+	}
+	if m.FieldCleared(contractsupplier.FieldFileName) {
+		fields = append(fields, contractsupplier.FieldFileName)
+	}
+	if m.FieldCleared(contractsupplier.FieldFileSize) {
+		fields = append(fields, contractsupplier.FieldFileSize)
+	}
+	if m.FieldCleared(contractsupplier.FieldFileMimeType) {
+		fields = append(fields, contractsupplier.FieldFileMimeType)
 	}
 	return fields
 }
@@ -2188,6 +2490,18 @@ func (m *ContractSupplierMutation) ClearField(name string) error {
 		return nil
 	case contractsupplier.FieldAmendmentAmount:
 		m.ClearAmendmentAmount()
+		return nil
+	case contractsupplier.FieldFileKey:
+		m.ClearFileKey()
+		return nil
+	case contractsupplier.FieldFileName:
+		m.ClearFileName()
+		return nil
+	case contractsupplier.FieldFileSize:
+		m.ClearFileSize()
+		return nil
+	case contractsupplier.FieldFileMimeType:
+		m.ClearFileMimeType()
 		return nil
 	}
 	return fmt.Errorf("unknown ContractSupplier nullable field %s", name)
@@ -2235,6 +2549,18 @@ func (m *ContractSupplierMutation) ResetField(name string) error {
 		return nil
 	case contractsupplier.FieldRemainingAmount:
 		m.ResetRemainingAmount()
+		return nil
+	case contractsupplier.FieldFileKey:
+		m.ResetFileKey()
+		return nil
+	case contractsupplier.FieldFileName:
+		m.ResetFileName()
+		return nil
+	case contractsupplier.FieldFileSize:
+		m.ResetFileSize()
+		return nil
+	case contractsupplier.FieldFileMimeType:
+		m.ResetFileMimeType()
 		return nil
 	case contractsupplier.FieldIsActive:
 		m.ResetIsActive()

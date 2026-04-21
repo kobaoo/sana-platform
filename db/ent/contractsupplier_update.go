@@ -289,6 +289,93 @@ func (_u *ContractSupplierUpdate) AddRemainingAmount(v float64) *ContractSupplie
 	return _u
 }
 
+// SetFileKey sets the "file_key" field.
+func (_u *ContractSupplierUpdate) SetFileKey(v string) *ContractSupplierUpdate {
+	_u.mutation.SetFileKey(v)
+	return _u
+}
+
+// SetNillableFileKey sets the "file_key" field if the given value is not nil.
+func (_u *ContractSupplierUpdate) SetNillableFileKey(v *string) *ContractSupplierUpdate {
+	if v != nil {
+		_u.SetFileKey(*v)
+	}
+	return _u
+}
+
+// ClearFileKey clears the value of the "file_key" field.
+func (_u *ContractSupplierUpdate) ClearFileKey() *ContractSupplierUpdate {
+	_u.mutation.ClearFileKey()
+	return _u
+}
+
+// SetFileName sets the "file_name" field.
+func (_u *ContractSupplierUpdate) SetFileName(v string) *ContractSupplierUpdate {
+	_u.mutation.SetFileName(v)
+	return _u
+}
+
+// SetNillableFileName sets the "file_name" field if the given value is not nil.
+func (_u *ContractSupplierUpdate) SetNillableFileName(v *string) *ContractSupplierUpdate {
+	if v != nil {
+		_u.SetFileName(*v)
+	}
+	return _u
+}
+
+// ClearFileName clears the value of the "file_name" field.
+func (_u *ContractSupplierUpdate) ClearFileName() *ContractSupplierUpdate {
+	_u.mutation.ClearFileName()
+	return _u
+}
+
+// SetFileSize sets the "file_size" field.
+func (_u *ContractSupplierUpdate) SetFileSize(v int64) *ContractSupplierUpdate {
+	_u.mutation.ResetFileSize()
+	_u.mutation.SetFileSize(v)
+	return _u
+}
+
+// SetNillableFileSize sets the "file_size" field if the given value is not nil.
+func (_u *ContractSupplierUpdate) SetNillableFileSize(v *int64) *ContractSupplierUpdate {
+	if v != nil {
+		_u.SetFileSize(*v)
+	}
+	return _u
+}
+
+// AddFileSize adds value to the "file_size" field.
+func (_u *ContractSupplierUpdate) AddFileSize(v int64) *ContractSupplierUpdate {
+	_u.mutation.AddFileSize(v)
+	return _u
+}
+
+// ClearFileSize clears the value of the "file_size" field.
+func (_u *ContractSupplierUpdate) ClearFileSize() *ContractSupplierUpdate {
+	_u.mutation.ClearFileSize()
+	return _u
+}
+
+// SetFileMimeType sets the "file_mime_type" field.
+func (_u *ContractSupplierUpdate) SetFileMimeType(v string) *ContractSupplierUpdate {
+	_u.mutation.SetFileMimeType(v)
+	return _u
+}
+
+// SetNillableFileMimeType sets the "file_mime_type" field if the given value is not nil.
+func (_u *ContractSupplierUpdate) SetNillableFileMimeType(v *string) *ContractSupplierUpdate {
+	if v != nil {
+		_u.SetFileMimeType(*v)
+	}
+	return _u
+}
+
+// ClearFileMimeType clears the value of the "file_mime_type" field.
+func (_u *ContractSupplierUpdate) ClearFileMimeType() *ContractSupplierUpdate {
+	_u.mutation.ClearFileMimeType()
+	return _u
+}
+
 // SetIsActive sets the "is_active" field.
 func (_u *ContractSupplierUpdate) SetIsActive(v bool) *ContractSupplierUpdate {
 	_u.mutation.SetIsActive(v)
@@ -365,6 +452,21 @@ func (_u *ContractSupplierUpdate) check() error {
 	if v, ok := _u.mutation.AmendmentNumber(); ok {
 		if err := contractsupplier.AmendmentNumberValidator(v); err != nil {
 			return &ValidationError{Name: "amendment_number", err: fmt.Errorf(`ent: validator failed for field "ContractSupplier.amendment_number": %w`, err)}
+		}
+	}
+	if v, ok := _u.mutation.FileKey(); ok {
+		if err := contractsupplier.FileKeyValidator(v); err != nil {
+			return &ValidationError{Name: "file_key", err: fmt.Errorf(`ent: validator failed for field "ContractSupplier.file_key": %w`, err)}
+		}
+	}
+	if v, ok := _u.mutation.FileName(); ok {
+		if err := contractsupplier.FileNameValidator(v); err != nil {
+			return &ValidationError{Name: "file_name", err: fmt.Errorf(`ent: validator failed for field "ContractSupplier.file_name": %w`, err)}
+		}
+	}
+	if v, ok := _u.mutation.FileMimeType(); ok {
+		if err := contractsupplier.FileMimeTypeValidator(v); err != nil {
+			return &ValidationError{Name: "file_mime_type", err: fmt.Errorf(`ent: validator failed for field "ContractSupplier.file_mime_type": %w`, err)}
 		}
 	}
 	return nil
@@ -456,6 +558,33 @@ func (_u *ContractSupplierUpdate) sqlSave(ctx context.Context) (_node int, err e
 	}
 	if value, ok := _u.mutation.AddedRemainingAmount(); ok {
 		_spec.AddField(contractsupplier.FieldRemainingAmount, field.TypeFloat64, value)
+	}
+	if value, ok := _u.mutation.FileKey(); ok {
+		_spec.SetField(contractsupplier.FieldFileKey, field.TypeString, value)
+	}
+	if _u.mutation.FileKeyCleared() {
+		_spec.ClearField(contractsupplier.FieldFileKey, field.TypeString)
+	}
+	if value, ok := _u.mutation.FileName(); ok {
+		_spec.SetField(contractsupplier.FieldFileName, field.TypeString, value)
+	}
+	if _u.mutation.FileNameCleared() {
+		_spec.ClearField(contractsupplier.FieldFileName, field.TypeString)
+	}
+	if value, ok := _u.mutation.FileSize(); ok {
+		_spec.SetField(contractsupplier.FieldFileSize, field.TypeInt64, value)
+	}
+	if value, ok := _u.mutation.AddedFileSize(); ok {
+		_spec.AddField(contractsupplier.FieldFileSize, field.TypeInt64, value)
+	}
+	if _u.mutation.FileSizeCleared() {
+		_spec.ClearField(contractsupplier.FieldFileSize, field.TypeInt64)
+	}
+	if value, ok := _u.mutation.FileMimeType(); ok {
+		_spec.SetField(contractsupplier.FieldFileMimeType, field.TypeString, value)
+	}
+	if _u.mutation.FileMimeTypeCleared() {
+		_spec.ClearField(contractsupplier.FieldFileMimeType, field.TypeString)
 	}
 	if value, ok := _u.mutation.IsActive(); ok {
 		_spec.SetField(contractsupplier.FieldIsActive, field.TypeBool, value)
@@ -743,6 +872,93 @@ func (_u *ContractSupplierUpdateOne) AddRemainingAmount(v float64) *ContractSupp
 	return _u
 }
 
+// SetFileKey sets the "file_key" field.
+func (_u *ContractSupplierUpdateOne) SetFileKey(v string) *ContractSupplierUpdateOne {
+	_u.mutation.SetFileKey(v)
+	return _u
+}
+
+// SetNillableFileKey sets the "file_key" field if the given value is not nil.
+func (_u *ContractSupplierUpdateOne) SetNillableFileKey(v *string) *ContractSupplierUpdateOne {
+	if v != nil {
+		_u.SetFileKey(*v)
+	}
+	return _u
+}
+
+// ClearFileKey clears the value of the "file_key" field.
+func (_u *ContractSupplierUpdateOne) ClearFileKey() *ContractSupplierUpdateOne {
+	_u.mutation.ClearFileKey()
+	return _u
+}
+
+// SetFileName sets the "file_name" field.
+func (_u *ContractSupplierUpdateOne) SetFileName(v string) *ContractSupplierUpdateOne {
+	_u.mutation.SetFileName(v)
+	return _u
+}
+
+// SetNillableFileName sets the "file_name" field if the given value is not nil.
+func (_u *ContractSupplierUpdateOne) SetNillableFileName(v *string) *ContractSupplierUpdateOne {
+	if v != nil {
+		_u.SetFileName(*v)
+	}
+	return _u
+}
+
+// ClearFileName clears the value of the "file_name" field.
+func (_u *ContractSupplierUpdateOne) ClearFileName() *ContractSupplierUpdateOne {
+	_u.mutation.ClearFileName()
+	return _u
+}
+
+// SetFileSize sets the "file_size" field.
+func (_u *ContractSupplierUpdateOne) SetFileSize(v int64) *ContractSupplierUpdateOne {
+	_u.mutation.ResetFileSize()
+	_u.mutation.SetFileSize(v)
+	return _u
+}
+
+// SetNillableFileSize sets the "file_size" field if the given value is not nil.
+func (_u *ContractSupplierUpdateOne) SetNillableFileSize(v *int64) *ContractSupplierUpdateOne {
+	if v != nil {
+		_u.SetFileSize(*v)
+	}
+	return _u
+}
+
+// AddFileSize adds value to the "file_size" field.
+func (_u *ContractSupplierUpdateOne) AddFileSize(v int64) *ContractSupplierUpdateOne {
+	_u.mutation.AddFileSize(v)
+	return _u
+}
+
+// ClearFileSize clears the value of the "file_size" field.
+func (_u *ContractSupplierUpdateOne) ClearFileSize() *ContractSupplierUpdateOne {
+	_u.mutation.ClearFileSize()
+	return _u
+}
+
+// SetFileMimeType sets the "file_mime_type" field.
+func (_u *ContractSupplierUpdateOne) SetFileMimeType(v string) *ContractSupplierUpdateOne {
+	_u.mutation.SetFileMimeType(v)
+	return _u
+}
+
+// SetNillableFileMimeType sets the "file_mime_type" field if the given value is not nil.
+func (_u *ContractSupplierUpdateOne) SetNillableFileMimeType(v *string) *ContractSupplierUpdateOne {
+	if v != nil {
+		_u.SetFileMimeType(*v)
+	}
+	return _u
+}
+
+// ClearFileMimeType clears the value of the "file_mime_type" field.
+func (_u *ContractSupplierUpdateOne) ClearFileMimeType() *ContractSupplierUpdateOne {
+	_u.mutation.ClearFileMimeType()
+	return _u
+}
+
 // SetIsActive sets the "is_active" field.
 func (_u *ContractSupplierUpdateOne) SetIsActive(v bool) *ContractSupplierUpdateOne {
 	_u.mutation.SetIsActive(v)
@@ -832,6 +1048,21 @@ func (_u *ContractSupplierUpdateOne) check() error {
 	if v, ok := _u.mutation.AmendmentNumber(); ok {
 		if err := contractsupplier.AmendmentNumberValidator(v); err != nil {
 			return &ValidationError{Name: "amendment_number", err: fmt.Errorf(`ent: validator failed for field "ContractSupplier.amendment_number": %w`, err)}
+		}
+	}
+	if v, ok := _u.mutation.FileKey(); ok {
+		if err := contractsupplier.FileKeyValidator(v); err != nil {
+			return &ValidationError{Name: "file_key", err: fmt.Errorf(`ent: validator failed for field "ContractSupplier.file_key": %w`, err)}
+		}
+	}
+	if v, ok := _u.mutation.FileName(); ok {
+		if err := contractsupplier.FileNameValidator(v); err != nil {
+			return &ValidationError{Name: "file_name", err: fmt.Errorf(`ent: validator failed for field "ContractSupplier.file_name": %w`, err)}
+		}
+	}
+	if v, ok := _u.mutation.FileMimeType(); ok {
+		if err := contractsupplier.FileMimeTypeValidator(v); err != nil {
+			return &ValidationError{Name: "file_mime_type", err: fmt.Errorf(`ent: validator failed for field "ContractSupplier.file_mime_type": %w`, err)}
 		}
 	}
 	return nil
@@ -940,6 +1171,33 @@ func (_u *ContractSupplierUpdateOne) sqlSave(ctx context.Context) (_node *Contra
 	}
 	if value, ok := _u.mutation.AddedRemainingAmount(); ok {
 		_spec.AddField(contractsupplier.FieldRemainingAmount, field.TypeFloat64, value)
+	}
+	if value, ok := _u.mutation.FileKey(); ok {
+		_spec.SetField(contractsupplier.FieldFileKey, field.TypeString, value)
+	}
+	if _u.mutation.FileKeyCleared() {
+		_spec.ClearField(contractsupplier.FieldFileKey, field.TypeString)
+	}
+	if value, ok := _u.mutation.FileName(); ok {
+		_spec.SetField(contractsupplier.FieldFileName, field.TypeString, value)
+	}
+	if _u.mutation.FileNameCleared() {
+		_spec.ClearField(contractsupplier.FieldFileName, field.TypeString)
+	}
+	if value, ok := _u.mutation.FileSize(); ok {
+		_spec.SetField(contractsupplier.FieldFileSize, field.TypeInt64, value)
+	}
+	if value, ok := _u.mutation.AddedFileSize(); ok {
+		_spec.AddField(contractsupplier.FieldFileSize, field.TypeInt64, value)
+	}
+	if _u.mutation.FileSizeCleared() {
+		_spec.ClearField(contractsupplier.FieldFileSize, field.TypeInt64)
+	}
+	if value, ok := _u.mutation.FileMimeType(); ok {
+		_spec.SetField(contractsupplier.FieldFileMimeType, field.TypeString, value)
+	}
+	if _u.mutation.FileMimeTypeCleared() {
+		_spec.ClearField(contractsupplier.FieldFileMimeType, field.TypeString)
 	}
 	if value, ok := _u.mutation.IsActive(); ok {
 		_spec.SetField(contractsupplier.FieldIsActive, field.TypeBool, value)

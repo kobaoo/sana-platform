@@ -155,6 +155,62 @@ func (_c *ContractSupplierCreate) SetRemainingAmount(v float64) *ContractSupplie
 	return _c
 }
 
+// SetFileKey sets the "file_key" field.
+func (_c *ContractSupplierCreate) SetFileKey(v string) *ContractSupplierCreate {
+	_c.mutation.SetFileKey(v)
+	return _c
+}
+
+// SetNillableFileKey sets the "file_key" field if the given value is not nil.
+func (_c *ContractSupplierCreate) SetNillableFileKey(v *string) *ContractSupplierCreate {
+	if v != nil {
+		_c.SetFileKey(*v)
+	}
+	return _c
+}
+
+// SetFileName sets the "file_name" field.
+func (_c *ContractSupplierCreate) SetFileName(v string) *ContractSupplierCreate {
+	_c.mutation.SetFileName(v)
+	return _c
+}
+
+// SetNillableFileName sets the "file_name" field if the given value is not nil.
+func (_c *ContractSupplierCreate) SetNillableFileName(v *string) *ContractSupplierCreate {
+	if v != nil {
+		_c.SetFileName(*v)
+	}
+	return _c
+}
+
+// SetFileSize sets the "file_size" field.
+func (_c *ContractSupplierCreate) SetFileSize(v int64) *ContractSupplierCreate {
+	_c.mutation.SetFileSize(v)
+	return _c
+}
+
+// SetNillableFileSize sets the "file_size" field if the given value is not nil.
+func (_c *ContractSupplierCreate) SetNillableFileSize(v *int64) *ContractSupplierCreate {
+	if v != nil {
+		_c.SetFileSize(*v)
+	}
+	return _c
+}
+
+// SetFileMimeType sets the "file_mime_type" field.
+func (_c *ContractSupplierCreate) SetFileMimeType(v string) *ContractSupplierCreate {
+	_c.mutation.SetFileMimeType(v)
+	return _c
+}
+
+// SetNillableFileMimeType sets the "file_mime_type" field if the given value is not nil.
+func (_c *ContractSupplierCreate) SetNillableFileMimeType(v *string) *ContractSupplierCreate {
+	if v != nil {
+		_c.SetFileMimeType(*v)
+	}
+	return _c
+}
+
 // SetIsActive sets the "is_active" field.
 func (_c *ContractSupplierCreate) SetIsActive(v bool) *ContractSupplierCreate {
 	_c.mutation.SetIsActive(v)
@@ -306,6 +362,21 @@ func (_c *ContractSupplierCreate) check() error {
 	if _, ok := _c.mutation.RemainingAmount(); !ok {
 		return &ValidationError{Name: "remaining_amount", err: errors.New(`ent: missing required field "ContractSupplier.remaining_amount"`)}
 	}
+	if v, ok := _c.mutation.FileKey(); ok {
+		if err := contractsupplier.FileKeyValidator(v); err != nil {
+			return &ValidationError{Name: "file_key", err: fmt.Errorf(`ent: validator failed for field "ContractSupplier.file_key": %w`, err)}
+		}
+	}
+	if v, ok := _c.mutation.FileName(); ok {
+		if err := contractsupplier.FileNameValidator(v); err != nil {
+			return &ValidationError{Name: "file_name", err: fmt.Errorf(`ent: validator failed for field "ContractSupplier.file_name": %w`, err)}
+		}
+	}
+	if v, ok := _c.mutation.FileMimeType(); ok {
+		if err := contractsupplier.FileMimeTypeValidator(v); err != nil {
+			return &ValidationError{Name: "file_mime_type", err: fmt.Errorf(`ent: validator failed for field "ContractSupplier.file_mime_type": %w`, err)}
+		}
+	}
 	if _, ok := _c.mutation.IsActive(); !ok {
 		return &ValidationError{Name: "is_active", err: errors.New(`ent: missing required field "ContractSupplier.is_active"`)}
 	}
@@ -401,6 +472,22 @@ func (_c *ContractSupplierCreate) createSpec() (*ContractSupplier, *sqlgraph.Cre
 	if value, ok := _c.mutation.RemainingAmount(); ok {
 		_spec.SetField(contractsupplier.FieldRemainingAmount, field.TypeFloat64, value)
 		_node.RemainingAmount = value
+	}
+	if value, ok := _c.mutation.FileKey(); ok {
+		_spec.SetField(contractsupplier.FieldFileKey, field.TypeString, value)
+		_node.FileKey = &value
+	}
+	if value, ok := _c.mutation.FileName(); ok {
+		_spec.SetField(contractsupplier.FieldFileName, field.TypeString, value)
+		_node.FileName = &value
+	}
+	if value, ok := _c.mutation.FileSize(); ok {
+		_spec.SetField(contractsupplier.FieldFileSize, field.TypeInt64, value)
+		_node.FileSize = &value
+	}
+	if value, ok := _c.mutation.FileMimeType(); ok {
+		_spec.SetField(contractsupplier.FieldFileMimeType, field.TypeString, value)
+		_node.FileMimeType = &value
 	}
 	if value, ok := _c.mutation.IsActive(); ok {
 		_spec.SetField(contractsupplier.FieldIsActive, field.TypeBool, value)
