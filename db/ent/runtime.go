@@ -12,6 +12,7 @@ import (
 	"encore.app/db/ent/employee"
 	"encore.app/db/ent/organization"
 	"encore.app/db/ent/schema"
+	"encore.app/db/ent/supplier"
 	"encore.app/db/ent/user"
 	"github.com/google/uuid"
 )
@@ -320,6 +321,38 @@ func init() {
 	organizationDescID := organizationFields[0].Descriptor()
 	// organization.DefaultID holds the default value on creation for the id field.
 	organization.DefaultID = organizationDescID.Default.(func() uuid.UUID)
+	supplierFields := schema.Supplier{}.Fields()
+	_ = supplierFields
+	// supplierDescName is the schema descriptor for name field.
+	supplierDescName := supplierFields[3].Descriptor()
+	// supplier.NameValidator is a validator for the "name" field. It is called by the builders before save.
+	supplier.NameValidator = func() func(string) error {
+		validators := supplierDescName.Validators
+		fns := [...]func(string) error{
+			validators[0].(func(string) error),
+			validators[1].(func(string) error),
+		}
+		return func(name string) error {
+			for _, fn := range fns {
+				if err := fn(name); err != nil {
+					return err
+				}
+			}
+			return nil
+		}
+	}()
+	// supplierDescBinOrIin is the schema descriptor for bin_or_iin field.
+	supplierDescBinOrIin := supplierFields[4].Descriptor()
+	// supplier.BinOrIinValidator is a validator for the "bin_or_iin" field. It is called by the builders before save.
+	supplier.BinOrIinValidator = supplierDescBinOrIin.Validators[0].(func(string) error)
+	// supplierDescIsActive is the schema descriptor for is_active field.
+	supplierDescIsActive := supplierFields[6].Descriptor()
+	// supplier.DefaultIsActive holds the default value on creation for the is_active field.
+	supplier.DefaultIsActive = supplierDescIsActive.Default.(bool)
+	// supplierDescID is the schema descriptor for id field.
+	supplierDescID := supplierFields[0].Descriptor()
+	// supplier.DefaultID holds the default value on creation for the id field.
+	supplier.DefaultID = supplierDescID.Default.(func() uuid.UUID)
 	userFields := schema.User{}.Fields()
 	_ = userFields
 	// userDescKeycloakUserID is the schema descriptor for keycloak_user_id field.
