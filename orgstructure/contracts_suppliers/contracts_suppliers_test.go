@@ -123,8 +123,28 @@ func TestDeleteContract_SoftDelete(t *testing.T) {
 	t.Skip("TODO: implement once DeleteContract sets is_active=false")
 }
 
-func TestAddAmendment(t *testing.T) {
-	t.Skip("TODO: implement once AddAmendment recomputes total_with_amendment")
+func TestValidateAmendmentRequest(t *testing.T) {
+	validDate := time.Date(2025, 6, 1, 0, 0, 0, 0, time.UTC)
+	tests := []struct {
+		name    string
+		req     *AmendmentRequest
+		wantErr bool
+	}{
+		{"valid", &AmendmentRequest{AmendmentNumber: "ДС-1", AmendmentDate: validDate, AmendmentAmount: 50}, false},
+		{"nil request", nil, true},
+		{"empty number", &AmendmentRequest{AmendmentNumber: "  ", AmendmentDate: validDate, AmendmentAmount: 50}, true},
+		{"zero date", &AmendmentRequest{AmendmentNumber: "ДС-1", AmendmentAmount: 50}, true},
+		{"zero amount", &AmendmentRequest{AmendmentNumber: "ДС-1", AmendmentDate: validDate, AmendmentAmount: 0}, true},
+		{"negative amount", &AmendmentRequest{AmendmentNumber: "ДС-1", AmendmentDate: validDate, AmendmentAmount: -10}, true},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			err := validateAmendmentRequest(tt.req)
+			if (err != nil) != tt.wantErr {
+				t.Errorf("validateAmendmentRequest() err = %v, wantErr %v", err, tt.wantErr)
+			}
+		})
+	}
 }
 
 func TestSpend_DecreasesRemaining(t *testing.T) {

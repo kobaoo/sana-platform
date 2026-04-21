@@ -171,13 +171,42 @@ func DeleteContract(ctx context.Context, id string) (*DeleteContractResponse, er
 }
 
 // AddAmendment records an amendment (доп. соглашение) on the contract.
+// Only one amendment is allowed per contract; a second attempt returns 409.
+// Recomputes total_with_amendment and remaining_amount.
 //
 //encore:api auth method=POST path=/contracts-suppliers/id/:id/amendment
 func AddAmendment(ctx context.Context, id string, req *AmendmentRequest) (*GetContractResponse, error) {
 	if _, err := requirePermission(); err != nil {
 		return nil, err
 	}
-	return nil, errs.B().Code(errs.Unimplemented).Msg("AddAmendment not implemented").Err()
+
+	if err := validateAmendmentRequest(req); err != nil {
+		return nil, err
+	}
+
+	rowBefore, err := queryContractByID(ctx, id)
+	if err != nil {
+		return nil, err
+	}
+	if !rowBefore.IsActive {
+		return nil, errs.B().Code(errs.NotFound).Msg("contract not found").Err()
+	}
+	if rowBefore.AmendmentNumber != nil {
+		return nil, errs.B().Code(errs.AlreadyExists).Msg("amendment already exists for this contract").Err()
+	}
+
+	rowAfter, err := applyAmendment(ctx, rowBefore, req)
+	if err != nil {
+		return nil, err
+	}
+
+	if auditErr := csh.InsertAuditRecord(ctx, id, csh.OpUpdate,
+		csh.EntToContract(rowBefore), csh.EntToContract(rowAfter)); auditErr != nil {
+		rlog.Error("contracts-suppliers: failed to write audit record",
+			"contract_id", id, "err", auditErr)
+	}
+
+	return &GetContractResponse{Contract: *entToContract(rowAfter)}, nil
 }
 
 // Spend decreases the contract's remaining budget.
@@ -309,6 +338,37 @@ func updateContract(ctx context.Context, row *ent.ContractSupplier, req *UpdateC
 	updated, err := upd.Save(ctx)
 	if err != nil {
 		return nil, errs.B().Code(errs.Internal).Msg("failed to update contract").Cause(err).Err()
+	}
+	return updated, nil
+}
+
+func validateAmendmentRequest(req *AmendmentRequest) error {
+	if req == nil {
+		return errs.B().Code(errs.InvalidArgument).Msg("request body is required").Err()
+	}
+	if strings.TrimSpace(req.AmendmentNumber) == "" {
+		return errs.B().Code(errs.InvalidArgument).Msg("amendment_number is required").Err()
+	}
+	if req.AmendmentDate.IsZero() {
+		return errs.B().Code(errs.InvalidArgument).Msg("amendment_date is required").Err()
+	}
+	// TODO: revisit once business confirms whether negative amendments (scope reduction) are needed.
+	if req.AmendmentAmount <= 0 {
+		return errs.B().Code(errs.InvalidArgument).Msg("amendment_amount must be > 0").Err()
+	}
+	return nil
+}
+
+func applyAmendment(ctx context.Context, row *ent.ContractSupplier, req *AmendmentRequest) (*ent.ContractSupplier, error) {
+	updated, err := Client.ContractSupplier.UpdateOne(row).
+		SetAmendmentNumber(strings.TrimSpace(req.AmendmentNumber)).
+		SetAmendmentDate(req.AmendmentDate).
+		SetAmendmentAmount(req.AmendmentAmount).
+		SetTotalWithAmendment(row.Amount + req.AmendmentAmount).
+		SetRemainingAmount(row.RemainingAmount + req.AmendmentAmount).
+		Save(ctx)
+	if err != nil {
+		return nil, errs.B().Code(errs.Internal).Msg("failed to apply amendment").Cause(err).Err()
 	}
 	return updated, nil
 }
