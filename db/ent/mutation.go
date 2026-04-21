@@ -844,6 +844,7 @@ type ContractSupplierMutation struct {
 	contract_number         *string
 	vat_flag                *bool
 	signed_date             *time.Time
+	end_date                *time.Time
 	amount                  *float64
 	addamount               *float64
 	amount_currency         *float64
@@ -1119,6 +1120,55 @@ func (m *ContractSupplierMutation) OldSignedDate(ctx context.Context) (v time.Ti
 // ResetSignedDate resets all changes to the "signed_date" field.
 func (m *ContractSupplierMutation) ResetSignedDate() {
 	m.signed_date = nil
+}
+
+// SetEndDate sets the "end_date" field.
+func (m *ContractSupplierMutation) SetEndDate(t time.Time) {
+	m.end_date = &t
+}
+
+// EndDate returns the value of the "end_date" field in the mutation.
+func (m *ContractSupplierMutation) EndDate() (r time.Time, exists bool) {
+	v := m.end_date
+	if v == nil {
+		return
+	}
+	return *v, true
+}
+
+// OldEndDate returns the old "end_date" field's value of the ContractSupplier entity.
+// If the ContractSupplier object wasn't provided to the builder, the object is fetched from the database.
+// An error is returned if the mutation operation is not UpdateOne, or the database query fails.
+func (m *ContractSupplierMutation) OldEndDate(ctx context.Context) (v *time.Time, err error) {
+	if !m.op.Is(OpUpdateOne) {
+		return v, errors.New("OldEndDate is only allowed on UpdateOne operations")
+	}
+	if m.id == nil || m.oldValue == nil {
+		return v, errors.New("OldEndDate requires an ID field in the mutation")
+	}
+	oldValue, err := m.oldValue(ctx)
+	if err != nil {
+		return v, fmt.Errorf("querying old value for OldEndDate: %w", err)
+	}
+	return oldValue.EndDate, nil
+}
+
+// ClearEndDate clears the value of the "end_date" field.
+func (m *ContractSupplierMutation) ClearEndDate() {
+	m.end_date = nil
+	m.clearedFields[contractsupplier.FieldEndDate] = struct{}{}
+}
+
+// EndDateCleared returns if the "end_date" field was cleared in this mutation.
+func (m *ContractSupplierMutation) EndDateCleared() bool {
+	_, ok := m.clearedFields[contractsupplier.FieldEndDate]
+	return ok
+}
+
+// ResetEndDate resets all changes to the "end_date" field.
+func (m *ContractSupplierMutation) ResetEndDate() {
+	m.end_date = nil
+	delete(m.clearedFields, contractsupplier.FieldEndDate)
 }
 
 // SetAmount sets the "amount" field.
@@ -2005,7 +2055,7 @@ func (m *ContractSupplierMutation) Type() string {
 // order to get all numeric fields that were incremented/decremented, call
 // AddedFields().
 func (m *ContractSupplierMutation) Fields() []string {
-	fields := make([]string, 0, 20)
+	fields := make([]string, 0, 21)
 	if m.supplier_id != nil {
 		fields = append(fields, contractsupplier.FieldSupplierID)
 	}
@@ -2017,6 +2067,9 @@ func (m *ContractSupplierMutation) Fields() []string {
 	}
 	if m.signed_date != nil {
 		fields = append(fields, contractsupplier.FieldSignedDate)
+	}
+	if m.end_date != nil {
+		fields = append(fields, contractsupplier.FieldEndDate)
 	}
 	if m.amount != nil {
 		fields = append(fields, contractsupplier.FieldAmount)
@@ -2082,6 +2135,8 @@ func (m *ContractSupplierMutation) Field(name string) (ent.Value, bool) {
 		return m.VatFlag()
 	case contractsupplier.FieldSignedDate:
 		return m.SignedDate()
+	case contractsupplier.FieldEndDate:
+		return m.EndDate()
 	case contractsupplier.FieldAmount:
 		return m.Amount()
 	case contractsupplier.FieldAmountCurrency:
@@ -2131,6 +2186,8 @@ func (m *ContractSupplierMutation) OldField(ctx context.Context, name string) (e
 		return m.OldVatFlag(ctx)
 	case contractsupplier.FieldSignedDate:
 		return m.OldSignedDate(ctx)
+	case contractsupplier.FieldEndDate:
+		return m.OldEndDate(ctx)
 	case contractsupplier.FieldAmount:
 		return m.OldAmount(ctx)
 	case contractsupplier.FieldAmountCurrency:
@@ -2199,6 +2256,13 @@ func (m *ContractSupplierMutation) SetField(name string, value ent.Value) error 
 			return fmt.Errorf("unexpected type %T for field %s", value, name)
 		}
 		m.SetSignedDate(v)
+		return nil
+	case contractsupplier.FieldEndDate:
+		v, ok := value.(time.Time)
+		if !ok {
+			return fmt.Errorf("unexpected type %T for field %s", value, name)
+		}
+		m.SetEndDate(v)
 		return nil
 	case contractsupplier.FieldAmount:
 		v, ok := value.(float64)
@@ -2429,6 +2493,9 @@ func (m *ContractSupplierMutation) AddField(name string, value ent.Value) error 
 // mutation.
 func (m *ContractSupplierMutation) ClearedFields() []string {
 	var fields []string
+	if m.FieldCleared(contractsupplier.FieldEndDate) {
+		fields = append(fields, contractsupplier.FieldEndDate)
+	}
 	if m.FieldCleared(contractsupplier.FieldAmountCurrency) {
 		fields = append(fields, contractsupplier.FieldAmountCurrency)
 	}
@@ -2473,6 +2540,9 @@ func (m *ContractSupplierMutation) FieldCleared(name string) bool {
 // error if the field is not defined in the schema.
 func (m *ContractSupplierMutation) ClearField(name string) error {
 	switch name {
+	case contractsupplier.FieldEndDate:
+		m.ClearEndDate()
+		return nil
 	case contractsupplier.FieldAmountCurrency:
 		m.ClearAmountCurrency()
 		return nil
@@ -2522,6 +2592,9 @@ func (m *ContractSupplierMutation) ResetField(name string) error {
 		return nil
 	case contractsupplier.FieldSignedDate:
 		m.ResetSignedDate()
+		return nil
+	case contractsupplier.FieldEndDate:
+		m.ResetEndDate()
 		return nil
 	case contractsupplier.FieldAmount:
 		m.ResetAmount()

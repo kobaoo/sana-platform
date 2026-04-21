@@ -75,6 +75,11 @@ func SignedDate(v time.Time) predicate.ContractSupplier {
 	return predicate.ContractSupplier(sql.FieldEQ(FieldSignedDate, v))
 }
 
+// EndDate applies equality check predicate on the "end_date" field. It's identical to EndDateEQ.
+func EndDate(v time.Time) predicate.ContractSupplier {
+	return predicate.ContractSupplier(sql.FieldEQ(FieldEndDate, v))
+}
+
 // Amount applies equality check predicate on the "amount" field. It's identical to AmountEQ.
 func Amount(v float64) predicate.ContractSupplier {
 	return predicate.ContractSupplier(sql.FieldEQ(FieldAmount, v))
@@ -308,6 +313,56 @@ func SignedDateLT(v time.Time) predicate.ContractSupplier {
 // SignedDateLTE applies the LTE predicate on the "signed_date" field.
 func SignedDateLTE(v time.Time) predicate.ContractSupplier {
 	return predicate.ContractSupplier(sql.FieldLTE(FieldSignedDate, v))
+}
+
+// EndDateEQ applies the EQ predicate on the "end_date" field.
+func EndDateEQ(v time.Time) predicate.ContractSupplier {
+	return predicate.ContractSupplier(sql.FieldEQ(FieldEndDate, v))
+}
+
+// EndDateNEQ applies the NEQ predicate on the "end_date" field.
+func EndDateNEQ(v time.Time) predicate.ContractSupplier {
+	return predicate.ContractSupplier(sql.FieldNEQ(FieldEndDate, v))
+}
+
+// EndDateIn applies the In predicate on the "end_date" field.
+func EndDateIn(vs ...time.Time) predicate.ContractSupplier {
+	return predicate.ContractSupplier(sql.FieldIn(FieldEndDate, vs...))
+}
+
+// EndDateNotIn applies the NotIn predicate on the "end_date" field.
+func EndDateNotIn(vs ...time.Time) predicate.ContractSupplier {
+	return predicate.ContractSupplier(sql.FieldNotIn(FieldEndDate, vs...))
+}
+
+// EndDateGT applies the GT predicate on the "end_date" field.
+func EndDateGT(v time.Time) predicate.ContractSupplier {
+	return predicate.ContractSupplier(sql.FieldGT(FieldEndDate, v))
+}
+
+// EndDateGTE applies the GTE predicate on the "end_date" field.
+func EndDateGTE(v time.Time) predicate.ContractSupplier {
+	return predicate.ContractSupplier(sql.FieldGTE(FieldEndDate, v))
+}
+
+// EndDateLT applies the LT predicate on the "end_date" field.
+func EndDateLT(v time.Time) predicate.ContractSupplier {
+	return predicate.ContractSupplier(sql.FieldLT(FieldEndDate, v))
+}
+
+// EndDateLTE applies the LTE predicate on the "end_date" field.
+func EndDateLTE(v time.Time) predicate.ContractSupplier {
+	return predicate.ContractSupplier(sql.FieldLTE(FieldEndDate, v))
+}
+
+// EndDateIsNil applies the IsNil predicate on the "end_date" field.
+func EndDateIsNil() predicate.ContractSupplier {
+	return predicate.ContractSupplier(sql.FieldIsNull(FieldEndDate))
+}
+
+// EndDateNotNil applies the NotNil predicate on the "end_date" field.
+func EndDateNotNil() predicate.ContractSupplier {
+	return predicate.ContractSupplier(sql.FieldNotNull(FieldEndDate))
 }
 
 // AmountEQ applies the EQ predicate on the "amount" field.

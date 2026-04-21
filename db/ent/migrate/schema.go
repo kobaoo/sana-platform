@@ -32,6 +32,7 @@ var (
 		{Name: "contract_number", Type: field.TypeString, Size: 100},
 		{Name: "vat_flag", Type: field.TypeBool, Default: false},
 		{Name: "signed_date", Type: field.TypeTime, SchemaType: map[string]string{"postgres": "date"}},
+		{Name: "end_date", Type: field.TypeTime, Nullable: true, SchemaType: map[string]string{"postgres": "date"}},
 		{Name: "amount", Type: field.TypeFloat64, SchemaType: map[string]string{"postgres": "decimal(14,2)"}},
 		{Name: "amount_currency", Type: field.TypeFloat64, Nullable: true, SchemaType: map[string]string{"postgres": "decimal(14,2)"}},
 		{Name: "currency", Type: field.TypeString, Nullable: true, Size: 10},

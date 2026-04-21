@@ -1,7 +1,10 @@
-h1:SIGG6iFCpEA82zHEthUjVuzXH18Do+hJ+gjLUXniYIs=
+h1:NaG8PGoUJbBkMb52gtVpjTmu0XPJ16r+B8BwRnip5+I=
 20260416133254_add_dzo_organizations_and_employee.up.sql h1:tHxSiit9OStmUVceHS33iKUEmrrDhFyOPjVOBXKXBkA=
 20260416154539_initial.up.sql h1:3EIR3uL+x3V5GqAW0reZyNwzRpnkKlHTxehPJpXYCvM=
 20260419000000_clients.up.sql h1:uYYwHBfzHuo7aHvZQ9IBJsiC01Vrp4+fMjib0T41SM8=
 20260420103604_add_contracts_suppliers_and_history.up.sql h1:ukvSFEzsTdb1fCNqyoMpvKERg8RtifIXe6pxfaa+kPU=
 20260420121445_add_is_deleted_to_employees.up.sql h1:PbaeyCSSpTP09RyCljdYu/QfrJ2gaMsTReI6B6oruM0=
-20260421202153_add_contract_file_fields.up.sql h1:Co3Al6Krqc3ScCQWYfLFgT3nLqCkRgmzKvVYeHEedFk=
+20260421080705_suppliers_unique_iin_bin.up.sql h1:mOHv9aQ8VPWHi1cKhrbNtLNycx9gkKs7MJBNy7zk4WQ=
+20260421202153_add_contract_file_fields.up.sql h1:BbmmZyau+udfvQtDVTOVl3vr5s587+JxsYnI9BffiGE=
+20260422022336_add_contract_end_date.up.sql h1:jGiIg5wPXMRTlVq7iyao1+CV/v+D+8ETLywll5QKwLM=
+2_suppliers.up.sql h1:M62OtMpGhhixXOuGCbD2UjWS/rchMyfj06404p5giqI=

@@ -53,6 +53,20 @@ func (_c *ContractSupplierCreate) SetSignedDate(v time.Time) *ContractSupplierCr
 	return _c
 }
 
+// SetEndDate sets the "end_date" field.
+func (_c *ContractSupplierCreate) SetEndDate(v time.Time) *ContractSupplierCreate {
+	_c.mutation.SetEndDate(v)
+	return _c
+}
+
+// SetNillableEndDate sets the "end_date" field if the given value is not nil.
+func (_c *ContractSupplierCreate) SetNillableEndDate(v *time.Time) *ContractSupplierCreate {
+	if v != nil {
+		_c.SetEndDate(*v)
+	}
+	return _c
+}
+
 // SetAmount sets the "amount" field.
 func (_c *ContractSupplierCreate) SetAmount(v float64) *ContractSupplierCreate {
 	_c.mutation.SetAmount(v)
@@ -436,6 +450,10 @@ func (_c *ContractSupplierCreate) createSpec() (*ContractSupplier, *sqlgraph.Cre
 	if value, ok := _c.mutation.SignedDate(); ok {
 		_spec.SetField(contractsupplier.FieldSignedDate, field.TypeTime, value)
 		_node.SignedDate = value
+	}
+	if value, ok := _c.mutation.EndDate(); ok {
+		_spec.SetField(contractsupplier.FieldEndDate, field.TypeTime, value)
+		_node.EndDate = &value
 	}
 	if value, ok := _c.mutation.Amount(); ok {
 		_spec.SetField(contractsupplier.FieldAmount, field.TypeFloat64, value)

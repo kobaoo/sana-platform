@@ -85,6 +85,26 @@ func (_u *ContractSupplierUpdate) SetNillableSignedDate(v *time.Time) *ContractS
 	return _u
 }
 
+// SetEndDate sets the "end_date" field.
+func (_u *ContractSupplierUpdate) SetEndDate(v time.Time) *ContractSupplierUpdate {
+	_u.mutation.SetEndDate(v)
+	return _u
+}
+
+// SetNillableEndDate sets the "end_date" field if the given value is not nil.
+func (_u *ContractSupplierUpdate) SetNillableEndDate(v *time.Time) *ContractSupplierUpdate {
+	if v != nil {
+		_u.SetEndDate(*v)
+	}
+	return _u
+}
+
+// ClearEndDate clears the value of the "end_date" field.
+func (_u *ContractSupplierUpdate) ClearEndDate() *ContractSupplierUpdate {
+	_u.mutation.ClearEndDate()
+	return _u
+}
+
 // SetAmount sets the "amount" field.
 func (_u *ContractSupplierUpdate) SetAmount(v float64) *ContractSupplierUpdate {
 	_u.mutation.ResetAmount()
@@ -496,6 +516,12 @@ func (_u *ContractSupplierUpdate) sqlSave(ctx context.Context) (_node int, err e
 	if value, ok := _u.mutation.SignedDate(); ok {
 		_spec.SetField(contractsupplier.FieldSignedDate, field.TypeTime, value)
 	}
+	if value, ok := _u.mutation.EndDate(); ok {
+		_spec.SetField(contractsupplier.FieldEndDate, field.TypeTime, value)
+	}
+	if _u.mutation.EndDateCleared() {
+		_spec.ClearField(contractsupplier.FieldEndDate, field.TypeTime)
+	}
 	if value, ok := _u.mutation.Amount(); ok {
 		_spec.SetField(contractsupplier.FieldAmount, field.TypeFloat64, value)
 	}
@@ -665,6 +691,26 @@ func (_u *ContractSupplierUpdateOne) SetNillableSignedDate(v *time.Time) *Contra
 	if v != nil {
 		_u.SetSignedDate(*v)
 	}
+	return _u
+}
+
+// SetEndDate sets the "end_date" field.
+func (_u *ContractSupplierUpdateOne) SetEndDate(v time.Time) *ContractSupplierUpdateOne {
+	_u.mutation.SetEndDate(v)
+	return _u
+}
+
+// SetNillableEndDate sets the "end_date" field if the given value is not nil.
+func (_u *ContractSupplierUpdateOne) SetNillableEndDate(v *time.Time) *ContractSupplierUpdateOne {
+	if v != nil {
+		_u.SetEndDate(*v)
+	}
+	return _u
+}
+
+// ClearEndDate clears the value of the "end_date" field.
+func (_u *ContractSupplierUpdateOne) ClearEndDate() *ContractSupplierUpdateOne {
+	_u.mutation.ClearEndDate()
 	return _u
 }
 
@@ -1108,6 +1154,12 @@ func (_u *ContractSupplierUpdateOne) sqlSave(ctx context.Context) (_node *Contra
 	}
 	if value, ok := _u.mutation.SignedDate(); ok {
 		_spec.SetField(contractsupplier.FieldSignedDate, field.TypeTime, value)
+	}
+	if value, ok := _u.mutation.EndDate(); ok {
+		_spec.SetField(contractsupplier.FieldEndDate, field.TypeTime, value)
+	}
+	if _u.mutation.EndDateCleared() {
+		_spec.ClearField(contractsupplier.FieldEndDate, field.TypeTime)
 	}
 	if value, ok := _u.mutation.Amount(); ok {
 		_spec.SetField(contractsupplier.FieldAmount, field.TypeFloat64, value)

@@ -86,35 +86,35 @@ func init() {
 	// contractsupplier.DefaultVatFlag holds the default value on creation for the vat_flag field.
 	contractsupplier.DefaultVatFlag = contractsupplierDescVatFlag.Default.(bool)
 	// contractsupplierDescCurrency is the schema descriptor for currency field.
-	contractsupplierDescCurrency := contractsupplierFields[7].Descriptor()
+	contractsupplierDescCurrency := contractsupplierFields[8].Descriptor()
 	// contractsupplier.CurrencyValidator is a validator for the "currency" field. It is called by the builders before save.
 	contractsupplier.CurrencyValidator = contractsupplierDescCurrency.Validators[0].(func(string) error)
 	// contractsupplierDescAmendmentNumber is the schema descriptor for amendment_number field.
-	contractsupplierDescAmendmentNumber := contractsupplierFields[9].Descriptor()
+	contractsupplierDescAmendmentNumber := contractsupplierFields[10].Descriptor()
 	// contractsupplier.AmendmentNumberValidator is a validator for the "amendment_number" field. It is called by the builders before save.
 	contractsupplier.AmendmentNumberValidator = contractsupplierDescAmendmentNumber.Validators[0].(func(string) error)
 	// contractsupplierDescFileKey is the schema descriptor for file_key field.
-	contractsupplierDescFileKey := contractsupplierFields[14].Descriptor()
+	contractsupplierDescFileKey := contractsupplierFields[15].Descriptor()
 	// contractsupplier.FileKeyValidator is a validator for the "file_key" field. It is called by the builders before save.
 	contractsupplier.FileKeyValidator = contractsupplierDescFileKey.Validators[0].(func(string) error)
 	// contractsupplierDescFileName is the schema descriptor for file_name field.
-	contractsupplierDescFileName := contractsupplierFields[15].Descriptor()
+	contractsupplierDescFileName := contractsupplierFields[16].Descriptor()
 	// contractsupplier.FileNameValidator is a validator for the "file_name" field. It is called by the builders before save.
 	contractsupplier.FileNameValidator = contractsupplierDescFileName.Validators[0].(func(string) error)
 	// contractsupplierDescFileMimeType is the schema descriptor for file_mime_type field.
-	contractsupplierDescFileMimeType := contractsupplierFields[17].Descriptor()
+	contractsupplierDescFileMimeType := contractsupplierFields[18].Descriptor()
 	// contractsupplier.FileMimeTypeValidator is a validator for the "file_mime_type" field. It is called by the builders before save.
 	contractsupplier.FileMimeTypeValidator = contractsupplierDescFileMimeType.Validators[0].(func(string) error)
 	// contractsupplierDescIsActive is the schema descriptor for is_active field.
-	contractsupplierDescIsActive := contractsupplierFields[18].Descriptor()
+	contractsupplierDescIsActive := contractsupplierFields[19].Descriptor()
 	// contractsupplier.DefaultIsActive holds the default value on creation for the is_active field.
 	contractsupplier.DefaultIsActive = contractsupplierDescIsActive.Default.(bool)
 	// contractsupplierDescCreatedAt is the schema descriptor for created_at field.
-	contractsupplierDescCreatedAt := contractsupplierFields[19].Descriptor()
+	contractsupplierDescCreatedAt := contractsupplierFields[20].Descriptor()
 	// contractsupplier.DefaultCreatedAt holds the default value on creation for the created_at field.
 	contractsupplier.DefaultCreatedAt = contractsupplierDescCreatedAt.Default.(func() time.Time)
 	// contractsupplierDescUpdatedAt is the schema descriptor for updated_at field.
-	contractsupplierDescUpdatedAt := contractsupplierFields[20].Descriptor()
+	contractsupplierDescUpdatedAt := contractsupplierFields[21].Descriptor()
 	// contractsupplier.DefaultUpdatedAt holds the default value on creation for the updated_at field.
 	contractsupplier.DefaultUpdatedAt = contractsupplierDescUpdatedAt.Default.(func() time.Time)
 	// contractsupplier.UpdateDefaultUpdatedAt holds the default value on update for the updated_at field.

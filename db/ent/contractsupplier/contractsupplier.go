@@ -22,6 +22,8 @@ const (
 	FieldVatFlag = "vat_flag"
 	// FieldSignedDate holds the string denoting the signed_date field in the database.
 	FieldSignedDate = "signed_date"
+	// FieldEndDate holds the string denoting the end_date field in the database.
+	FieldEndDate = "end_date"
 	// FieldAmount holds the string denoting the amount field in the database.
 	FieldAmount = "amount"
 	// FieldAmountCurrency holds the string denoting the amount_currency field in the database.
@@ -65,6 +67,7 @@ var Columns = []string{
 	FieldContractNumber,
 	FieldVatFlag,
 	FieldSignedDate,
+	FieldEndDate,
 	FieldAmount,
 	FieldAmountCurrency,
 	FieldCurrency,
@@ -146,6 +149,11 @@ func ByVatFlag(opts ...sql.OrderTermOption) OrderOption {
 // BySignedDate orders the results by the signed_date field.
 func BySignedDate(opts ...sql.OrderTermOption) OrderOption {
 	return sql.OrderByField(FieldSignedDate, opts...).ToFunc()
+}
+
+// ByEndDate orders the results by the end_date field.
+func ByEndDate(opts ...sql.OrderTermOption) OrderOption {
+	return sql.OrderByField(FieldEndDate, opts...).ToFunc()
 }
 
 // ByAmount orders the results by the amount field.

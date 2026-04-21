@@ -26,6 +26,8 @@ type ContractSupplier struct {
 	VatFlag bool `json:"vat_flag,omitempty"`
 	// SignedDate holds the value of the "signed_date" field.
 	SignedDate time.Time `json:"signed_date,omitempty"`
+	// EndDate holds the value of the "end_date" field.
+	EndDate *time.Time `json:"end_date,omitempty"`
 	// Amount holds the value of the "amount" field.
 	Amount float64 `json:"amount,omitempty"`
 	// AmountCurrency holds the value of the "amount_currency" field.
@@ -74,7 +76,7 @@ func (*ContractSupplier) scanValues(columns []string) ([]any, error) {
 			values[i] = new(sql.NullInt64)
 		case contractsupplier.FieldContractNumber, contractsupplier.FieldCurrency, contractsupplier.FieldAmendmentNumber, contractsupplier.FieldFileKey, contractsupplier.FieldFileName, contractsupplier.FieldFileMimeType:
 			values[i] = new(sql.NullString)
-		case contractsupplier.FieldSignedDate, contractsupplier.FieldAmendmentDate, contractsupplier.FieldCreatedAt, contractsupplier.FieldUpdatedAt:
+		case contractsupplier.FieldSignedDate, contractsupplier.FieldEndDate, contractsupplier.FieldAmendmentDate, contractsupplier.FieldCreatedAt, contractsupplier.FieldUpdatedAt:
 			values[i] = new(sql.NullTime)
 		case contractsupplier.FieldID, contractsupplier.FieldSupplierID:
 			values[i] = new(uuid.UUID)
@@ -122,6 +124,13 @@ func (_m *ContractSupplier) assignValues(columns []string, values []any) error {
 				return fmt.Errorf("unexpected type %T for field signed_date", values[i])
 			} else if value.Valid {
 				_m.SignedDate = value.Time
+			}
+		case contractsupplier.FieldEndDate:
+			if value, ok := values[i].(*sql.NullTime); !ok {
+				return fmt.Errorf("unexpected type %T for field end_date", values[i])
+			} else if value.Valid {
+				_m.EndDate = new(time.Time)
+				*_m.EndDate = value.Time
 			}
 		case contractsupplier.FieldAmount:
 			if value, ok := values[i].(*sql.NullFloat64); !ok {
@@ -276,6 +285,11 @@ func (_m *ContractSupplier) String() string {
 	builder.WriteString(", ")
 	builder.WriteString("signed_date=")
 	builder.WriteString(_m.SignedDate.Format(time.ANSIC))
+	builder.WriteString(", ")
+	if v := _m.EndDate; v != nil {
+		builder.WriteString("end_date=")
+		builder.WriteString(v.Format(time.ANSIC))
+	}
 	builder.WriteString(", ")
 	builder.WriteString("amount=")
 	builder.WriteString(fmt.Sprintf("%v", _m.Amount))

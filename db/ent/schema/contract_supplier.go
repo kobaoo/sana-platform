@@ -31,6 +31,12 @@ func (ContractSupplier) Fields() []ent.Field {
 			SchemaType(map[string]string{
 				dialect.Postgres: "date",
 			}),
+		field.Time("end_date").
+			Optional().
+			Nillable().
+			SchemaType(map[string]string{
+				dialect.Postgres: "date",
+			}),
 		field.Float("amount").
 			SchemaType(map[string]string{
 				dialect.Postgres: "decimal(14,2)",
