@@ -5,6 +5,7 @@ import (
 	"net/http"
 	"path/filepath"
 	"strings"
+	"time"
 
 	"encore.app/auth/authhandler"
 	"encore.app/db/ent"
@@ -275,6 +276,43 @@ func UploadFile(ctx context.Context, id string, req *UploadFileRequest) (*GetCon
 	return &GetContractResponse{Contract: *entToContract(rowAfter)}, nil
 }
 
+// GetFileURL returns a short-lived signed URL to download the contract's file.
+//
+//encore:api auth method=GET path=/contracts-suppliers/id/:id/file-url
+func GetFileURL(ctx context.Context, id string) (*FileURLResponse, error) {
+	if _, err := requirePermission(); err != nil {
+		return nil, err
+	}
+
+	row, err := queryContractByID(ctx, id)
+	if err != nil {
+		return nil, err
+	}
+	if !row.IsActive {
+		return nil, errs.B().Code(errs.NotFound).Msg("contract not found").Err()
+	}
+	if row.FileKey == nil {
+		return nil, errs.B().Code(errs.NotFound).Msg("no file uploaded for this contract").Err()
+	}
+
+	signed, err := contractFiles.SignedDownloadURL(ctx, *row.FileKey, objects.WithTTL(signedURLTTL))
+	if err != nil {
+		return nil, errs.B().Code(errs.Internal).Msg("failed to generate signed url").Cause(err).Err()
+	}
+
+	resp := &FileURLResponse{
+		URL:       signed.URL,
+		ExpiresAt: time.Now().Add(signedURLTTL),
+	}
+	if row.FileName != nil {
+		resp.FileName = *row.FileName
+	}
+	if row.FileMimeType != nil {
+		resp.MimeType = *row.FileMimeType
+	}
+	return resp, nil
+}
+
 // ImportContracts bulk-imports contracts from CSV/XLSX.
 //
 //encore:api auth method=POST path=/contracts-suppliers/import
@@ -388,7 +426,10 @@ func updateContract(ctx context.Context, row *ent.ContractSupplier, req *UpdateC
 	return updated, nil
 }
 
-const maxUploadSize = 25 * 1024 * 1024
+const (
+	maxUploadSize = 25 * 1024 * 1024
+	signedURLTTL  = 15 * time.Minute
+)
 
 var allowedMimeTypes = map[string]struct{}{
 	"application/pdf": {},

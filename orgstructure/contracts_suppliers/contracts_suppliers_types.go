@@ -133,6 +133,14 @@ type DeleteContractResponse struct {
 	Message string `json:"message"`
 }
 
+// FileURLResponse carries a signed download URL for the contract's attached file.
+type FileURLResponse struct {
+	URL       string    `json:"url"`
+	FileName  string    `json:"file_name"`
+	MimeType  string    `json:"mime_type"`
+	ExpiresAt time.Time `json:"expires_at"`
+}
+
 // MessageResponse is a generic message response.
 type MessageResponse struct {
 	Message string `json:"message"`
