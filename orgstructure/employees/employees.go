@@ -313,6 +313,9 @@ func GetEmployee(ctx context.Context, id string) (*GetEmployeeResponse, error) {
 	if (ad.Role == authhandler.RoleADM && emp.ClientID != ad.CompanyID) || (ad.Role == authhandler.RoleHR && emp.DzoID != ad.DzoID) {
 		return nil, errs.B().Code(errs.NotFound).Msg("employee not found").Err()
 	}
+	if ad.Role == authhandler.RoleADM && emp.ClientID != ad.CompanyID {
+		return nil, errs.B().Code(errs.NotFound).Msg("employee not found").Err()
+	}
 
 	return &GetEmployeeResponse{Employee: *emp}, nil
 }

@@ -11,13 +11,17 @@ import (
 	"github.com/google/uuid"
 )
 
+// testClientID is the client UUID shared across DZO tests.
+// The ADM's CompanyID must match this value so the client-scope checks pass.
+const testClientID = "11111111-1111-1111-1111-111111111111"
+
 func ctx() context.Context {
 	return auth.WithContext(
 		context.Background(),
 		auth.UID("test-user"),
 		&authhandler.AuthData{
 			Role:      authhandler.RoleADM,
-			CompanyID: "00000000-0000-0000-0000-000000000001",
+			CompanyID: testClientID,
 		},
 	)
 }
@@ -38,6 +42,7 @@ func makeClient(t *testing.T) uuid.UUID {
 
 	return id
 }
+
 func makeDZO(t *testing.T, name string) *DZO {
 	id := makeClient(t)
 	t.Helper()
@@ -98,7 +103,6 @@ func TestCreateDZO_ADM_CannotCreateInOtherClient(t *testing.T) {
 	if err == nil {
 		t.Fatal("expected error when ADM creates DZO in another client")
 	}
-
 	if errs.Code(err) != errs.PermissionDenied {
 		t.Errorf("expected PermissionDenied, got %v", errs.Code(err))
 	}

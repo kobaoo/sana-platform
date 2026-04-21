@@ -61,6 +61,11 @@ func CreateDZO(ctx context.Context, req *CreateDZORequest) (*GetDZOResponse, err
 		return nil, errs.B().Code(errs.PermissionDenied).Msg("admin can only create DZO within their own client").Err()
 	}
 
+	// ADM can only create DZO within their own client.
+	if ad.Role == authhandler.RoleADM && req.ClientID != ad.CompanyID {
+		return nil, errs.B().Code(errs.PermissionDenied).Msg("admin can only create DZO within their own client").Err()
+	}
+
 	dzo, err := createDZO(ctx, req)
 	if err != nil {
 		return nil, err
@@ -307,6 +312,32 @@ func queryActiveDZOByClient(ctx context.Context, clientID string) ([]DZO, error)
 	res := make([]DZO, 0, len(rows))
 	for _, r := range rows {
 		res = append(res, *entToDZO(r, 0))
+	}
+
+	return res, nil
+}
+
+func queryActiveDZOByClient(ctx context.Context, clientID string) ([]DZO, error) {
+	clientUUID, err := uuid.Parse(clientID)
+	if err != nil {
+		return nil, errs.B().Code(errs.InvalidArgument).Msg("invalid client_id format").Err()
+	}
+
+	rows, err := Client.DzoOrganization.
+		Query().
+		Where(
+			dzoorganization.IsActiveEQ(true),
+			dzoorganization.ClientIDEQ(clientUUID),
+		).
+		All(ctx)
+
+	if err != nil {
+		return nil, errs.B().Code(errs.Internal).Err()
+	}
+
+	res := make([]DZO, 0, len(rows))
+	for _, r := range rows {
+		res = append(res, *entToDZO(r))
 	}
 
 	return res, nil
