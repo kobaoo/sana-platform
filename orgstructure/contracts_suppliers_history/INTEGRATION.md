@@ -19,10 +19,10 @@ import csh "encore.app/orgstructure/contracts_suppliers_history"
 | Эндпоинт | Операция |
 |---|---|
 | `POST /suppliers/{id}/contracts` | `csh.OpCreate` |
-| `PATCH /contracts-suppliers/{id}` | `csh.OpUpdate` |
-| `POST /contracts-suppliers/{id}/amendment` | `csh.OpUpdate` |
-| `POST /contracts-suppliers/{id}/upload-file` | `csh.OpUpdate` |
-| `DELETE /contracts-suppliers/{id}` | `csh.OpDelete` |
+| `PATCH /contracts-suppliers/id/{id}` | `csh.OpUpdate` |
+| `POST /contracts-suppliers/id/{id}/amendment` | `csh.OpUpdate` |
+| `POST /contracts-suppliers/id/{id}/upload-file` | `csh.OpUpdate` |
+| `DELETE /contracts-suppliers/id/{id}` | `csh.OpDelete` |
 
 ## Пример: CREATE
 
@@ -60,7 +60,7 @@ csh.InsertAuditRecord(ctx, id, csh.OpDelete, oldContract, &newContract)
 
 ## Ответы эндпоинтов
 
-### GET /contracts-suppliers/{id}/history
+### GET /contracts-suppliers/id/{id}/history
 
 Успешный ответ (сортировка по `changed_at` DESC):
 
@@ -90,7 +90,7 @@ csh.InsertAuditRecord(ctx, id, csh.OpDelete, oldContract, &newContract)
 }
 ```
 
-### GET /contracts-suppliers/{id}/validate
+### GET /contracts-suppliers/id/{id}/validate
 
 Договор валиден:
 

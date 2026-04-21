@@ -33,7 +33,7 @@ func newEntClient() *ent.Client {
 
 // GetHistory returns the audit trail for a contract-supplier, sorted by changed_at DESC.
 //
-//encore:api auth method=GET path=/contracts-suppliers/:id/history
+//encore:api auth method=GET path=/contracts-suppliers/id/:id/history
 func GetHistory(ctx context.Context, id string) (*ListHistoryResponse, error) {
 	if _, err := requirePermission(); err != nil {
 		return nil, err
@@ -52,7 +52,7 @@ func GetHistory(ctx context.Context, id string) (*ListHistoryResponse, error) {
 
 // ValidateContract validates a contract before it can be used in requests.
 //
-//encore:api auth method=GET path=/contracts-suppliers/:id/validate
+//encore:api auth method=GET path=/contracts-suppliers/id/:id/validate
 func ValidateContract(ctx context.Context, id string) (*ValidateResponse, error) {
 	if _, err := requirePermission(); err != nil {
 		return nil, err
