@@ -4,8 +4,15 @@ package notifications
 type NotificationType string
 
 const (
+	// Certificates
 	TypeCertExpiring NotificationType = "CERT_EXPIRING"
 	TypeCertExpired  NotificationType = "CERT_EXPIRED"
+
+	// Requests
+	TypeRequestCreated     NotificationType = "REQUEST_CREATED"
+	TypeRequestStepUpdated NotificationType = "REQUEST_STEP_UPDATED"
+	TypeRequestApproved    NotificationType = "REQUEST_APPROVED"
+	TypeRequestCancelled   NotificationType = "REQUEST_CANCELLED"
 )
 
 // EntityType — доменная сущность, к которой относится уведомление.
@@ -13,6 +20,7 @@ type EntityType string
 
 const (
 	EntityCertificate EntityType = "CERTIFICATE"
+	EntityRequest     EntityType = "REQUEST"
 )
 
 // NotificationStatus — статус доставки уведомления.
@@ -25,7 +33,6 @@ const (
 )
 
 // NotifyRequest — входные данные для создания уведомления.
-// Используется как тип запроса Encore private API.
 type NotifyRequest struct {
 	UserID     string           `json:"user_id"`
 	Type       NotificationType `json:"type"`
@@ -35,6 +42,6 @@ type NotifyRequest struct {
 
 // NotifyResponse — результат обработки уведомления.
 type NotifyResponse struct {
-	Skipped bool   `json:"skipped"` // true — дубликат, пропущено
+	Skipped bool   `json:"skipped"`
 	Message string `json:"message"`
 }

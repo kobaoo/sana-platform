@@ -1,7 +1,23 @@
 -- Enum types для notifications
-CREATE TYPE notification_type        AS ENUM ('CERT_EXPIRING', 'CERT_EXPIRED');
-CREATE TYPE notification_entity_type AS ENUM ('CERTIFICATE');
-CREATE TYPE notification_status      AS ENUM ('PENDING', 'SENT', 'FAILED');
+CREATE TYPE notification_type AS ENUM (
+    'CERT_EXPIRING',
+    'CERT_EXPIRED',
+    'REQUEST_CREATED',
+    'REQUEST_STEP_UPDATED',
+    'REQUEST_APPROVED',
+    'REQUEST_CANCELLED'
+);
+
+CREATE TYPE notification_entity_type AS ENUM (
+    'CERTIFICATE',
+    'REQUEST'
+);
+
+CREATE TYPE notification_status AS ENUM (
+    'PENDING',
+    'SENT',
+    'FAILED'
+);
 
 CREATE TABLE notifications (
     id          UUID                     PRIMARY KEY DEFAULT gen_random_uuid(),
@@ -13,7 +29,6 @@ CREATE TABLE notifications (
     sent_at     TIMESTAMPTZ,
     created_at  TIMESTAMPTZ              NOT NULL DEFAULT NOW(),
 
-    -- Анти-дублирующий ключ: одно уведомление на (user, type, entity)
     CONSTRAINT notifications_dedup_key
         UNIQUE (user_id, type, entity_type, entity_id)
 );

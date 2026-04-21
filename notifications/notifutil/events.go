@@ -1,13 +1,40 @@
-package notifications
+package notifutil
+
+// NotificationType — тип уведомления.
+type NotificationType string
+
+const (
+	TypeCertExpiring       NotificationType = "CERT_EXPIRING"
+	TypeCertExpired        NotificationType = "CERT_EXPIRED"
+	TypeRequestCreated     NotificationType = "REQUEST_CREATED"
+	TypeRequestStepUpdated NotificationType = "REQUEST_STEP_UPDATED"
+	TypeRequestApproved    NotificationType = "REQUEST_APPROVED"
+	TypeRequestCancelled   NotificationType = "REQUEST_CANCELLED"
+)
+
+// EntityType — доменная сущность.
+type EntityType string
+
+const (
+	EntityCertificate EntityType = "CERTIFICATE"
+	EntityRequest     EntityType = "REQUEST"
+)
+
+// NotifyRequest — универсальный запрос на уведомление.
+type NotifyRequest struct {
+	UserID     string
+	Type       NotificationType
+	EntityType EntityType
+	EntityID   string
+}
 
 // ════ CERTIFICATE EVENTS ════
 
-// CertificateExpiryEvent — сертификат приближается к дате истечения.
 type CertificateExpiryEvent struct {
 	EmployeeID string
 	CertID     string
 	Title      string
-	ExpiryDate string // формат "2006-01-02"
+	ExpiryDate string
 }
 
 func (e CertificateExpiryEvent) ToNotifyRequest() NotifyRequest {
@@ -21,12 +48,10 @@ func (e CertificateExpiryEvent) ToNotifyRequest() NotifyRequest {
 
 // ════ REQUEST EVENTS ════
 
-// RequestCreatedEvent — новый запрос создан, уведомить следующего апрувера.
 type RequestCreatedEvent struct {
 	InitiatorID string
-	ApproverID  string // первый апрувер (HR на шаге 0→1)
+	ApproverID  string
 	RequestID   string
-	EntityType  string
 }
 
 func (e RequestCreatedEvent) ToNotifyRequest() NotifyRequest {
@@ -38,9 +63,8 @@ func (e RequestCreatedEvent) ToNotifyRequest() NotifyRequest {
 	}
 }
 
-// RequestStepUpdatedEvent — шаг изменился, уведомить следующего апрувера.
 type RequestStepUpdatedEvent struct {
-	ApproverID string // следующий апрувер
+	ApproverID string
 	RequestID  string
 	Step       int
 }
@@ -54,7 +78,6 @@ func (e RequestStepUpdatedEvent) ToNotifyRequest() NotifyRequest {
 	}
 }
 
-// RequestApprovedEvent — запрос одобрен, уведомить инициатора.
 type RequestApprovedEvent struct {
 	InitiatorID string
 	RequestID   string
@@ -69,7 +92,6 @@ func (e RequestApprovedEvent) ToNotifyRequest() NotifyRequest {
 	}
 }
 
-// RequestCancelledEvent — запрос отменён, уведомить инициатора.
 type RequestCancelledEvent struct {
 	InitiatorID string
 	RequestID   string

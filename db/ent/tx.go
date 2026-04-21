@@ -12,12 +12,16 @@ import (
 // Tx is a transactional client that is created by calling Client.Tx().
 type Tx struct {
 	config
+	// Certificate is the client for interacting with the Certificate builders.
+	Certificate *CertificateClient
 	// Company is the client for interacting with the Company builders.
 	Company *CompanyClient
 	// DzoOrganization is the client for interacting with the DzoOrganization builders.
 	DzoOrganization *DzoOrganizationClient
 	// Employee is the client for interacting with the Employee builders.
 	Employee *EmployeeClient
+	// Notification is the client for interacting with the Notification builders.
+	Notification *NotificationClient
 	// Organization is the client for interacting with the Organization builders.
 	Organization *OrganizationClient
 	// Request is the client for interacting with the Request builders.
@@ -155,9 +159,11 @@ func (tx *Tx) Client() *Client {
 }
 
 func (tx *Tx) init() {
+	tx.Certificate = NewCertificateClient(tx.config)
 	tx.Company = NewCompanyClient(tx.config)
 	tx.DzoOrganization = NewDzoOrganizationClient(tx.config)
 	tx.Employee = NewEmployeeClient(tx.config)
+	tx.Notification = NewNotificationClient(tx.config)
 	tx.Organization = NewOrganizationClient(tx.config)
 	tx.Request = NewRequestClient(tx.config)
 	tx.User = NewUserClient(tx.config)
@@ -170,7 +176,7 @@ func (tx *Tx) init() {
 // of them in order to commit or rollback the transaction.
 //
 // If a closed transaction is embedded in one of the generated entities, and the entity
-// applies a query, for example: Company.QueryXXX(), the query will be executed
+// applies a query, for example: Certificate.QueryXXX(), the query will be executed
 // through the driver which created this transaction.
 //
 // Note that txDriver is not goroutine safe.
