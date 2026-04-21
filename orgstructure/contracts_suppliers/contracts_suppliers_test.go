@@ -147,8 +147,62 @@ func TestValidateAmendmentRequest(t *testing.T) {
 	}
 }
 
-func TestUploadFile(t *testing.T) {
-	t.Skip("TODO: implement once UploadFile stores objects")
+func TestValidateUploadFileRequest(t *testing.T) {
+	smallPDF := []byte("%PDF-1.4\n%data")
+	tooBig := make([]byte, 25*1024*1024+1)
+
+	tests := []struct {
+		name    string
+		req     *UploadFileRequest
+		wantErr bool
+	}{
+		{"valid", &UploadFileRequest{FileName: "contract.pdf", FileData: smallPDF}, false},
+		{"nil request", nil, true},
+		{"empty file_name", &UploadFileRequest{FileName: "  ", FileData: smallPDF}, true},
+		{"empty file_data", &UploadFileRequest{FileName: "contract.pdf", FileData: nil}, true},
+		{"too large", &UploadFileRequest{FileName: "contract.pdf", FileData: tooBig}, true},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			err := validateUploadFileRequest(tt.req)
+			if (err != nil) != tt.wantErr {
+				t.Errorf("validateUploadFileRequest() err = %v, wantErr %v", err, tt.wantErr)
+			}
+		})
+	}
+}
+
+func TestIsAllowedMimeType(t *testing.T) {
+	cases := map[string]bool{
+		"application/pdf":  true,
+		"image/png":        true,
+		"image/jpeg":       true,
+		"image/gif":        false,
+		"text/plain":       false,
+		"application/json": false,
+		"":                 false,
+	}
+	for mime, want := range cases {
+		if got := isAllowedMimeType(mime); got != want {
+			t.Errorf("isAllowedMimeType(%q) = %v, want %v", mime, got, want)
+		}
+	}
+}
+
+func TestBuildFileKey(t *testing.T) {
+	cases := []struct {
+		contractID, fileName, want string
+	}{
+		{"abc123", "contract.pdf", "abc123/contract.pdf"},
+		{"abc123", "  contract.pdf  ", "abc123/contract.pdf"},
+		{"abc123", "/etc/passwd", "abc123/passwd"},        // strips directory traversal
+		{"abc123", "../../secret.pdf", "abc123/secret.pdf"},
+	}
+	for _, c := range cases {
+		if got := buildFileKey(c.contractID, c.fileName); got != c.want {
+			t.Errorf("buildFileKey(%q, %q) = %q, want %q", c.contractID, c.fileName, got, c.want)
+		}
+	}
 }
 
 func TestImportContracts(t *testing.T) {

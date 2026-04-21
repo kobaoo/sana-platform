@@ -2,6 +2,8 @@ package contractssuppliers
 
 import (
 	"context"
+	"net/http"
+	"path/filepath"
 	"strings"
 
 	"encore.app/auth/authhandler"
@@ -10,6 +12,7 @@ import (
 	csh "encore.app/orgstructure/contracts_suppliers_history"
 	"encore.dev/beta/errs"
 	"encore.dev/rlog"
+	"encore.dev/storage/objects"
 	"encore.dev/storage/sqldb"
 	"entgo.io/ent/dialect"
 	entsql "entgo.io/ent/dialect/sql"
@@ -21,6 +24,10 @@ import (
 var (
 	db     = sqldb.Named("lms")
 	Client = newEntClient()
+
+	// contractFiles stores uploaded contract documents (pdf/png/jpeg).
+	// Keyed by "<contract_id>/<file_name>".
+	contractFiles = objects.NewBucket("contract-files", objects.BucketConfig{})
 )
 
 func newEntClient() *ent.Client {
@@ -209,14 +216,63 @@ func AddAmendment(ctx context.Context, id string, req *AmendmentRequest) (*GetCo
 	return &GetContractResponse{Contract: *entToContract(rowAfter)}, nil
 }
 
-// UploadFile attaches a contract document (pdf/jpg/png).
+// UploadFile attaches a contract document (pdf/jpg/png) to the contract.
+// Replaces any previously uploaded file. Max size 25 MB.
 //
 //encore:api auth method=POST path=/contracts-suppliers/id/:id/upload-file
-func UploadFile(ctx context.Context, id string) (*MessageResponse, error) {
+func UploadFile(ctx context.Context, id string, req *UploadFileRequest) (*GetContractResponse, error) {
 	if _, err := requirePermission(); err != nil {
 		return nil, err
 	}
-	return nil, errs.B().Code(errs.Unimplemented).Msg("UploadFile not implemented").Err()
+
+	if err := validateUploadFileRequest(req); err != nil {
+		return nil, err
+	}
+
+	rowBefore, err := queryContractByID(ctx, id)
+	if err != nil {
+		return nil, err
+	}
+	if !rowBefore.IsActive {
+		return nil, errs.B().Code(errs.NotFound).Msg("contract not found").Err()
+	}
+
+	mimeType := http.DetectContentType(req.FileData)
+	if !isAllowedMimeType(mimeType) {
+		return nil, errs.B().Code(errs.InvalidArgument).
+			Msgf("unsupported file type %q; allowed: pdf, png, jpeg", mimeType).Err()
+	}
+
+	newKey := buildFileKey(id, req.FileName)
+	if err := uploadFileToBucket(ctx, newKey, req.FileData); err != nil {
+		return nil, err
+	}
+
+	// If replacing a different key, remove the old object (best-effort).
+	if rowBefore.FileKey != nil && *rowBefore.FileKey != newKey {
+		if rmErr := contractFiles.Remove(ctx, *rowBefore.FileKey); rmErr != nil {
+			rlog.Error("contracts-suppliers: failed to remove old file",
+				"contract_id", id, "key", *rowBefore.FileKey, "err", rmErr)
+		}
+	}
+
+	rowAfter, err := updateContractFileFields(ctx, rowBefore, newKey, req.FileName, int64(len(req.FileData)), mimeType)
+	if err != nil {
+		// Roll back the bucket upload to avoid orphaned objects.
+		if rmErr := contractFiles.Remove(ctx, newKey); rmErr != nil {
+			rlog.Error("contracts-suppliers: failed to remove orphaned file",
+				"contract_id", id, "key", newKey, "err", rmErr)
+		}
+		return nil, err
+	}
+
+	if auditErr := csh.InsertAuditRecord(ctx, id, csh.OpUpdate,
+		csh.EntToContract(rowBefore), csh.EntToContract(rowAfter)); auditErr != nil {
+		rlog.Error("contracts-suppliers: failed to write audit record",
+			"contract_id", id, "err", auditErr)
+	}
+
+	return &GetContractResponse{Contract: *entToContract(rowAfter)}, nil
 }
 
 // ImportContracts bulk-imports contracts from CSV/XLSX.
@@ -328,6 +384,66 @@ func updateContract(ctx context.Context, row *ent.ContractSupplier, req *UpdateC
 	updated, err := upd.Save(ctx)
 	if err != nil {
 		return nil, errs.B().Code(errs.Internal).Msg("failed to update contract").Cause(err).Err()
+	}
+	return updated, nil
+}
+
+const maxUploadSize = 25 * 1024 * 1024
+
+var allowedMimeTypes = map[string]struct{}{
+	"application/pdf": {},
+	"image/png":       {},
+	"image/jpeg":      {},
+}
+
+func isAllowedMimeType(mime string) bool {
+	_, ok := allowedMimeTypes[mime]
+	return ok
+}
+
+func validateUploadFileRequest(req *UploadFileRequest) error {
+	if req == nil {
+		return errs.B().Code(errs.InvalidArgument).Msg("request body is required").Err()
+	}
+	if strings.TrimSpace(req.FileName) == "" {
+		return errs.B().Code(errs.InvalidArgument).Msg("file_name is required").Err()
+	}
+	if len(req.FileData) == 0 {
+		return errs.B().Code(errs.InvalidArgument).Msg("file_data is required").Err()
+	}
+	if len(req.FileData) > maxUploadSize {
+		return errs.B().Code(errs.InvalidArgument).Msg("file_data exceeds 25 MB limit").Err()
+	}
+	return nil
+}
+
+// buildFileKey produces a deterministic bucket key: "<contract_id>/<basename>".
+// Strips any directory components from the user-supplied file name.
+func buildFileKey(contractID, fileName string) string {
+	return contractID + "/" + filepath.Base(strings.TrimSpace(fileName))
+}
+
+func uploadFileToBucket(ctx context.Context, key string, data []byte) error {
+	w := contractFiles.Upload(ctx, key)
+	if _, err := w.Write(data); err != nil {
+		w.Abort(err)
+		return errs.B().Code(errs.Internal).Msg("failed to upload file").Cause(err).Err()
+	}
+	if err := w.Close(); err != nil {
+		return errs.B().Code(errs.Internal).Msg("failed to finalize upload").Cause(err).Err()
+	}
+	return nil
+}
+
+func updateContractFileFields(ctx context.Context, row *ent.ContractSupplier, key, name string, size int64, mime string) (*ent.ContractSupplier, error) {
+	updated, err := Client.ContractSupplier.UpdateOne(row).
+		SetFileKey(key).
+		SetFileName(name).
+		SetFileSize(size).
+		SetFileMimeType(mime).
+		Save(ctx)
+	if err != nil {
+		return nil, errs.B().Code(errs.Internal).Msg("failed to save file metadata").Cause(err).Err()
 	}
 	return updated, nil
 }
@@ -450,6 +566,10 @@ func entToContract(e *ent.ContractSupplier) *ContractSupplier {
 		AmendmentAmount:    e.AmendmentAmount,
 		TotalWithAmendment: e.TotalWithAmendment,
 		RemainingAmount:    e.RemainingAmount,
+		FileKey:            e.FileKey,
+		FileName:           e.FileName,
+		FileSize:           e.FileSize,
+		FileMimeType:       e.FileMimeType,
 		IsActive:           e.IsActive,
 		CreatedAt:          e.CreatedAt,
 		UpdatedAt:          e.UpdatedAt,

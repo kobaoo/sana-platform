@@ -42,6 +42,10 @@ type ContractSupplier struct {
 	AmendmentAmount    *float64   `json:"amendment_amount,omitempty"`
 	TotalWithAmendment float64    `json:"total_with_amendment"`
 	RemainingAmount    float64    `json:"remaining_amount"`
+	FileKey            *string    `json:"file_key,omitempty"`
+	FileName           *string    `json:"file_name,omitempty"`
+	FileSize           *int64     `json:"file_size,omitempty"`
+	FileMimeType       *string    `json:"file_mime_type,omitempty"`
 	IsActive           bool       `json:"is_active"`
 	CreatedAt          time.Time  `json:"created_at"`
 	UpdatedAt          time.Time  `json:"updated_at"`
@@ -81,6 +85,14 @@ type AmendmentRequest struct {
 	AmendmentNumber string    `json:"amendment_number"`
 	AmendmentDate   time.Time `json:"amendment_date"`
 	AmendmentAmount float64   `json:"amendment_amount"`
+}
+
+// UploadFileRequest is the body for POST /contracts-suppliers/id/:id/upload-file.
+// file_data is base64-encoded bytes of the file contents.
+// Accepted MIME types: application/pdf, image/png, image/jpeg. Max size 25 MB.
+type UploadFileRequest struct {
+	FileName string `json:"file_name"`
+	FileData []byte `json:"file_data"`
 }
 
 // ListContractsFilter holds query-string filters for GET /contracts-suppliers.
