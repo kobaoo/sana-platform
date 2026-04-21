@@ -193,11 +193,6 @@ func (_m *Certificate) Value(name string) (ent.Value, error) {
 	return _m.selectValues.Get(name)
 }
 
-// QueryEmployee queries the "employee" edge of the Certificate entity.
-func (_m *Certificate) QueryEmployee() *EmployeeQuery {
-	return NewCertificateClient(_m.config).QueryEmployee(_m)
-}
-
 // Update returns a builder for updating this Certificate.
 // Note that you need to call Certificate.Unwrap() before calling this method if this Certificate
 // was returned from a transaction, and the transaction was committed or rolled back.

@@ -5,11 +5,15 @@ import (
 	"strings"
 	"testing"
 
-	"encore.app/db/ent"
-	"encore.app/db/ent/user"
+	"encore.dev/beta/auth"
 	"encore.dev/beta/errs"
+	"encore.dev/et"
 	encoreuuid "encore.dev/types/uuid"
 	"github.com/google/uuid"
+
+	"encore.app/auth/authhandler"
+	"encore.app/db/ent"
+	"encore.app/db/ent/user"
 )
 
 func ctx() context.Context {
@@ -20,8 +24,7 @@ func toEncoreUUID(id uuid.UUID) encoreuuid.UUID {
 	return encoreuuid.UUID(id)
 }
 
-// --- helpers ---
-
+// ensureUser creates a DB user without injecting auth context.
 func ensureUser(t *testing.T, id uuid.UUID, role string) {
 	t.Helper()
 
@@ -53,23 +56,13 @@ func ensureUser(t *testing.T, id uuid.UUID, role string) {
 	}
 }
 
-func makeActors(t *testing.T) (uuid.UUID, uuid.UUID) {
-	hrID := uuid.New()
-	admID := uuid.New()
-
-	ensureUser(t, hrID, "HR")
-	ensureUser(t, admID, "ADM")
-
-	return hrID, admID
-}
-
-func makeRequest(t *testing.T, initiator uuid.UUID) *RequestResponse {
+// makeRequest creates a TRAINING_EVENT request using the current auth context.
+func makeRequest(t *testing.T) *RequestResponse {
 	t.Helper()
 
 	resp, err := CreateRequest(ctx(), &CreateRequestRequest{
-		InitiatorID: initiator,
-		EntityID:    uuid.New(),
-		EntityType:  "TRAINING_EVENT",
+		EntityID:   uuid.New(),
+		EntityType: "TRAINING_EVENT",
 	})
 	if err != nil {
 		t.Fatalf("create request failed: %v", err)
@@ -81,12 +74,11 @@ func makeRequest(t *testing.T, initiator uuid.UUID) *RequestResponse {
 // --- tests ---
 
 func TestCreateRequest(t *testing.T) {
-	hrID, _ := makeActors(t)
+	makeAuthUser(t, authhandler.RoleHR)
 
 	resp, err := CreateRequest(ctx(), &CreateRequestRequest{
-		InitiatorID: hrID,
-		EntityID:    uuid.New(),
-		EntityType:  "TRAINING_EVENT",
+		EntityID:   uuid.New(),
+		EntityType: "TRAINING_EVENT",
 	})
 	if err != nil {
 		t.Fatalf("unexpected error: %v", err)
@@ -101,8 +93,8 @@ func TestCreateRequest(t *testing.T) {
 }
 
 func TestGetRequest(t *testing.T) {
-	hrID, _ := makeActors(t)
-	r := makeRequest(t, hrID)
+	makeAuthUser(t, authhandler.RoleHR)
+	r := makeRequest(t)
 
 	resp, err := GetRequest(ctx(), toEncoreUUID(r.ID))
 	if err != nil {
@@ -115,12 +107,11 @@ func TestGetRequest(t *testing.T) {
 }
 
 func TestInvalidStepJump(t *testing.T) {
-	hrID, _ := makeActors(t)
-	r := makeRequest(t, hrID)
+	makeAuthUser(t, authhandler.RoleHR)
+	r := makeRequest(t)
 
 	_, err := UpdateRequestStep(ctx(), toEncoreUUID(r.ID), &UpdateRequestStepRequest{
-		ActorID: hrID,
-		Step:    2,
+		Step: 2,
 	})
 
 	if err == nil {
@@ -132,59 +123,82 @@ func TestInvalidStepJump(t *testing.T) {
 }
 
 func TestStepFlow(t *testing.T) {
-	hrID, admID := makeActors(t)
-	r := makeRequest(t, hrID)
+	_, hrKcID := makeAuthUser(t, authhandler.RoleHR)
+	_, admKcID := makeAuthUser(t, authhandler.RoleADM)
+
+	et.OverrideAuthInfo(auth.UID(hrKcID), &authhandler.AuthData{
+		KeycloakUserID: hrKcID,
+		Role:           authhandler.RoleHR,
+	})
+	r := makeRequest(t)
 
 	var err error
 
-	r, err = UpdateRequestStep(ctx(), toEncoreUUID(r.ID), &UpdateRequestStepRequest{
-		ActorID: hrID,
-		Step:    1,
-	})
+	// Step 1: HR
+	r, err = UpdateRequestStep(ctx(), toEncoreUUID(r.ID), &UpdateRequestStepRequest{Step: 1})
 	if err != nil {
 		t.Fatalf("step1 failed: %v", err)
 	}
 
-	r, err = UpdateRequestStep(ctx(), toEncoreUUID(r.ID), &UpdateRequestStepRequest{
-		ActorID: admID,
-		Step:    2,
+	// Step 2: ADM
+	et.OverrideAuthInfo(auth.UID(admKcID), &authhandler.AuthData{
+		KeycloakUserID: admKcID,
+		Role:           authhandler.RoleADM,
 	})
+	r, err = UpdateRequestStep(ctx(), toEncoreUUID(r.ID), &UpdateRequestStepRequest{Step: 2})
 	if err != nil {
 		t.Fatalf("step2 failed: %v", err)
 	}
 
-	r, err = UpdateRequestStep(ctx(), toEncoreUUID(r.ID), &UpdateRequestStepRequest{
-		ActorID: hrID,
-		Step:    3,
+	// Step 3: HR
+	et.OverrideAuthInfo(auth.UID(hrKcID), &authhandler.AuthData{
+		KeycloakUserID: hrKcID,
+		Role:           authhandler.RoleHR,
 	})
+	r, err = UpdateRequestStep(ctx(), toEncoreUUID(r.ID), &UpdateRequestStepRequest{Step: 3})
 	if err != nil {
 		t.Fatalf("step3 failed: %v", err)
 	}
 
 	if r.Step != 3 {
-		t.Fatalf("expected step 3")
+		t.Fatalf("expected step 3, got %d", r.Step)
 	}
 }
 
 func TestFinalize(t *testing.T) {
-	hrID, admID := makeActors(t)
-	r := makeRequest(t, hrID)
+	_, hrKcID := makeAuthUser(t, authhandler.RoleHR)
+	_, admKcID := makeAuthUser(t, authhandler.RoleADM)
+
+	et.OverrideAuthInfo(auth.UID(hrKcID), &authhandler.AuthData{
+		KeycloakUserID: hrKcID,
+		Role:           authhandler.RoleHR,
+	})
+	r := makeRequest(t)
 
 	var err error
 
-	r, _ = UpdateRequestStep(ctx(), toEncoreUUID(r.ID), &UpdateRequestStepRequest{ActorID: hrID, Step: 1})
-	r, _ = UpdateRequestStep(ctx(), toEncoreUUID(r.ID), &UpdateRequestStepRequest{ActorID: admID, Step: 2})
-	r, _ = UpdateRequestStep(ctx(), toEncoreUUID(r.ID), &UpdateRequestStepRequest{ActorID: hrID, Step: 3})
+	r, _ = UpdateRequestStep(ctx(), toEncoreUUID(r.ID), &UpdateRequestStepRequest{Step: 1})
+
+	et.OverrideAuthInfo(auth.UID(admKcID), &authhandler.AuthData{
+		KeycloakUserID: admKcID,
+		Role:           authhandler.RoleADM,
+	})
+	r, _ = UpdateRequestStep(ctx(), toEncoreUUID(r.ID), &UpdateRequestStepRequest{Step: 2})
+
+	et.OverrideAuthInfo(auth.UID(hrKcID), &authhandler.AuthData{
+		KeycloakUserID: hrKcID,
+		Role:           authhandler.RoleHR,
+	})
+	r, _ = UpdateRequestStep(ctx(), toEncoreUUID(r.ID), &UpdateRequestStepRequest{Step: 3})
 
 	final, err := UpdateRequestStatus(ctx(), toEncoreUUID(r.ID), &UpdateRequestStatusRequest{
-		ActorID: hrID,
-		Status:  "APPROVED",
+		Status: "APPROVED",
 	})
 	if err != nil {
 		t.Fatalf("finalize failed: %v", err)
 	}
 
 	if final.Status != "APPROVED" {
-		t.Fatalf("expected APPROVED")
+		t.Fatalf("expected APPROVED, got %s", final.Status)
 	}
 }

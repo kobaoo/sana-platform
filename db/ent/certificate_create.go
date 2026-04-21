@@ -9,7 +9,6 @@ import (
 	"time"
 
 	"encore.app/db/ent/certificate"
-	"encore.app/db/ent/employee"
 	"entgo.io/ent/dialect/sql/sqlgraph"
 	"entgo.io/ent/schema/field"
 	"github.com/google/uuid"
@@ -258,9 +257,6 @@ func (_c *CertificateCreate) check() error {
 	if _, ok := _c.mutation.UpdatedAt(); !ok {
 		return &ValidationError{Name: "updated_at", err: errors.New(`ent: missing required field "Certificate.updated_at"`)}
 	}
-	if len(_c.mutation.EmployeeIDs()) == 0 {
-		return &ValidationError{Name: "employee", err: errors.New(`ent: missing required edge "Certificate.employee"`)}
-	}
 	return nil
 }
 
@@ -340,22 +336,9 @@ func (_c *CertificateCreate) createSpec() (*Certificate, *sqlgraph.CreateSpec) {
 		_spec.SetField(certificate.FieldUpdatedAt, field.TypeTime, value)
 		_node.UpdatedAt = value
 	}
-	if nodes := _c.mutation.EmployeeIDs(); len(nodes) > 0 {
-		edge := &sqlgraph.EdgeSpec{
-			Rel:     sqlgraph.M2O,
-			Inverse: false,
-			Table:   certificate.EmployeeTable,
-			Columns: []string{certificate.EmployeeColumn},
-			Bidi:    false,
-			Target: &sqlgraph.EdgeTarget{
-				IDSpec: sqlgraph.NewFieldSpec(employee.FieldID, field.TypeUUID),
-			},
-		}
-		for _, k := range nodes {
-			edge.Target.Nodes = append(edge.Target.Nodes, k)
-		}
-		_node.EmployeeID = nodes[0]
-		_spec.Edges = append(_spec.Edges, edge)
+	if value, ok := _c.mutation.EmployeeID(); ok {
+		_spec.SetField(certificate.FieldEmployeeID, field.TypeUUID, value)
+		_node.EmployeeID = value
 	}
 	return _node, _spec
 }

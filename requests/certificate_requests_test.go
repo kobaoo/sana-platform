@@ -228,12 +228,11 @@ func TestCanReviewCertRenewal_Roles(t *testing.T) {
 
 // Get возвращает 404 если ID принадлежит Epic 4 (другой entity_type)
 func TestGetCertificateRenewal_WrongEntityType(t *testing.T) {
-	hrID, _ := makeActors(t)
+	makeAuthUser(t, authhandler.RoleHR)
 
 	tr, err := CreateRequest(ctx(), &CreateRequestRequest{
-		InitiatorID: hrID,
-		EntityID:    uuid.New(),
-		EntityType:  "TRAINING_EVENT",
+		EntityID:   uuid.New(),
+		EntityType: "TRAINING_EVENT",
 	})
 	if err != nil {
 		t.Fatalf("create training event request: %v", err)

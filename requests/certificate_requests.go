@@ -35,7 +35,7 @@ func CreateCertificateRenewal(ctx context.Context, req *CreateCertificateRenewal
 		return nil, errs.B().Code(errs.PermissionDenied).Msg("only HR can create certificate renewal requests").Err()
 	}
 
-	initiatorID, err := resolveInitiatorID(ctx, ad.KeycloakUserID)
+	initiatorID, err := resolveInitiatorID(ctx, ad)
 	if err != nil {
 		return nil, err
 	}
@@ -175,16 +175,29 @@ func getCertAuthData() (*authhandler.AuthData, error) {
 	return ad, nil
 }
 
-func resolveInitiatorID(ctx context.Context, kcID string) (uuid.UUID, error) {
+func resolveInitiatorID(ctx context.Context, ad *authhandler.AuthData) (uuid.UUID, error) {
 	u, err := Client.User.
 		Query().
-		Where(user.KeycloakUserIDEQ(kcID)).
+		Where(user.KeycloakUserIDEQ(ad.KeycloakUserID)).
 		Only(ctx)
 	if err != nil {
-		if ent.IsNotFound(err) {
-			return uuid.Nil, errs.B().Code(errs.NotFound).Msg("authenticated user not found").Err()
+		if !ent.IsNotFound(err) {
+			return uuid.Nil, errs.B().Code(errs.Internal).Msg("failed to resolve initiator").Cause(err).Err()
 		}
-		return uuid.Nil, errs.B().Code(errs.Internal).Msg("failed to resolve initiator").Cause(err).Err()
+		// User not in DB yet — auto-create from token claims on first request.
+		builder := Client.User.Create().
+			SetKeycloakUserID(ad.KeycloakUserID).
+			SetEmail(ad.Email).
+			SetRole(string(ad.Role))
+		if ad.DzoID != "" {
+			if dzoUID, parseErr := uuid.Parse(ad.DzoID); parseErr == nil {
+				builder = builder.SetDzoID(dzoUID)
+			}
+		}
+		u, err = builder.Save(ctx)
+		if err != nil {
+			return uuid.Nil, errs.B().Code(errs.Internal).Msg("failed to create user record").Cause(err).Err()
+		}
 	}
 	return u.ID, nil
 }

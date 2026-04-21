@@ -7,19 +7,16 @@ import (
 )
 
 type CreateRequestRequest struct {
-	InitiatorID uuid.UUID `json:"initiator_id"`
-	EntityID    uuid.UUID `json:"entity_id"`
-	EntityType  string    `json:"entity_type"`
+	EntityID   uuid.UUID `json:"entity_id"`
+	EntityType string    `json:"entity_type"`
 }
 
 type UpdateRequestStepRequest struct {
-	ActorID uuid.UUID `json:"actor_id"`
-	Step    int       `json:"step"`
+	Step int `json:"step"`
 }
 
 type UpdateRequestStatusRequest struct {
-	ActorID uuid.UUID `json:"actor_id"`
-	Status  string    `json:"status"`
+	Status string `json:"status"`
 }
 
 type RequestResponse struct {

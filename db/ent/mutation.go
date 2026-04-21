@@ -463,104 +463,6 @@ func (m *CertificateMutation) ResetUploadedBy() {
 	delete(m.clearedFields, certificate.FieldUploadedBy)
 }
 
-// SetEventID sets the "event_id" field.
-func (m *CertificateMutation) SetEventID(u uuid.UUID) {
-	m.event_id = &u
-}
-
-// EventID returns the value of the "event_id" field in the mutation.
-func (m *CertificateMutation) EventID() (r uuid.UUID, exists bool) {
-	v := m.event_id
-	if v == nil {
-		return
-	}
-	return *v, true
-}
-
-// OldEventID returns the old "event_id" field's value of the Certificate entity.
-// If the Certificate object wasn't provided to the builder, the object is fetched from the database.
-// An error is returned if the mutation operation is not UpdateOne, or the database query fails.
-func (m *CertificateMutation) OldEventID(ctx context.Context) (v *uuid.UUID, err error) {
-	if !m.op.Is(OpUpdateOne) {
-		return v, errors.New("OldEventID is only allowed on UpdateOne operations")
-	}
-	if m.id == nil || m.oldValue == nil {
-		return v, errors.New("OldEventID requires an ID field in the mutation")
-	}
-	oldValue, err := m.oldValue(ctx)
-	if err != nil {
-		return v, fmt.Errorf("querying old value for OldEventID: %w", err)
-	}
-	return oldValue.EventID, nil
-}
-
-// ClearEventID clears the value of the "event_id" field.
-func (m *CertificateMutation) ClearEventID() {
-	m.event_id = nil
-	m.clearedFields[certificate.FieldEventID] = struct{}{}
-}
-
-// EventIDCleared returns if the "event_id" field was cleared in this mutation.
-func (m *CertificateMutation) EventIDCleared() bool {
-	_, ok := m.clearedFields[certificate.FieldEventID]
-	return ok
-}
-
-// ResetEventID resets all changes to the "event_id" field.
-func (m *CertificateMutation) ResetEventID() {
-	m.event_id = nil
-	delete(m.clearedFields, certificate.FieldEventID)
-}
-
-// SetScormCourseID sets the "scorm_course_id" field.
-func (m *CertificateMutation) SetScormCourseID(u uuid.UUID) {
-	m.scorm_course_id = &u
-}
-
-// ScormCourseID returns the value of the "scorm_course_id" field in the mutation.
-func (m *CertificateMutation) ScormCourseID() (r uuid.UUID, exists bool) {
-	v := m.scorm_course_id
-	if v == nil {
-		return
-	}
-	return *v, true
-}
-
-// OldScormCourseID returns the old "scorm_course_id" field's value of the Certificate entity.
-// If the Certificate object wasn't provided to the builder, the object is fetched from the database.
-// An error is returned if the mutation operation is not UpdateOne, or the database query fails.
-func (m *CertificateMutation) OldScormCourseID(ctx context.Context) (v *uuid.UUID, err error) {
-	if !m.op.Is(OpUpdateOne) {
-		return v, errors.New("OldScormCourseID is only allowed on UpdateOne operations")
-	}
-	if m.id == nil || m.oldValue == nil {
-		return v, errors.New("OldScormCourseID requires an ID field in the mutation")
-	}
-	oldValue, err := m.oldValue(ctx)
-	if err != nil {
-		return v, fmt.Errorf("querying old value for OldScormCourseID: %w", err)
-	}
-	return oldValue.ScormCourseID, nil
-}
-
-// ClearScormCourseID clears the value of the "scorm_course_id" field.
-func (m *CertificateMutation) ClearScormCourseID() {
-	m.scorm_course_id = nil
-	m.clearedFields[certificate.FieldScormCourseID] = struct{}{}
-}
-
-// ScormCourseIDCleared returns if the "scorm_course_id" field was cleared in this mutation.
-func (m *CertificateMutation) ScormCourseIDCleared() bool {
-	_, ok := m.clearedFields[certificate.FieldScormCourseID]
-	return ok
-}
-
-// ResetScormCourseID resets all changes to the "scorm_course_id" field.
-func (m *CertificateMutation) ResetScormCourseID() {
-	m.scorm_course_id = nil
-	delete(m.clearedFields, certificate.FieldScormCourseID)
-}
-
 // SetEntityType sets the "entity_type" field.
 func (m *CertificateMutation) SetEntityType(ct certificate.EntityType) {
 	m.entity_type = &ct
@@ -797,12 +699,6 @@ func (m *CertificateMutation) Fields() []string {
 	if m.uploaded_by != nil {
 		fields = append(fields, certificate.FieldUploadedBy)
 	}
-	if m.event_id != nil {
-		fields = append(fields, certificate.FieldEventID)
-	}
-	if m.scorm_course_id != nil {
-		fields = append(fields, certificate.FieldScormCourseID)
-	}
 	if m.entity_type != nil {
 		fields = append(fields, certificate.FieldEntityType)
 	}
@@ -840,10 +736,6 @@ func (m *CertificateMutation) Field(name string) (ent.Value, bool) {
 		return m.FileURL()
 	case certificate.FieldUploadedBy:
 		return m.UploadedBy()
-	case certificate.FieldEventID:
-		return m.EventID()
-	case certificate.FieldScormCourseID:
-		return m.ScormCourseID()
 	case certificate.FieldEntityType:
 		return m.EntityType()
 	case certificate.FieldEntityID:
@@ -877,10 +769,6 @@ func (m *CertificateMutation) OldField(ctx context.Context, name string) (ent.Va
 		return m.OldFileURL(ctx)
 	case certificate.FieldUploadedBy:
 		return m.OldUploadedBy(ctx)
-	case certificate.FieldEventID:
-		return m.OldEventID(ctx)
-	case certificate.FieldScormCourseID:
-		return m.OldScormCourseID(ctx)
 	case certificate.FieldEntityType:
 		return m.OldEntityType(ctx)
 	case certificate.FieldEntityID:
@@ -948,20 +836,6 @@ func (m *CertificateMutation) SetField(name string, value ent.Value) error {
 			return fmt.Errorf("unexpected type %T for field %s", value, name)
 		}
 		m.SetUploadedBy(v)
-		return nil
-	case certificate.FieldEventID:
-		v, ok := value.(uuid.UUID)
-		if !ok {
-			return fmt.Errorf("unexpected type %T for field %s", value, name)
-		}
-		m.SetEventID(v)
-		return nil
-	case certificate.FieldScormCourseID:
-		v, ok := value.(uuid.UUID)
-		if !ok {
-			return fmt.Errorf("unexpected type %T for field %s", value, name)
-		}
-		m.SetScormCourseID(v)
 		return nil
 	case certificate.FieldEntityType:
 		v, ok := value.(certificate.EntityType)
@@ -1037,12 +911,6 @@ func (m *CertificateMutation) ClearedFields() []string {
 	if m.FieldCleared(certificate.FieldUploadedBy) {
 		fields = append(fields, certificate.FieldUploadedBy)
 	}
-	if m.FieldCleared(certificate.FieldEventID) {
-		fields = append(fields, certificate.FieldEventID)
-	}
-	if m.FieldCleared(certificate.FieldScormCourseID) {
-		fields = append(fields, certificate.FieldScormCourseID)
-	}
 	return fields
 }
 
@@ -1065,12 +933,6 @@ func (m *CertificateMutation) ClearField(name string) error {
 		return nil
 	case certificate.FieldUploadedBy:
 		m.ClearUploadedBy()
-		return nil
-	case certificate.FieldEventID:
-		m.ClearEventID()
-		return nil
-	case certificate.FieldScormCourseID:
-		m.ClearScormCourseID()
 		return nil
 	}
 	return fmt.Errorf("unknown Certificate nullable field %s", name)
@@ -1100,12 +962,6 @@ func (m *CertificateMutation) ResetField(name string) error {
 		return nil
 	case certificate.FieldUploadedBy:
 		m.ResetUploadedBy()
-		return nil
-	case certificate.FieldEventID:
-		m.ResetEventID()
-		return nil
-	case certificate.FieldScormCourseID:
-		m.ResetScormCourseID()
 		return nil
 	case certificate.FieldEntityType:
 		m.ResetEntityType()

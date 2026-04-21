@@ -5,7 +5,6 @@ import (
 
 	"entgo.io/ent"
 	"entgo.io/ent/dialect"
-	"entgo.io/ent/schema/edge"
 	"entgo.io/ent/schema/field"
 	"entgo.io/ent/schema/index"
 	"github.com/google/uuid"
@@ -23,7 +22,7 @@ func (Certificate) Fields() []ent.Field {
 			Immutable(),
 		field.UUID("employee_id", uuid.UUID{}),
 		field.Enum("type").
-			Values("EXTERNAL", "SCORM"),
+			Values("EXTERNAL", "SCORM", "INTERNAL"),
 		field.String("title").
 			MaxLen(300).
 			NotEmpty(),
@@ -58,14 +57,7 @@ func (Certificate) Fields() []ent.Field {
 }
 
 func (Certificate) Edges() []ent.Edge {
-	return []ent.Edge{
-		// Односторонняя связь: создаем FK на уровне БД,
-		// не добавляя ничего в схему Employee.
-		edge.To("employee", Employee.Type).
-			Field("employee_id").
-			Unique().
-			Required(),
-	}
+	return nil
 }
 
 func (Certificate) Indexes() []ent.Index {

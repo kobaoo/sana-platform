@@ -9,7 +9,6 @@ import (
 	"time"
 
 	"encore.app/db/ent/certificate"
-	"encore.app/db/ent/employee"
 	"encore.app/db/ent/predicate"
 	"entgo.io/ent/dialect/sql"
 	"entgo.io/ent/dialect/sql/sqlgraph"
@@ -204,12 +203,6 @@ func (_u *CertificateUpdate) Mutation() *CertificateMutation {
 	return _u.mutation
 }
 
-// ClearEmployee clears the "employee" edge to the Employee entity.
-func (_u *CertificateUpdate) ClearEmployee() *CertificateUpdate {
-	_u.mutation.ClearEmployee()
-	return _u
-}
-
 // Save executes the query and returns the number of nodes affected by the update operation.
 func (_u *CertificateUpdate) Save(ctx context.Context) (int, error) {
 	_u.defaults()
@@ -262,9 +255,6 @@ func (_u *CertificateUpdate) check() error {
 		if err := certificate.EntityTypeValidator(v); err != nil {
 			return &ValidationError{Name: "entity_type", err: fmt.Errorf(`ent: validator failed for field "Certificate.entity_type": %w`, err)}
 		}
-	}
-	if _u.mutation.EmployeeCleared() && len(_u.mutation.EmployeeIDs()) > 0 {
-		return errors.New(`ent: clearing a required unique edge "Certificate.employee"`)
 	}
 	return nil
 }
@@ -320,34 +310,8 @@ func (_u *CertificateUpdate) sqlSave(ctx context.Context) (_node int, err error)
 	if value, ok := _u.mutation.UpdatedAt(); ok {
 		_spec.SetField(certificate.FieldUpdatedAt, field.TypeTime, value)
 	}
-	if _u.mutation.EmployeeCleared() {
-		edge := &sqlgraph.EdgeSpec{
-			Rel:     sqlgraph.M2O,
-			Inverse: false,
-			Table:   certificate.EmployeeTable,
-			Columns: []string{certificate.EmployeeColumn},
-			Bidi:    false,
-			Target: &sqlgraph.EdgeTarget{
-				IDSpec: sqlgraph.NewFieldSpec(employee.FieldID, field.TypeUUID),
-			},
-		}
-		_spec.Edges.Clear = append(_spec.Edges.Clear, edge)
-	}
-	if nodes := _u.mutation.EmployeeIDs(); len(nodes) > 0 {
-		edge := &sqlgraph.EdgeSpec{
-			Rel:     sqlgraph.M2O,
-			Inverse: false,
-			Table:   certificate.EmployeeTable,
-			Columns: []string{certificate.EmployeeColumn},
-			Bidi:    false,
-			Target: &sqlgraph.EdgeTarget{
-				IDSpec: sqlgraph.NewFieldSpec(employee.FieldID, field.TypeUUID),
-			},
-		}
-		for _, k := range nodes {
-			edge.Target.Nodes = append(edge.Target.Nodes, k)
-		}
-		_spec.Edges.Add = append(_spec.Edges.Add, edge)
+	if value, ok := _u.mutation.EmployeeID(); ok {
+		_spec.SetField(certificate.FieldEmployeeID, field.TypeUUID, value)
 	}
 	if _node, err = sqlgraph.UpdateNodes(ctx, _u.driver, _spec); err != nil {
 		if _, ok := err.(*sqlgraph.NotFoundError); ok {
@@ -543,12 +507,6 @@ func (_u *CertificateUpdateOne) Mutation() *CertificateMutation {
 	return _u.mutation
 }
 
-// ClearEmployee clears the "employee" edge to the Employee entity.
-func (_u *CertificateUpdateOne) ClearEmployee() *CertificateUpdateOne {
-	_u.mutation.ClearEmployee()
-	return _u
-}
-
 // Where appends a list predicates to the CertificateUpdate builder.
 func (_u *CertificateUpdateOne) Where(ps ...predicate.Certificate) *CertificateUpdateOne {
 	_u.mutation.Where(ps...)
@@ -614,9 +572,6 @@ func (_u *CertificateUpdateOne) check() error {
 		if err := certificate.EntityTypeValidator(v); err != nil {
 			return &ValidationError{Name: "entity_type", err: fmt.Errorf(`ent: validator failed for field "Certificate.entity_type": %w`, err)}
 		}
-	}
-	if _u.mutation.EmployeeCleared() && len(_u.mutation.EmployeeIDs()) > 0 {
-		return errors.New(`ent: clearing a required unique edge "Certificate.employee"`)
 	}
 	return nil
 }
@@ -689,34 +644,8 @@ func (_u *CertificateUpdateOne) sqlSave(ctx context.Context) (_node *Certificate
 	if value, ok := _u.mutation.UpdatedAt(); ok {
 		_spec.SetField(certificate.FieldUpdatedAt, field.TypeTime, value)
 	}
-	if _u.mutation.EmployeeCleared() {
-		edge := &sqlgraph.EdgeSpec{
-			Rel:     sqlgraph.M2O,
-			Inverse: false,
-			Table:   certificate.EmployeeTable,
-			Columns: []string{certificate.EmployeeColumn},
-			Bidi:    false,
-			Target: &sqlgraph.EdgeTarget{
-				IDSpec: sqlgraph.NewFieldSpec(employee.FieldID, field.TypeUUID),
-			},
-		}
-		_spec.Edges.Clear = append(_spec.Edges.Clear, edge)
-	}
-	if nodes := _u.mutation.EmployeeIDs(); len(nodes) > 0 {
-		edge := &sqlgraph.EdgeSpec{
-			Rel:     sqlgraph.M2O,
-			Inverse: false,
-			Table:   certificate.EmployeeTable,
-			Columns: []string{certificate.EmployeeColumn},
-			Bidi:    false,
-			Target: &sqlgraph.EdgeTarget{
-				IDSpec: sqlgraph.NewFieldSpec(employee.FieldID, field.TypeUUID),
-			},
-		}
-		for _, k := range nodes {
-			edge.Target.Nodes = append(edge.Target.Nodes, k)
-		}
-		_spec.Edges.Add = append(_spec.Edges.Add, edge)
+	if value, ok := _u.mutation.EmployeeID(); ok {
+		_spec.SetField(certificate.FieldEmployeeID, field.TypeUUID, value)
 	}
 	_node = &Certificate{config: _u.config}
 	_spec.Assign = _node.assignValues

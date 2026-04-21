@@ -4,6 +4,7 @@ import (
 	"context"
 	"strings"
 
+	"encore.dev/beta/auth"
 	"encore.dev/beta/errs"
 	"encore.dev/storage/sqldb"
 	encoreuuid "encore.dev/types/uuid"
@@ -11,9 +12,9 @@ import (
 	entsql "entgo.io/ent/dialect/sql"
 	"github.com/google/uuid"
 
+	"encore.app/auth/authhandler"
 	"encore.app/db/ent"
 	"encore.app/db/ent/request"
-	"encore.app/db/ent/user"
 )
 
 var (
@@ -26,11 +27,8 @@ func newEntClient() *ent.Client {
 	return ent.NewClient(ent.Driver(drv))
 }
 
-//encore:api public method=POST path=/requests
+//encore:api auth method=POST path=/requests
 func CreateRequest(ctx context.Context, req *CreateRequestRequest) (*RequestResponse, error) {
-	if req.InitiatorID == uuid.Nil {
-		return nil, errs.B().Code(errs.InvalidArgument).Msg("initiator_id is required").Err()
-	}
 	if req.EntityID == uuid.Nil {
 		return nil, errs.B().Code(errs.InvalidArgument).Msg("entity_id is required").Err()
 	}
@@ -38,9 +36,18 @@ func CreateRequest(ctx context.Context, req *CreateRequestRequest) (*RequestResp
 		return nil, errs.B().Code(errs.InvalidArgument).Msg("entity_type is required").Err()
 	}
 
+	ad, err := getAuthData()
+	if err != nil {
+		return nil, err
+	}
+	initiatorID, err := resolveInitiatorID(ctx, ad)
+	if err != nil {
+		return nil, err
+	}
+
 	r, err := Client.Request.
 		Create().
-		SetInitiatorID(req.InitiatorID).
+		SetInitiatorID(initiatorID).
 		SetEntityID(req.EntityID).
 		SetEntityType(strings.TrimSpace(req.EntityType)).
 		SetStep(0).
@@ -53,7 +60,7 @@ func CreateRequest(ctx context.Context, req *CreateRequestRequest) (*RequestResp
 	return toResponse(r), nil
 }
 
-//encore:api public method=GET path=/requests
+//encore:api auth method=GET path=/requests
 func ListRequests(ctx context.Context) (*ListRequestsResponse, error) {
 	rows, err := Client.Request.
 		Query().
@@ -71,7 +78,7 @@ func ListRequests(ctx context.Context) (*ListRequestsResponse, error) {
 	return &ListRequestsResponse{Items: items}, nil
 }
 
-//encore:api public method=GET path=/requests/:id
+//encore:api auth method=GET path=/requests/:id
 func GetRequest(ctx context.Context, id encoreuuid.UUID) (*RequestResponse, error) {
 	requestID := uuid.UUID(id)
 
@@ -89,19 +96,22 @@ func GetRequest(ctx context.Context, id encoreuuid.UUID) (*RequestResponse, erro
 	return toResponse(r), nil
 }
 
-//encore:api public method=PUT path=/requests/:id/step
+//encore:api auth method=PUT path=/requests/:id/step
 func UpdateRequestStep(ctx context.Context, id encoreuuid.UUID, req *UpdateRequestStepRequest) (*RequestResponse, error) {
 	requestID := uuid.UUID(id)
 
 	if req == nil {
 		return nil, errs.B().Code(errs.InvalidArgument).Msg("request body is required").Err()
 	}
-	if req.ActorID == uuid.Nil {
-		return nil, errs.B().Code(errs.InvalidArgument).Msg("actor_id is required").Err()
-	}
 	if req.Step < 0 || req.Step > 3 {
 		return nil, errs.B().Code(errs.InvalidArgument).Msg("step must be between 0 and 3").Err()
 	}
+
+	ad, err := getAuthData()
+	if err != nil {
+		return nil, err
+	}
+	role := strings.ToUpper(string(ad.Role))
 
 	existing, err := Client.Request.
 		Query().
@@ -122,11 +132,6 @@ func UpdateRequestStep(ctx context.Context, id encoreuuid.UUID, req *UpdateReque
 		return nil, errs.B().Code(errs.InvalidArgument).Msg("invalid step transition").Err()
 	}
 
-	role, err := getUserRole(ctx, req.ActorID)
-	if err != nil {
-		return nil, err
-	}
-
 	if !canMoveStep(role, existing.Step, req.Step) {
 		return nil, errs.B().Code(errs.PermissionDenied).Msg("actor is not allowed to move request to this step").Err()
 	}
@@ -142,21 +147,24 @@ func UpdateRequestStep(ctx context.Context, id encoreuuid.UUID, req *UpdateReque
 	return toResponse(updated), nil
 }
 
-//encore:api public method=PUT path=/requests/:id/status
+//encore:api auth method=PUT path=/requests/:id/status
 func UpdateRequestStatus(ctx context.Context, id encoreuuid.UUID, req *UpdateRequestStatusRequest) (*RequestResponse, error) {
 	requestID := uuid.UUID(id)
 
 	if req == nil {
 		return nil, errs.B().Code(errs.InvalidArgument).Msg("request body is required").Err()
 	}
-	if req.ActorID == uuid.Nil {
-		return nil, errs.B().Code(errs.InvalidArgument).Msg("actor_id is required").Err()
-	}
 
 	status := strings.ToUpper(strings.TrimSpace(req.Status))
 	if !isValidStatus(status) {
 		return nil, errs.B().Code(errs.InvalidArgument).Msg("invalid status").Err()
 	}
+
+	ad, err := getAuthData()
+	if err != nil {
+		return nil, err
+	}
+	role := strings.ToUpper(string(ad.Role))
 
 	existing, err := Client.Request.
 		Query().
@@ -174,11 +182,6 @@ func UpdateRequestStatus(ctx context.Context, id encoreuuid.UUID, req *UpdateReq
 	}
 
 	if status != "PENDING" {
-		role, err := getUserRole(ctx, req.ActorID)
-		if err != nil {
-			return nil, err
-		}
-
 		if !canFinalize(role, existing.Step) {
 			return nil, errs.B().Code(errs.PermissionDenied).Msg("only HR can finalize request at step 3").Err()
 		}
@@ -216,19 +219,12 @@ func isValidStatus(status string) bool {
 	}
 }
 
-func getUserRole(ctx context.Context, actorID uuid.UUID) (string, error) {
-	u, err := Client.User.
-		Query().
-		Where(user.IDEQ(actorID)).
-		Only(ctx)
-	if err != nil {
-		if ent.IsNotFound(err) {
-			return "", errs.B().Code(errs.NotFound).Msg("actor not found").Err()
-		}
-		return "", errs.B().Code(errs.Internal).Msg("failed to get actor").Cause(err).Err()
+func getAuthData() (*authhandler.AuthData, error) {
+	ad, ok := auth.Data().(*authhandler.AuthData)
+	if !ok {
+		return nil, errs.B().Code(errs.Unauthenticated).Msg("not authenticated").Err()
 	}
-
-	return strings.ToUpper(strings.TrimSpace(u.Role)), nil
+	return ad, nil
 }
 
 func canMoveStep(role string, currentStep, nextStep int) bool {

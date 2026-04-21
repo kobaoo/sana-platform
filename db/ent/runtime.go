@@ -42,15 +42,15 @@ func init() {
 		}
 	}()
 	// certificateDescIsActive is the schema descriptor for is_active field.
-	certificateDescIsActive := certificateFields[12].Descriptor()
+	certificateDescIsActive := certificateFields[10].Descriptor()
 	// certificate.DefaultIsActive holds the default value on creation for the is_active field.
 	certificate.DefaultIsActive = certificateDescIsActive.Default.(bool)
 	// certificateDescCreatedAt is the schema descriptor for created_at field.
-	certificateDescCreatedAt := certificateFields[13].Descriptor()
+	certificateDescCreatedAt := certificateFields[11].Descriptor()
 	// certificate.DefaultCreatedAt holds the default value on creation for the created_at field.
 	certificate.DefaultCreatedAt = certificateDescCreatedAt.Default.(func() time.Time)
 	// certificateDescUpdatedAt is the schema descriptor for updated_at field.
-	certificateDescUpdatedAt := certificateFields[14].Descriptor()
+	certificateDescUpdatedAt := certificateFields[12].Descriptor()
 	// certificate.DefaultUpdatedAt holds the default value on creation for the updated_at field.
 	certificate.DefaultUpdatedAt = certificateDescUpdatedAt.Default.(func() time.Time)
 	// certificate.UpdateDefaultUpdatedAt holds the default value on update for the updated_at field.
