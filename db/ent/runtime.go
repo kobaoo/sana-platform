@@ -5,6 +5,7 @@ package ent
 import (
 	"time"
 
+	"encore.app/db/ent/company"
 	"encore.app/db/ent/dzoorganization"
 	"encore.app/db/ent/employee"
 	"encore.app/db/ent/organization"
@@ -17,6 +18,46 @@ import (
 // (default values, validators, hooks and policies) and stitches it
 // to their package variables.
 func init() {
+	companyFields := schema.Company{}.Fields()
+	_ = companyFields
+	// companyDescName is the schema descriptor for name field.
+	companyDescName := companyFields[1].Descriptor()
+	// company.NameValidator is a validator for the "name" field. It is called by the builders before save.
+	company.NameValidator = func() func(string) error {
+		validators := companyDescName.Validators
+		fns := [...]func(string) error{
+			validators[0].(func(string) error),
+			validators[1].(func(string) error),
+		}
+		return func(name string) error {
+			for _, fn := range fns {
+				if err := fn(name); err != nil {
+					return err
+				}
+			}
+			return nil
+		}
+	}()
+	// companyDescDomain is the schema descriptor for domain field.
+	companyDescDomain := companyFields[2].Descriptor()
+	// company.DomainValidator is a validator for the "domain" field. It is called by the builders before save.
+	company.DomainValidator = companyDescDomain.Validators[0].(func(string) error)
+	// companyDescLanguage is the schema descriptor for language field.
+	companyDescLanguage := companyFields[3].Descriptor()
+	// company.LanguageValidator is a validator for the "language" field. It is called by the builders before save.
+	company.LanguageValidator = companyDescLanguage.Validators[0].(func(string) error)
+	// companyDescIsActive is the schema descriptor for is_active field.
+	companyDescIsActive := companyFields[5].Descriptor()
+	// company.DefaultIsActive holds the default value on creation for the is_active field.
+	company.DefaultIsActive = companyDescIsActive.Default.(bool)
+	// companyDescCreatedAt is the schema descriptor for created_at field.
+	companyDescCreatedAt := companyFields[6].Descriptor()
+	// company.DefaultCreatedAt holds the default value on creation for the created_at field.
+	company.DefaultCreatedAt = companyDescCreatedAt.Default.(func() time.Time)
+	// companyDescID is the schema descriptor for id field.
+	companyDescID := companyFields[0].Descriptor()
+	// company.DefaultID holds the default value on creation for the id field.
+	company.DefaultID = companyDescID.Default.(func() uuid.UUID)
 	dzoorganizationFields := schema.DzoOrganization{}.Fields()
 	_ = dzoorganizationFields
 	// dzoorganizationDescName is the schema descriptor for name field.

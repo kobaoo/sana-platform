@@ -9,6 +9,7 @@ import (
 	"reflect"
 	"sync"
 
+	"encore.app/db/ent/company"
 	"encore.app/db/ent/dzoorganization"
 	"encore.app/db/ent/employee"
 	"encore.app/db/ent/organization"
@@ -76,6 +77,7 @@ var (
 func checkColumn(t, c string) error {
 	initCheck.Do(func() {
 		columnCheck = sql.NewColumnCheck(map[string]func(string) bool{
+			company.Table:         company.ValidColumn,
 			dzoorganization.Table: dzoorganization.ValidColumn,
 			employee.Table:        employee.ValidColumn,
 			organization.Table:    organization.ValidColumn,
