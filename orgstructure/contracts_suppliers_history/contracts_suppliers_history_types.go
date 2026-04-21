@@ -54,7 +54,7 @@ type HistoryRecord struct {
 	Diff          json.RawMessage `json:"diff,omitempty"`
 }
 
-// ListHistoryResponse is the response for GET /contracts-suppliers/:id/history.
+// ListHistoryResponse is the response for GET /contracts-suppliers/id/:id/history.
 type ListHistoryResponse struct {
 	Records []HistoryRecord `json:"records"`
 	Total   int             `json:"total"`
@@ -72,7 +72,7 @@ type ValidationResult struct {
 	Errors  []string `json:"errors,omitempty"`
 }
 
-// ValidateResponse is the response for GET /contracts-suppliers/:id/validate.
+// ValidateResponse is the response for GET /contracts-suppliers/id/:id/validate.
 type ValidateResponse struct {
 	Result ValidationResult `json:"result"`
 }
