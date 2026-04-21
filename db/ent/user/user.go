@@ -6,6 +6,7 @@ import (
 	"time"
 
 	"entgo.io/ent/dialect/sql"
+	"entgo.io/ent/dialect/sql/sqlgraph"
 	"github.com/google/uuid"
 )
 
@@ -30,8 +31,19 @@ const (
 	FieldCreatedAt = "created_at"
 	// FieldUpdatedAt holds the string denoting the updated_at field in the database.
 	FieldUpdatedAt = "updated_at"
+	// FieldClientID holds the string denoting the client_id field in the database.
+	FieldClientID = "client_id"
+	// EdgeClient holds the string denoting the client edge name in mutations.
+	EdgeClient = "client"
 	// Table holds the table name of the user in the database.
 	Table = "users"
+	// ClientTable is the table that holds the client relation/edge.
+	ClientTable = "users"
+	// ClientInverseTable is the table name for the Company entity.
+	// It exists in this package in order to avoid circular dependency with the "company" package.
+	ClientInverseTable = "clients"
+	// ClientColumn is the table column denoting the client relation/edge.
+	ClientColumn = "client_id"
 )
 
 // Columns holds all SQL columns for user fields.
@@ -45,6 +57,7 @@ var Columns = []string{
 	FieldIsOnboarded,
 	FieldCreatedAt,
 	FieldUpdatedAt,
+	FieldClientID,
 }
 
 // ValidColumn reports if the column name is valid (part of the table columns).
@@ -126,4 +139,23 @@ func ByCreatedAt(opts ...sql.OrderTermOption) OrderOption {
 // ByUpdatedAt orders the results by the updated_at field.
 func ByUpdatedAt(opts ...sql.OrderTermOption) OrderOption {
 	return sql.OrderByField(FieldUpdatedAt, opts...).ToFunc()
+}
+
+// ByClientID orders the results by the client_id field.
+func ByClientID(opts ...sql.OrderTermOption) OrderOption {
+	return sql.OrderByField(FieldClientID, opts...).ToFunc()
+}
+
+// ByClientField orders the results by client field.
+func ByClientField(field string, opts ...sql.OrderTermOption) OrderOption {
+	return func(s *sql.Selector) {
+		sqlgraph.OrderByNeighborTerms(s, newClientStep(), sql.OrderByField(field, opts...))
+	}
+}
+func newClientStep() *sqlgraph.Step {
+	return sqlgraph.NewStep(
+		sqlgraph.From(Table, FieldID),
+		sqlgraph.To(ClientInverseTable, FieldID),
+		sqlgraph.Edge(sqlgraph.M2O, true, ClientTable, ClientColumn),
+	)
 }

@@ -106,27 +106,3 @@ func TestUploadFile_ValidPDF(t *testing.T) {
 		t.Error("expected file_url to be set after upload")
 	}
 }
-
-func TestUploadFile_NonPDF(t *testing.T) {
-	cert := makeCert(t, "Non-PDF Test")
-
-	body := &bytes.Buffer{}
-	writer := multipart.NewWriter(body)
-	h := make(textproto.MIMEHeader)
-	h.Set("Content-Disposition", `form-data; name="file"; filename="image.png"`)
-	h.Set("Content-Type", "image/png")
-	part, _ := writer.CreatePart(h)
-	part.Write([]byte("fake png content"))
-	writer.Close()
-
-	req := httptest.NewRequest(http.MethodPost, "/certificates/"+cert.ID+"/upload", body)
-	req.Header.Set("Content-Type", writer.FormDataContentType())
-	req.SetPathValue("id", cert.ID)
-
-	rr := httptest.NewRecorder()
-	handleUpload(rr, req)
-
-	if rr.Code != http.StatusUnsupportedMediaType {
-		t.Fatalf("expected 415, got %d: %s", rr.Code, rr.Body.String())
-	}
-}

@@ -5,8 +5,11 @@ package ent
 import (
 	"time"
 
-	"encore.app/db/ent/certificate"
+	"encore.app/db/ent/company"
+	"encore.app/db/ent/dzoorganization"
+	"encore.app/db/ent/employee"
 	"encore.app/db/ent/organization"
+	"encore.app/db/ent/request"
 	"encore.app/db/ent/schema"
 	"encore.app/db/ent/user"
 	"github.com/google/uuid"
@@ -16,44 +19,152 @@ import (
 // (default values, validators, hooks and policies) and stitches it
 // to their package variables.
 func init() {
-	certificateFields := schema.Certificate{}.Fields()
-	_ = certificateFields
-	// certificateDescTitle is the schema descriptor for title field.
-	certificateDescTitle := certificateFields[3].Descriptor()
-	// certificate.TitleValidator is a validator for the "title" field. It is called by the builders before save.
-	certificate.TitleValidator = func() func(string) error {
-		validators := certificateDescTitle.Validators
+	companyFields := schema.Company{}.Fields()
+	_ = companyFields
+	// companyDescName is the schema descriptor for name field.
+	companyDescName := companyFields[1].Descriptor()
+	// company.NameValidator is a validator for the "name" field. It is called by the builders before save.
+	company.NameValidator = func() func(string) error {
+		validators := companyDescName.Validators
 		fns := [...]func(string) error{
 			validators[0].(func(string) error),
 			validators[1].(func(string) error),
 		}
-		return func(title string) error {
+		return func(name string) error {
 			for _, fn := range fns {
-				if err := fn(title); err != nil {
+				if err := fn(name); err != nil {
 					return err
 				}
 			}
 			return nil
 		}
 	}()
-	// certificateDescIsActive is the schema descriptor for is_active field.
-	certificateDescIsActive := certificateFields[12].Descriptor()
-	// certificate.DefaultIsActive holds the default value on creation for the is_active field.
-	certificate.DefaultIsActive = certificateDescIsActive.Default.(bool)
-	// certificateDescCreatedAt is the schema descriptor for created_at field.
-	certificateDescCreatedAt := certificateFields[13].Descriptor()
-	// certificate.DefaultCreatedAt holds the default value on creation for the created_at field.
-	certificate.DefaultCreatedAt = certificateDescCreatedAt.Default.(func() time.Time)
-	// certificateDescUpdatedAt is the schema descriptor for updated_at field.
-	certificateDescUpdatedAt := certificateFields[14].Descriptor()
-	// certificate.DefaultUpdatedAt holds the default value on creation for the updated_at field.
-	certificate.DefaultUpdatedAt = certificateDescUpdatedAt.Default.(func() time.Time)
-	// certificate.UpdateDefaultUpdatedAt holds the default value on update for the updated_at field.
-	certificate.UpdateDefaultUpdatedAt = certificateDescUpdatedAt.UpdateDefault.(func() time.Time)
-	// certificateDescID is the schema descriptor for id field.
-	certificateDescID := certificateFields[0].Descriptor()
-	// certificate.DefaultID holds the default value on creation for the id field.
-	certificate.DefaultID = certificateDescID.Default.(func() uuid.UUID)
+	// companyDescDomain is the schema descriptor for domain field.
+	companyDescDomain := companyFields[2].Descriptor()
+	// company.DomainValidator is a validator for the "domain" field. It is called by the builders before save.
+	company.DomainValidator = companyDescDomain.Validators[0].(func(string) error)
+	// companyDescLanguage is the schema descriptor for language field.
+	companyDescLanguage := companyFields[3].Descriptor()
+	// company.LanguageValidator is a validator for the "language" field. It is called by the builders before save.
+	company.LanguageValidator = companyDescLanguage.Validators[0].(func(string) error)
+	// companyDescIsActive is the schema descriptor for is_active field.
+	companyDescIsActive := companyFields[5].Descriptor()
+	// company.DefaultIsActive holds the default value on creation for the is_active field.
+	company.DefaultIsActive = companyDescIsActive.Default.(bool)
+	// companyDescCreatedAt is the schema descriptor for created_at field.
+	companyDescCreatedAt := companyFields[6].Descriptor()
+	// company.DefaultCreatedAt holds the default value on creation for the created_at field.
+	company.DefaultCreatedAt = companyDescCreatedAt.Default.(func() time.Time)
+	// companyDescID is the schema descriptor for id field.
+	companyDescID := companyFields[0].Descriptor()
+	// company.DefaultID holds the default value on creation for the id field.
+	company.DefaultID = companyDescID.Default.(func() uuid.UUID)
+	dzoorganizationFields := schema.DzoOrganization{}.Fields()
+	_ = dzoorganizationFields
+	// dzoorganizationDescName is the schema descriptor for name field.
+	dzoorganizationDescName := dzoorganizationFields[2].Descriptor()
+	// dzoorganization.NameValidator is a validator for the "name" field. It is called by the builders before save.
+	dzoorganization.NameValidator = func() func(string) error {
+		validators := dzoorganizationDescName.Validators
+		fns := [...]func(string) error{
+			validators[0].(func(string) error),
+			validators[1].(func(string) error),
+		}
+		return func(name string) error {
+			for _, fn := range fns {
+				if err := fn(name); err != nil {
+					return err
+				}
+			}
+			return nil
+		}
+	}()
+	// dzoorganizationDescShortName is the schema descriptor for short_name field.
+	dzoorganizationDescShortName := dzoorganizationFields[3].Descriptor()
+	// dzoorganization.ShortNameValidator is a validator for the "short_name" field. It is called by the builders before save.
+	dzoorganization.ShortNameValidator = dzoorganizationDescShortName.Validators[0].(func(string) error)
+	// dzoorganizationDescBin is the schema descriptor for bin field.
+	dzoorganizationDescBin := dzoorganizationFields[4].Descriptor()
+	// dzoorganization.BinValidator is a validator for the "bin" field. It is called by the builders before save.
+	dzoorganization.BinValidator = dzoorganizationDescBin.Validators[0].(func(string) error)
+	// dzoorganizationDescIsActive is the schema descriptor for is_active field.
+	dzoorganizationDescIsActive := dzoorganizationFields[5].Descriptor()
+	// dzoorganization.DefaultIsActive holds the default value on creation for the is_active field.
+	dzoorganization.DefaultIsActive = dzoorganizationDescIsActive.Default.(bool)
+	// dzoorganizationDescID is the schema descriptor for id field.
+	dzoorganizationDescID := dzoorganizationFields[0].Descriptor()
+	// dzoorganization.DefaultID holds the default value on creation for the id field.
+	dzoorganization.DefaultID = dzoorganizationDescID.Default.(func() uuid.UUID)
+	employeeFields := schema.Employee{}.Fields()
+	_ = employeeFields
+	// employeeDescPosition is the schema descriptor for position field.
+	employeeDescPosition := employeeFields[3].Descriptor()
+	// employee.PositionValidator is a validator for the "position" field. It is called by the builders before save.
+	employee.PositionValidator = employeeDescPosition.Validators[0].(func(string) error)
+	// employeeDescFullName is the schema descriptor for full_name field.
+	employeeDescFullName := employeeFields[4].Descriptor()
+	// employee.FullNameValidator is a validator for the "full_name" field. It is called by the builders before save.
+	employee.FullNameValidator = func() func(string) error {
+		validators := employeeDescFullName.Validators
+		fns := [...]func(string) error{
+			validators[0].(func(string) error),
+			validators[1].(func(string) error),
+		}
+		return func(full_name string) error {
+			for _, fn := range fns {
+				if err := fn(full_name); err != nil {
+					return err
+				}
+			}
+			return nil
+		}
+	}()
+	// employeeDescShortName is the schema descriptor for short_name field.
+	employeeDescShortName := employeeFields[5].Descriptor()
+	// employee.ShortNameValidator is a validator for the "short_name" field. It is called by the builders before save.
+	employee.ShortNameValidator = employeeDescShortName.Validators[0].(func(string) error)
+	// employeeDescDepartment is the schema descriptor for department field.
+	employeeDescDepartment := employeeFields[6].Descriptor()
+	// employee.DepartmentValidator is a validator for the "department" field. It is called by the builders before save.
+	employee.DepartmentValidator = employeeDescDepartment.Validators[0].(func(string) error)
+	// employeeDescDirection is the schema descriptor for direction field.
+	employeeDescDirection := employeeFields[7].Descriptor()
+	// employee.DirectionValidator is a validator for the "direction" field. It is called by the builders before save.
+	employee.DirectionValidator = employeeDescDirection.Validators[0].(func(string) error)
+	// employeeDescEmail is the schema descriptor for email field.
+	employeeDescEmail := employeeFields[8].Descriptor()
+	// employee.EmailValidator is a validator for the "email" field. It is called by the builders before save.
+	employee.EmailValidator = func() func(string) error {
+		validators := employeeDescEmail.Validators
+		fns := [...]func(string) error{
+			validators[0].(func(string) error),
+			validators[1].(func(string) error),
+		}
+		return func(email string) error {
+			for _, fn := range fns {
+				if err := fn(email); err != nil {
+					return err
+				}
+			}
+			return nil
+		}
+	}()
+	// employeeDescInternalPhone is the schema descriptor for internal_phone field.
+	employeeDescInternalPhone := employeeFields[9].Descriptor()
+	// employee.InternalPhoneValidator is a validator for the "internal_phone" field. It is called by the builders before save.
+	employee.InternalPhoneValidator = employeeDescInternalPhone.Validators[0].(func(string) error)
+	// employeeDescIsActive is the schema descriptor for is_active field.
+	employeeDescIsActive := employeeFields[11].Descriptor()
+	// employee.DefaultIsActive holds the default value on creation for the is_active field.
+	employee.DefaultIsActive = employeeDescIsActive.Default.(bool)
+	// employeeDescIsDeleted is the schema descriptor for is_deleted field.
+	employeeDescIsDeleted := employeeFields[13].Descriptor()
+	// employee.DefaultIsDeleted holds the default value on creation for the is_deleted field.
+	employee.DefaultIsDeleted = employeeDescIsDeleted.Default.(bool)
+	// employeeDescID is the schema descriptor for id field.
+	employeeDescID := employeeFields[0].Descriptor()
+	// employee.DefaultID holds the default value on creation for the id field.
+	employee.DefaultID = employeeDescID.Default.(func() uuid.UUID)
 	organizationFields := schema.Organization{}.Fields()
 	_ = organizationFields
 	// organizationDescName is the schema descriptor for name field.
@@ -130,6 +241,58 @@ func init() {
 	organizationDescID := organizationFields[0].Descriptor()
 	// organization.DefaultID holds the default value on creation for the id field.
 	organization.DefaultID = organizationDescID.Default.(func() uuid.UUID)
+	requestFields := schema.Request{}.Fields()
+	_ = requestFields
+	// requestDescEntityType is the schema descriptor for entity_type field.
+	requestDescEntityType := requestFields[3].Descriptor()
+	// request.EntityTypeValidator is a validator for the "entity_type" field. It is called by the builders before save.
+	request.EntityTypeValidator = func() func(string) error {
+		validators := requestDescEntityType.Validators
+		fns := [...]func(string) error{
+			validators[0].(func(string) error),
+			validators[1].(func(string) error),
+		}
+		return func(entity_type string) error {
+			for _, fn := range fns {
+				if err := fn(entity_type); err != nil {
+					return err
+				}
+			}
+			return nil
+		}
+	}()
+	// requestDescStep is the schema descriptor for step field.
+	requestDescStep := requestFields[4].Descriptor()
+	// request.DefaultStep holds the default value on creation for the step field.
+	request.DefaultStep = requestDescStep.Default.(int)
+	// requestDescCreatedAt is the schema descriptor for created_at field.
+	requestDescCreatedAt := requestFields[5].Descriptor()
+	// request.DefaultCreatedAt holds the default value on creation for the created_at field.
+	request.DefaultCreatedAt = requestDescCreatedAt.Default.(func() time.Time)
+	// requestDescStatus is the schema descriptor for status field.
+	requestDescStatus := requestFields[6].Descriptor()
+	// request.DefaultStatus holds the default value on creation for the status field.
+	request.DefaultStatus = requestDescStatus.Default.(string)
+	// request.StatusValidator is a validator for the "status" field. It is called by the builders before save.
+	request.StatusValidator = func() func(string) error {
+		validators := requestDescStatus.Validators
+		fns := [...]func(string) error{
+			validators[0].(func(string) error),
+			validators[1].(func(string) error),
+		}
+		return func(status string) error {
+			for _, fn := range fns {
+				if err := fn(status); err != nil {
+					return err
+				}
+			}
+			return nil
+		}
+	}()
+	// requestDescID is the schema descriptor for id field.
+	requestDescID := requestFields[0].Descriptor()
+	// request.DefaultID holds the default value on creation for the id field.
+	request.DefaultID = requestDescID.Default.(func() uuid.UUID)
 	userFields := schema.User{}.Fields()
 	_ = userFields
 	// userDescKeycloakUserID is the schema descriptor for keycloak_user_id field.

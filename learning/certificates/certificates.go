@@ -32,7 +32,7 @@ func newEntClient() *ent.Client {
 
 // ════ ENDPOINTS ════
 
-// Create создает новый сертификат.
+// Create creates a new certificate.
 //
 //encore:api auth method=POST path=/certificates
 func Create(ctx context.Context, req *CreateRequest) (*GetCertResponse, error) {
@@ -46,7 +46,7 @@ func Create(ctx context.Context, req *CreateRequest) (*GetCertResponse, error) {
 	return &GetCertResponse{Certificate: *cert}, nil
 }
 
-// GetExpiring возвращает сертификаты, у которых истекает срок (180 дней).
+// GetExpiring returns certificates expiring within the next 6 months.
 //
 //encore:api auth method=GET path=/certificates/expiring
 func GetExpiring(ctx context.Context) (*ListResponse, error) {
@@ -57,7 +57,7 @@ func GetExpiring(ctx context.Context) (*ListResponse, error) {
 	return &ListResponse{Certificates: rows, Total: len(rows)}, nil
 }
 
-// GetByID возвращает один сертификат по ID.
+// GetByID returns a single certificate by ID.
 //
 //encore:api auth method=GET path=/certificates/i/:id
 func GetByID(ctx context.Context, id string) (*GetCertResponse, error) {
@@ -68,7 +68,7 @@ func GetByID(ctx context.Context, id string) (*GetCertResponse, error) {
 	return &GetCertResponse{Certificate: *cert}, nil
 }
 
-// Delete выполняет мягкое удаление сертификата.
+// Delete soft-deletes a certificate.
 //
 //encore:api auth method=DELETE path=/certificates/:id
 func Delete(ctx context.Context, id string) (*DeleteResponse, error) {
@@ -78,7 +78,7 @@ func Delete(ctx context.Context, id string) (*DeleteResponse, error) {
 	return &DeleteResponse{Message: "certificate deleted successfully"}, nil
 }
 
-// обновлённый сертификат в JSON.
+// UploadFile uploads a PDF file for a certificate.
 //
 //encore:api auth raw method=POST path=/certificates/:id/upload
 func UploadFile(w http.ResponseWriter, r *http.Request) {
@@ -87,7 +87,6 @@ func UploadFile(w http.ResponseWriter, r *http.Request) {
 
 func handleUpload(w http.ResponseWriter, r *http.Request) {
 	ctx := r.Context()
-
 	idStr := r.PathValue("id")
 	if idStr == "" {
 		http.Error(w, "path parameter 'id' is required", http.StatusBadRequest)
@@ -190,6 +189,7 @@ func queryCertByID(ctx context.Context, id string) (*Certificate, error) {
 	if err != nil {
 		return nil, errs.B().Code(errs.InvalidArgument).Msg("invalid id format").Err()
 	}
+
 	row, err := Client.Certificate.Query().
 		Where(certificate.IDEQ(uid), certificate.IsActiveEQ(true)).
 		Only(ctx)
@@ -205,11 +205,14 @@ func queryCertByID(ctx context.Context, id string) (*Certificate, error) {
 func queryExpiringCerts(ctx context.Context) ([]Certificate, error) {
 	threshold := time.Now().AddDate(0, 6, 0)
 	rows, err := Client.Certificate.Query().
-		Where(certificate.ExpiryDateLTE(threshold), certificate.IsActiveEQ(true)).
-		All(ctx)
+		Where(
+			certificate.ExpiryDateLTE(threshold),
+			certificate.IsActiveEQ(true),
+		).All(ctx)
 	if err != nil {
 		return nil, errs.B().Code(errs.Internal).Err()
 	}
+
 	certs := make([]Certificate, 0, len(rows))
 	for _, r := range rows {
 		certs = append(certs, *entToCert(r))

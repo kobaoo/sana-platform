@@ -7,6 +7,7 @@ import (
 	"fmt"
 	"math"
 
+	"encore.app/db/ent/company"
 	"encore.app/db/ent/predicate"
 	"encore.app/db/ent/user"
 	"entgo.io/ent"
@@ -23,6 +24,7 @@ type UserQuery struct {
 	order      []user.OrderOption
 	inters     []Interceptor
 	predicates []predicate.User
+	withClient *CompanyQuery
 	// intermediate query (i.e. traversal path).
 	sql  *sql.Selector
 	path func(context.Context) (*sql.Selector, error)
@@ -57,6 +59,28 @@ func (_q *UserQuery) Unique(unique bool) *UserQuery {
 func (_q *UserQuery) Order(o ...user.OrderOption) *UserQuery {
 	_q.order = append(_q.order, o...)
 	return _q
+}
+
+// QueryClient chains the current query on the "client" edge.
+func (_q *UserQuery) QueryClient() *CompanyQuery {
+	query := (&CompanyClient{config: _q.config}).Query()
+	query.path = func(ctx context.Context) (fromU *sql.Selector, err error) {
+		if err := _q.prepareQuery(ctx); err != nil {
+			return nil, err
+		}
+		selector := _q.sqlQuery(ctx)
+		if err := selector.Err(); err != nil {
+			return nil, err
+		}
+		step := sqlgraph.NewStep(
+			sqlgraph.From(user.Table, user.FieldID, selector),
+			sqlgraph.To(company.Table, company.FieldID),
+			sqlgraph.Edge(sqlgraph.M2O, true, user.ClientTable, user.ClientColumn),
+		)
+		fromU = sqlgraph.SetNeighbors(_q.driver.Dialect(), step)
+		return fromU, nil
+	}
+	return query
 }
 
 // First returns the first User entity from the query.
@@ -251,10 +275,22 @@ func (_q *UserQuery) Clone() *UserQuery {
 		order:      append([]user.OrderOption{}, _q.order...),
 		inters:     append([]Interceptor{}, _q.inters...),
 		predicates: append([]predicate.User{}, _q.predicates...),
+		withClient: _q.withClient.Clone(),
 		// clone intermediate query.
 		sql:  _q.sql.Clone(),
 		path: _q.path,
 	}
+}
+
+// WithClient tells the query-builder to eager-load the nodes that are connected to
+// the "client" edge. The optional arguments are used to configure the query builder of the edge.
+func (_q *UserQuery) WithClient(opts ...func(*CompanyQuery)) *UserQuery {
+	query := (&CompanyClient{config: _q.config}).Query()
+	for _, opt := range opts {
+		opt(query)
+	}
+	_q.withClient = query
+	return _q
 }
 
 // GroupBy is used to group vertices by one or more fields/columns.
@@ -333,8 +369,11 @@ func (_q *UserQuery) prepareQuery(ctx context.Context) error {
 
 func (_q *UserQuery) sqlAll(ctx context.Context, hooks ...queryHook) ([]*User, error) {
 	var (
-		nodes = []*User{}
-		_spec = _q.querySpec()
+		nodes       = []*User{}
+		_spec       = _q.querySpec()
+		loadedTypes = [1]bool{
+			_q.withClient != nil,
+		}
 	)
 	_spec.ScanValues = func(columns []string) ([]any, error) {
 		return (*User).scanValues(nil, columns)
@@ -342,6 +381,7 @@ func (_q *UserQuery) sqlAll(ctx context.Context, hooks ...queryHook) ([]*User, e
 	_spec.Assign = func(columns []string, values []any) error {
 		node := &User{config: _q.config}
 		nodes = append(nodes, node)
+		node.Edges.loadedTypes = loadedTypes
 		return node.assignValues(columns, values)
 	}
 	for i := range hooks {
@@ -353,7 +393,43 @@ func (_q *UserQuery) sqlAll(ctx context.Context, hooks ...queryHook) ([]*User, e
 	if len(nodes) == 0 {
 		return nodes, nil
 	}
+	if query := _q.withClient; query != nil {
+		if err := _q.loadClient(ctx, query, nodes, nil,
+			func(n *User, e *Company) { n.Edges.Client = e }); err != nil {
+			return nil, err
+		}
+	}
 	return nodes, nil
+}
+
+func (_q *UserQuery) loadClient(ctx context.Context, query *CompanyQuery, nodes []*User, init func(*User), assign func(*User, *Company)) error {
+	ids := make([]uuid.UUID, 0, len(nodes))
+	nodeids := make(map[uuid.UUID][]*User)
+	for i := range nodes {
+		fk := nodes[i].ClientID
+		if _, ok := nodeids[fk]; !ok {
+			ids = append(ids, fk)
+		}
+		nodeids[fk] = append(nodeids[fk], nodes[i])
+	}
+	if len(ids) == 0 {
+		return nil
+	}
+	query.Where(company.IDIn(ids...))
+	neighbors, err := query.All(ctx)
+	if err != nil {
+		return err
+	}
+	for _, n := range neighbors {
+		nodes, ok := nodeids[n.ID]
+		if !ok {
+			return fmt.Errorf(`unexpected foreign-key "client_id" returned %v`, n.ID)
+		}
+		for i := range nodes {
+			assign(nodes[i], n)
+		}
+	}
+	return nil
 }
 
 func (_q *UserQuery) sqlCount(ctx context.Context) (int, error) {
@@ -380,6 +456,9 @@ func (_q *UserQuery) querySpec() *sqlgraph.QuerySpec {
 			if fields[i] != user.FieldID {
 				_spec.Node.Columns = append(_spec.Node.Columns, fields[i])
 			}
+		}
+		if _q.withClient != nil {
+			_spec.Node.AddColumnOnce(user.FieldClientID)
 		}
 	}
 	if ps := _q.predicates; len(ps) > 0 {

@@ -110,6 +110,14 @@ func CreateUser(ctx context.Context, req *CreateUserRequest) (*GetUserResponse, 
 	if !req.Role.IsValid() {
 		return nil, errs.B().Code(errs.InvalidArgument).Msg("invalid role").Err()
 	}
+	if req.ClientID != nil && strings.TrimSpace(*req.ClientID) == "" {
+		return nil, errs.B().Code(errs.InvalidArgument).Msg("client_id cannot be empty if provided").Err()
+	}
+	if req.ClientID != nil {
+		if _, err := uuid.Parse(*req.ClientID); err != nil {
+			return nil, errs.B().Code(errs.InvalidArgument).Msg("invalid client_id format").Err()
+		}
+	}
 	u, err := insertUser(ctx, req)
 	if err != nil {
 		return nil, err
@@ -140,6 +148,14 @@ func RegisterAdmin(ctx context.Context, req *RegisterAdminRequest) (*GetUserResp
 	}
 	if _, err := uuid.Parse(*req.DzoID); err != nil {
 		return nil, errs.B().Code(errs.InvalidArgument).Msg("invalid dzo_id format").Err()
+	}
+	if req.ClientID != nil && strings.TrimSpace(*req.ClientID) == "" {
+		return nil, errs.B().Code(errs.InvalidArgument).Msg("client_id cannot be empty if provided").Err()
+	}
+	if req.ClientID != nil {
+		if _, err := uuid.Parse(*req.ClientID); err != nil {
+			return nil, errs.B().Code(errs.InvalidArgument).Msg("invalid client_id format").Err()
+		}
 	}
 	u, err := insertPendingAdmin(ctx, req)
 	if err != nil {
@@ -311,6 +327,9 @@ func autoProvision(ctx context.Context, ad *authhandler.AuthData) (*User, error)
 		Email:          ad.Email,
 		Role:           role,
 	}
+	if ad.CompanyID != "" {
+		req.ClientID = &ad.CompanyID
+	}
 	if ad.DzoID != "" {
 		req.DzoID = &ad.DzoID
 	}
@@ -323,6 +342,14 @@ func insertUser(ctx context.Context, req *CreateUserRequest) (*User, error) {
 		SetKeycloakUserID(req.KeycloakUserID).
 		SetEmail(req.Email).
 		SetRole(string(req.Role))
+
+	if req.ClientID != nil {
+		clientUUID, err := uuid.Parse(*req.ClientID)
+		if err != nil {
+			return nil, errs.B().Code(errs.InvalidArgument).Msg("invalid client_id format").Err()
+		}
+		builder = builder.SetClientID(clientUUID)
+	}
 
 	if req.DzoID != nil {
 		dzoUUID, err := uuid.Parse(*req.DzoID)
@@ -348,15 +375,24 @@ func insertPendingAdmin(ctx context.Context, req *RegisterAdminRequest) (*User, 
 		return nil, errs.B().Code(errs.InvalidArgument).Msg("invalid dzo_id format").Err()
 	}
 
-	row, err := Client.User.
+	builder := Client.User.
 		Create().
 		SetKeycloakUserID(req.KeycloakUserID).
 		SetEmail(req.Email).
 		SetRole(string(authhandler.RoleADM)).
 		SetDzoID(dzoUUID).
 		SetIsActive(false).
-		SetIsOnboarded(false).
-		Save(ctx)
+		SetIsOnboarded(false)
+
+	if req.ClientID != nil {
+		clientUUID, err := uuid.Parse(*req.ClientID)
+		if err != nil {
+			return nil, errs.B().Code(errs.InvalidArgument).Msg("invalid client_id format").Err()
+		}
+		builder = builder.SetClientID(clientUUID)
+	}
+
+	row, err := builder.Save(ctx)
 	if err != nil {
 		if ent.IsConstraintError(err) {
 			return nil, errs.B().Code(errs.AlreadyExists).Msg("user with this keycloak_user_id already exists").Err()
@@ -509,12 +545,18 @@ func entToUser(e *ent.User) *User {
 		s := e.DzoID.String()
 		dzoID = &s
 	}
+	var clientID *string
+	if e.ClientID != uuid.Nil {
+		s := e.ClientID.String()
+		clientID = &s
+	}
 	return &User{
 		ID:             e.ID.String(),
 		KeycloakUserID: e.KeycloakUserID,
 		Email:          e.Email,
 		Role:           authhandler.UserRole(e.Role),
 		DzoID:          dzoID,
+		ClientID:       clientID,
 		IsActive:       e.IsActive,
 		IsOnboarded:    e.IsOnboarded,
 		CreatedAt:      e.CreatedAt,
