@@ -30,7 +30,41 @@ func newEntClient() *ent.Client {
 	return ent.NewClient(ent.Driver(drv))
 }
 
+type ListParams struct {
+	EmployeeID string `query:"employee_id"`
+	EntityType string `query:"entity_type"`
+}
+
 // ════ ENDPOINTS ════
+
+// List возвращает список сертификатов с фильтрацией.
+//
+//encore:api auth method=GET path=/certificates
+func List(ctx context.Context, params *ListParams) (*ListResponse, error) {
+	query := Client.Certificate.Query().Where(certificate.IsActiveEQ(true))
+
+	if params.EmployeeID != "" {
+		uid, err := uuid.Parse(params.EmployeeID)
+		if err != nil {
+			return nil, errs.B().Code(errs.InvalidArgument).Msg("invalid employee_id format").Err()
+		}
+		query = query.Where(certificate.EmployeeIDEQ(uid))
+	}
+	if params.EntityType != "" {
+		query = query.Where(certificate.EntityTypeEQ(certificate.EntityType(params.EntityType)))
+	}
+
+	rows, err := query.All(ctx)
+	if err != nil {
+		return nil, errs.B().Code(errs.Internal).Msg("failed to query certificates").Cause(err).Err()
+	}
+
+	certs := make([]Certificate, 0, len(rows))
+	for _, r := range rows {
+		certs = append(certs, *entToCert(r))
+	}
+	return &ListResponse{Certificates: certs, Total: len(certs)}, nil
+}
 
 // Create creates a new certificate.
 //
@@ -46,9 +80,33 @@ func Create(ctx context.Context, req *CreateRequest) (*GetCertResponse, error) {
 	return &GetCertResponse{Certificate: *cert}, nil
 }
 
-// GetExpiring returns certificates expiring within the next 6 months.
+// Update обновляет данные сертификата.
 //
-//encore:api auth method=GET path=/certificates/expiring
+//encore:api auth method=PUT path=/certificates/:id
+func Update(ctx context.Context, id string, req *CreateRequest) (*GetCertResponse, error) {
+	uid, err := uuid.Parse(id)
+	if err != nil {
+		return nil, errs.B().Code(errs.InvalidArgument).Msg("invalid id format").Err()
+	}
+
+	row, err := Client.Certificate.UpdateOneID(uid).
+		SetTitle(req.Title).
+		SetType(certificate.Type(req.Type)).
+		SetIssuedDate(req.IssuedDate).
+		SetNillableExpiryDate(req.ExpiryDate).
+		SetEntityType(certificate.EntityType(req.EntityType)).
+		SetEntityID(req.EntityID).
+		Save(ctx)
+	if err != nil {
+		return nil, errs.B().Code(errs.Internal).Msg("failed to update certificate").Cause(err).Err()
+	}
+	return &GetCertResponse{Certificate: *entToCert(row)}, nil
+}
+
+// GetExpiring returns certificates expiring within the next 6 months.
+// Изменено на уникальный путь во избежание конфликта роутинга Encore.
+//
+//encore:api auth method=GET path=/expiring-certificates
 func GetExpiring(ctx context.Context) (*ListResponse, error) {
 	rows, err := queryExpiringCerts(ctx)
 	if err != nil {
@@ -59,7 +117,7 @@ func GetExpiring(ctx context.Context) (*ListResponse, error) {
 
 // GetByID returns a single certificate by ID.
 //
-//encore:api auth method=GET path=/certificates/i/:id
+//encore:api auth method=GET path=/certificates/:id
 func GetByID(ctx context.Context, id string) (*GetCertResponse, error) {
 	cert, err := queryCertByID(ctx, id)
 	if err != nil {
@@ -68,7 +126,7 @@ func GetByID(ctx context.Context, id string) (*GetCertResponse, error) {
 	return &GetCertResponse{Certificate: *cert}, nil
 }
 
-// Delete soft-deletes a certificate.
+// Delete soft-делетит сертификат.
 //
 //encore:api auth method=DELETE path=/certificates/:id
 func Delete(ctx context.Context, id string) (*DeleteResponse, error) {
@@ -238,8 +296,6 @@ func softDeleteCert(ctx context.Context, id string) error {
 
 	return Client.Certificate.UpdateOneID(uid).SetIsActive(false).Exec(ctx)
 }
-
-// ════ HELPERS ════
 
 func entToCert(e *ent.Certificate) *Certificate {
 	var uploadedBy *string

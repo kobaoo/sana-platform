@@ -9,6 +9,7 @@ import (
 	"time"
 
 	"encore.app/db/ent/certificate"
+	"encore.app/db/ent/employee"
 	"entgo.io/ent/dialect/sql/sqlgraph"
 	"entgo.io/ent/schema/field"
 	"github.com/google/uuid"
@@ -87,34 +88,6 @@ func (_c *CertificateCreate) SetNillableUploadedBy(v *uuid.UUID) *CertificateCre
 	return _c
 }
 
-// SetEventID sets the "event_id" field.
-func (_c *CertificateCreate) SetEventID(v uuid.UUID) *CertificateCreate {
-	_c.mutation.SetEventID(v)
-	return _c
-}
-
-// SetNillableEventID sets the "event_id" field if the given value is not nil.
-func (_c *CertificateCreate) SetNillableEventID(v *uuid.UUID) *CertificateCreate {
-	if v != nil {
-		_c.SetEventID(*v)
-	}
-	return _c
-}
-
-// SetScormCourseID sets the "scorm_course_id" field.
-func (_c *CertificateCreate) SetScormCourseID(v uuid.UUID) *CertificateCreate {
-	_c.mutation.SetScormCourseID(v)
-	return _c
-}
-
-// SetNillableScormCourseID sets the "scorm_course_id" field if the given value is not nil.
-func (_c *CertificateCreate) SetNillableScormCourseID(v *uuid.UUID) *CertificateCreate {
-	if v != nil {
-		_c.SetScormCourseID(*v)
-	}
-	return _c
-}
-
 // SetEntityType sets the "entity_type" field.
 func (_c *CertificateCreate) SetEntityType(v certificate.EntityType) *CertificateCreate {
 	_c.mutation.SetEntityType(v)
@@ -181,6 +154,11 @@ func (_c *CertificateCreate) SetNillableID(v *uuid.UUID) *CertificateCreate {
 		_c.SetID(*v)
 	}
 	return _c
+}
+
+// SetEmployee sets the "employee" edge to the Employee entity.
+func (_c *CertificateCreate) SetEmployee(v *Employee) *CertificateCreate {
+	return _c.SetEmployeeID(v.ID)
 }
 
 // Mutation returns the CertificateMutation object of the builder.
@@ -280,6 +258,9 @@ func (_c *CertificateCreate) check() error {
 	if _, ok := _c.mutation.UpdatedAt(); !ok {
 		return &ValidationError{Name: "updated_at", err: errors.New(`ent: missing required field "Certificate.updated_at"`)}
 	}
+	if len(_c.mutation.EmployeeIDs()) == 0 {
+		return &ValidationError{Name: "employee", err: errors.New(`ent: missing required edge "Certificate.employee"`)}
+	}
 	return nil
 }
 
@@ -315,10 +296,6 @@ func (_c *CertificateCreate) createSpec() (*Certificate, *sqlgraph.CreateSpec) {
 		_node.ID = id
 		_spec.ID.Value = &id
 	}
-	if value, ok := _c.mutation.EmployeeID(); ok {
-		_spec.SetField(certificate.FieldEmployeeID, field.TypeUUID, value)
-		_node.EmployeeID = value
-	}
 	if value, ok := _c.mutation.GetType(); ok {
 		_spec.SetField(certificate.FieldType, field.TypeEnum, value)
 		_node.Type = value
@@ -343,14 +320,6 @@ func (_c *CertificateCreate) createSpec() (*Certificate, *sqlgraph.CreateSpec) {
 		_spec.SetField(certificate.FieldUploadedBy, field.TypeUUID, value)
 		_node.UploadedBy = &value
 	}
-	if value, ok := _c.mutation.EventID(); ok {
-		_spec.SetField(certificate.FieldEventID, field.TypeUUID, value)
-		_node.EventID = &value
-	}
-	if value, ok := _c.mutation.ScormCourseID(); ok {
-		_spec.SetField(certificate.FieldScormCourseID, field.TypeUUID, value)
-		_node.ScormCourseID = &value
-	}
 	if value, ok := _c.mutation.EntityType(); ok {
 		_spec.SetField(certificate.FieldEntityType, field.TypeEnum, value)
 		_node.EntityType = value
@@ -370,6 +339,23 @@ func (_c *CertificateCreate) createSpec() (*Certificate, *sqlgraph.CreateSpec) {
 	if value, ok := _c.mutation.UpdatedAt(); ok {
 		_spec.SetField(certificate.FieldUpdatedAt, field.TypeTime, value)
 		_node.UpdatedAt = value
+	}
+	if nodes := _c.mutation.EmployeeIDs(); len(nodes) > 0 {
+		edge := &sqlgraph.EdgeSpec{
+			Rel:     sqlgraph.M2O,
+			Inverse: false,
+			Table:   certificate.EmployeeTable,
+			Columns: []string{certificate.EmployeeColumn},
+			Bidi:    false,
+			Target: &sqlgraph.EdgeTarget{
+				IDSpec: sqlgraph.NewFieldSpec(employee.FieldID, field.TypeUUID),
+			},
+		}
+		for _, k := range nodes {
+			edge.Target.Nodes = append(edge.Target.Nodes, k)
+		}
+		_node.EmployeeID = nodes[0]
+		_spec.Edges = append(_spec.Edges, edge)
 	}
 	return _node, _spec
 }

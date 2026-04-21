@@ -7,6 +7,7 @@ import (
 
 	"encore.app/db/ent/predicate"
 	"entgo.io/ent/dialect/sql"
+	"entgo.io/ent/dialect/sql/sqlgraph"
 	"github.com/google/uuid"
 )
 
@@ -85,16 +86,6 @@ func UploadedBy(v uuid.UUID) predicate.Certificate {
 	return predicate.Certificate(sql.FieldEQ(FieldUploadedBy, v))
 }
 
-// EventID applies equality check predicate on the "event_id" field. It's identical to EventIDEQ.
-func EventID(v uuid.UUID) predicate.Certificate {
-	return predicate.Certificate(sql.FieldEQ(FieldEventID, v))
-}
-
-// ScormCourseID applies equality check predicate on the "scorm_course_id" field. It's identical to ScormCourseIDEQ.
-func ScormCourseID(v uuid.UUID) predicate.Certificate {
-	return predicate.Certificate(sql.FieldEQ(FieldScormCourseID, v))
-}
-
 // EntityID applies equality check predicate on the "entity_id" field. It's identical to EntityIDEQ.
 func EntityID(v uuid.UUID) predicate.Certificate {
 	return predicate.Certificate(sql.FieldEQ(FieldEntityID, v))
@@ -133,26 +124,6 @@ func EmployeeIDIn(vs ...uuid.UUID) predicate.Certificate {
 // EmployeeIDNotIn applies the NotIn predicate on the "employee_id" field.
 func EmployeeIDNotIn(vs ...uuid.UUID) predicate.Certificate {
 	return predicate.Certificate(sql.FieldNotIn(FieldEmployeeID, vs...))
-}
-
-// EmployeeIDGT applies the GT predicate on the "employee_id" field.
-func EmployeeIDGT(v uuid.UUID) predicate.Certificate {
-	return predicate.Certificate(sql.FieldGT(FieldEmployeeID, v))
-}
-
-// EmployeeIDGTE applies the GTE predicate on the "employee_id" field.
-func EmployeeIDGTE(v uuid.UUID) predicate.Certificate {
-	return predicate.Certificate(sql.FieldGTE(FieldEmployeeID, v))
-}
-
-// EmployeeIDLT applies the LT predicate on the "employee_id" field.
-func EmployeeIDLT(v uuid.UUID) predicate.Certificate {
-	return predicate.Certificate(sql.FieldLT(FieldEmployeeID, v))
-}
-
-// EmployeeIDLTE applies the LTE predicate on the "employee_id" field.
-func EmployeeIDLTE(v uuid.UUID) predicate.Certificate {
-	return predicate.Certificate(sql.FieldLTE(FieldEmployeeID, v))
 }
 
 // TypeEQ applies the EQ predicate on the "type" field.
@@ -455,106 +426,6 @@ func UploadedByNotNil() predicate.Certificate {
 	return predicate.Certificate(sql.FieldNotNull(FieldUploadedBy))
 }
 
-// EventIDEQ applies the EQ predicate on the "event_id" field.
-func EventIDEQ(v uuid.UUID) predicate.Certificate {
-	return predicate.Certificate(sql.FieldEQ(FieldEventID, v))
-}
-
-// EventIDNEQ applies the NEQ predicate on the "event_id" field.
-func EventIDNEQ(v uuid.UUID) predicate.Certificate {
-	return predicate.Certificate(sql.FieldNEQ(FieldEventID, v))
-}
-
-// EventIDIn applies the In predicate on the "event_id" field.
-func EventIDIn(vs ...uuid.UUID) predicate.Certificate {
-	return predicate.Certificate(sql.FieldIn(FieldEventID, vs...))
-}
-
-// EventIDNotIn applies the NotIn predicate on the "event_id" field.
-func EventIDNotIn(vs ...uuid.UUID) predicate.Certificate {
-	return predicate.Certificate(sql.FieldNotIn(FieldEventID, vs...))
-}
-
-// EventIDGT applies the GT predicate on the "event_id" field.
-func EventIDGT(v uuid.UUID) predicate.Certificate {
-	return predicate.Certificate(sql.FieldGT(FieldEventID, v))
-}
-
-// EventIDGTE applies the GTE predicate on the "event_id" field.
-func EventIDGTE(v uuid.UUID) predicate.Certificate {
-	return predicate.Certificate(sql.FieldGTE(FieldEventID, v))
-}
-
-// EventIDLT applies the LT predicate on the "event_id" field.
-func EventIDLT(v uuid.UUID) predicate.Certificate {
-	return predicate.Certificate(sql.FieldLT(FieldEventID, v))
-}
-
-// EventIDLTE applies the LTE predicate on the "event_id" field.
-func EventIDLTE(v uuid.UUID) predicate.Certificate {
-	return predicate.Certificate(sql.FieldLTE(FieldEventID, v))
-}
-
-// EventIDIsNil applies the IsNil predicate on the "event_id" field.
-func EventIDIsNil() predicate.Certificate {
-	return predicate.Certificate(sql.FieldIsNull(FieldEventID))
-}
-
-// EventIDNotNil applies the NotNil predicate on the "event_id" field.
-func EventIDNotNil() predicate.Certificate {
-	return predicate.Certificate(sql.FieldNotNull(FieldEventID))
-}
-
-// ScormCourseIDEQ applies the EQ predicate on the "scorm_course_id" field.
-func ScormCourseIDEQ(v uuid.UUID) predicate.Certificate {
-	return predicate.Certificate(sql.FieldEQ(FieldScormCourseID, v))
-}
-
-// ScormCourseIDNEQ applies the NEQ predicate on the "scorm_course_id" field.
-func ScormCourseIDNEQ(v uuid.UUID) predicate.Certificate {
-	return predicate.Certificate(sql.FieldNEQ(FieldScormCourseID, v))
-}
-
-// ScormCourseIDIn applies the In predicate on the "scorm_course_id" field.
-func ScormCourseIDIn(vs ...uuid.UUID) predicate.Certificate {
-	return predicate.Certificate(sql.FieldIn(FieldScormCourseID, vs...))
-}
-
-// ScormCourseIDNotIn applies the NotIn predicate on the "scorm_course_id" field.
-func ScormCourseIDNotIn(vs ...uuid.UUID) predicate.Certificate {
-	return predicate.Certificate(sql.FieldNotIn(FieldScormCourseID, vs...))
-}
-
-// ScormCourseIDGT applies the GT predicate on the "scorm_course_id" field.
-func ScormCourseIDGT(v uuid.UUID) predicate.Certificate {
-	return predicate.Certificate(sql.FieldGT(FieldScormCourseID, v))
-}
-
-// ScormCourseIDGTE applies the GTE predicate on the "scorm_course_id" field.
-func ScormCourseIDGTE(v uuid.UUID) predicate.Certificate {
-	return predicate.Certificate(sql.FieldGTE(FieldScormCourseID, v))
-}
-
-// ScormCourseIDLT applies the LT predicate on the "scorm_course_id" field.
-func ScormCourseIDLT(v uuid.UUID) predicate.Certificate {
-	return predicate.Certificate(sql.FieldLT(FieldScormCourseID, v))
-}
-
-// ScormCourseIDLTE applies the LTE predicate on the "scorm_course_id" field.
-func ScormCourseIDLTE(v uuid.UUID) predicate.Certificate {
-	return predicate.Certificate(sql.FieldLTE(FieldScormCourseID, v))
-}
-
-// ScormCourseIDIsNil applies the IsNil predicate on the "scorm_course_id" field.
-func ScormCourseIDIsNil() predicate.Certificate {
-	return predicate.Certificate(sql.FieldIsNull(FieldScormCourseID))
-}
-
-// ScormCourseIDNotNil applies the NotNil predicate on the "scorm_course_id" field.
-func ScormCourseIDNotNil() predicate.Certificate {
-	return predicate.Certificate(sql.FieldNotNull(FieldScormCourseID))
-}
-
 // EntityTypeEQ applies the EQ predicate on the "entity_type" field.
 func EntityTypeEQ(v EntityType) predicate.Certificate {
 	return predicate.Certificate(sql.FieldEQ(FieldEntityType, v))
@@ -703,6 +574,29 @@ func UpdatedAtLT(v time.Time) predicate.Certificate {
 // UpdatedAtLTE applies the LTE predicate on the "updated_at" field.
 func UpdatedAtLTE(v time.Time) predicate.Certificate {
 	return predicate.Certificate(sql.FieldLTE(FieldUpdatedAt, v))
+}
+
+// HasEmployee applies the HasEdge predicate on the "employee" edge.
+func HasEmployee() predicate.Certificate {
+	return predicate.Certificate(func(s *sql.Selector) {
+		step := sqlgraph.NewStep(
+			sqlgraph.From(Table, FieldID),
+			sqlgraph.Edge(sqlgraph.M2O, false, EmployeeTable, EmployeeColumn),
+		)
+		sqlgraph.HasNeighbors(s, step)
+	})
+}
+
+// HasEmployeeWith applies the HasEdge predicate on the "employee" edge with a given conditions (other predicates).
+func HasEmployeeWith(preds ...predicate.Employee) predicate.Certificate {
+	return predicate.Certificate(func(s *sql.Selector) {
+		step := newEmployeeStep()
+		sqlgraph.HasNeighborsWith(s, step, func(s *sql.Selector) {
+			for _, p := range preds {
+				p(s)
+			}
+		})
+	})
 }
 
 // And groups predicates with the AND operator between them.

@@ -5,6 +5,7 @@ import (
 
 	"entgo.io/ent"
 	"entgo.io/ent/dialect"
+	"entgo.io/ent/schema/edge"
 	"entgo.io/ent/schema/field"
 	"entgo.io/ent/schema/index"
 	"github.com/google/uuid"
@@ -20,38 +21,31 @@ func (Certificate) Fields() []ent.Field {
 			Default(uuid.New).
 			Unique().
 			Immutable(),
-		field.UUID("employee_id", uuid.UUID{}), // Изменено на UUID по ТЗ
-		// field.UUID("dzo_id", uuid.UUID{}).Optional().Nillable(), // Закомментировал
+		field.UUID("employee_id", uuid.UUID{}),
 		field.Enum("type").
-			Values("EXTERNAL", "SCORM"), // Добавлено из Data Dictionary
+			Values("EXTERNAL", "SCORM"),
 		field.String("title").
-			MaxLen(300). // VARCHAR(300) по ТЗ
+			MaxLen(300).
 			NotEmpty(),
-		field.Time("issued_date"). // Переименовано
-						SchemaType(map[string]string{
-				dialect.Postgres: "date", // В ДД указан тип DATE
-			}),
-		field.Time("expiry_date"). // Переименовано
-						Optional().
-						Nillable().
-						SchemaType(map[string]string{
+		field.Time("issued_date").
+			SchemaType(map[string]string{
 				dialect.Postgres: "date",
 			}),
-		field.Text("file_url"). // Сделано Optional/Nillable
-					Optional().
-					Nillable(),
+		field.Time("expiry_date").
+			Optional().
+			Nillable().
+			SchemaType(map[string]string{
+				dialect.Postgres: "date",
+			}),
+		field.Text("file_url").
+			Optional().
+			Nillable(),
 		field.UUID("uploaded_by", uuid.UUID{}).
 			Optional().
-			Nillable(), // Добавлено по ТЗ
-		field.UUID("event_id", uuid.UUID{}).
-			Optional().
-			Nillable(), // Добавлено по ТЗ
-		field.UUID("scorm_course_id", uuid.UUID{}).
-			Optional().
-			Nillable(), // Добавлено по ТЗ
+			Nillable(),
 		field.Enum("entity_type").
-			Values("SCORM_COURSE", "TRAINING_EVENT"), // Добавлено
-		field.UUID("entity_id", uuid.UUID{}), // Добавлено
+			Values("SCORM_COURSE", "TRAINING_EVENT"),
+		field.UUID("entity_id", uuid.UUID{}),
 		field.Bool("is_active").
 			Default(true),
 		field.Time("created_at").
@@ -64,12 +58,20 @@ func (Certificate) Fields() []ent.Field {
 }
 
 func (Certificate) Edges() []ent.Edge {
-	return nil
+	return []ent.Edge{
+		// Односторонняя связь: создаем FK на уровне БД,
+		// не добавляя ничего в схему Employee.
+		edge.To("employee", Employee.Type).
+			Field("employee_id").
+			Unique().
+			Required(),
+	}
 }
 
 func (Certificate) Indexes() []ent.Index {
 	return []ent.Index{
 		index.Fields("employee_id"),
 		index.Fields("is_active"),
+		index.Fields("expiry_date"),
 	}
 }
