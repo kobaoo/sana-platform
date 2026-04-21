@@ -1,3 +1,4 @@
-h1:ww4IUYw1n0Cp912iqQEYvjJXMDKNyGKSJq12g31ns8g=
-20260416154539_initial.up.sql h1:SPW5GsUYvthUCGI972fD41HyxIL3JVdgorwNchcBJG4=
-20260420103604_add_contracts_suppliers_and_history.up.sql h1:pQ2kcHyDlr0ElJN3sYilNQ2N8DDchNQ1maMyb4q20wg=
+h1:BRR2UvDyixE16TcQJPu1REpGuKs6EWzjxRrKw1W7L4I=
+20260416133254_add_dzo_organizations_and_employee.up.sql h1:CQEgYDdY5YJMRQX7FMgVEgaW6QqDlnIUh61jA1v83NE=
+20260416154539_initial.up.sql h1:jtXM/98YUNbW1mJJa2D48xiWKd+61GzQgrkD/CxCzfo=
+20260420121445_add_is_deleted_to_employees.up.sql h1:dSqWhc7B0ILOW6/JWSiytacYzy44wBVeX1UHt04qqKE=

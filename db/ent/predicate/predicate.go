@@ -6,11 +6,20 @@ import (
 	"entgo.io/ent/dialect/sql"
 )
 
+// Company is the predicate function for company builders.
+type Company func(*sql.Selector)
+
 // ContractSupplier is the predicate function for contractsupplier builders.
 type ContractSupplier func(*sql.Selector)
 
 // ContractSupplierHistory is the predicate function for contractsupplierhistory builders.
 type ContractSupplierHistory func(*sql.Selector)
+
+// DzoOrganization is the predicate function for dzoorganization builders.
+type DzoOrganization func(*sql.Selector)
+
+// Employee is the predicate function for employee builders.
+type Employee func(*sql.Selector)
 
 // Organization is the predicate function for organization builders.
 type Organization func(*sql.Selector)
