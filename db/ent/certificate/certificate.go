@@ -7,6 +7,7 @@ import (
 	"time"
 
 	"entgo.io/ent/dialect/sql"
+	"entgo.io/ent/dialect/sql/sqlgraph"
 	"github.com/google/uuid"
 )
 
@@ -29,10 +30,6 @@ const (
 	FieldFileURL = "file_url"
 	// FieldUploadedBy holds the string denoting the uploaded_by field in the database.
 	FieldUploadedBy = "uploaded_by"
-	// FieldEventID holds the string denoting the event_id field in the database.
-	FieldEventID = "event_id"
-	// FieldScormCourseID holds the string denoting the scorm_course_id field in the database.
-	FieldScormCourseID = "scorm_course_id"
 	// FieldEntityType holds the string denoting the entity_type field in the database.
 	FieldEntityType = "entity_type"
 	// FieldEntityID holds the string denoting the entity_id field in the database.
@@ -43,8 +40,17 @@ const (
 	FieldCreatedAt = "created_at"
 	// FieldUpdatedAt holds the string denoting the updated_at field in the database.
 	FieldUpdatedAt = "updated_at"
+	// EdgeEmployee holds the string denoting the employee edge name in mutations.
+	EdgeEmployee = "employee"
 	// Table holds the table name of the certificate in the database.
 	Table = "certificates"
+	// EmployeeTable is the table that holds the employee relation/edge.
+	EmployeeTable = "certificates"
+	// EmployeeInverseTable is the table name for the Employee entity.
+	// It exists in this package in order to avoid circular dependency with the "employee" package.
+	EmployeeInverseTable = "employees"
+	// EmployeeColumn is the table column denoting the employee relation/edge.
+	EmployeeColumn = "employee_id"
 )
 
 // Columns holds all SQL columns for certificate fields.
@@ -57,8 +63,6 @@ var Columns = []string{
 	FieldExpiryDate,
 	FieldFileURL,
 	FieldUploadedBy,
-	FieldEventID,
-	FieldScormCourseID,
 	FieldEntityType,
 	FieldEntityID,
 	FieldIsActive,
@@ -180,16 +184,6 @@ func ByUploadedBy(opts ...sql.OrderTermOption) OrderOption {
 	return sql.OrderByField(FieldUploadedBy, opts...).ToFunc()
 }
 
-// ByEventID orders the results by the event_id field.
-func ByEventID(opts ...sql.OrderTermOption) OrderOption {
-	return sql.OrderByField(FieldEventID, opts...).ToFunc()
-}
-
-// ByScormCourseID orders the results by the scorm_course_id field.
-func ByScormCourseID(opts ...sql.OrderTermOption) OrderOption {
-	return sql.OrderByField(FieldScormCourseID, opts...).ToFunc()
-}
-
 // ByEntityType orders the results by the entity_type field.
 func ByEntityType(opts ...sql.OrderTermOption) OrderOption {
 	return sql.OrderByField(FieldEntityType, opts...).ToFunc()
@@ -213,4 +207,18 @@ func ByCreatedAt(opts ...sql.OrderTermOption) OrderOption {
 // ByUpdatedAt orders the results by the updated_at field.
 func ByUpdatedAt(opts ...sql.OrderTermOption) OrderOption {
 	return sql.OrderByField(FieldUpdatedAt, opts...).ToFunc()
+}
+
+// ByEmployeeField orders the results by employee field.
+func ByEmployeeField(field string, opts ...sql.OrderTermOption) OrderOption {
+	return func(s *sql.Selector) {
+		sqlgraph.OrderByNeighborTerms(s, newEmployeeStep(), sql.OrderByField(field, opts...))
+	}
+}
+func newEmployeeStep() *sqlgraph.Step {
+	return sqlgraph.NewStep(
+		sqlgraph.From(Table, FieldID),
+		sqlgraph.To(EmployeeInverseTable, FieldID),
+		sqlgraph.Edge(sqlgraph.M2O, false, EmployeeTable, EmployeeColumn),
+	)
 }

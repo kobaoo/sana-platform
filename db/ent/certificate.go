@@ -8,6 +8,7 @@ import (
 	"time"
 
 	"encore.app/db/ent/certificate"
+	"encore.app/db/ent/employee"
 	"entgo.io/ent"
 	"entgo.io/ent/dialect/sql"
 	"github.com/google/uuid"
@@ -32,10 +33,6 @@ type Certificate struct {
 	FileURL *string `json:"file_url,omitempty"`
 	// UploadedBy holds the value of the "uploaded_by" field.
 	UploadedBy *uuid.UUID `json:"uploaded_by,omitempty"`
-	// EventID holds the value of the "event_id" field.
-	EventID *uuid.UUID `json:"event_id,omitempty"`
-	// ScormCourseID holds the value of the "scorm_course_id" field.
-	ScormCourseID *uuid.UUID `json:"scorm_course_id,omitempty"`
 	// EntityType holds the value of the "entity_type" field.
 	EntityType certificate.EntityType `json:"entity_type,omitempty"`
 	// EntityID holds the value of the "entity_id" field.
@@ -45,8 +42,31 @@ type Certificate struct {
 	// CreatedAt holds the value of the "created_at" field.
 	CreatedAt time.Time `json:"created_at,omitempty"`
 	// UpdatedAt holds the value of the "updated_at" field.
-	UpdatedAt    time.Time `json:"updated_at,omitempty"`
+	UpdatedAt time.Time `json:"updated_at,omitempty"`
+	// Edges holds the relations/edges for other nodes in the graph.
+	// The values are being populated by the CertificateQuery when eager-loading is set.
+	Edges        CertificateEdges `json:"edges"`
 	selectValues sql.SelectValues
+}
+
+// CertificateEdges holds the relations/edges for other nodes in the graph.
+type CertificateEdges struct {
+	// Employee holds the value of the employee edge.
+	Employee *Employee `json:"employee,omitempty"`
+	// loadedTypes holds the information for reporting if a
+	// type was loaded (or requested) in eager-loading or not.
+	loadedTypes [1]bool
+}
+
+// EmployeeOrErr returns the Employee value or an error if the edge
+// was not loaded in eager-loading, or loaded but was not found.
+func (e CertificateEdges) EmployeeOrErr() (*Employee, error) {
+	if e.Employee != nil {
+		return e.Employee, nil
+	} else if e.loadedTypes[0] {
+		return nil, &NotFoundError{label: employee.Label}
+	}
+	return nil, &NotLoadedError{edge: "employee"}
 }
 
 // scanValues returns the types for scanning values from sql.Rows.
@@ -54,7 +74,7 @@ func (*Certificate) scanValues(columns []string) ([]any, error) {
 	values := make([]any, len(columns))
 	for i := range columns {
 		switch columns[i] {
-		case certificate.FieldUploadedBy, certificate.FieldEventID, certificate.FieldScormCourseID:
+		case certificate.FieldUploadedBy:
 			values[i] = &sql.NullScanner{S: new(uuid.UUID)}
 		case certificate.FieldIsActive:
 			values[i] = new(sql.NullBool)
@@ -130,20 +150,6 @@ func (_m *Certificate) assignValues(columns []string, values []any) error {
 				_m.UploadedBy = new(uuid.UUID)
 				*_m.UploadedBy = *value.S.(*uuid.UUID)
 			}
-		case certificate.FieldEventID:
-			if value, ok := values[i].(*sql.NullScanner); !ok {
-				return fmt.Errorf("unexpected type %T for field event_id", values[i])
-			} else if value.Valid {
-				_m.EventID = new(uuid.UUID)
-				*_m.EventID = *value.S.(*uuid.UUID)
-			}
-		case certificate.FieldScormCourseID:
-			if value, ok := values[i].(*sql.NullScanner); !ok {
-				return fmt.Errorf("unexpected type %T for field scorm_course_id", values[i])
-			} else if value.Valid {
-				_m.ScormCourseID = new(uuid.UUID)
-				*_m.ScormCourseID = *value.S.(*uuid.UUID)
-			}
 		case certificate.FieldEntityType:
 			if value, ok := values[i].(*sql.NullString); !ok {
 				return fmt.Errorf("unexpected type %T for field entity_type", values[i])
@@ -185,6 +191,11 @@ func (_m *Certificate) assignValues(columns []string, values []any) error {
 // This includes values selected through modifiers, order, etc.
 func (_m *Certificate) Value(name string) (ent.Value, error) {
 	return _m.selectValues.Get(name)
+}
+
+// QueryEmployee queries the "employee" edge of the Certificate entity.
+func (_m *Certificate) QueryEmployee() *EmployeeQuery {
+	return NewCertificateClient(_m.config).QueryEmployee(_m)
 }
 
 // Update returns a builder for updating this Certificate.
@@ -234,16 +245,6 @@ func (_m *Certificate) String() string {
 	builder.WriteString(", ")
 	if v := _m.UploadedBy; v != nil {
 		builder.WriteString("uploaded_by=")
-		builder.WriteString(fmt.Sprintf("%v", *v))
-	}
-	builder.WriteString(", ")
-	if v := _m.EventID; v != nil {
-		builder.WriteString("event_id=")
-		builder.WriteString(fmt.Sprintf("%v", *v))
-	}
-	builder.WriteString(", ")
-	if v := _m.ScormCourseID; v != nil {
-		builder.WriteString("scorm_course_id=")
 		builder.WriteString(fmt.Sprintf("%v", *v))
 	}
 	builder.WriteString(", ")

@@ -9,6 +9,7 @@ import (
 	"time"
 
 	"encore.app/db/ent/certificate"
+	"encore.app/db/ent/employee"
 	"encore.app/db/ent/predicate"
 	"entgo.io/ent/dialect/sql"
 	"entgo.io/ent/dialect/sql/sqlgraph"
@@ -145,46 +146,6 @@ func (_u *CertificateUpdate) ClearUploadedBy() *CertificateUpdate {
 	return _u
 }
 
-// SetEventID sets the "event_id" field.
-func (_u *CertificateUpdate) SetEventID(v uuid.UUID) *CertificateUpdate {
-	_u.mutation.SetEventID(v)
-	return _u
-}
-
-// SetNillableEventID sets the "event_id" field if the given value is not nil.
-func (_u *CertificateUpdate) SetNillableEventID(v *uuid.UUID) *CertificateUpdate {
-	if v != nil {
-		_u.SetEventID(*v)
-	}
-	return _u
-}
-
-// ClearEventID clears the value of the "event_id" field.
-func (_u *CertificateUpdate) ClearEventID() *CertificateUpdate {
-	_u.mutation.ClearEventID()
-	return _u
-}
-
-// SetScormCourseID sets the "scorm_course_id" field.
-func (_u *CertificateUpdate) SetScormCourseID(v uuid.UUID) *CertificateUpdate {
-	_u.mutation.SetScormCourseID(v)
-	return _u
-}
-
-// SetNillableScormCourseID sets the "scorm_course_id" field if the given value is not nil.
-func (_u *CertificateUpdate) SetNillableScormCourseID(v *uuid.UUID) *CertificateUpdate {
-	if v != nil {
-		_u.SetScormCourseID(*v)
-	}
-	return _u
-}
-
-// ClearScormCourseID clears the value of the "scorm_course_id" field.
-func (_u *CertificateUpdate) ClearScormCourseID() *CertificateUpdate {
-	_u.mutation.ClearScormCourseID()
-	return _u
-}
-
 // SetEntityType sets the "entity_type" field.
 func (_u *CertificateUpdate) SetEntityType(v certificate.EntityType) *CertificateUpdate {
 	_u.mutation.SetEntityType(v)
@@ -233,9 +194,20 @@ func (_u *CertificateUpdate) SetUpdatedAt(v time.Time) *CertificateUpdate {
 	return _u
 }
 
+// SetEmployee sets the "employee" edge to the Employee entity.
+func (_u *CertificateUpdate) SetEmployee(v *Employee) *CertificateUpdate {
+	return _u.SetEmployeeID(v.ID)
+}
+
 // Mutation returns the CertificateMutation object of the builder.
 func (_u *CertificateUpdate) Mutation() *CertificateMutation {
 	return _u.mutation
+}
+
+// ClearEmployee clears the "employee" edge to the Employee entity.
+func (_u *CertificateUpdate) ClearEmployee() *CertificateUpdate {
+	_u.mutation.ClearEmployee()
+	return _u
 }
 
 // Save executes the query and returns the number of nodes affected by the update operation.
@@ -291,6 +263,9 @@ func (_u *CertificateUpdate) check() error {
 			return &ValidationError{Name: "entity_type", err: fmt.Errorf(`ent: validator failed for field "Certificate.entity_type": %w`, err)}
 		}
 	}
+	if _u.mutation.EmployeeCleared() && len(_u.mutation.EmployeeIDs()) > 0 {
+		return errors.New(`ent: clearing a required unique edge "Certificate.employee"`)
+	}
 	return nil
 }
 
@@ -305,9 +280,6 @@ func (_u *CertificateUpdate) sqlSave(ctx context.Context) (_node int, err error)
 				ps[i](selector)
 			}
 		}
-	}
-	if value, ok := _u.mutation.EmployeeID(); ok {
-		_spec.SetField(certificate.FieldEmployeeID, field.TypeUUID, value)
 	}
 	if value, ok := _u.mutation.GetType(); ok {
 		_spec.SetField(certificate.FieldType, field.TypeEnum, value)
@@ -336,18 +308,6 @@ func (_u *CertificateUpdate) sqlSave(ctx context.Context) (_node int, err error)
 	if _u.mutation.UploadedByCleared() {
 		_spec.ClearField(certificate.FieldUploadedBy, field.TypeUUID)
 	}
-	if value, ok := _u.mutation.EventID(); ok {
-		_spec.SetField(certificate.FieldEventID, field.TypeUUID, value)
-	}
-	if _u.mutation.EventIDCleared() {
-		_spec.ClearField(certificate.FieldEventID, field.TypeUUID)
-	}
-	if value, ok := _u.mutation.ScormCourseID(); ok {
-		_spec.SetField(certificate.FieldScormCourseID, field.TypeUUID, value)
-	}
-	if _u.mutation.ScormCourseIDCleared() {
-		_spec.ClearField(certificate.FieldScormCourseID, field.TypeUUID)
-	}
 	if value, ok := _u.mutation.EntityType(); ok {
 		_spec.SetField(certificate.FieldEntityType, field.TypeEnum, value)
 	}
@@ -359,6 +319,35 @@ func (_u *CertificateUpdate) sqlSave(ctx context.Context) (_node int, err error)
 	}
 	if value, ok := _u.mutation.UpdatedAt(); ok {
 		_spec.SetField(certificate.FieldUpdatedAt, field.TypeTime, value)
+	}
+	if _u.mutation.EmployeeCleared() {
+		edge := &sqlgraph.EdgeSpec{
+			Rel:     sqlgraph.M2O,
+			Inverse: false,
+			Table:   certificate.EmployeeTable,
+			Columns: []string{certificate.EmployeeColumn},
+			Bidi:    false,
+			Target: &sqlgraph.EdgeTarget{
+				IDSpec: sqlgraph.NewFieldSpec(employee.FieldID, field.TypeUUID),
+			},
+		}
+		_spec.Edges.Clear = append(_spec.Edges.Clear, edge)
+	}
+	if nodes := _u.mutation.EmployeeIDs(); len(nodes) > 0 {
+		edge := &sqlgraph.EdgeSpec{
+			Rel:     sqlgraph.M2O,
+			Inverse: false,
+			Table:   certificate.EmployeeTable,
+			Columns: []string{certificate.EmployeeColumn},
+			Bidi:    false,
+			Target: &sqlgraph.EdgeTarget{
+				IDSpec: sqlgraph.NewFieldSpec(employee.FieldID, field.TypeUUID),
+			},
+		}
+		for _, k := range nodes {
+			edge.Target.Nodes = append(edge.Target.Nodes, k)
+		}
+		_spec.Edges.Add = append(_spec.Edges.Add, edge)
 	}
 	if _node, err = sqlgraph.UpdateNodes(ctx, _u.driver, _spec); err != nil {
 		if _, ok := err.(*sqlgraph.NotFoundError); ok {
@@ -496,46 +485,6 @@ func (_u *CertificateUpdateOne) ClearUploadedBy() *CertificateUpdateOne {
 	return _u
 }
 
-// SetEventID sets the "event_id" field.
-func (_u *CertificateUpdateOne) SetEventID(v uuid.UUID) *CertificateUpdateOne {
-	_u.mutation.SetEventID(v)
-	return _u
-}
-
-// SetNillableEventID sets the "event_id" field if the given value is not nil.
-func (_u *CertificateUpdateOne) SetNillableEventID(v *uuid.UUID) *CertificateUpdateOne {
-	if v != nil {
-		_u.SetEventID(*v)
-	}
-	return _u
-}
-
-// ClearEventID clears the value of the "event_id" field.
-func (_u *CertificateUpdateOne) ClearEventID() *CertificateUpdateOne {
-	_u.mutation.ClearEventID()
-	return _u
-}
-
-// SetScormCourseID sets the "scorm_course_id" field.
-func (_u *CertificateUpdateOne) SetScormCourseID(v uuid.UUID) *CertificateUpdateOne {
-	_u.mutation.SetScormCourseID(v)
-	return _u
-}
-
-// SetNillableScormCourseID sets the "scorm_course_id" field if the given value is not nil.
-func (_u *CertificateUpdateOne) SetNillableScormCourseID(v *uuid.UUID) *CertificateUpdateOne {
-	if v != nil {
-		_u.SetScormCourseID(*v)
-	}
-	return _u
-}
-
-// ClearScormCourseID clears the value of the "scorm_course_id" field.
-func (_u *CertificateUpdateOne) ClearScormCourseID() *CertificateUpdateOne {
-	_u.mutation.ClearScormCourseID()
-	return _u
-}
-
 // SetEntityType sets the "entity_type" field.
 func (_u *CertificateUpdateOne) SetEntityType(v certificate.EntityType) *CertificateUpdateOne {
 	_u.mutation.SetEntityType(v)
@@ -584,9 +533,20 @@ func (_u *CertificateUpdateOne) SetUpdatedAt(v time.Time) *CertificateUpdateOne 
 	return _u
 }
 
+// SetEmployee sets the "employee" edge to the Employee entity.
+func (_u *CertificateUpdateOne) SetEmployee(v *Employee) *CertificateUpdateOne {
+	return _u.SetEmployeeID(v.ID)
+}
+
 // Mutation returns the CertificateMutation object of the builder.
 func (_u *CertificateUpdateOne) Mutation() *CertificateMutation {
 	return _u.mutation
+}
+
+// ClearEmployee clears the "employee" edge to the Employee entity.
+func (_u *CertificateUpdateOne) ClearEmployee() *CertificateUpdateOne {
+	_u.mutation.ClearEmployee()
+	return _u
 }
 
 // Where appends a list predicates to the CertificateUpdate builder.
@@ -655,6 +615,9 @@ func (_u *CertificateUpdateOne) check() error {
 			return &ValidationError{Name: "entity_type", err: fmt.Errorf(`ent: validator failed for field "Certificate.entity_type": %w`, err)}
 		}
 	}
+	if _u.mutation.EmployeeCleared() && len(_u.mutation.EmployeeIDs()) > 0 {
+		return errors.New(`ent: clearing a required unique edge "Certificate.employee"`)
+	}
 	return nil
 }
 
@@ -687,9 +650,6 @@ func (_u *CertificateUpdateOne) sqlSave(ctx context.Context) (_node *Certificate
 			}
 		}
 	}
-	if value, ok := _u.mutation.EmployeeID(); ok {
-		_spec.SetField(certificate.FieldEmployeeID, field.TypeUUID, value)
-	}
 	if value, ok := _u.mutation.GetType(); ok {
 		_spec.SetField(certificate.FieldType, field.TypeEnum, value)
 	}
@@ -717,18 +677,6 @@ func (_u *CertificateUpdateOne) sqlSave(ctx context.Context) (_node *Certificate
 	if _u.mutation.UploadedByCleared() {
 		_spec.ClearField(certificate.FieldUploadedBy, field.TypeUUID)
 	}
-	if value, ok := _u.mutation.EventID(); ok {
-		_spec.SetField(certificate.FieldEventID, field.TypeUUID, value)
-	}
-	if _u.mutation.EventIDCleared() {
-		_spec.ClearField(certificate.FieldEventID, field.TypeUUID)
-	}
-	if value, ok := _u.mutation.ScormCourseID(); ok {
-		_spec.SetField(certificate.FieldScormCourseID, field.TypeUUID, value)
-	}
-	if _u.mutation.ScormCourseIDCleared() {
-		_spec.ClearField(certificate.FieldScormCourseID, field.TypeUUID)
-	}
 	if value, ok := _u.mutation.EntityType(); ok {
 		_spec.SetField(certificate.FieldEntityType, field.TypeEnum, value)
 	}
@@ -740,6 +688,35 @@ func (_u *CertificateUpdateOne) sqlSave(ctx context.Context) (_node *Certificate
 	}
 	if value, ok := _u.mutation.UpdatedAt(); ok {
 		_spec.SetField(certificate.FieldUpdatedAt, field.TypeTime, value)
+	}
+	if _u.mutation.EmployeeCleared() {
+		edge := &sqlgraph.EdgeSpec{
+			Rel:     sqlgraph.M2O,
+			Inverse: false,
+			Table:   certificate.EmployeeTable,
+			Columns: []string{certificate.EmployeeColumn},
+			Bidi:    false,
+			Target: &sqlgraph.EdgeTarget{
+				IDSpec: sqlgraph.NewFieldSpec(employee.FieldID, field.TypeUUID),
+			},
+		}
+		_spec.Edges.Clear = append(_spec.Edges.Clear, edge)
+	}
+	if nodes := _u.mutation.EmployeeIDs(); len(nodes) > 0 {
+		edge := &sqlgraph.EdgeSpec{
+			Rel:     sqlgraph.M2O,
+			Inverse: false,
+			Table:   certificate.EmployeeTable,
+			Columns: []string{certificate.EmployeeColumn},
+			Bidi:    false,
+			Target: &sqlgraph.EdgeTarget{
+				IDSpec: sqlgraph.NewFieldSpec(employee.FieldID, field.TypeUUID),
+			},
+		}
+		for _, k := range nodes {
+			edge.Target.Nodes = append(edge.Target.Nodes, k)
+		}
+		_spec.Edges.Add = append(_spec.Edges.Add, edge)
 	}
 	_node = &Certificate{config: _u.config}
 	_spec.Assign = _node.assignValues

@@ -45,6 +45,23 @@ type ListResponse struct {
 	Total        int           `json:"total"`
 }
 
+// UpdateRequest is the request body for updating a certificate.
+type UpdateRequest struct {
+	Type       string     `json:"type"`
+	Title      string     `json:"title"`
+	FileURL    *string    `json:"file_url"`
+	IssuedDate time.Time  `json:"issued_date"`
+	ExpiryDate *time.Time `json:"expiry_date"`
+	EntityType string     `json:"entity_type"`
+	EntityID   uuid.UUID  `json:"entity_id"`
+}
+
+// ListParams holds optional query filters for listing certificates.
+type ListParams struct {
+	EmployeeID string `query:"employee_id"`
+	EntityType string `query:"entity_type"`
+}
+
 // DeleteResponse is the response for deleting a certificate.
 type DeleteResponse struct {
 	Message string `json:"message"`
