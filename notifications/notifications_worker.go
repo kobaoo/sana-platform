@@ -3,22 +3,16 @@ package notifications
 import (
 	"context"
 	"log"
+
+	"encore.app/auth/authhandler"
+	"encore.dev/beta/auth"
 )
 
-// NotifyUserWithEntity — основной Encore private API для отправки уведомлений.
-// Вызывается доменными сервисами: certificates, requests, courses.
-//
-// Порядок выполнения:
-//  1. Анти-дублирующая проверка → пропуск если уже отправлялось
-//  2. Dispatch в email + realtime каналы
-//  3. Сохранение записи (SENT / FAILED)
-//
 //encore:api private
-func (s *Service) NotifyUserWithEntity(ctx context.Context, req *NotifyRequest) (*NotifyResponse, error) {
+func NotifyUserWithEntity(ctx context.Context, req *NotifyRequest) (*NotifyResponse, error) {
 	log.Printf("[notifications] processing: user=%s type=%s entity=%s/%s",
 		req.UserID, req.Type, req.EntityType, req.EntityID)
 
-	// 1. Анти-дублирующая проверка
 	exists, err := notificationExists(ctx, req)
 	if err != nil {
 		log.Printf("[notifications] duplicate check error: %v", err)
@@ -30,11 +24,9 @@ func (s *Service) NotifyUserWithEntity(ctx context.Context, req *NotifyRequest) 
 		return &NotifyResponse{Skipped: true, Message: "duplicate: already notified"}, nil
 	}
 
-	// 2. Dispatch по каналам
 	emailErr := sendEmail(ctx, req)
-	sendRealtime(ctx, req) // stub — fire-and-forget, никогда не падает
+	sendRealtime(ctx, req)
 
-	// 3. Сохранение результата
 	if emailErr != nil {
 		log.Printf("[notifications] email dispatch failed: %v", emailErr)
 		_ = saveFailedNotification(ctx, req)
@@ -46,4 +38,23 @@ func (s *Service) NotifyUserWithEntity(ctx context.Context, req *NotifyRequest) 
 	}
 
 	return &NotifyResponse{Skipped: false, Message: "notification sent"}, nil
+}
+
+// GetNotifications возвращает список уведомлений текущего пользователя.
+//
+//encore:api auth method=GET path=/notifications
+func (s *Service) GetNotifications(ctx context.Context) (*ListNotificationsResponse, error) {
+	userID := auth.Data().(*authhandler.AuthData).KeycloakUserID
+
+	items, err := listNotifications(ctx, userID)
+	if err != nil {
+		return nil, err
+	}
+	if items == nil {
+		items = []Notification{} // никогда не возвращаем null на фронт
+	}
+	return &ListNotificationsResponse{
+		Notifications: items,
+		Total:         len(items),
+	}, nil
 }

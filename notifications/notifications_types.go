@@ -1,5 +1,7 @@
 package notifications
 
+import "time"
+
 // NotificationType — тип уведомления.
 type NotificationType string
 
@@ -44,4 +46,21 @@ type NotifyRequest struct {
 type NotifyResponse struct {
 	Skipped bool   `json:"skipped"`
 	Message string `json:"message"`
+}
+
+// Notification — запись уведомления для отдачи на фронт.
+type Notification struct {
+	ID         string             `json:"id"`
+	UserID     string             `json:"user_id"`
+	Type       NotificationType   `json:"type"`
+	EntityType EntityType         `json:"entity_type"`
+	EntityID   string             `json:"entity_id"`
+	Status     NotificationStatus `json:"status"`
+	CreatedAt  time.Time          `json:"created_at"`
+}
+
+// ListNotificationsResponse — ответ GET /notifications.
+type ListNotificationsResponse struct {
+	Notifications []Notification `json:"notifications"`
+	Total         int            `json:"total"`
 }
