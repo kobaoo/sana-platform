@@ -61,6 +61,11 @@ func InitiatorID(v uuid.UUID) predicate.Request {
 	return predicate.Request(sql.FieldEQ(FieldInitiatorID, v))
 }
 
+// ParentRequestID applies equality check predicate on the "parent_request_id" field. It's identical to ParentRequestIDEQ.
+func ParentRequestID(v uuid.UUID) predicate.Request {
+	return predicate.Request(sql.FieldEQ(FieldParentRequestID, v))
+}
+
 // EntityID applies equality check predicate on the "entity_id" field. It's identical to EntityIDEQ.
 func EntityID(v uuid.UUID) predicate.Request {
 	return predicate.Request(sql.FieldEQ(FieldEntityID, v))
@@ -71,6 +76,61 @@ func EntityType(v string) predicate.Request {
 	return predicate.Request(sql.FieldEQ(FieldEntityType, v))
 }
 
+// RequestType applies equality check predicate on the "request_type" field. It's identical to RequestTypeEQ.
+func RequestType(v string) predicate.Request {
+	return predicate.Request(sql.FieldEQ(FieldRequestType, v))
+}
+
+// AssignedHrID applies equality check predicate on the "assigned_hr_id" field. It's identical to AssignedHrIDEQ.
+func AssignedHrID(v uuid.UUID) predicate.Request {
+	return predicate.Request(sql.FieldEQ(FieldAssignedHrID, v))
+}
+
+// TargetDzoID applies equality check predicate on the "target_dzo_id" field. It's identical to TargetDzoIDEQ.
+func TargetDzoID(v uuid.UUID) predicate.Request {
+	return predicate.Request(sql.FieldEQ(FieldTargetDzoID, v))
+}
+
+// Title applies equality check predicate on the "title" field. It's identical to TitleEQ.
+func Title(v string) predicate.Request {
+	return predicate.Request(sql.FieldEQ(FieldTitle, v))
+}
+
+// Category applies equality check predicate on the "category" field. It's identical to CategoryEQ.
+func Category(v string) predicate.Request {
+	return predicate.Request(sql.FieldEQ(FieldCategory, v))
+}
+
+// Format applies equality check predicate on the "format" field. It's identical to FormatEQ.
+func Format(v string) predicate.Request {
+	return predicate.Request(sql.FieldEQ(FieldFormat, v))
+}
+
+// ResponsibleAdminID applies equality check predicate on the "responsible_admin_id" field. It's identical to ResponsibleAdminIDEQ.
+func ResponsibleAdminID(v uuid.UUID) predicate.Request {
+	return predicate.Request(sql.FieldEQ(FieldResponsibleAdminID, v))
+}
+
+// TrainingDate applies equality check predicate on the "training_date" field. It's identical to TrainingDateEQ.
+func TrainingDate(v time.Time) predicate.Request {
+	return predicate.Request(sql.FieldEQ(FieldTrainingDate, v))
+}
+
+// DeadlineAt applies equality check predicate on the "deadline_at" field. It's identical to DeadlineAtEQ.
+func DeadlineAt(v time.Time) predicate.Request {
+	return predicate.Request(sql.FieldEQ(FieldDeadlineAt, v))
+}
+
+// CostAmount applies equality check predicate on the "cost_amount" field. It's identical to CostAmountEQ.
+func CostAmount(v float64) predicate.Request {
+	return predicate.Request(sql.FieldEQ(FieldCostAmount, v))
+}
+
+// CostMode applies equality check predicate on the "cost_mode" field. It's identical to CostModeEQ.
+func CostMode(v string) predicate.Request {
+	return predicate.Request(sql.FieldEQ(FieldCostMode, v))
+}
+
 // Step applies equality check predicate on the "step" field. It's identical to StepEQ.
 func Step(v int) predicate.Request {
 	return predicate.Request(sql.FieldEQ(FieldStep, v))
@@ -79,6 +139,11 @@ func Step(v int) predicate.Request {
 // CreatedAt applies equality check predicate on the "created_at" field. It's identical to CreatedAtEQ.
 func CreatedAt(v time.Time) predicate.Request {
 	return predicate.Request(sql.FieldEQ(FieldCreatedAt, v))
+}
+
+// UpdatedAt applies equality check predicate on the "updated_at" field. It's identical to UpdatedAtEQ.
+func UpdatedAt(v time.Time) predicate.Request {
+	return predicate.Request(sql.FieldEQ(FieldUpdatedAt, v))
 }
 
 // Status applies equality check predicate on the "status" field. It's identical to StatusEQ.
@@ -104,6 +169,36 @@ func InitiatorIDIn(vs ...uuid.UUID) predicate.Request {
 // InitiatorIDNotIn applies the NotIn predicate on the "initiator_id" field.
 func InitiatorIDNotIn(vs ...uuid.UUID) predicate.Request {
 	return predicate.Request(sql.FieldNotIn(FieldInitiatorID, vs...))
+}
+
+// ParentRequestIDEQ applies the EQ predicate on the "parent_request_id" field.
+func ParentRequestIDEQ(v uuid.UUID) predicate.Request {
+	return predicate.Request(sql.FieldEQ(FieldParentRequestID, v))
+}
+
+// ParentRequestIDNEQ applies the NEQ predicate on the "parent_request_id" field.
+func ParentRequestIDNEQ(v uuid.UUID) predicate.Request {
+	return predicate.Request(sql.FieldNEQ(FieldParentRequestID, v))
+}
+
+// ParentRequestIDIn applies the In predicate on the "parent_request_id" field.
+func ParentRequestIDIn(vs ...uuid.UUID) predicate.Request {
+	return predicate.Request(sql.FieldIn(FieldParentRequestID, vs...))
+}
+
+// ParentRequestIDNotIn applies the NotIn predicate on the "parent_request_id" field.
+func ParentRequestIDNotIn(vs ...uuid.UUID) predicate.Request {
+	return predicate.Request(sql.FieldNotIn(FieldParentRequestID, vs...))
+}
+
+// ParentRequestIDIsNil applies the IsNil predicate on the "parent_request_id" field.
+func ParentRequestIDIsNil() predicate.Request {
+	return predicate.Request(sql.FieldIsNull(FieldParentRequestID))
+}
+
+// ParentRequestIDNotNil applies the NotNil predicate on the "parent_request_id" field.
+func ParentRequestIDNotNil() predicate.Request {
+	return predicate.Request(sql.FieldNotNull(FieldParentRequestID))
 }
 
 // EntityIDEQ applies the EQ predicate on the "entity_id" field.
@@ -211,6 +306,661 @@ func EntityTypeContainsFold(v string) predicate.Request {
 	return predicate.Request(sql.FieldContainsFold(FieldEntityType, v))
 }
 
+// RequestTypeEQ applies the EQ predicate on the "request_type" field.
+func RequestTypeEQ(v string) predicate.Request {
+	return predicate.Request(sql.FieldEQ(FieldRequestType, v))
+}
+
+// RequestTypeNEQ applies the NEQ predicate on the "request_type" field.
+func RequestTypeNEQ(v string) predicate.Request {
+	return predicate.Request(sql.FieldNEQ(FieldRequestType, v))
+}
+
+// RequestTypeIn applies the In predicate on the "request_type" field.
+func RequestTypeIn(vs ...string) predicate.Request {
+	return predicate.Request(sql.FieldIn(FieldRequestType, vs...))
+}
+
+// RequestTypeNotIn applies the NotIn predicate on the "request_type" field.
+func RequestTypeNotIn(vs ...string) predicate.Request {
+	return predicate.Request(sql.FieldNotIn(FieldRequestType, vs...))
+}
+
+// RequestTypeGT applies the GT predicate on the "request_type" field.
+func RequestTypeGT(v string) predicate.Request {
+	return predicate.Request(sql.FieldGT(FieldRequestType, v))
+}
+
+// RequestTypeGTE applies the GTE predicate on the "request_type" field.
+func RequestTypeGTE(v string) predicate.Request {
+	return predicate.Request(sql.FieldGTE(FieldRequestType, v))
+}
+
+// RequestTypeLT applies the LT predicate on the "request_type" field.
+func RequestTypeLT(v string) predicate.Request {
+	return predicate.Request(sql.FieldLT(FieldRequestType, v))
+}
+
+// RequestTypeLTE applies the LTE predicate on the "request_type" field.
+func RequestTypeLTE(v string) predicate.Request {
+	return predicate.Request(sql.FieldLTE(FieldRequestType, v))
+}
+
+// RequestTypeContains applies the Contains predicate on the "request_type" field.
+func RequestTypeContains(v string) predicate.Request {
+	return predicate.Request(sql.FieldContains(FieldRequestType, v))
+}
+
+// RequestTypeHasPrefix applies the HasPrefix predicate on the "request_type" field.
+func RequestTypeHasPrefix(v string) predicate.Request {
+	return predicate.Request(sql.FieldHasPrefix(FieldRequestType, v))
+}
+
+// RequestTypeHasSuffix applies the HasSuffix predicate on the "request_type" field.
+func RequestTypeHasSuffix(v string) predicate.Request {
+	return predicate.Request(sql.FieldHasSuffix(FieldRequestType, v))
+}
+
+// RequestTypeEqualFold applies the EqualFold predicate on the "request_type" field.
+func RequestTypeEqualFold(v string) predicate.Request {
+	return predicate.Request(sql.FieldEqualFold(FieldRequestType, v))
+}
+
+// RequestTypeContainsFold applies the ContainsFold predicate on the "request_type" field.
+func RequestTypeContainsFold(v string) predicate.Request {
+	return predicate.Request(sql.FieldContainsFold(FieldRequestType, v))
+}
+
+// AssignedHrIDEQ applies the EQ predicate on the "assigned_hr_id" field.
+func AssignedHrIDEQ(v uuid.UUID) predicate.Request {
+	return predicate.Request(sql.FieldEQ(FieldAssignedHrID, v))
+}
+
+// AssignedHrIDNEQ applies the NEQ predicate on the "assigned_hr_id" field.
+func AssignedHrIDNEQ(v uuid.UUID) predicate.Request {
+	return predicate.Request(sql.FieldNEQ(FieldAssignedHrID, v))
+}
+
+// AssignedHrIDIn applies the In predicate on the "assigned_hr_id" field.
+func AssignedHrIDIn(vs ...uuid.UUID) predicate.Request {
+	return predicate.Request(sql.FieldIn(FieldAssignedHrID, vs...))
+}
+
+// AssignedHrIDNotIn applies the NotIn predicate on the "assigned_hr_id" field.
+func AssignedHrIDNotIn(vs ...uuid.UUID) predicate.Request {
+	return predicate.Request(sql.FieldNotIn(FieldAssignedHrID, vs...))
+}
+
+// AssignedHrIDGT applies the GT predicate on the "assigned_hr_id" field.
+func AssignedHrIDGT(v uuid.UUID) predicate.Request {
+	return predicate.Request(sql.FieldGT(FieldAssignedHrID, v))
+}
+
+// AssignedHrIDGTE applies the GTE predicate on the "assigned_hr_id" field.
+func AssignedHrIDGTE(v uuid.UUID) predicate.Request {
+	return predicate.Request(sql.FieldGTE(FieldAssignedHrID, v))
+}
+
+// AssignedHrIDLT applies the LT predicate on the "assigned_hr_id" field.
+func AssignedHrIDLT(v uuid.UUID) predicate.Request {
+	return predicate.Request(sql.FieldLT(FieldAssignedHrID, v))
+}
+
+// AssignedHrIDLTE applies the LTE predicate on the "assigned_hr_id" field.
+func AssignedHrIDLTE(v uuid.UUID) predicate.Request {
+	return predicate.Request(sql.FieldLTE(FieldAssignedHrID, v))
+}
+
+// AssignedHrIDIsNil applies the IsNil predicate on the "assigned_hr_id" field.
+func AssignedHrIDIsNil() predicate.Request {
+	return predicate.Request(sql.FieldIsNull(FieldAssignedHrID))
+}
+
+// AssignedHrIDNotNil applies the NotNil predicate on the "assigned_hr_id" field.
+func AssignedHrIDNotNil() predicate.Request {
+	return predicate.Request(sql.FieldNotNull(FieldAssignedHrID))
+}
+
+// TargetDzoIDEQ applies the EQ predicate on the "target_dzo_id" field.
+func TargetDzoIDEQ(v uuid.UUID) predicate.Request {
+	return predicate.Request(sql.FieldEQ(FieldTargetDzoID, v))
+}
+
+// TargetDzoIDNEQ applies the NEQ predicate on the "target_dzo_id" field.
+func TargetDzoIDNEQ(v uuid.UUID) predicate.Request {
+	return predicate.Request(sql.FieldNEQ(FieldTargetDzoID, v))
+}
+
+// TargetDzoIDIn applies the In predicate on the "target_dzo_id" field.
+func TargetDzoIDIn(vs ...uuid.UUID) predicate.Request {
+	return predicate.Request(sql.FieldIn(FieldTargetDzoID, vs...))
+}
+
+// TargetDzoIDNotIn applies the NotIn predicate on the "target_dzo_id" field.
+func TargetDzoIDNotIn(vs ...uuid.UUID) predicate.Request {
+	return predicate.Request(sql.FieldNotIn(FieldTargetDzoID, vs...))
+}
+
+// TargetDzoIDGT applies the GT predicate on the "target_dzo_id" field.
+func TargetDzoIDGT(v uuid.UUID) predicate.Request {
+	return predicate.Request(sql.FieldGT(FieldTargetDzoID, v))
+}
+
+// TargetDzoIDGTE applies the GTE predicate on the "target_dzo_id" field.
+func TargetDzoIDGTE(v uuid.UUID) predicate.Request {
+	return predicate.Request(sql.FieldGTE(FieldTargetDzoID, v))
+}
+
+// TargetDzoIDLT applies the LT predicate on the "target_dzo_id" field.
+func TargetDzoIDLT(v uuid.UUID) predicate.Request {
+	return predicate.Request(sql.FieldLT(FieldTargetDzoID, v))
+}
+
+// TargetDzoIDLTE applies the LTE predicate on the "target_dzo_id" field.
+func TargetDzoIDLTE(v uuid.UUID) predicate.Request {
+	return predicate.Request(sql.FieldLTE(FieldTargetDzoID, v))
+}
+
+// TargetDzoIDIsNil applies the IsNil predicate on the "target_dzo_id" field.
+func TargetDzoIDIsNil() predicate.Request {
+	return predicate.Request(sql.FieldIsNull(FieldTargetDzoID))
+}
+
+// TargetDzoIDNotNil applies the NotNil predicate on the "target_dzo_id" field.
+func TargetDzoIDNotNil() predicate.Request {
+	return predicate.Request(sql.FieldNotNull(FieldTargetDzoID))
+}
+
+// TitleEQ applies the EQ predicate on the "title" field.
+func TitleEQ(v string) predicate.Request {
+	return predicate.Request(sql.FieldEQ(FieldTitle, v))
+}
+
+// TitleNEQ applies the NEQ predicate on the "title" field.
+func TitleNEQ(v string) predicate.Request {
+	return predicate.Request(sql.FieldNEQ(FieldTitle, v))
+}
+
+// TitleIn applies the In predicate on the "title" field.
+func TitleIn(vs ...string) predicate.Request {
+	return predicate.Request(sql.FieldIn(FieldTitle, vs...))
+}
+
+// TitleNotIn applies the NotIn predicate on the "title" field.
+func TitleNotIn(vs ...string) predicate.Request {
+	return predicate.Request(sql.FieldNotIn(FieldTitle, vs...))
+}
+
+// TitleGT applies the GT predicate on the "title" field.
+func TitleGT(v string) predicate.Request {
+	return predicate.Request(sql.FieldGT(FieldTitle, v))
+}
+
+// TitleGTE applies the GTE predicate on the "title" field.
+func TitleGTE(v string) predicate.Request {
+	return predicate.Request(sql.FieldGTE(FieldTitle, v))
+}
+
+// TitleLT applies the LT predicate on the "title" field.
+func TitleLT(v string) predicate.Request {
+	return predicate.Request(sql.FieldLT(FieldTitle, v))
+}
+
+// TitleLTE applies the LTE predicate on the "title" field.
+func TitleLTE(v string) predicate.Request {
+	return predicate.Request(sql.FieldLTE(FieldTitle, v))
+}
+
+// TitleContains applies the Contains predicate on the "title" field.
+func TitleContains(v string) predicate.Request {
+	return predicate.Request(sql.FieldContains(FieldTitle, v))
+}
+
+// TitleHasPrefix applies the HasPrefix predicate on the "title" field.
+func TitleHasPrefix(v string) predicate.Request {
+	return predicate.Request(sql.FieldHasPrefix(FieldTitle, v))
+}
+
+// TitleHasSuffix applies the HasSuffix predicate on the "title" field.
+func TitleHasSuffix(v string) predicate.Request {
+	return predicate.Request(sql.FieldHasSuffix(FieldTitle, v))
+}
+
+// TitleEqualFold applies the EqualFold predicate on the "title" field.
+func TitleEqualFold(v string) predicate.Request {
+	return predicate.Request(sql.FieldEqualFold(FieldTitle, v))
+}
+
+// TitleContainsFold applies the ContainsFold predicate on the "title" field.
+func TitleContainsFold(v string) predicate.Request {
+	return predicate.Request(sql.FieldContainsFold(FieldTitle, v))
+}
+
+// CategoryEQ applies the EQ predicate on the "category" field.
+func CategoryEQ(v string) predicate.Request {
+	return predicate.Request(sql.FieldEQ(FieldCategory, v))
+}
+
+// CategoryNEQ applies the NEQ predicate on the "category" field.
+func CategoryNEQ(v string) predicate.Request {
+	return predicate.Request(sql.FieldNEQ(FieldCategory, v))
+}
+
+// CategoryIn applies the In predicate on the "category" field.
+func CategoryIn(vs ...string) predicate.Request {
+	return predicate.Request(sql.FieldIn(FieldCategory, vs...))
+}
+
+// CategoryNotIn applies the NotIn predicate on the "category" field.
+func CategoryNotIn(vs ...string) predicate.Request {
+	return predicate.Request(sql.FieldNotIn(FieldCategory, vs...))
+}
+
+// CategoryGT applies the GT predicate on the "category" field.
+func CategoryGT(v string) predicate.Request {
+	return predicate.Request(sql.FieldGT(FieldCategory, v))
+}
+
+// CategoryGTE applies the GTE predicate on the "category" field.
+func CategoryGTE(v string) predicate.Request {
+	return predicate.Request(sql.FieldGTE(FieldCategory, v))
+}
+
+// CategoryLT applies the LT predicate on the "category" field.
+func CategoryLT(v string) predicate.Request {
+	return predicate.Request(sql.FieldLT(FieldCategory, v))
+}
+
+// CategoryLTE applies the LTE predicate on the "category" field.
+func CategoryLTE(v string) predicate.Request {
+	return predicate.Request(sql.FieldLTE(FieldCategory, v))
+}
+
+// CategoryContains applies the Contains predicate on the "category" field.
+func CategoryContains(v string) predicate.Request {
+	return predicate.Request(sql.FieldContains(FieldCategory, v))
+}
+
+// CategoryHasPrefix applies the HasPrefix predicate on the "category" field.
+func CategoryHasPrefix(v string) predicate.Request {
+	return predicate.Request(sql.FieldHasPrefix(FieldCategory, v))
+}
+
+// CategoryHasSuffix applies the HasSuffix predicate on the "category" field.
+func CategoryHasSuffix(v string) predicate.Request {
+	return predicate.Request(sql.FieldHasSuffix(FieldCategory, v))
+}
+
+// CategoryIsNil applies the IsNil predicate on the "category" field.
+func CategoryIsNil() predicate.Request {
+	return predicate.Request(sql.FieldIsNull(FieldCategory))
+}
+
+// CategoryNotNil applies the NotNil predicate on the "category" field.
+func CategoryNotNil() predicate.Request {
+	return predicate.Request(sql.FieldNotNull(FieldCategory))
+}
+
+// CategoryEqualFold applies the EqualFold predicate on the "category" field.
+func CategoryEqualFold(v string) predicate.Request {
+	return predicate.Request(sql.FieldEqualFold(FieldCategory, v))
+}
+
+// CategoryContainsFold applies the ContainsFold predicate on the "category" field.
+func CategoryContainsFold(v string) predicate.Request {
+	return predicate.Request(sql.FieldContainsFold(FieldCategory, v))
+}
+
+// FormatEQ applies the EQ predicate on the "format" field.
+func FormatEQ(v string) predicate.Request {
+	return predicate.Request(sql.FieldEQ(FieldFormat, v))
+}
+
+// FormatNEQ applies the NEQ predicate on the "format" field.
+func FormatNEQ(v string) predicate.Request {
+	return predicate.Request(sql.FieldNEQ(FieldFormat, v))
+}
+
+// FormatIn applies the In predicate on the "format" field.
+func FormatIn(vs ...string) predicate.Request {
+	return predicate.Request(sql.FieldIn(FieldFormat, vs...))
+}
+
+// FormatNotIn applies the NotIn predicate on the "format" field.
+func FormatNotIn(vs ...string) predicate.Request {
+	return predicate.Request(sql.FieldNotIn(FieldFormat, vs...))
+}
+
+// FormatGT applies the GT predicate on the "format" field.
+func FormatGT(v string) predicate.Request {
+	return predicate.Request(sql.FieldGT(FieldFormat, v))
+}
+
+// FormatGTE applies the GTE predicate on the "format" field.
+func FormatGTE(v string) predicate.Request {
+	return predicate.Request(sql.FieldGTE(FieldFormat, v))
+}
+
+// FormatLT applies the LT predicate on the "format" field.
+func FormatLT(v string) predicate.Request {
+	return predicate.Request(sql.FieldLT(FieldFormat, v))
+}
+
+// FormatLTE applies the LTE predicate on the "format" field.
+func FormatLTE(v string) predicate.Request {
+	return predicate.Request(sql.FieldLTE(FieldFormat, v))
+}
+
+// FormatContains applies the Contains predicate on the "format" field.
+func FormatContains(v string) predicate.Request {
+	return predicate.Request(sql.FieldContains(FieldFormat, v))
+}
+
+// FormatHasPrefix applies the HasPrefix predicate on the "format" field.
+func FormatHasPrefix(v string) predicate.Request {
+	return predicate.Request(sql.FieldHasPrefix(FieldFormat, v))
+}
+
+// FormatHasSuffix applies the HasSuffix predicate on the "format" field.
+func FormatHasSuffix(v string) predicate.Request {
+	return predicate.Request(sql.FieldHasSuffix(FieldFormat, v))
+}
+
+// FormatIsNil applies the IsNil predicate on the "format" field.
+func FormatIsNil() predicate.Request {
+	return predicate.Request(sql.FieldIsNull(FieldFormat))
+}
+
+// FormatNotNil applies the NotNil predicate on the "format" field.
+func FormatNotNil() predicate.Request {
+	return predicate.Request(sql.FieldNotNull(FieldFormat))
+}
+
+// FormatEqualFold applies the EqualFold predicate on the "format" field.
+func FormatEqualFold(v string) predicate.Request {
+	return predicate.Request(sql.FieldEqualFold(FieldFormat, v))
+}
+
+// FormatContainsFold applies the ContainsFold predicate on the "format" field.
+func FormatContainsFold(v string) predicate.Request {
+	return predicate.Request(sql.FieldContainsFold(FieldFormat, v))
+}
+
+// ResponsibleAdminIDEQ applies the EQ predicate on the "responsible_admin_id" field.
+func ResponsibleAdminIDEQ(v uuid.UUID) predicate.Request {
+	return predicate.Request(sql.FieldEQ(FieldResponsibleAdminID, v))
+}
+
+// ResponsibleAdminIDNEQ applies the NEQ predicate on the "responsible_admin_id" field.
+func ResponsibleAdminIDNEQ(v uuid.UUID) predicate.Request {
+	return predicate.Request(sql.FieldNEQ(FieldResponsibleAdminID, v))
+}
+
+// ResponsibleAdminIDIn applies the In predicate on the "responsible_admin_id" field.
+func ResponsibleAdminIDIn(vs ...uuid.UUID) predicate.Request {
+	return predicate.Request(sql.FieldIn(FieldResponsibleAdminID, vs...))
+}
+
+// ResponsibleAdminIDNotIn applies the NotIn predicate on the "responsible_admin_id" field.
+func ResponsibleAdminIDNotIn(vs ...uuid.UUID) predicate.Request {
+	return predicate.Request(sql.FieldNotIn(FieldResponsibleAdminID, vs...))
+}
+
+// ResponsibleAdminIDGT applies the GT predicate on the "responsible_admin_id" field.
+func ResponsibleAdminIDGT(v uuid.UUID) predicate.Request {
+	return predicate.Request(sql.FieldGT(FieldResponsibleAdminID, v))
+}
+
+// ResponsibleAdminIDGTE applies the GTE predicate on the "responsible_admin_id" field.
+func ResponsibleAdminIDGTE(v uuid.UUID) predicate.Request {
+	return predicate.Request(sql.FieldGTE(FieldResponsibleAdminID, v))
+}
+
+// ResponsibleAdminIDLT applies the LT predicate on the "responsible_admin_id" field.
+func ResponsibleAdminIDLT(v uuid.UUID) predicate.Request {
+	return predicate.Request(sql.FieldLT(FieldResponsibleAdminID, v))
+}
+
+// ResponsibleAdminIDLTE applies the LTE predicate on the "responsible_admin_id" field.
+func ResponsibleAdminIDLTE(v uuid.UUID) predicate.Request {
+	return predicate.Request(sql.FieldLTE(FieldResponsibleAdminID, v))
+}
+
+// ResponsibleAdminIDIsNil applies the IsNil predicate on the "responsible_admin_id" field.
+func ResponsibleAdminIDIsNil() predicate.Request {
+	return predicate.Request(sql.FieldIsNull(FieldResponsibleAdminID))
+}
+
+// ResponsibleAdminIDNotNil applies the NotNil predicate on the "responsible_admin_id" field.
+func ResponsibleAdminIDNotNil() predicate.Request {
+	return predicate.Request(sql.FieldNotNull(FieldResponsibleAdminID))
+}
+
+// TrainingDateEQ applies the EQ predicate on the "training_date" field.
+func TrainingDateEQ(v time.Time) predicate.Request {
+	return predicate.Request(sql.FieldEQ(FieldTrainingDate, v))
+}
+
+// TrainingDateNEQ applies the NEQ predicate on the "training_date" field.
+func TrainingDateNEQ(v time.Time) predicate.Request {
+	return predicate.Request(sql.FieldNEQ(FieldTrainingDate, v))
+}
+
+// TrainingDateIn applies the In predicate on the "training_date" field.
+func TrainingDateIn(vs ...time.Time) predicate.Request {
+	return predicate.Request(sql.FieldIn(FieldTrainingDate, vs...))
+}
+
+// TrainingDateNotIn applies the NotIn predicate on the "training_date" field.
+func TrainingDateNotIn(vs ...time.Time) predicate.Request {
+	return predicate.Request(sql.FieldNotIn(FieldTrainingDate, vs...))
+}
+
+// TrainingDateGT applies the GT predicate on the "training_date" field.
+func TrainingDateGT(v time.Time) predicate.Request {
+	return predicate.Request(sql.FieldGT(FieldTrainingDate, v))
+}
+
+// TrainingDateGTE applies the GTE predicate on the "training_date" field.
+func TrainingDateGTE(v time.Time) predicate.Request {
+	return predicate.Request(sql.FieldGTE(FieldTrainingDate, v))
+}
+
+// TrainingDateLT applies the LT predicate on the "training_date" field.
+func TrainingDateLT(v time.Time) predicate.Request {
+	return predicate.Request(sql.FieldLT(FieldTrainingDate, v))
+}
+
+// TrainingDateLTE applies the LTE predicate on the "training_date" field.
+func TrainingDateLTE(v time.Time) predicate.Request {
+	return predicate.Request(sql.FieldLTE(FieldTrainingDate, v))
+}
+
+// TrainingDateIsNil applies the IsNil predicate on the "training_date" field.
+func TrainingDateIsNil() predicate.Request {
+	return predicate.Request(sql.FieldIsNull(FieldTrainingDate))
+}
+
+// TrainingDateNotNil applies the NotNil predicate on the "training_date" field.
+func TrainingDateNotNil() predicate.Request {
+	return predicate.Request(sql.FieldNotNull(FieldTrainingDate))
+}
+
+// DeadlineAtEQ applies the EQ predicate on the "deadline_at" field.
+func DeadlineAtEQ(v time.Time) predicate.Request {
+	return predicate.Request(sql.FieldEQ(FieldDeadlineAt, v))
+}
+
+// DeadlineAtNEQ applies the NEQ predicate on the "deadline_at" field.
+func DeadlineAtNEQ(v time.Time) predicate.Request {
+	return predicate.Request(sql.FieldNEQ(FieldDeadlineAt, v))
+}
+
+// DeadlineAtIn applies the In predicate on the "deadline_at" field.
+func DeadlineAtIn(vs ...time.Time) predicate.Request {
+	return predicate.Request(sql.FieldIn(FieldDeadlineAt, vs...))
+}
+
+// DeadlineAtNotIn applies the NotIn predicate on the "deadline_at" field.
+func DeadlineAtNotIn(vs ...time.Time) predicate.Request {
+	return predicate.Request(sql.FieldNotIn(FieldDeadlineAt, vs...))
+}
+
+// DeadlineAtGT applies the GT predicate on the "deadline_at" field.
+func DeadlineAtGT(v time.Time) predicate.Request {
+	return predicate.Request(sql.FieldGT(FieldDeadlineAt, v))
+}
+
+// DeadlineAtGTE applies the GTE predicate on the "deadline_at" field.
+func DeadlineAtGTE(v time.Time) predicate.Request {
+	return predicate.Request(sql.FieldGTE(FieldDeadlineAt, v))
+}
+
+// DeadlineAtLT applies the LT predicate on the "deadline_at" field.
+func DeadlineAtLT(v time.Time) predicate.Request {
+	return predicate.Request(sql.FieldLT(FieldDeadlineAt, v))
+}
+
+// DeadlineAtLTE applies the LTE predicate on the "deadline_at" field.
+func DeadlineAtLTE(v time.Time) predicate.Request {
+	return predicate.Request(sql.FieldLTE(FieldDeadlineAt, v))
+}
+
+// DeadlineAtIsNil applies the IsNil predicate on the "deadline_at" field.
+func DeadlineAtIsNil() predicate.Request {
+	return predicate.Request(sql.FieldIsNull(FieldDeadlineAt))
+}
+
+// DeadlineAtNotNil applies the NotNil predicate on the "deadline_at" field.
+func DeadlineAtNotNil() predicate.Request {
+	return predicate.Request(sql.FieldNotNull(FieldDeadlineAt))
+}
+
+// CostAmountEQ applies the EQ predicate on the "cost_amount" field.
+func CostAmountEQ(v float64) predicate.Request {
+	return predicate.Request(sql.FieldEQ(FieldCostAmount, v))
+}
+
+// CostAmountNEQ applies the NEQ predicate on the "cost_amount" field.
+func CostAmountNEQ(v float64) predicate.Request {
+	return predicate.Request(sql.FieldNEQ(FieldCostAmount, v))
+}
+
+// CostAmountIn applies the In predicate on the "cost_amount" field.
+func CostAmountIn(vs ...float64) predicate.Request {
+	return predicate.Request(sql.FieldIn(FieldCostAmount, vs...))
+}
+
+// CostAmountNotIn applies the NotIn predicate on the "cost_amount" field.
+func CostAmountNotIn(vs ...float64) predicate.Request {
+	return predicate.Request(sql.FieldNotIn(FieldCostAmount, vs...))
+}
+
+// CostAmountGT applies the GT predicate on the "cost_amount" field.
+func CostAmountGT(v float64) predicate.Request {
+	return predicate.Request(sql.FieldGT(FieldCostAmount, v))
+}
+
+// CostAmountGTE applies the GTE predicate on the "cost_amount" field.
+func CostAmountGTE(v float64) predicate.Request {
+	return predicate.Request(sql.FieldGTE(FieldCostAmount, v))
+}
+
+// CostAmountLT applies the LT predicate on the "cost_amount" field.
+func CostAmountLT(v float64) predicate.Request {
+	return predicate.Request(sql.FieldLT(FieldCostAmount, v))
+}
+
+// CostAmountLTE applies the LTE predicate on the "cost_amount" field.
+func CostAmountLTE(v float64) predicate.Request {
+	return predicate.Request(sql.FieldLTE(FieldCostAmount, v))
+}
+
+// CostAmountIsNil applies the IsNil predicate on the "cost_amount" field.
+func CostAmountIsNil() predicate.Request {
+	return predicate.Request(sql.FieldIsNull(FieldCostAmount))
+}
+
+// CostAmountNotNil applies the NotNil predicate on the "cost_amount" field.
+func CostAmountNotNil() predicate.Request {
+	return predicate.Request(sql.FieldNotNull(FieldCostAmount))
+}
+
+// CostModeEQ applies the EQ predicate on the "cost_mode" field.
+func CostModeEQ(v string) predicate.Request {
+	return predicate.Request(sql.FieldEQ(FieldCostMode, v))
+}
+
+// CostModeNEQ applies the NEQ predicate on the "cost_mode" field.
+func CostModeNEQ(v string) predicate.Request {
+	return predicate.Request(sql.FieldNEQ(FieldCostMode, v))
+}
+
+// CostModeIn applies the In predicate on the "cost_mode" field.
+func CostModeIn(vs ...string) predicate.Request {
+	return predicate.Request(sql.FieldIn(FieldCostMode, vs...))
+}
+
+// CostModeNotIn applies the NotIn predicate on the "cost_mode" field.
+func CostModeNotIn(vs ...string) predicate.Request {
+	return predicate.Request(sql.FieldNotIn(FieldCostMode, vs...))
+}
+
+// CostModeGT applies the GT predicate on the "cost_mode" field.
+func CostModeGT(v string) predicate.Request {
+	return predicate.Request(sql.FieldGT(FieldCostMode, v))
+}
+
+// CostModeGTE applies the GTE predicate on the "cost_mode" field.
+func CostModeGTE(v string) predicate.Request {
+	return predicate.Request(sql.FieldGTE(FieldCostMode, v))
+}
+
+// CostModeLT applies the LT predicate on the "cost_mode" field.
+func CostModeLT(v string) predicate.Request {
+	return predicate.Request(sql.FieldLT(FieldCostMode, v))
+}
+
+// CostModeLTE applies the LTE predicate on the "cost_mode" field.
+func CostModeLTE(v string) predicate.Request {
+	return predicate.Request(sql.FieldLTE(FieldCostMode, v))
+}
+
+// CostModeContains applies the Contains predicate on the "cost_mode" field.
+func CostModeContains(v string) predicate.Request {
+	return predicate.Request(sql.FieldContains(FieldCostMode, v))
+}
+
+// CostModeHasPrefix applies the HasPrefix predicate on the "cost_mode" field.
+func CostModeHasPrefix(v string) predicate.Request {
+	return predicate.Request(sql.FieldHasPrefix(FieldCostMode, v))
+}
+
+// CostModeHasSuffix applies the HasSuffix predicate on the "cost_mode" field.
+func CostModeHasSuffix(v string) predicate.Request {
+	return predicate.Request(sql.FieldHasSuffix(FieldCostMode, v))
+}
+
+// CostModeIsNil applies the IsNil predicate on the "cost_mode" field.
+func CostModeIsNil() predicate.Request {
+	return predicate.Request(sql.FieldIsNull(FieldCostMode))
+}
+
+// CostModeNotNil applies the NotNil predicate on the "cost_mode" field.
+func CostModeNotNil() predicate.Request {
+	return predicate.Request(sql.FieldNotNull(FieldCostMode))
+}
+
+// CostModeEqualFold applies the EqualFold predicate on the "cost_mode" field.
+func CostModeEqualFold(v string) predicate.Request {
+	return predicate.Request(sql.FieldEqualFold(FieldCostMode, v))
+}
+
+// CostModeContainsFold applies the ContainsFold predicate on the "cost_mode" field.
+func CostModeContainsFold(v string) predicate.Request {
+	return predicate.Request(sql.FieldContainsFold(FieldCostMode, v))
+}
+
 // StepEQ applies the EQ predicate on the "step" field.
 func StepEQ(v int) predicate.Request {
 	return predicate.Request(sql.FieldEQ(FieldStep, v))
@@ -289,6 +1039,46 @@ func CreatedAtLT(v time.Time) predicate.Request {
 // CreatedAtLTE applies the LTE predicate on the "created_at" field.
 func CreatedAtLTE(v time.Time) predicate.Request {
 	return predicate.Request(sql.FieldLTE(FieldCreatedAt, v))
+}
+
+// UpdatedAtEQ applies the EQ predicate on the "updated_at" field.
+func UpdatedAtEQ(v time.Time) predicate.Request {
+	return predicate.Request(sql.FieldEQ(FieldUpdatedAt, v))
+}
+
+// UpdatedAtNEQ applies the NEQ predicate on the "updated_at" field.
+func UpdatedAtNEQ(v time.Time) predicate.Request {
+	return predicate.Request(sql.FieldNEQ(FieldUpdatedAt, v))
+}
+
+// UpdatedAtIn applies the In predicate on the "updated_at" field.
+func UpdatedAtIn(vs ...time.Time) predicate.Request {
+	return predicate.Request(sql.FieldIn(FieldUpdatedAt, vs...))
+}
+
+// UpdatedAtNotIn applies the NotIn predicate on the "updated_at" field.
+func UpdatedAtNotIn(vs ...time.Time) predicate.Request {
+	return predicate.Request(sql.FieldNotIn(FieldUpdatedAt, vs...))
+}
+
+// UpdatedAtGT applies the GT predicate on the "updated_at" field.
+func UpdatedAtGT(v time.Time) predicate.Request {
+	return predicate.Request(sql.FieldGT(FieldUpdatedAt, v))
+}
+
+// UpdatedAtGTE applies the GTE predicate on the "updated_at" field.
+func UpdatedAtGTE(v time.Time) predicate.Request {
+	return predicate.Request(sql.FieldGTE(FieldUpdatedAt, v))
+}
+
+// UpdatedAtLT applies the LT predicate on the "updated_at" field.
+func UpdatedAtLT(v time.Time) predicate.Request {
+	return predicate.Request(sql.FieldLT(FieldUpdatedAt, v))
+}
+
+// UpdatedAtLTE applies the LTE predicate on the "updated_at" field.
+func UpdatedAtLTE(v time.Time) predicate.Request {
+	return predicate.Request(sql.FieldLTE(FieldUpdatedAt, v))
 }
 
 // StatusEQ applies the EQ predicate on the "status" field.
@@ -371,6 +1161,52 @@ func HasInitiator() predicate.Request {
 func HasInitiatorWith(preds ...predicate.User) predicate.Request {
 	return predicate.Request(func(s *sql.Selector) {
 		step := newInitiatorStep()
+		sqlgraph.HasNeighborsWith(s, step, func(s *sql.Selector) {
+			for _, p := range preds {
+				p(s)
+			}
+		})
+	})
+}
+
+// HasParent applies the HasEdge predicate on the "parent" edge.
+func HasParent() predicate.Request {
+	return predicate.Request(func(s *sql.Selector) {
+		step := sqlgraph.NewStep(
+			sqlgraph.From(Table, FieldID),
+			sqlgraph.Edge(sqlgraph.M2O, true, ParentTable, ParentColumn),
+		)
+		sqlgraph.HasNeighbors(s, step)
+	})
+}
+
+// HasParentWith applies the HasEdge predicate on the "parent" edge with a given conditions (other predicates).
+func HasParentWith(preds ...predicate.Request) predicate.Request {
+	return predicate.Request(func(s *sql.Selector) {
+		step := newParentStep()
+		sqlgraph.HasNeighborsWith(s, step, func(s *sql.Selector) {
+			for _, p := range preds {
+				p(s)
+			}
+		})
+	})
+}
+
+// HasChildren applies the HasEdge predicate on the "children" edge.
+func HasChildren() predicate.Request {
+	return predicate.Request(func(s *sql.Selector) {
+		step := sqlgraph.NewStep(
+			sqlgraph.From(Table, FieldID),
+			sqlgraph.Edge(sqlgraph.O2M, false, ChildrenTable, ChildrenColumn),
+		)
+		sqlgraph.HasNeighbors(s, step)
+	})
+}
+
+// HasChildrenWith applies the HasEdge predicate on the "children" edge with a given conditions (other predicates).
+func HasChildrenWith(preds ...predicate.Request) predicate.Request {
+	return predicate.Request(func(s *sql.Selector) {
+		step := newChildrenStep()
 		sqlgraph.HasNeighborsWith(s, step, func(s *sql.Selector) {
 			for _, p := range preds {
 				p(s)
