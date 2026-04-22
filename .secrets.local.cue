@@ -1,4 +1,0 @@
-KeycloakIssuerURL:     ""
-KeycloakAudience:      ""
-KeycloakAdminUser:     ""
-KeycloakAdminPassword: ""
