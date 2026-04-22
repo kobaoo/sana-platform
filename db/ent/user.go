@@ -47,13 +47,15 @@ type User struct {
 type UserEdges struct {
 	// Client holds the value of the client edge.
 	Client *Company `json:"client,omitempty"`
+	// Requests holds the value of the requests edge.
+	Requests []*Request `json:"requests,omitempty"`
 	// HostedEvents holds the value of the hosted_events edge.
 	HostedEvents []*Event `json:"hosted_events,omitempty"`
 	// ReviewedParticipations holds the value of the reviewed_participations edge.
 	ReviewedParticipations []*EventParticipant `json:"reviewed_participations,omitempty"`
 	// loadedTypes holds the information for reporting if a
 	// type was loaded (or requested) in eager-loading or not.
-	loadedTypes [3]bool
+	loadedTypes [4]bool
 }
 
 // ClientOrErr returns the Client value or an error if the edge
@@ -67,10 +69,19 @@ func (e UserEdges) ClientOrErr() (*Company, error) {
 	return nil, &NotLoadedError{edge: "client"}
 }
 
+// RequestsOrErr returns the Requests value or an error if the edge
+// was not loaded in eager-loading.
+func (e UserEdges) RequestsOrErr() ([]*Request, error) {
+	if e.loadedTypes[1] {
+		return e.Requests, nil
+	}
+	return nil, &NotLoadedError{edge: "requests"}
+}
+
 // HostedEventsOrErr returns the HostedEvents value or an error if the edge
 // was not loaded in eager-loading.
 func (e UserEdges) HostedEventsOrErr() ([]*Event, error) {
-	if e.loadedTypes[1] {
+	if e.loadedTypes[2] {
 		return e.HostedEvents, nil
 	}
 	return nil, &NotLoadedError{edge: "hosted_events"}
@@ -79,7 +90,7 @@ func (e UserEdges) HostedEventsOrErr() ([]*Event, error) {
 // ReviewedParticipationsOrErr returns the ReviewedParticipations value or an error if the edge
 // was not loaded in eager-loading.
 func (e UserEdges) ReviewedParticipationsOrErr() ([]*EventParticipant, error) {
-	if e.loadedTypes[2] {
+	if e.loadedTypes[3] {
 		return e.ReviewedParticipations, nil
 	}
 	return nil, &NotLoadedError{edge: "reviewed_participations"}
@@ -192,6 +203,11 @@ func (_m *User) Value(name string) (ent.Value, error) {
 // QueryClient queries the "client" edge of the User entity.
 func (_m *User) QueryClient() *CompanyQuery {
 	return NewUserClient(_m.config).QueryClient(_m)
+}
+
+// QueryRequests queries the "requests" edge of the User entity.
+func (_m *User) QueryRequests() *RequestQuery {
+	return NewUserClient(_m.config).QueryRequests(_m)
 }
 
 // QueryHostedEvents queries the "hosted_events" edge of the User entity.
