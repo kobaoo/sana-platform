@@ -110,10 +110,43 @@ func ListSuppliers(ctx context.Context, params *ListSuppliersParams) (*ListSuppl
 }
 
 // ListSuppliersWithBudget returns active suppliers with aggregated budget totals from contracts.
+// Optional filters:
+//   - type: LEGAL | INDIVIDUAL
+//   - is_active: true | false (defaults to true if omitted)
+//   - search: case-insensitive substring match on name
 //
 //encore:api auth method=GET path=/supplier/budget
-func ListSuppliersWithBudget(ctx context.Context) (*ListSuppliersWithBudgetResponse, error) {
-	suppliers, err := querySuppliersWithBudget(ctx)
+func ListSuppliersWithBudget(ctx context.Context, params *ListSuppliersParams) (*ListSuppliersWithBudgetResponse, error) {
+	var supplierType *SupplierType
+	if params.Type != "" {
+		t := SupplierType(params.Type)
+		if !t.IsValid() {
+			return nil, errs.B().
+				Code(errs.InvalidArgument).
+				Msg("type must be LEGAL or INDIVIDUAL").
+				Err()
+		}
+		supplierType = &t
+	}
+
+	var isActive *bool
+	if params.IsActive != "" {
+		b, err := strconv.ParseBool(params.IsActive)
+		if err != nil {
+			return nil, errs.B().
+				Code(errs.InvalidArgument).
+				Msg("is_active must be true or false").
+				Err()
+		}
+		isActive = &b
+	}
+
+	var search *string
+	if s := strings.TrimSpace(params.Search); s != "" {
+		search = &s
+	}
+
+	suppliers, err := querySuppliersWithBudget(ctx, supplierType, isActive, search)
 	if err != nil {
 		return nil, err
 	}
@@ -621,8 +654,40 @@ func normalizeSupplierHeader(h string) string {
 	return strings.ToLower(strings.TrimSpace(h))
 }
 
-func querySuppliersWithBudget(ctx context.Context) ([]SupplierWithBudget, error) {
-	rows, err := db.Query(ctx, `
+func querySuppliersWithBudget(
+	ctx context.Context,
+	supplierType *SupplierType,
+	isActive *bool,
+	search *string,
+) ([]SupplierWithBudget, error) {
+	// Build WHERE clause dynamically
+	conditions := []string{"1=1"}
+	args := []any{}
+	argIdx := 1
+
+	if isActive != nil {
+		conditions = append(conditions, fmt.Sprintf("s.is_active = $%d", argIdx))
+		args = append(args, *isActive)
+		argIdx++
+	} else {
+		conditions = append(conditions, "s.is_active = TRUE")
+	}
+
+	if supplierType != nil {
+		conditions = append(conditions, fmt.Sprintf("s.type = $%d", argIdx))
+		args = append(args, string(*supplierType))
+		argIdx++
+	}
+
+	if search != nil {
+		conditions = append(conditions, fmt.Sprintf("s.name ILIKE $%d", argIdx))
+		args = append(args, "%"+*search+"%")
+		argIdx++
+	}
+
+	whereClause := strings.Join(conditions, " AND ")
+
+	query := fmt.Sprintf(`
 		SELECT
 			s.id,
 			s.client_id,
@@ -631,15 +696,17 @@ func querySuppliersWithBudget(ctx context.Context) ([]SupplierWithBudget, error)
 			s.bin_or_iin,
 			s.local_content_pct,
 			s.is_active,
-			COALESCE(SUM(cs.total_with_amendment), 0)                               AS budget_total,
-			COALESCE(SUM(cs.total_with_amendment) - SUM(cs.remaining_amount), 0)    AS budget_used,
-			COALESCE(SUM(cs.remaining_amount), 0)                                   AS budget_remaining
+			COALESCE(SUM(cs.total_with_amendment), 0)                            AS budget_total,
+			COALESCE(SUM(cs.total_with_amendment) - SUM(cs.remaining_amount), 0) AS budget_used,
+			COALESCE(SUM(cs.remaining_amount), 0)                                AS budget_remaining
 		FROM suppliers s
 		LEFT JOIN contract_suppliers cs ON cs.supplier_id = s.id AND cs.is_active = TRUE
-		WHERE s.is_active = TRUE
+		WHERE %s
 		GROUP BY s.id, s.client_id, s.type, s.name, s.bin_or_iin, s.local_content_pct, s.is_active
 		ORDER BY s.name ASC
-	`)
+	`, whereClause)
+
+	rows, err := db.Query(ctx, query, args...)
 	if err != nil {
 		return nil, errs.B().Code(errs.Internal).Msg("failed to list suppliers with budget").Cause(err).Err()
 	}
