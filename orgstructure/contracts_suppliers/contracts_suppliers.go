@@ -313,16 +313,6 @@ func GetFileURL(ctx context.Context, id string) (*FileURLResponse, error) {
 	return resp, nil
 }
 
-// ImportContracts bulk-imports contracts from CSV/XLSX.
-//
-//encore:api auth method=POST path=/contracts-suppliers/import
-func ImportContracts(ctx context.Context) (*ImportResponse, error) {
-	if _, err := requirePermission(); err != nil {
-		return nil, err
-	}
-	return nil, errs.B().Code(errs.Unimplemented).Msg("ImportContracts not implemented").Err()
-}
-
 // ════ INTERNAL ════
 
 const (

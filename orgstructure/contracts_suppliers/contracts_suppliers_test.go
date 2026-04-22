@@ -236,6 +236,151 @@ func TestBuildFileKey(t *testing.T) {
 	}
 }
 
-func TestImportContracts(t *testing.T) {
-	t.Skip("TODO: implement once ImportContracts parses CSV/XLSX")
+func TestValidateImportRequest(t *testing.T) {
+	small := []byte("header\nrow")
+	tooBig := make([]byte, maxImportFileSize+1)
+	tests := []struct {
+		name    string
+		req     *ImportContractsRequest
+		wantErr bool
+	}{
+		{"valid csv", &ImportContractsRequest{FileName: "contracts.csv", FileData: small}, false},
+		{"valid xlsx", &ImportContractsRequest{FileName: "contracts.xlsx", FileData: small}, false},
+		{"nil request", nil, true},
+		{"empty file_name", &ImportContractsRequest{FileName: "  ", FileData: small}, true},
+		{"empty file_data", &ImportContractsRequest{FileName: "contracts.csv", FileData: nil}, true},
+		{"too large", &ImportContractsRequest{FileName: "contracts.csv", FileData: tooBig}, true},
+		{"unsupported ext", &ImportContractsRequest{FileName: "contracts.txt", FileData: small}, true},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			err := validateImportRequest(tt.req)
+			if (err != nil) != tt.wantErr {
+				t.Errorf("validateImportRequest() err = %v, wantErr %v", err, tt.wantErr)
+			}
+		})
+	}
+}
+
+func TestParseContractsCSV_HeaderValidation(t *testing.T) {
+	// Missing required column.
+	data := []byte("contract_number,vat_flag,signed_date\nABC,true,2025-01-01\n")
+	if _, err := parseContractsCSV(data); err == nil {
+		t.Error("expected error when required columns missing, got nil")
+	}
+
+	// Missing both supplier identifier columns.
+	data2 := []byte("contract_number,vat_flag,signed_date,amount,total_with_amendment,remaining_amount\n" +
+		"ABC,true,2025-01-01,100,100,100\n")
+	if _, err := parseContractsCSV(data2); err == nil {
+		t.Error("expected error when both supplier_bin_or_iin and supplier_name are missing")
+	}
+}
+
+func TestParseContractsCSV_Happy(t *testing.T) {
+	data := []byte("contract_number,supplier_bin_or_iin,supplier_name,vat_flag,signed_date,end_date,amount,total_with_amendment,remaining_amount,currency\n" +
+		"№123/2025,123456789012,Acme,true,2025-01-01,2026-01-01,100.50,100.50,50.25,KZT\n" +
+		"№124/2025,,Other Co,false,2025-02-15,,200,200,200,USD\n")
+	rows, err := parseContractsCSV(data)
+	if err != nil {
+		t.Fatalf("parseContractsCSV err = %v", err)
+	}
+	if len(rows) != 2 {
+		t.Fatalf("got %d rows, want 2", len(rows))
+	}
+	if rows[0].get(colContractNumber) != "№123/2025" || rows[0].rowNum != 2 {
+		t.Errorf("row 0 mismatch: %+v", rows[0])
+	}
+	if rows[1].get(colSupplierBinOrIin) != "" {
+		t.Errorf("row 1 bin_or_iin should be empty: %q", rows[1].get(colSupplierBinOrIin))
+	}
+}
+
+func TestParseContractsCSV_SkipsEmptyRows(t *testing.T) {
+	data := []byte("contract_number,supplier_name,vat_flag,signed_date,amount,total_with_amendment,remaining_amount\n" +
+		"№1,Acme,true,2025-01-01,10,10,10\n" +
+		",,,,,,\n" + // blank
+		"№2,Acme,true,2025-01-02,20,20,20\n")
+	rows, err := parseContractsCSV(data)
+	if err != nil {
+		t.Fatalf("err = %v", err)
+	}
+	if len(rows) != 2 {
+		t.Errorf("got %d rows, want 2", len(rows))
+	}
+}
+
+func TestConvertRow(t *testing.T) {
+	mk := func(overrides map[string]string) parsedContractRow {
+		base := map[string]string{
+			colContractNumber:     "№1",
+			colSupplierName:       "Acme",
+			colVatFlag:            "true",
+			colSignedDate:         "2025-01-01",
+			colAmount:             "100",
+			colTotalWithAmendment: "100",
+			colRemainingAmount:    "100",
+		}
+		for k, v := range overrides {
+			base[k] = v
+		}
+		return parsedContractRow{rowNum: 2, cells: base}
+	}
+
+	tests := []struct {
+		name     string
+		row      parsedContractRow
+		wantErr  bool
+		checkCol string
+	}{
+		{"valid minimal", mk(nil), false, ""},
+		{"no supplier identifier", parsedContractRow{rowNum: 2, cells: map[string]string{
+			colContractNumber: "№1", colVatFlag: "true", colSignedDate: "2025-01-01",
+			colAmount: "100", colTotalWithAmendment: "100", colRemainingAmount: "100",
+		}}, true, "supplier"},
+		{"missing contract_number", mk(map[string]string{colContractNumber: ""}), true, "contract_number"},
+		{"invalid vat_flag", mk(map[string]string{colVatFlag: "maybe"}), true, "vat_flag"},
+		{"invalid signed_date", mk(map[string]string{colSignedDate: "not-a-date"}), true, "signed_date"},
+		{"end_date before signed_date", mk(map[string]string{colEndDate: "2024-01-01"}), true, "end_date"},
+		{"negative amount", mk(map[string]string{colAmount: "-1"}), true, "amount"},
+		{"invalid amount text", mk(map[string]string{colAmount: "abc"}), true, "amount"},
+		{"comma decimal accepted", mk(map[string]string{colAmount: "100,50"}), false, ""},
+		{"russian yes/no for vat_flag", mk(map[string]string{colVatFlag: "Да"}), false, ""},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			_, err := convertRow(tt.row)
+			if (err != nil) != tt.wantErr {
+				t.Errorf("convertRow() err = %v, wantErr %v", err, tt.wantErr)
+			}
+			if tt.wantErr && tt.checkCol != "" && err != nil &&
+				!strings.Contains(strings.ToLower(err.Error()), tt.checkCol) {
+				t.Errorf("error %q does not mention column %q", err.Error(), tt.checkCol)
+			}
+		})
+	}
+}
+
+func TestParseFloat(t *testing.T) {
+	cases := map[string]struct {
+		want    float64
+		wantErr bool
+	}{
+		"100":           {100, false},
+		"100.50":        {100.50, false},
+		"100,50":        {100.50, false},
+		"1 000.50":      {1000.50, false}, // space separator
+		"abc":           {0, true},
+		"":              {0, true},
+	}
+	for in, want := range cases {
+		got, err := parseFloat(in)
+		if (err != nil) != want.wantErr {
+			t.Errorf("parseFloat(%q) err = %v, wantErr %v", in, err, want.wantErr)
+			continue
+		}
+		if !want.wantErr && got != want.want {
+			t.Errorf("parseFloat(%q) = %v, want %v", in, got, want.want)
+		}
+	}
 }

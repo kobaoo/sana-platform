@@ -99,6 +99,15 @@ type UploadFileRequest struct {
 	FileData []byte `json:"file_data"`
 }
 
+// ImportContractsRequest is the body for POST /contracts-suppliers/import.
+// file_data is base64-encoded bytes of an .xlsx or .csv file.
+// Max size 25 MB. Partial import: valid rows are inserted, invalid rows are
+// reported in the response errors list.
+type ImportContractsRequest struct {
+	FileName string `json:"file_name"`
+	FileData []byte `json:"file_data"`
+}
+
 // ListContractsFilter holds query-string filters for GET /contracts-suppliers.
 // Encore binds query params from the struct fields. Encore only allows
 // non-pointer built-in types in query params, so "not provided" is detected
