@@ -21,30 +21,6 @@ func (f CompanyFunc) Mutate(ctx context.Context, m ent.Mutation) (ent.Value, err
 	return nil, fmt.Errorf("unexpected mutation type %T. expect *ent.CompanyMutation", m)
 }
 
-// The ContractSupplierFunc type is an adapter to allow the use of ordinary
-// function as ContractSupplier mutator.
-type ContractSupplierFunc func(context.Context, *ent.ContractSupplierMutation) (ent.Value, error)
-
-// Mutate calls f(ctx, m).
-func (f ContractSupplierFunc) Mutate(ctx context.Context, m ent.Mutation) (ent.Value, error) {
-	if mv, ok := m.(*ent.ContractSupplierMutation); ok {
-		return f(ctx, mv)
-	}
-	return nil, fmt.Errorf("unexpected mutation type %T. expect *ent.ContractSupplierMutation", m)
-}
-
-// The ContractSupplierHistoryFunc type is an adapter to allow the use of ordinary
-// function as ContractSupplierHistory mutator.
-type ContractSupplierHistoryFunc func(context.Context, *ent.ContractSupplierHistoryMutation) (ent.Value, error)
-
-// Mutate calls f(ctx, m).
-func (f ContractSupplierHistoryFunc) Mutate(ctx context.Context, m ent.Mutation) (ent.Value, error) {
-	if mv, ok := m.(*ent.ContractSupplierHistoryMutation); ok {
-		return f(ctx, mv)
-	}
-	return nil, fmt.Errorf("unexpected mutation type %T. expect *ent.ContractSupplierHistoryMutation", m)
-}
-
 // The DzoOrganizationFunc type is an adapter to allow the use of ordinary
 // function as DzoOrganization mutator.
 type DzoOrganizationFunc func(context.Context, *ent.DzoOrganizationMutation) (ent.Value, error)
@@ -93,16 +69,28 @@ func (f RequestFunc) Mutate(ctx context.Context, m ent.Mutation) (ent.Value, err
 	return nil, fmt.Errorf("unexpected mutation type %T. expect *ent.RequestMutation", m)
 }
 
-// The SupplierFunc type is an adapter to allow the use of ordinary
-// function as Supplier mutator.
-type SupplierFunc func(context.Context, *ent.SupplierMutation) (ent.Value, error)
+// The RequestParticipantFunc type is an adapter to allow the use of ordinary
+// function as RequestParticipant mutator.
+type RequestParticipantFunc func(context.Context, *ent.RequestParticipantMutation) (ent.Value, error)
 
 // Mutate calls f(ctx, m).
-func (f SupplierFunc) Mutate(ctx context.Context, m ent.Mutation) (ent.Value, error) {
-	if mv, ok := m.(*ent.SupplierMutation); ok {
+func (f RequestParticipantFunc) Mutate(ctx context.Context, m ent.Mutation) (ent.Value, error) {
+	if mv, ok := m.(*ent.RequestParticipantMutation); ok {
 		return f(ctx, mv)
 	}
-	return nil, fmt.Errorf("unexpected mutation type %T. expect *ent.SupplierMutation", m)
+	return nil, fmt.Errorf("unexpected mutation type %T. expect *ent.RequestParticipantMutation", m)
+}
+
+// The RequestTargetDzoFunc type is an adapter to allow the use of ordinary
+// function as RequestTargetDzo mutator.
+type RequestTargetDzoFunc func(context.Context, *ent.RequestTargetDzoMutation) (ent.Value, error)
+
+// Mutate calls f(ctx, m).
+func (f RequestTargetDzoFunc) Mutate(ctx context.Context, m ent.Mutation) (ent.Value, error) {
+	if mv, ok := m.(*ent.RequestTargetDzoMutation); ok {
+		return f(ctx, mv)
+	}
+	return nil, fmt.Errorf("unexpected mutation type %T. expect *ent.RequestTargetDzoMutation", m)
 }
 
 // The TrainingEventFunc type is an adapter to allow the use of ordinary

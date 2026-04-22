@@ -1,34 +1,122 @@
 package requests
 
-import (
-	"time"
+import "time"
 
-	"github.com/google/uuid"
+type RequestType string
+
+const (
+	RequestTypeMain       RequestType = "MAIN"
+	RequestTypeSubrequest RequestType = "SUBREQUEST"
 )
 
-type CreateRequestRequest struct {
-	EntityID   uuid.UUID `json:"entity_id"`
-	EntityType string    `json:"entity_type"`
+func (t RequestType) IsValid() bool {
+	switch t {
+	case RequestTypeMain, RequestTypeSubrequest:
+		return true
+	default:
+		return false
+	}
 }
 
-type UpdateRequestStepRequest struct {
-	Step int `json:"step"`
+type RequestStatus string
+
+const (
+	RequestStatusDraft      RequestStatus = "DRAFT"
+	RequestStatusInProgress RequestStatus = "IN_PROGRESS"
+	RequestStatusPending    RequestStatus = "PENDING"
+	RequestStatusApproved   RequestStatus = "APPROVED"
+	RequestStatusCancelled  RequestStatus = "CANCELLED"
+)
+
+func (s RequestStatus) IsValid() bool {
+	switch s {
+	case RequestStatusDraft, RequestStatusInProgress, RequestStatusPending, RequestStatusApproved, RequestStatusCancelled:
+		return true
+	default:
+		return false
+	}
 }
 
-type UpdateRequestStatusRequest struct {
-	Status string `json:"status"`
+type CostMode string
+
+const (
+	CostModePerEmployee CostMode = "PER_EMPLOYEE"
+	CostModeGroup       CostMode = "GROUP"
+)
+
+func (m CostMode) IsValid() bool {
+	switch m {
+	case CostModePerEmployee, CostModeGroup:
+		return true
+	default:
+		return false
+	}
 }
 
-type RequestResponse struct {
-	ID          uuid.UUID `json:"id"`
-	InitiatorID uuid.UUID `json:"initiator_id"`
-	EntityID    uuid.UUID `json:"entity_id"`
-	EntityType  string    `json:"entity_type"`
-	Step        int       `json:"step"`
-	Status      string    `json:"status"`
-	CreatedAt   time.Time `json:"created_at"`
+type CreateAdminRequestRequest struct {
+	TrainingEventID string    `json:"training_event_id"`
+	Title           *string   `json:"title,omitempty"`
+	Category        *string   `json:"category,omitempty"`
+	Format          *string   `json:"format,omitempty"`
+	EmployeeIDs     []string  `json:"employee_ids,omitempty"`
+	DzoIDs          []string  `json:"dzo_ids,omitempty"`
+	CostAmount      *float64  `json:"cost_amount,omitempty"`
+	CostMode        *CostMode `json:"cost_mode,omitempty"`
+	DeadlineAt      *string   `json:"deadline_at,omitempty"`
+}
+
+type UpdateHRRequestEmployeesRequest struct {
+	EmployeeIDs []string `json:"employee_ids"`
+}
+
+type RequestEmployee struct {
+	ID       string `json:"id"`
+	FullName string `json:"full_name"`
+	DzoID    string `json:"dzo_id"`
+	DzoName  string `json:"dzo_name"`
+}
+
+type RequestTargetDZO struct {
+	ID   string `json:"id"`
+	Name string `json:"name"`
+}
+
+type RequestSummary struct {
+	ID                 string        `json:"id"`
+	InitiatorID        string        `json:"initiator_id"`
+	ParentRequestID    *string       `json:"parent_request_id,omitempty"`
+	TrainingEventID    string        `json:"training_event_id"`
+	EntityType         string        `json:"entity_type"`
+	RequestType        RequestType   `json:"request_type"`
+	Status             RequestStatus `json:"status"`
+	AssignedHRID       *string       `json:"assigned_hr_id,omitempty"`
+	TargetDzoID        *string       `json:"target_dzo_id,omitempty"`
+	Title              string        `json:"title"`
+	Category           *string       `json:"category,omitempty"`
+	Format             *string       `json:"format,omitempty"`
+	ResponsibleAdminID *string       `json:"responsible_admin_id,omitempty"`
+	TrainingDate       *time.Time    `json:"training_date,omitempty"`
+	DeadlineAt         *time.Time    `json:"deadline_at,omitempty"`
+	CostAmount         *float64      `json:"cost_amount,omitempty"`
+	CostMode           *CostMode     `json:"cost_mode,omitempty"`
+	EmployeesCount     int           `json:"employees_count"`
+	ApprovedChildren   int           `json:"approved_children"`
+	TotalChildren      int           `json:"total_children"`
+	CreatedAt          time.Time     `json:"created_at"`
+	UpdatedAt          time.Time     `json:"updated_at"`
+}
+
+type RequestDetail struct {
+	Request       RequestSummary     `json:"request"`
+	Employees     []RequestEmployee  `json:"employees"`
+	TargetDZOs    []RequestTargetDZO `json:"target_dzos"`
+	ChildRequests []RequestSummary   `json:"child_requests"`
+}
+
+type GetRequestResponse struct {
+	Detail RequestDetail `json:"detail"`
 }
 
 type ListRequestsResponse struct {
-	Items []*RequestResponse `json:"items"`
+	Items []RequestSummary `json:"items"`
 }

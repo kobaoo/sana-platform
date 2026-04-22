@@ -4,6 +4,7 @@ package ent
 
 import (
 	"context"
+	"database/sql/driver"
 	"fmt"
 	"math"
 
@@ -25,6 +26,8 @@ type RequestQuery struct {
 	inters        []Interceptor
 	predicates    []predicate.Request
 	withInitiator *UserQuery
+	withParent    *RequestQuery
+	withChildren  *RequestQuery
 	// intermediate query (i.e. traversal path).
 	sql  *sql.Selector
 	path func(context.Context) (*sql.Selector, error)
@@ -76,6 +79,50 @@ func (_q *RequestQuery) QueryInitiator() *UserQuery {
 			sqlgraph.From(request.Table, request.FieldID, selector),
 			sqlgraph.To(user.Table, user.FieldID),
 			sqlgraph.Edge(sqlgraph.M2O, true, request.InitiatorTable, request.InitiatorColumn),
+		)
+		fromU = sqlgraph.SetNeighbors(_q.driver.Dialect(), step)
+		return fromU, nil
+	}
+	return query
+}
+
+// QueryParent chains the current query on the "parent" edge.
+func (_q *RequestQuery) QueryParent() *RequestQuery {
+	query := (&RequestClient{config: _q.config}).Query()
+	query.path = func(ctx context.Context) (fromU *sql.Selector, err error) {
+		if err := _q.prepareQuery(ctx); err != nil {
+			return nil, err
+		}
+		selector := _q.sqlQuery(ctx)
+		if err := selector.Err(); err != nil {
+			return nil, err
+		}
+		step := sqlgraph.NewStep(
+			sqlgraph.From(request.Table, request.FieldID, selector),
+			sqlgraph.To(request.Table, request.FieldID),
+			sqlgraph.Edge(sqlgraph.M2O, true, request.ParentTable, request.ParentColumn),
+		)
+		fromU = sqlgraph.SetNeighbors(_q.driver.Dialect(), step)
+		return fromU, nil
+	}
+	return query
+}
+
+// QueryChildren chains the current query on the "children" edge.
+func (_q *RequestQuery) QueryChildren() *RequestQuery {
+	query := (&RequestClient{config: _q.config}).Query()
+	query.path = func(ctx context.Context) (fromU *sql.Selector, err error) {
+		if err := _q.prepareQuery(ctx); err != nil {
+			return nil, err
+		}
+		selector := _q.sqlQuery(ctx)
+		if err := selector.Err(); err != nil {
+			return nil, err
+		}
+		step := sqlgraph.NewStep(
+			sqlgraph.From(request.Table, request.FieldID, selector),
+			sqlgraph.To(request.Table, request.FieldID),
+			sqlgraph.Edge(sqlgraph.O2M, false, request.ChildrenTable, request.ChildrenColumn),
 		)
 		fromU = sqlgraph.SetNeighbors(_q.driver.Dialect(), step)
 		return fromU, nil
@@ -276,6 +323,8 @@ func (_q *RequestQuery) Clone() *RequestQuery {
 		inters:        append([]Interceptor{}, _q.inters...),
 		predicates:    append([]predicate.Request{}, _q.predicates...),
 		withInitiator: _q.withInitiator.Clone(),
+		withParent:    _q.withParent.Clone(),
+		withChildren:  _q.withChildren.Clone(),
 		// clone intermediate query.
 		sql:  _q.sql.Clone(),
 		path: _q.path,
@@ -290,6 +339,28 @@ func (_q *RequestQuery) WithInitiator(opts ...func(*UserQuery)) *RequestQuery {
 		opt(query)
 	}
 	_q.withInitiator = query
+	return _q
+}
+
+// WithParent tells the query-builder to eager-load the nodes that are connected to
+// the "parent" edge. The optional arguments are used to configure the query builder of the edge.
+func (_q *RequestQuery) WithParent(opts ...func(*RequestQuery)) *RequestQuery {
+	query := (&RequestClient{config: _q.config}).Query()
+	for _, opt := range opts {
+		opt(query)
+	}
+	_q.withParent = query
+	return _q
+}
+
+// WithChildren tells the query-builder to eager-load the nodes that are connected to
+// the "children" edge. The optional arguments are used to configure the query builder of the edge.
+func (_q *RequestQuery) WithChildren(opts ...func(*RequestQuery)) *RequestQuery {
+	query := (&RequestClient{config: _q.config}).Query()
+	for _, opt := range opts {
+		opt(query)
+	}
+	_q.withChildren = query
 	return _q
 }
 
@@ -371,8 +442,10 @@ func (_q *RequestQuery) sqlAll(ctx context.Context, hooks ...queryHook) ([]*Requ
 	var (
 		nodes       = []*Request{}
 		_spec       = _q.querySpec()
-		loadedTypes = [1]bool{
+		loadedTypes = [3]bool{
 			_q.withInitiator != nil,
+			_q.withParent != nil,
+			_q.withChildren != nil,
 		}
 	)
 	_spec.ScanValues = func(columns []string) ([]any, error) {
@@ -396,6 +469,19 @@ func (_q *RequestQuery) sqlAll(ctx context.Context, hooks ...queryHook) ([]*Requ
 	if query := _q.withInitiator; query != nil {
 		if err := _q.loadInitiator(ctx, query, nodes, nil,
 			func(n *Request, e *User) { n.Edges.Initiator = e }); err != nil {
+			return nil, err
+		}
+	}
+	if query := _q.withParent; query != nil {
+		if err := _q.loadParent(ctx, query, nodes, nil,
+			func(n *Request, e *Request) { n.Edges.Parent = e }); err != nil {
+			return nil, err
+		}
+	}
+	if query := _q.withChildren; query != nil {
+		if err := _q.loadChildren(ctx, query, nodes,
+			func(n *Request) { n.Edges.Children = []*Request{} },
+			func(n *Request, e *Request) { n.Edges.Children = append(n.Edges.Children, e) }); err != nil {
 			return nil, err
 		}
 	}
@@ -431,6 +517,71 @@ func (_q *RequestQuery) loadInitiator(ctx context.Context, query *UserQuery, nod
 	}
 	return nil
 }
+func (_q *RequestQuery) loadParent(ctx context.Context, query *RequestQuery, nodes []*Request, init func(*Request), assign func(*Request, *Request)) error {
+	ids := make([]uuid.UUID, 0, len(nodes))
+	nodeids := make(map[uuid.UUID][]*Request)
+	for i := range nodes {
+		if nodes[i].ParentRequestID == nil {
+			continue
+		}
+		fk := *nodes[i].ParentRequestID
+		if _, ok := nodeids[fk]; !ok {
+			ids = append(ids, fk)
+		}
+		nodeids[fk] = append(nodeids[fk], nodes[i])
+	}
+	if len(ids) == 0 {
+		return nil
+	}
+	query.Where(request.IDIn(ids...))
+	neighbors, err := query.All(ctx)
+	if err != nil {
+		return err
+	}
+	for _, n := range neighbors {
+		nodes, ok := nodeids[n.ID]
+		if !ok {
+			return fmt.Errorf(`unexpected foreign-key "parent_request_id" returned %v`, n.ID)
+		}
+		for i := range nodes {
+			assign(nodes[i], n)
+		}
+	}
+	return nil
+}
+func (_q *RequestQuery) loadChildren(ctx context.Context, query *RequestQuery, nodes []*Request, init func(*Request), assign func(*Request, *Request)) error {
+	fks := make([]driver.Value, 0, len(nodes))
+	nodeids := make(map[uuid.UUID]*Request)
+	for i := range nodes {
+		fks = append(fks, nodes[i].ID)
+		nodeids[nodes[i].ID] = nodes[i]
+		if init != nil {
+			init(nodes[i])
+		}
+	}
+	if len(query.ctx.Fields) > 0 {
+		query.ctx.AppendFieldOnce(request.FieldParentRequestID)
+	}
+	query.Where(predicate.Request(func(s *sql.Selector) {
+		s.Where(sql.InValues(s.C(request.ChildrenColumn), fks...))
+	}))
+	neighbors, err := query.All(ctx)
+	if err != nil {
+		return err
+	}
+	for _, n := range neighbors {
+		fk := n.ParentRequestID
+		if fk == nil {
+			return fmt.Errorf(`foreign-key "parent_request_id" is nil for node %v`, n.ID)
+		}
+		node, ok := nodeids[*fk]
+		if !ok {
+			return fmt.Errorf(`unexpected referenced foreign-key "parent_request_id" returned %v for node %v`, *fk, n.ID)
+		}
+		assign(node, n)
+	}
+	return nil
+}
 
 func (_q *RequestQuery) sqlCount(ctx context.Context) (int, error) {
 	_spec := _q.querySpec()
@@ -459,6 +610,9 @@ func (_q *RequestQuery) querySpec() *sqlgraph.QuerySpec {
 		}
 		if _q.withInitiator != nil {
 			_spec.Node.AddColumnOnce(request.FieldInitiatorID)
+		}
+		if _q.withParent != nil {
+			_spec.Node.AddColumnOnce(request.FieldParentRequestID)
 		}
 	}
 	if ps := _q.predicates; len(ps) > 0 {
