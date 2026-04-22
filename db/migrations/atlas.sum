@@ -1,4 +1,6 @@
-h1:BRR2UvDyixE16TcQJPu1REpGuKs6EWzjxRrKw1W7L4I=
+h1:9P0teXjXe57FvjdfiYSCkQm2B0QTe9bkktIzEBa9sCc=
 20260416133254_add_dzo_organizations_and_employee.up.sql h1:CQEgYDdY5YJMRQX7FMgVEgaW6QqDlnIUh61jA1v83NE=
 20260416154539_initial.up.sql h1:jtXM/98YUNbW1mJJa2D48xiWKd+61GzQgrkD/CxCzfo=
-20260420121445_add_is_deleted_to_employees.up.sql h1:dSqWhc7B0ILOW6/JWSiytacYzy44wBVeX1UHt04qqKE=
+20260419000000_clients.up.sql h1:Sxayrh5YXOb1rP0Ezo6kkUNaBaKsYS8mBdyWGFHmRm8=
+20260420121445_add_is_deleted_to_employees.up.sql h1:C4l6YqGRqbjlay4uufsnfdxdEzZoMjJBUX5JYNmNigk=
+20260421184237_dzo_add_created_at_updated_at.up.sql h1:1bGQVZuDYUrIrRAldVwxQfNnZYnMwF6z+54j3dJ/CP8=

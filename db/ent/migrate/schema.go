@@ -33,6 +33,8 @@ var (
 		{Name: "short_name", Type: field.TypeString, Nullable: true, Size: 100},
 		{Name: "bin", Type: field.TypeString, Nullable: true, Size: 12},
 		{Name: "is_active", Type: field.TypeBool, Default: true},
+		{Name: "created_at", Type: field.TypeTime},
+		{Name: "updated_at", Type: field.TypeTime},
 	}
 	// DzoOrganizationsTable holds the schema information for the "dzo_organizations" table.
 	DzoOrganizationsTable = &schema.Table{

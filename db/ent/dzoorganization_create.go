@@ -6,6 +6,7 @@ import (
 	"context"
 	"errors"
 	"fmt"
+	"time"
 
 	"encore.app/db/ent/dzoorganization"
 	"encore.app/db/ent/employee"
@@ -71,6 +72,34 @@ func (_c *DzoOrganizationCreate) SetIsActive(v bool) *DzoOrganizationCreate {
 func (_c *DzoOrganizationCreate) SetNillableIsActive(v *bool) *DzoOrganizationCreate {
 	if v != nil {
 		_c.SetIsActive(*v)
+	}
+	return _c
+}
+
+// SetCreatedAt sets the "created_at" field.
+func (_c *DzoOrganizationCreate) SetCreatedAt(v time.Time) *DzoOrganizationCreate {
+	_c.mutation.SetCreatedAt(v)
+	return _c
+}
+
+// SetNillableCreatedAt sets the "created_at" field if the given value is not nil.
+func (_c *DzoOrganizationCreate) SetNillableCreatedAt(v *time.Time) *DzoOrganizationCreate {
+	if v != nil {
+		_c.SetCreatedAt(*v)
+	}
+	return _c
+}
+
+// SetUpdatedAt sets the "updated_at" field.
+func (_c *DzoOrganizationCreate) SetUpdatedAt(v time.Time) *DzoOrganizationCreate {
+	_c.mutation.SetUpdatedAt(v)
+	return _c
+}
+
+// SetNillableUpdatedAt sets the "updated_at" field if the given value is not nil.
+func (_c *DzoOrganizationCreate) SetNillableUpdatedAt(v *time.Time) *DzoOrganizationCreate {
+	if v != nil {
+		_c.SetUpdatedAt(*v)
 	}
 	return _c
 }
@@ -143,6 +172,14 @@ func (_c *DzoOrganizationCreate) defaults() {
 		v := dzoorganization.DefaultIsActive
 		_c.mutation.SetIsActive(v)
 	}
+	if _, ok := _c.mutation.CreatedAt(); !ok {
+		v := dzoorganization.DefaultCreatedAt()
+		_c.mutation.SetCreatedAt(v)
+	}
+	if _, ok := _c.mutation.UpdatedAt(); !ok {
+		v := dzoorganization.DefaultUpdatedAt()
+		_c.mutation.SetUpdatedAt(v)
+	}
 	if _, ok := _c.mutation.ID(); !ok {
 		v := dzoorganization.DefaultID()
 		_c.mutation.SetID(v)
@@ -174,6 +211,12 @@ func (_c *DzoOrganizationCreate) check() error {
 	}
 	if _, ok := _c.mutation.IsActive(); !ok {
 		return &ValidationError{Name: "is_active", err: errors.New(`ent: missing required field "DzoOrganization.is_active"`)}
+	}
+	if _, ok := _c.mutation.CreatedAt(); !ok {
+		return &ValidationError{Name: "created_at", err: errors.New(`ent: missing required field "DzoOrganization.created_at"`)}
+	}
+	if _, ok := _c.mutation.UpdatedAt(); !ok {
+		return &ValidationError{Name: "updated_at", err: errors.New(`ent: missing required field "DzoOrganization.updated_at"`)}
 	}
 	return nil
 }
@@ -229,6 +272,14 @@ func (_c *DzoOrganizationCreate) createSpec() (*DzoOrganization, *sqlgraph.Creat
 	if value, ok := _c.mutation.IsActive(); ok {
 		_spec.SetField(dzoorganization.FieldIsActive, field.TypeBool, value)
 		_node.IsActive = value
+	}
+	if value, ok := _c.mutation.CreatedAt(); ok {
+		_spec.SetField(dzoorganization.FieldCreatedAt, field.TypeTime, value)
+		_node.CreatedAt = value
+	}
+	if value, ok := _c.mutation.UpdatedAt(); ok {
+		_spec.SetField(dzoorganization.FieldUpdatedAt, field.TypeTime, value)
+		_node.UpdatedAt = value
 	}
 	if nodes := _c.mutation.EmployeesIDs(); len(nodes) > 0 {
 		edge := &sqlgraph.EdgeSpec{

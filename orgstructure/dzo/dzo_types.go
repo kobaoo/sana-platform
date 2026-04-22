@@ -4,14 +4,15 @@ import "time"
 
 // DZO represents a subsidiary organization entity.
 type DZO struct {
-	ID        string    `json:"id"`
-	ClientID  string    `json:"client_id"`
-	Name      string    `json:"name"`
-	ShortName *string   `json:"short_name"`
-	BIN       *string   `json:"bin"`
-	IsActive  bool      `json:"is_active"`
-	CreatedAt time.Time `json:"created_at"`
-	UpdatedAt time.Time `json:"updated_at"`
+	ID             string    `json:"id"`
+	ClientID       string    `json:"client_id"`
+	Name           string    `json:"name"`
+	ShortName      *string   `json:"short_name"`
+	BIN            *string   `json:"bin"`
+	IsActive       bool      `json:"is_active"`
+	CreatedAt      time.Time `json:"created_at"`
+	UpdatedAt      time.Time `json:"updated_at"`
+	EmployeesCount int       `json:"employees_count"`
 }
 
 // CreateDZORequest is the request body for creating a new DZO.
