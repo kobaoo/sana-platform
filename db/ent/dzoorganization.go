@@ -5,6 +5,7 @@ package ent
 import (
 	"fmt"
 	"strings"
+	"time"
 
 	"encore.app/db/ent/dzoorganization"
 	"entgo.io/ent"
@@ -27,6 +28,10 @@ type DzoOrganization struct {
 	Bin *string `json:"bin,omitempty"`
 	// IsActive holds the value of the "is_active" field.
 	IsActive bool `json:"is_active,omitempty"`
+	// CreatedAt holds the value of the "created_at" field.
+	CreatedAt time.Time `json:"created_at,omitempty"`
+	// UpdatedAt holds the value of the "updated_at" field.
+	UpdatedAt time.Time `json:"updated_at,omitempty"`
 	// Edges holds the relations/edges for other nodes in the graph.
 	// The values are being populated by the DzoOrganizationQuery when eager-loading is set.
 	Edges        DzoOrganizationEdges `json:"edges"`
@@ -60,6 +65,8 @@ func (*DzoOrganization) scanValues(columns []string) ([]any, error) {
 			values[i] = new(sql.NullBool)
 		case dzoorganization.FieldName, dzoorganization.FieldShortName, dzoorganization.FieldBin:
 			values[i] = new(sql.NullString)
+		case dzoorganization.FieldCreatedAt, dzoorganization.FieldUpdatedAt:
+			values[i] = new(sql.NullTime)
 		case dzoorganization.FieldID, dzoorganization.FieldClientID:
 			values[i] = new(uuid.UUID)
 		default:
@@ -114,6 +121,18 @@ func (_m *DzoOrganization) assignValues(columns []string, values []any) error {
 				return fmt.Errorf("unexpected type %T for field is_active", values[i])
 			} else if value.Valid {
 				_m.IsActive = value.Bool
+			}
+		case dzoorganization.FieldCreatedAt:
+			if value, ok := values[i].(*sql.NullTime); !ok {
+				return fmt.Errorf("unexpected type %T for field created_at", values[i])
+			} else if value.Valid {
+				_m.CreatedAt = value.Time
+			}
+		case dzoorganization.FieldUpdatedAt:
+			if value, ok := values[i].(*sql.NullTime); !ok {
+				return fmt.Errorf("unexpected type %T for field updated_at", values[i])
+			} else if value.Valid {
+				_m.UpdatedAt = value.Time
 			}
 		default:
 			_m.selectValues.Set(columns[i], values[i])
@@ -174,6 +193,12 @@ func (_m *DzoOrganization) String() string {
 	builder.WriteString(", ")
 	builder.WriteString("is_active=")
 	builder.WriteString(fmt.Sprintf("%v", _m.IsActive))
+	builder.WriteString(", ")
+	builder.WriteString("created_at=")
+	builder.WriteString(_m.CreatedAt.Format(time.ANSIC))
+	builder.WriteString(", ")
+	builder.WriteString("updated_at=")
+	builder.WriteString(_m.UpdatedAt.Format(time.ANSIC))
 	builder.WriteByte(')')
 	return builder.String()
 }

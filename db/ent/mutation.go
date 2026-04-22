@@ -839,6 +839,8 @@ type DzoOrganizationMutation struct {
 	short_name       *string
 	bin              *string
 	is_active        *bool
+	created_at       *time.Time
+	updated_at       *time.Time
 	clearedFields    map[string]struct{}
 	employees        map[uuid.UUID]struct{}
 	removedemployees map[uuid.UUID]struct{}
@@ -1158,6 +1160,78 @@ func (m *DzoOrganizationMutation) ResetIsActive() {
 	m.is_active = nil
 }
 
+// SetCreatedAt sets the "created_at" field.
+func (m *DzoOrganizationMutation) SetCreatedAt(t time.Time) {
+	m.created_at = &t
+}
+
+// CreatedAt returns the value of the "created_at" field in the mutation.
+func (m *DzoOrganizationMutation) CreatedAt() (r time.Time, exists bool) {
+	v := m.created_at
+	if v == nil {
+		return
+	}
+	return *v, true
+}
+
+// OldCreatedAt returns the old "created_at" field's value of the DzoOrganization entity.
+// If the DzoOrganization object wasn't provided to the builder, the object is fetched from the database.
+// An error is returned if the mutation operation is not UpdateOne, or the database query fails.
+func (m *DzoOrganizationMutation) OldCreatedAt(ctx context.Context) (v time.Time, err error) {
+	if !m.op.Is(OpUpdateOne) {
+		return v, errors.New("OldCreatedAt is only allowed on UpdateOne operations")
+	}
+	if m.id == nil || m.oldValue == nil {
+		return v, errors.New("OldCreatedAt requires an ID field in the mutation")
+	}
+	oldValue, err := m.oldValue(ctx)
+	if err != nil {
+		return v, fmt.Errorf("querying old value for OldCreatedAt: %w", err)
+	}
+	return oldValue.CreatedAt, nil
+}
+
+// ResetCreatedAt resets all changes to the "created_at" field.
+func (m *DzoOrganizationMutation) ResetCreatedAt() {
+	m.created_at = nil
+}
+
+// SetUpdatedAt sets the "updated_at" field.
+func (m *DzoOrganizationMutation) SetUpdatedAt(t time.Time) {
+	m.updated_at = &t
+}
+
+// UpdatedAt returns the value of the "updated_at" field in the mutation.
+func (m *DzoOrganizationMutation) UpdatedAt() (r time.Time, exists bool) {
+	v := m.updated_at
+	if v == nil {
+		return
+	}
+	return *v, true
+}
+
+// OldUpdatedAt returns the old "updated_at" field's value of the DzoOrganization entity.
+// If the DzoOrganization object wasn't provided to the builder, the object is fetched from the database.
+// An error is returned if the mutation operation is not UpdateOne, or the database query fails.
+func (m *DzoOrganizationMutation) OldUpdatedAt(ctx context.Context) (v time.Time, err error) {
+	if !m.op.Is(OpUpdateOne) {
+		return v, errors.New("OldUpdatedAt is only allowed on UpdateOne operations")
+	}
+	if m.id == nil || m.oldValue == nil {
+		return v, errors.New("OldUpdatedAt requires an ID field in the mutation")
+	}
+	oldValue, err := m.oldValue(ctx)
+	if err != nil {
+		return v, fmt.Errorf("querying old value for OldUpdatedAt: %w", err)
+	}
+	return oldValue.UpdatedAt, nil
+}
+
+// ResetUpdatedAt resets all changes to the "updated_at" field.
+func (m *DzoOrganizationMutation) ResetUpdatedAt() {
+	m.updated_at = nil
+}
+
 // AddEmployeeIDs adds the "employees" edge to the Employee entity by ids.
 func (m *DzoOrganizationMutation) AddEmployeeIDs(ids ...uuid.UUID) {
 	if m.employees == nil {
@@ -1246,7 +1320,7 @@ func (m *DzoOrganizationMutation) Type() string {
 // order to get all numeric fields that were incremented/decremented, call
 // AddedFields().
 func (m *DzoOrganizationMutation) Fields() []string {
-	fields := make([]string, 0, 5)
+	fields := make([]string, 0, 7)
 	if m.client_id != nil {
 		fields = append(fields, dzoorganization.FieldClientID)
 	}
@@ -1261,6 +1335,12 @@ func (m *DzoOrganizationMutation) Fields() []string {
 	}
 	if m.is_active != nil {
 		fields = append(fields, dzoorganization.FieldIsActive)
+	}
+	if m.created_at != nil {
+		fields = append(fields, dzoorganization.FieldCreatedAt)
+	}
+	if m.updated_at != nil {
+		fields = append(fields, dzoorganization.FieldUpdatedAt)
 	}
 	return fields
 }
@@ -1280,6 +1360,10 @@ func (m *DzoOrganizationMutation) Field(name string) (ent.Value, bool) {
 		return m.Bin()
 	case dzoorganization.FieldIsActive:
 		return m.IsActive()
+	case dzoorganization.FieldCreatedAt:
+		return m.CreatedAt()
+	case dzoorganization.FieldUpdatedAt:
+		return m.UpdatedAt()
 	}
 	return nil, false
 }
@@ -1299,6 +1383,10 @@ func (m *DzoOrganizationMutation) OldField(ctx context.Context, name string) (en
 		return m.OldBin(ctx)
 	case dzoorganization.FieldIsActive:
 		return m.OldIsActive(ctx)
+	case dzoorganization.FieldCreatedAt:
+		return m.OldCreatedAt(ctx)
+	case dzoorganization.FieldUpdatedAt:
+		return m.OldUpdatedAt(ctx)
 	}
 	return nil, fmt.Errorf("unknown DzoOrganization field %s", name)
 }
@@ -1342,6 +1430,20 @@ func (m *DzoOrganizationMutation) SetField(name string, value ent.Value) error {
 			return fmt.Errorf("unexpected type %T for field %s", value, name)
 		}
 		m.SetIsActive(v)
+		return nil
+	case dzoorganization.FieldCreatedAt:
+		v, ok := value.(time.Time)
+		if !ok {
+			return fmt.Errorf("unexpected type %T for field %s", value, name)
+		}
+		m.SetCreatedAt(v)
+		return nil
+	case dzoorganization.FieldUpdatedAt:
+		v, ok := value.(time.Time)
+		if !ok {
+			return fmt.Errorf("unexpected type %T for field %s", value, name)
+		}
+		m.SetUpdatedAt(v)
 		return nil
 	}
 	return fmt.Errorf("unknown DzoOrganization field %s", name)
@@ -1421,6 +1523,12 @@ func (m *DzoOrganizationMutation) ResetField(name string) error {
 		return nil
 	case dzoorganization.FieldIsActive:
 		m.ResetIsActive()
+		return nil
+	case dzoorganization.FieldCreatedAt:
+		m.ResetCreatedAt()
+		return nil
+	case dzoorganization.FieldUpdatedAt:
+		m.ResetUpdatedAt()
 		return nil
 	}
 	return fmt.Errorf("unknown DzoOrganization field %s", name)
