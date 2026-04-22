@@ -90,6 +90,16 @@ func init() {
 	dzoorganizationDescIsActive := dzoorganizationFields[5].Descriptor()
 	// dzoorganization.DefaultIsActive holds the default value on creation for the is_active field.
 	dzoorganization.DefaultIsActive = dzoorganizationDescIsActive.Default.(bool)
+	// dzoorganizationDescCreatedAt is the schema descriptor for created_at field.
+	dzoorganizationDescCreatedAt := dzoorganizationFields[6].Descriptor()
+	// dzoorganization.DefaultCreatedAt holds the default value on creation for the created_at field.
+	dzoorganization.DefaultCreatedAt = dzoorganizationDescCreatedAt.Default.(func() time.Time)
+	// dzoorganizationDescUpdatedAt is the schema descriptor for updated_at field.
+	dzoorganizationDescUpdatedAt := dzoorganizationFields[7].Descriptor()
+	// dzoorganization.DefaultUpdatedAt holds the default value on creation for the updated_at field.
+	dzoorganization.DefaultUpdatedAt = dzoorganizationDescUpdatedAt.Default.(func() time.Time)
+	// dzoorganization.UpdateDefaultUpdatedAt holds the default value on update for the updated_at field.
+	dzoorganization.UpdateDefaultUpdatedAt = dzoorganizationDescUpdatedAt.UpdateDefault.(func() time.Time)
 	// dzoorganizationDescID is the schema descriptor for id field.
 	dzoorganizationDescID := dzoorganizationFields[0].Descriptor()
 	// dzoorganization.DefaultID holds the default value on creation for the id field.
