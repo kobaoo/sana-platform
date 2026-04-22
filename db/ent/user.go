@@ -7,6 +7,7 @@ import (
 	"strings"
 	"time"
 
+	"encore.app/db/ent/company"
 	"encore.app/db/ent/user"
 	"entgo.io/ent"
 	"entgo.io/ent/dialect/sql"
@@ -34,6 +35,8 @@ type User struct {
 	CreatedAt time.Time `json:"created_at,omitempty"`
 	// UpdatedAt holds the value of the "updated_at" field.
 	UpdatedAt time.Time `json:"updated_at,omitempty"`
+	// Reference to clients.id
+	ClientID uuid.UUID `json:"client_id,omitempty"`
 	// Edges holds the relations/edges for other nodes in the graph.
 	// The values are being populated by the UserQuery when eager-loading is set.
 	Edges        UserEdges `json:"edges"`
@@ -42,31 +45,22 @@ type User struct {
 
 // UserEdges holds the relations/edges for other nodes in the graph.
 type UserEdges struct {
-	// HostedEvents holds the value of the hosted_events edge.
-	HostedEvents []*Event `json:"hosted_events,omitempty"`
-	// ReviewedParticipations holds the value of the reviewed_participations edge.
-	ReviewedParticipations []*EventParticipant `json:"reviewed_participations,omitempty"`
+	// Client holds the value of the client edge.
+	Client *Company `json:"client,omitempty"`
 	// loadedTypes holds the information for reporting if a
 	// type was loaded (or requested) in eager-loading or not.
-	loadedTypes [2]bool
+	loadedTypes [1]bool
 }
 
-// HostedEventsOrErr returns the HostedEvents value or an error if the edge
-// was not loaded in eager-loading.
-func (e UserEdges) HostedEventsOrErr() ([]*Event, error) {
-	if e.loadedTypes[0] {
-		return e.HostedEvents, nil
+// ClientOrErr returns the Client value or an error if the edge
+// was not loaded in eager-loading, or loaded but was not found.
+func (e UserEdges) ClientOrErr() (*Company, error) {
+	if e.Client != nil {
+		return e.Client, nil
+	} else if e.loadedTypes[0] {
+		return nil, &NotFoundError{label: company.Label}
 	}
-	return nil, &NotLoadedError{edge: "hosted_events"}
-}
-
-// ReviewedParticipationsOrErr returns the ReviewedParticipations value or an error if the edge
-// was not loaded in eager-loading.
-func (e UserEdges) ReviewedParticipationsOrErr() ([]*EventParticipant, error) {
-	if e.loadedTypes[1] {
-		return e.ReviewedParticipations, nil
-	}
-	return nil, &NotLoadedError{edge: "reviewed_participations"}
+	return nil, &NotLoadedError{edge: "client"}
 }
 
 // scanValues returns the types for scanning values from sql.Rows.
@@ -82,7 +76,7 @@ func (*User) scanValues(columns []string) ([]any, error) {
 			values[i] = new(sql.NullString)
 		case user.FieldCreatedAt, user.FieldUpdatedAt:
 			values[i] = new(sql.NullTime)
-		case user.FieldID:
+		case user.FieldID, user.FieldClientID:
 			values[i] = new(uuid.UUID)
 		default:
 			values[i] = new(sql.UnknownType)
@@ -154,6 +148,12 @@ func (_m *User) assignValues(columns []string, values []any) error {
 			} else if value.Valid {
 				_m.UpdatedAt = value.Time
 			}
+		case user.FieldClientID:
+			if value, ok := values[i].(*uuid.UUID); !ok {
+				return fmt.Errorf("unexpected type %T for field client_id", values[i])
+			} else if value != nil {
+				_m.ClientID = *value
+			}
 		default:
 			_m.selectValues.Set(columns[i], values[i])
 		}
@@ -167,14 +167,9 @@ func (_m *User) Value(name string) (ent.Value, error) {
 	return _m.selectValues.Get(name)
 }
 
-// QueryHostedEvents queries the "hosted_events" edge of the User entity.
-func (_m *User) QueryHostedEvents() *EventQuery {
-	return NewUserClient(_m.config).QueryHostedEvents(_m)
-}
-
-// QueryReviewedParticipations queries the "reviewed_participations" edge of the User entity.
-func (_m *User) QueryReviewedParticipations() *EventParticipantQuery {
-	return NewUserClient(_m.config).QueryReviewedParticipations(_m)
+// QueryClient queries the "client" edge of the User entity.
+func (_m *User) QueryClient() *CompanyQuery {
+	return NewUserClient(_m.config).QueryClient(_m)
 }
 
 // Update returns a builder for updating this User.
@@ -225,6 +220,9 @@ func (_m *User) String() string {
 	builder.WriteString(", ")
 	builder.WriteString("updated_at=")
 	builder.WriteString(_m.UpdatedAt.Format(time.ANSIC))
+	builder.WriteString(", ")
+	builder.WriteString("client_id=")
+	builder.WriteString(fmt.Sprintf("%v", _m.ClientID))
 	builder.WriteByte(')')
 	return builder.String()
 }

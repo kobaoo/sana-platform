@@ -6,9 +6,10 @@ import (
 	"context"
 	"errors"
 	"fmt"
+	"time"
 
+	"encore.app/db/ent/dzoorganization"
 	"encore.app/db/ent/employee"
-	"encore.app/db/ent/eventparticipant"
 	"encore.app/db/ent/predicate"
 	"entgo.io/ent/dialect/sql"
 	"entgo.io/ent/dialect/sql/sqlgraph"
@@ -29,19 +30,233 @@ func (_u *EmployeeUpdate) Where(ps ...predicate.Employee) *EmployeeUpdate {
 	return _u
 }
 
-// AddEventParticipationIDs adds the "event_participations" edge to the EventParticipant entity by IDs.
-func (_u *EmployeeUpdate) AddEventParticipationIDs(ids ...uuid.UUID) *EmployeeUpdate {
-	_u.mutation.AddEventParticipationIDs(ids...)
+// SetClientID sets the "client_id" field.
+func (_u *EmployeeUpdate) SetClientID(v uuid.UUID) *EmployeeUpdate {
+	_u.mutation.SetClientID(v)
 	return _u
 }
 
-// AddEventParticipations adds the "event_participations" edges to the EventParticipant entity.
-func (_u *EmployeeUpdate) AddEventParticipations(v ...*EventParticipant) *EmployeeUpdate {
-	ids := make([]uuid.UUID, len(v))
-	for i := range v {
-		ids[i] = v[i].ID
+// SetNillableClientID sets the "client_id" field if the given value is not nil.
+func (_u *EmployeeUpdate) SetNillableClientID(v *uuid.UUID) *EmployeeUpdate {
+	if v != nil {
+		_u.SetClientID(*v)
 	}
-	return _u.AddEventParticipationIDs(ids...)
+	return _u
+}
+
+// SetDzoID sets the "dzo_id" field.
+func (_u *EmployeeUpdate) SetDzoID(v uuid.UUID) *EmployeeUpdate {
+	_u.mutation.SetDzoID(v)
+	return _u
+}
+
+// SetNillableDzoID sets the "dzo_id" field if the given value is not nil.
+func (_u *EmployeeUpdate) SetNillableDzoID(v *uuid.UUID) *EmployeeUpdate {
+	if v != nil {
+		_u.SetDzoID(*v)
+	}
+	return _u
+}
+
+// SetPosition sets the "position" field.
+func (_u *EmployeeUpdate) SetPosition(v string) *EmployeeUpdate {
+	_u.mutation.SetPosition(v)
+	return _u
+}
+
+// SetNillablePosition sets the "position" field if the given value is not nil.
+func (_u *EmployeeUpdate) SetNillablePosition(v *string) *EmployeeUpdate {
+	if v != nil {
+		_u.SetPosition(*v)
+	}
+	return _u
+}
+
+// ClearPosition clears the value of the "position" field.
+func (_u *EmployeeUpdate) ClearPosition() *EmployeeUpdate {
+	_u.mutation.ClearPosition()
+	return _u
+}
+
+// SetFullName sets the "full_name" field.
+func (_u *EmployeeUpdate) SetFullName(v string) *EmployeeUpdate {
+	_u.mutation.SetFullName(v)
+	return _u
+}
+
+// SetNillableFullName sets the "full_name" field if the given value is not nil.
+func (_u *EmployeeUpdate) SetNillableFullName(v *string) *EmployeeUpdate {
+	if v != nil {
+		_u.SetFullName(*v)
+	}
+	return _u
+}
+
+// SetShortName sets the "short_name" field.
+func (_u *EmployeeUpdate) SetShortName(v string) *EmployeeUpdate {
+	_u.mutation.SetShortName(v)
+	return _u
+}
+
+// SetNillableShortName sets the "short_name" field if the given value is not nil.
+func (_u *EmployeeUpdate) SetNillableShortName(v *string) *EmployeeUpdate {
+	if v != nil {
+		_u.SetShortName(*v)
+	}
+	return _u
+}
+
+// ClearShortName clears the value of the "short_name" field.
+func (_u *EmployeeUpdate) ClearShortName() *EmployeeUpdate {
+	_u.mutation.ClearShortName()
+	return _u
+}
+
+// SetDepartment sets the "department" field.
+func (_u *EmployeeUpdate) SetDepartment(v string) *EmployeeUpdate {
+	_u.mutation.SetDepartment(v)
+	return _u
+}
+
+// SetNillableDepartment sets the "department" field if the given value is not nil.
+func (_u *EmployeeUpdate) SetNillableDepartment(v *string) *EmployeeUpdate {
+	if v != nil {
+		_u.SetDepartment(*v)
+	}
+	return _u
+}
+
+// ClearDepartment clears the value of the "department" field.
+func (_u *EmployeeUpdate) ClearDepartment() *EmployeeUpdate {
+	_u.mutation.ClearDepartment()
+	return _u
+}
+
+// SetDirection sets the "direction" field.
+func (_u *EmployeeUpdate) SetDirection(v string) *EmployeeUpdate {
+	_u.mutation.SetDirection(v)
+	return _u
+}
+
+// SetNillableDirection sets the "direction" field if the given value is not nil.
+func (_u *EmployeeUpdate) SetNillableDirection(v *string) *EmployeeUpdate {
+	if v != nil {
+		_u.SetDirection(*v)
+	}
+	return _u
+}
+
+// ClearDirection clears the value of the "direction" field.
+func (_u *EmployeeUpdate) ClearDirection() *EmployeeUpdate {
+	_u.mutation.ClearDirection()
+	return _u
+}
+
+// SetEmail sets the "email" field.
+func (_u *EmployeeUpdate) SetEmail(v string) *EmployeeUpdate {
+	_u.mutation.SetEmail(v)
+	return _u
+}
+
+// SetNillableEmail sets the "email" field if the given value is not nil.
+func (_u *EmployeeUpdate) SetNillableEmail(v *string) *EmployeeUpdate {
+	if v != nil {
+		_u.SetEmail(*v)
+	}
+	return _u
+}
+
+// SetInternalPhone sets the "internal_phone" field.
+func (_u *EmployeeUpdate) SetInternalPhone(v string) *EmployeeUpdate {
+	_u.mutation.SetInternalPhone(v)
+	return _u
+}
+
+// SetNillableInternalPhone sets the "internal_phone" field if the given value is not nil.
+func (_u *EmployeeUpdate) SetNillableInternalPhone(v *string) *EmployeeUpdate {
+	if v != nil {
+		_u.SetInternalPhone(*v)
+	}
+	return _u
+}
+
+// ClearInternalPhone clears the value of the "internal_phone" field.
+func (_u *EmployeeUpdate) ClearInternalPhone() *EmployeeUpdate {
+	_u.mutation.ClearInternalPhone()
+	return _u
+}
+
+// SetBirthDate sets the "birth_date" field.
+func (_u *EmployeeUpdate) SetBirthDate(v time.Time) *EmployeeUpdate {
+	_u.mutation.SetBirthDate(v)
+	return _u
+}
+
+// SetNillableBirthDate sets the "birth_date" field if the given value is not nil.
+func (_u *EmployeeUpdate) SetNillableBirthDate(v *time.Time) *EmployeeUpdate {
+	if v != nil {
+		_u.SetBirthDate(*v)
+	}
+	return _u
+}
+
+// ClearBirthDate clears the value of the "birth_date" field.
+func (_u *EmployeeUpdate) ClearBirthDate() *EmployeeUpdate {
+	_u.mutation.ClearBirthDate()
+	return _u
+}
+
+// SetIsActive sets the "is_active" field.
+func (_u *EmployeeUpdate) SetIsActive(v bool) *EmployeeUpdate {
+	_u.mutation.SetIsActive(v)
+	return _u
+}
+
+// SetNillableIsActive sets the "is_active" field if the given value is not nil.
+func (_u *EmployeeUpdate) SetNillableIsActive(v *bool) *EmployeeUpdate {
+	if v != nil {
+		_u.SetIsActive(*v)
+	}
+	return _u
+}
+
+// SetUserID sets the "user_id" field.
+func (_u *EmployeeUpdate) SetUserID(v uuid.UUID) *EmployeeUpdate {
+	_u.mutation.SetUserID(v)
+	return _u
+}
+
+// SetNillableUserID sets the "user_id" field if the given value is not nil.
+func (_u *EmployeeUpdate) SetNillableUserID(v *uuid.UUID) *EmployeeUpdate {
+	if v != nil {
+		_u.SetUserID(*v)
+	}
+	return _u
+}
+
+// ClearUserID clears the value of the "user_id" field.
+func (_u *EmployeeUpdate) ClearUserID() *EmployeeUpdate {
+	_u.mutation.ClearUserID()
+	return _u
+}
+
+// SetIsDeleted sets the "is_deleted" field.
+func (_u *EmployeeUpdate) SetIsDeleted(v bool) *EmployeeUpdate {
+	_u.mutation.SetIsDeleted(v)
+	return _u
+}
+
+// SetNillableIsDeleted sets the "is_deleted" field if the given value is not nil.
+func (_u *EmployeeUpdate) SetNillableIsDeleted(v *bool) *EmployeeUpdate {
+	if v != nil {
+		_u.SetIsDeleted(*v)
+	}
+	return _u
+}
+
+// SetDzo sets the "dzo" edge to the DzoOrganization entity.
+func (_u *EmployeeUpdate) SetDzo(v *DzoOrganization) *EmployeeUpdate {
+	return _u.SetDzoID(v.ID)
 }
 
 // Mutation returns the EmployeeMutation object of the builder.
@@ -49,25 +264,10 @@ func (_u *EmployeeUpdate) Mutation() *EmployeeMutation {
 	return _u.mutation
 }
 
-// ClearEventParticipations clears all "event_participations" edges to the EventParticipant entity.
-func (_u *EmployeeUpdate) ClearEventParticipations() *EmployeeUpdate {
-	_u.mutation.ClearEventParticipations()
+// ClearDzo clears the "dzo" edge to the DzoOrganization entity.
+func (_u *EmployeeUpdate) ClearDzo() *EmployeeUpdate {
+	_u.mutation.ClearDzo()
 	return _u
-}
-
-// RemoveEventParticipationIDs removes the "event_participations" edge to EventParticipant entities by IDs.
-func (_u *EmployeeUpdate) RemoveEventParticipationIDs(ids ...uuid.UUID) *EmployeeUpdate {
-	_u.mutation.RemoveEventParticipationIDs(ids...)
-	return _u
-}
-
-// RemoveEventParticipations removes "event_participations" edges to EventParticipant entities.
-func (_u *EmployeeUpdate) RemoveEventParticipations(v ...*EventParticipant) *EmployeeUpdate {
-	ids := make([]uuid.UUID, len(v))
-	for i := range v {
-		ids[i] = v[i].ID
-	}
-	return _u.RemoveEventParticipationIDs(ids...)
 }
 
 // Save executes the query and returns the number of nodes affected by the update operation.
@@ -97,7 +297,53 @@ func (_u *EmployeeUpdate) ExecX(ctx context.Context) {
 	}
 }
 
+// check runs all checks and user-defined validators on the builder.
+func (_u *EmployeeUpdate) check() error {
+	if v, ok := _u.mutation.Position(); ok {
+		if err := employee.PositionValidator(v); err != nil {
+			return &ValidationError{Name: "position", err: fmt.Errorf(`ent: validator failed for field "Employee.position": %w`, err)}
+		}
+	}
+	if v, ok := _u.mutation.FullName(); ok {
+		if err := employee.FullNameValidator(v); err != nil {
+			return &ValidationError{Name: "full_name", err: fmt.Errorf(`ent: validator failed for field "Employee.full_name": %w`, err)}
+		}
+	}
+	if v, ok := _u.mutation.ShortName(); ok {
+		if err := employee.ShortNameValidator(v); err != nil {
+			return &ValidationError{Name: "short_name", err: fmt.Errorf(`ent: validator failed for field "Employee.short_name": %w`, err)}
+		}
+	}
+	if v, ok := _u.mutation.Department(); ok {
+		if err := employee.DepartmentValidator(v); err != nil {
+			return &ValidationError{Name: "department", err: fmt.Errorf(`ent: validator failed for field "Employee.department": %w`, err)}
+		}
+	}
+	if v, ok := _u.mutation.Direction(); ok {
+		if err := employee.DirectionValidator(v); err != nil {
+			return &ValidationError{Name: "direction", err: fmt.Errorf(`ent: validator failed for field "Employee.direction": %w`, err)}
+		}
+	}
+	if v, ok := _u.mutation.Email(); ok {
+		if err := employee.EmailValidator(v); err != nil {
+			return &ValidationError{Name: "email", err: fmt.Errorf(`ent: validator failed for field "Employee.email": %w`, err)}
+		}
+	}
+	if v, ok := _u.mutation.InternalPhone(); ok {
+		if err := employee.InternalPhoneValidator(v); err != nil {
+			return &ValidationError{Name: "internal_phone", err: fmt.Errorf(`ent: validator failed for field "Employee.internal_phone": %w`, err)}
+		}
+	}
+	if _u.mutation.DzoCleared() && len(_u.mutation.DzoIDs()) > 0 {
+		return errors.New(`ent: clearing a required unique edge "Employee.dzo"`)
+	}
+	return nil
+}
+
 func (_u *EmployeeUpdate) sqlSave(ctx context.Context) (_node int, err error) {
+	if err := _u.check(); err != nil {
+		return _node, err
+	}
 	_spec := sqlgraph.NewUpdateSpec(employee.Table, employee.Columns, sqlgraph.NewFieldSpec(employee.FieldID, field.TypeUUID))
 	if ps := _u.mutation.predicates; len(ps) > 0 {
 		_spec.Predicate = func(selector *sql.Selector) {
@@ -106,44 +352,85 @@ func (_u *EmployeeUpdate) sqlSave(ctx context.Context) (_node int, err error) {
 			}
 		}
 	}
-	if _u.mutation.EventParticipationsCleared() {
+	if value, ok := _u.mutation.ClientID(); ok {
+		_spec.SetField(employee.FieldClientID, field.TypeUUID, value)
+	}
+	if value, ok := _u.mutation.Position(); ok {
+		_spec.SetField(employee.FieldPosition, field.TypeString, value)
+	}
+	if _u.mutation.PositionCleared() {
+		_spec.ClearField(employee.FieldPosition, field.TypeString)
+	}
+	if value, ok := _u.mutation.FullName(); ok {
+		_spec.SetField(employee.FieldFullName, field.TypeString, value)
+	}
+	if value, ok := _u.mutation.ShortName(); ok {
+		_spec.SetField(employee.FieldShortName, field.TypeString, value)
+	}
+	if _u.mutation.ShortNameCleared() {
+		_spec.ClearField(employee.FieldShortName, field.TypeString)
+	}
+	if value, ok := _u.mutation.Department(); ok {
+		_spec.SetField(employee.FieldDepartment, field.TypeString, value)
+	}
+	if _u.mutation.DepartmentCleared() {
+		_spec.ClearField(employee.FieldDepartment, field.TypeString)
+	}
+	if value, ok := _u.mutation.Direction(); ok {
+		_spec.SetField(employee.FieldDirection, field.TypeString, value)
+	}
+	if _u.mutation.DirectionCleared() {
+		_spec.ClearField(employee.FieldDirection, field.TypeString)
+	}
+	if value, ok := _u.mutation.Email(); ok {
+		_spec.SetField(employee.FieldEmail, field.TypeString, value)
+	}
+	if value, ok := _u.mutation.InternalPhone(); ok {
+		_spec.SetField(employee.FieldInternalPhone, field.TypeString, value)
+	}
+	if _u.mutation.InternalPhoneCleared() {
+		_spec.ClearField(employee.FieldInternalPhone, field.TypeString)
+	}
+	if value, ok := _u.mutation.BirthDate(); ok {
+		_spec.SetField(employee.FieldBirthDate, field.TypeTime, value)
+	}
+	if _u.mutation.BirthDateCleared() {
+		_spec.ClearField(employee.FieldBirthDate, field.TypeTime)
+	}
+	if value, ok := _u.mutation.IsActive(); ok {
+		_spec.SetField(employee.FieldIsActive, field.TypeBool, value)
+	}
+	if value, ok := _u.mutation.UserID(); ok {
+		_spec.SetField(employee.FieldUserID, field.TypeUUID, value)
+	}
+	if _u.mutation.UserIDCleared() {
+		_spec.ClearField(employee.FieldUserID, field.TypeUUID)
+	}
+	if value, ok := _u.mutation.IsDeleted(); ok {
+		_spec.SetField(employee.FieldIsDeleted, field.TypeBool, value)
+	}
+	if _u.mutation.DzoCleared() {
 		edge := &sqlgraph.EdgeSpec{
-			Rel:     sqlgraph.O2M,
-			Inverse: false,
-			Table:   employee.EventParticipationsTable,
-			Columns: []string{employee.EventParticipationsColumn},
+			Rel:     sqlgraph.M2O,
+			Inverse: true,
+			Table:   employee.DzoTable,
+			Columns: []string{employee.DzoColumn},
 			Bidi:    false,
 			Target: &sqlgraph.EdgeTarget{
-				IDSpec: sqlgraph.NewFieldSpec(eventparticipant.FieldID, field.TypeUUID),
+				IDSpec: sqlgraph.NewFieldSpec(dzoorganization.FieldID, field.TypeUUID),
 			},
 		}
 		_spec.Edges.Clear = append(_spec.Edges.Clear, edge)
 	}
-	if nodes := _u.mutation.RemovedEventParticipationsIDs(); len(nodes) > 0 && !_u.mutation.EventParticipationsCleared() {
+	if nodes := _u.mutation.DzoIDs(); len(nodes) > 0 {
 		edge := &sqlgraph.EdgeSpec{
-			Rel:     sqlgraph.O2M,
-			Inverse: false,
-			Table:   employee.EventParticipationsTable,
-			Columns: []string{employee.EventParticipationsColumn},
+			Rel:     sqlgraph.M2O,
+			Inverse: true,
+			Table:   employee.DzoTable,
+			Columns: []string{employee.DzoColumn},
 			Bidi:    false,
 			Target: &sqlgraph.EdgeTarget{
-				IDSpec: sqlgraph.NewFieldSpec(eventparticipant.FieldID, field.TypeUUID),
-			},
-		}
-		for _, k := range nodes {
-			edge.Target.Nodes = append(edge.Target.Nodes, k)
-		}
-		_spec.Edges.Clear = append(_spec.Edges.Clear, edge)
-	}
-	if nodes := _u.mutation.EventParticipationsIDs(); len(nodes) > 0 {
-		edge := &sqlgraph.EdgeSpec{
-			Rel:     sqlgraph.O2M,
-			Inverse: false,
-			Table:   employee.EventParticipationsTable,
-			Columns: []string{employee.EventParticipationsColumn},
-			Bidi:    false,
-			Target: &sqlgraph.EdgeTarget{
-				IDSpec: sqlgraph.NewFieldSpec(eventparticipant.FieldID, field.TypeUUID),
+				IDSpec: sqlgraph.NewFieldSpec(dzoorganization.FieldID, field.TypeUUID),
 			},
 		}
 		for _, k := range nodes {
@@ -171,19 +458,233 @@ type EmployeeUpdateOne struct {
 	mutation *EmployeeMutation
 }
 
-// AddEventParticipationIDs adds the "event_participations" edge to the EventParticipant entity by IDs.
-func (_u *EmployeeUpdateOne) AddEventParticipationIDs(ids ...uuid.UUID) *EmployeeUpdateOne {
-	_u.mutation.AddEventParticipationIDs(ids...)
+// SetClientID sets the "client_id" field.
+func (_u *EmployeeUpdateOne) SetClientID(v uuid.UUID) *EmployeeUpdateOne {
+	_u.mutation.SetClientID(v)
 	return _u
 }
 
-// AddEventParticipations adds the "event_participations" edges to the EventParticipant entity.
-func (_u *EmployeeUpdateOne) AddEventParticipations(v ...*EventParticipant) *EmployeeUpdateOne {
-	ids := make([]uuid.UUID, len(v))
-	for i := range v {
-		ids[i] = v[i].ID
+// SetNillableClientID sets the "client_id" field if the given value is not nil.
+func (_u *EmployeeUpdateOne) SetNillableClientID(v *uuid.UUID) *EmployeeUpdateOne {
+	if v != nil {
+		_u.SetClientID(*v)
 	}
-	return _u.AddEventParticipationIDs(ids...)
+	return _u
+}
+
+// SetDzoID sets the "dzo_id" field.
+func (_u *EmployeeUpdateOne) SetDzoID(v uuid.UUID) *EmployeeUpdateOne {
+	_u.mutation.SetDzoID(v)
+	return _u
+}
+
+// SetNillableDzoID sets the "dzo_id" field if the given value is not nil.
+func (_u *EmployeeUpdateOne) SetNillableDzoID(v *uuid.UUID) *EmployeeUpdateOne {
+	if v != nil {
+		_u.SetDzoID(*v)
+	}
+	return _u
+}
+
+// SetPosition sets the "position" field.
+func (_u *EmployeeUpdateOne) SetPosition(v string) *EmployeeUpdateOne {
+	_u.mutation.SetPosition(v)
+	return _u
+}
+
+// SetNillablePosition sets the "position" field if the given value is not nil.
+func (_u *EmployeeUpdateOne) SetNillablePosition(v *string) *EmployeeUpdateOne {
+	if v != nil {
+		_u.SetPosition(*v)
+	}
+	return _u
+}
+
+// ClearPosition clears the value of the "position" field.
+func (_u *EmployeeUpdateOne) ClearPosition() *EmployeeUpdateOne {
+	_u.mutation.ClearPosition()
+	return _u
+}
+
+// SetFullName sets the "full_name" field.
+func (_u *EmployeeUpdateOne) SetFullName(v string) *EmployeeUpdateOne {
+	_u.mutation.SetFullName(v)
+	return _u
+}
+
+// SetNillableFullName sets the "full_name" field if the given value is not nil.
+func (_u *EmployeeUpdateOne) SetNillableFullName(v *string) *EmployeeUpdateOne {
+	if v != nil {
+		_u.SetFullName(*v)
+	}
+	return _u
+}
+
+// SetShortName sets the "short_name" field.
+func (_u *EmployeeUpdateOne) SetShortName(v string) *EmployeeUpdateOne {
+	_u.mutation.SetShortName(v)
+	return _u
+}
+
+// SetNillableShortName sets the "short_name" field if the given value is not nil.
+func (_u *EmployeeUpdateOne) SetNillableShortName(v *string) *EmployeeUpdateOne {
+	if v != nil {
+		_u.SetShortName(*v)
+	}
+	return _u
+}
+
+// ClearShortName clears the value of the "short_name" field.
+func (_u *EmployeeUpdateOne) ClearShortName() *EmployeeUpdateOne {
+	_u.mutation.ClearShortName()
+	return _u
+}
+
+// SetDepartment sets the "department" field.
+func (_u *EmployeeUpdateOne) SetDepartment(v string) *EmployeeUpdateOne {
+	_u.mutation.SetDepartment(v)
+	return _u
+}
+
+// SetNillableDepartment sets the "department" field if the given value is not nil.
+func (_u *EmployeeUpdateOne) SetNillableDepartment(v *string) *EmployeeUpdateOne {
+	if v != nil {
+		_u.SetDepartment(*v)
+	}
+	return _u
+}
+
+// ClearDepartment clears the value of the "department" field.
+func (_u *EmployeeUpdateOne) ClearDepartment() *EmployeeUpdateOne {
+	_u.mutation.ClearDepartment()
+	return _u
+}
+
+// SetDirection sets the "direction" field.
+func (_u *EmployeeUpdateOne) SetDirection(v string) *EmployeeUpdateOne {
+	_u.mutation.SetDirection(v)
+	return _u
+}
+
+// SetNillableDirection sets the "direction" field if the given value is not nil.
+func (_u *EmployeeUpdateOne) SetNillableDirection(v *string) *EmployeeUpdateOne {
+	if v != nil {
+		_u.SetDirection(*v)
+	}
+	return _u
+}
+
+// ClearDirection clears the value of the "direction" field.
+func (_u *EmployeeUpdateOne) ClearDirection() *EmployeeUpdateOne {
+	_u.mutation.ClearDirection()
+	return _u
+}
+
+// SetEmail sets the "email" field.
+func (_u *EmployeeUpdateOne) SetEmail(v string) *EmployeeUpdateOne {
+	_u.mutation.SetEmail(v)
+	return _u
+}
+
+// SetNillableEmail sets the "email" field if the given value is not nil.
+func (_u *EmployeeUpdateOne) SetNillableEmail(v *string) *EmployeeUpdateOne {
+	if v != nil {
+		_u.SetEmail(*v)
+	}
+	return _u
+}
+
+// SetInternalPhone sets the "internal_phone" field.
+func (_u *EmployeeUpdateOne) SetInternalPhone(v string) *EmployeeUpdateOne {
+	_u.mutation.SetInternalPhone(v)
+	return _u
+}
+
+// SetNillableInternalPhone sets the "internal_phone" field if the given value is not nil.
+func (_u *EmployeeUpdateOne) SetNillableInternalPhone(v *string) *EmployeeUpdateOne {
+	if v != nil {
+		_u.SetInternalPhone(*v)
+	}
+	return _u
+}
+
+// ClearInternalPhone clears the value of the "internal_phone" field.
+func (_u *EmployeeUpdateOne) ClearInternalPhone() *EmployeeUpdateOne {
+	_u.mutation.ClearInternalPhone()
+	return _u
+}
+
+// SetBirthDate sets the "birth_date" field.
+func (_u *EmployeeUpdateOne) SetBirthDate(v time.Time) *EmployeeUpdateOne {
+	_u.mutation.SetBirthDate(v)
+	return _u
+}
+
+// SetNillableBirthDate sets the "birth_date" field if the given value is not nil.
+func (_u *EmployeeUpdateOne) SetNillableBirthDate(v *time.Time) *EmployeeUpdateOne {
+	if v != nil {
+		_u.SetBirthDate(*v)
+	}
+	return _u
+}
+
+// ClearBirthDate clears the value of the "birth_date" field.
+func (_u *EmployeeUpdateOne) ClearBirthDate() *EmployeeUpdateOne {
+	_u.mutation.ClearBirthDate()
+	return _u
+}
+
+// SetIsActive sets the "is_active" field.
+func (_u *EmployeeUpdateOne) SetIsActive(v bool) *EmployeeUpdateOne {
+	_u.mutation.SetIsActive(v)
+	return _u
+}
+
+// SetNillableIsActive sets the "is_active" field if the given value is not nil.
+func (_u *EmployeeUpdateOne) SetNillableIsActive(v *bool) *EmployeeUpdateOne {
+	if v != nil {
+		_u.SetIsActive(*v)
+	}
+	return _u
+}
+
+// SetUserID sets the "user_id" field.
+func (_u *EmployeeUpdateOne) SetUserID(v uuid.UUID) *EmployeeUpdateOne {
+	_u.mutation.SetUserID(v)
+	return _u
+}
+
+// SetNillableUserID sets the "user_id" field if the given value is not nil.
+func (_u *EmployeeUpdateOne) SetNillableUserID(v *uuid.UUID) *EmployeeUpdateOne {
+	if v != nil {
+		_u.SetUserID(*v)
+	}
+	return _u
+}
+
+// ClearUserID clears the value of the "user_id" field.
+func (_u *EmployeeUpdateOne) ClearUserID() *EmployeeUpdateOne {
+	_u.mutation.ClearUserID()
+	return _u
+}
+
+// SetIsDeleted sets the "is_deleted" field.
+func (_u *EmployeeUpdateOne) SetIsDeleted(v bool) *EmployeeUpdateOne {
+	_u.mutation.SetIsDeleted(v)
+	return _u
+}
+
+// SetNillableIsDeleted sets the "is_deleted" field if the given value is not nil.
+func (_u *EmployeeUpdateOne) SetNillableIsDeleted(v *bool) *EmployeeUpdateOne {
+	if v != nil {
+		_u.SetIsDeleted(*v)
+	}
+	return _u
+}
+
+// SetDzo sets the "dzo" edge to the DzoOrganization entity.
+func (_u *EmployeeUpdateOne) SetDzo(v *DzoOrganization) *EmployeeUpdateOne {
+	return _u.SetDzoID(v.ID)
 }
 
 // Mutation returns the EmployeeMutation object of the builder.
@@ -191,25 +692,10 @@ func (_u *EmployeeUpdateOne) Mutation() *EmployeeMutation {
 	return _u.mutation
 }
 
-// ClearEventParticipations clears all "event_participations" edges to the EventParticipant entity.
-func (_u *EmployeeUpdateOne) ClearEventParticipations() *EmployeeUpdateOne {
-	_u.mutation.ClearEventParticipations()
+// ClearDzo clears the "dzo" edge to the DzoOrganization entity.
+func (_u *EmployeeUpdateOne) ClearDzo() *EmployeeUpdateOne {
+	_u.mutation.ClearDzo()
 	return _u
-}
-
-// RemoveEventParticipationIDs removes the "event_participations" edge to EventParticipant entities by IDs.
-func (_u *EmployeeUpdateOne) RemoveEventParticipationIDs(ids ...uuid.UUID) *EmployeeUpdateOne {
-	_u.mutation.RemoveEventParticipationIDs(ids...)
-	return _u
-}
-
-// RemoveEventParticipations removes "event_participations" edges to EventParticipant entities.
-func (_u *EmployeeUpdateOne) RemoveEventParticipations(v ...*EventParticipant) *EmployeeUpdateOne {
-	ids := make([]uuid.UUID, len(v))
-	for i := range v {
-		ids[i] = v[i].ID
-	}
-	return _u.RemoveEventParticipationIDs(ids...)
 }
 
 // Where appends a list predicates to the EmployeeUpdate builder.
@@ -252,7 +738,53 @@ func (_u *EmployeeUpdateOne) ExecX(ctx context.Context) {
 	}
 }
 
+// check runs all checks and user-defined validators on the builder.
+func (_u *EmployeeUpdateOne) check() error {
+	if v, ok := _u.mutation.Position(); ok {
+		if err := employee.PositionValidator(v); err != nil {
+			return &ValidationError{Name: "position", err: fmt.Errorf(`ent: validator failed for field "Employee.position": %w`, err)}
+		}
+	}
+	if v, ok := _u.mutation.FullName(); ok {
+		if err := employee.FullNameValidator(v); err != nil {
+			return &ValidationError{Name: "full_name", err: fmt.Errorf(`ent: validator failed for field "Employee.full_name": %w`, err)}
+		}
+	}
+	if v, ok := _u.mutation.ShortName(); ok {
+		if err := employee.ShortNameValidator(v); err != nil {
+			return &ValidationError{Name: "short_name", err: fmt.Errorf(`ent: validator failed for field "Employee.short_name": %w`, err)}
+		}
+	}
+	if v, ok := _u.mutation.Department(); ok {
+		if err := employee.DepartmentValidator(v); err != nil {
+			return &ValidationError{Name: "department", err: fmt.Errorf(`ent: validator failed for field "Employee.department": %w`, err)}
+		}
+	}
+	if v, ok := _u.mutation.Direction(); ok {
+		if err := employee.DirectionValidator(v); err != nil {
+			return &ValidationError{Name: "direction", err: fmt.Errorf(`ent: validator failed for field "Employee.direction": %w`, err)}
+		}
+	}
+	if v, ok := _u.mutation.Email(); ok {
+		if err := employee.EmailValidator(v); err != nil {
+			return &ValidationError{Name: "email", err: fmt.Errorf(`ent: validator failed for field "Employee.email": %w`, err)}
+		}
+	}
+	if v, ok := _u.mutation.InternalPhone(); ok {
+		if err := employee.InternalPhoneValidator(v); err != nil {
+			return &ValidationError{Name: "internal_phone", err: fmt.Errorf(`ent: validator failed for field "Employee.internal_phone": %w`, err)}
+		}
+	}
+	if _u.mutation.DzoCleared() && len(_u.mutation.DzoIDs()) > 0 {
+		return errors.New(`ent: clearing a required unique edge "Employee.dzo"`)
+	}
+	return nil
+}
+
 func (_u *EmployeeUpdateOne) sqlSave(ctx context.Context) (_node *Employee, err error) {
+	if err := _u.check(); err != nil {
+		return _node, err
+	}
 	_spec := sqlgraph.NewUpdateSpec(employee.Table, employee.Columns, sqlgraph.NewFieldSpec(employee.FieldID, field.TypeUUID))
 	id, ok := _u.mutation.ID()
 	if !ok {
@@ -278,44 +810,85 @@ func (_u *EmployeeUpdateOne) sqlSave(ctx context.Context) (_node *Employee, err 
 			}
 		}
 	}
-	if _u.mutation.EventParticipationsCleared() {
+	if value, ok := _u.mutation.ClientID(); ok {
+		_spec.SetField(employee.FieldClientID, field.TypeUUID, value)
+	}
+	if value, ok := _u.mutation.Position(); ok {
+		_spec.SetField(employee.FieldPosition, field.TypeString, value)
+	}
+	if _u.mutation.PositionCleared() {
+		_spec.ClearField(employee.FieldPosition, field.TypeString)
+	}
+	if value, ok := _u.mutation.FullName(); ok {
+		_spec.SetField(employee.FieldFullName, field.TypeString, value)
+	}
+	if value, ok := _u.mutation.ShortName(); ok {
+		_spec.SetField(employee.FieldShortName, field.TypeString, value)
+	}
+	if _u.mutation.ShortNameCleared() {
+		_spec.ClearField(employee.FieldShortName, field.TypeString)
+	}
+	if value, ok := _u.mutation.Department(); ok {
+		_spec.SetField(employee.FieldDepartment, field.TypeString, value)
+	}
+	if _u.mutation.DepartmentCleared() {
+		_spec.ClearField(employee.FieldDepartment, field.TypeString)
+	}
+	if value, ok := _u.mutation.Direction(); ok {
+		_spec.SetField(employee.FieldDirection, field.TypeString, value)
+	}
+	if _u.mutation.DirectionCleared() {
+		_spec.ClearField(employee.FieldDirection, field.TypeString)
+	}
+	if value, ok := _u.mutation.Email(); ok {
+		_spec.SetField(employee.FieldEmail, field.TypeString, value)
+	}
+	if value, ok := _u.mutation.InternalPhone(); ok {
+		_spec.SetField(employee.FieldInternalPhone, field.TypeString, value)
+	}
+	if _u.mutation.InternalPhoneCleared() {
+		_spec.ClearField(employee.FieldInternalPhone, field.TypeString)
+	}
+	if value, ok := _u.mutation.BirthDate(); ok {
+		_spec.SetField(employee.FieldBirthDate, field.TypeTime, value)
+	}
+	if _u.mutation.BirthDateCleared() {
+		_spec.ClearField(employee.FieldBirthDate, field.TypeTime)
+	}
+	if value, ok := _u.mutation.IsActive(); ok {
+		_spec.SetField(employee.FieldIsActive, field.TypeBool, value)
+	}
+	if value, ok := _u.mutation.UserID(); ok {
+		_spec.SetField(employee.FieldUserID, field.TypeUUID, value)
+	}
+	if _u.mutation.UserIDCleared() {
+		_spec.ClearField(employee.FieldUserID, field.TypeUUID)
+	}
+	if value, ok := _u.mutation.IsDeleted(); ok {
+		_spec.SetField(employee.FieldIsDeleted, field.TypeBool, value)
+	}
+	if _u.mutation.DzoCleared() {
 		edge := &sqlgraph.EdgeSpec{
-			Rel:     sqlgraph.O2M,
-			Inverse: false,
-			Table:   employee.EventParticipationsTable,
-			Columns: []string{employee.EventParticipationsColumn},
+			Rel:     sqlgraph.M2O,
+			Inverse: true,
+			Table:   employee.DzoTable,
+			Columns: []string{employee.DzoColumn},
 			Bidi:    false,
 			Target: &sqlgraph.EdgeTarget{
-				IDSpec: sqlgraph.NewFieldSpec(eventparticipant.FieldID, field.TypeUUID),
+				IDSpec: sqlgraph.NewFieldSpec(dzoorganization.FieldID, field.TypeUUID),
 			},
 		}
 		_spec.Edges.Clear = append(_spec.Edges.Clear, edge)
 	}
-	if nodes := _u.mutation.RemovedEventParticipationsIDs(); len(nodes) > 0 && !_u.mutation.EventParticipationsCleared() {
+	if nodes := _u.mutation.DzoIDs(); len(nodes) > 0 {
 		edge := &sqlgraph.EdgeSpec{
-			Rel:     sqlgraph.O2M,
-			Inverse: false,
-			Table:   employee.EventParticipationsTable,
-			Columns: []string{employee.EventParticipationsColumn},
+			Rel:     sqlgraph.M2O,
+			Inverse: true,
+			Table:   employee.DzoTable,
+			Columns: []string{employee.DzoColumn},
 			Bidi:    false,
 			Target: &sqlgraph.EdgeTarget{
-				IDSpec: sqlgraph.NewFieldSpec(eventparticipant.FieldID, field.TypeUUID),
-			},
-		}
-		for _, k := range nodes {
-			edge.Target.Nodes = append(edge.Target.Nodes, k)
-		}
-		_spec.Edges.Clear = append(_spec.Edges.Clear, edge)
-	}
-	if nodes := _u.mutation.EventParticipationsIDs(); len(nodes) > 0 {
-		edge := &sqlgraph.EdgeSpec{
-			Rel:     sqlgraph.O2M,
-			Inverse: false,
-			Table:   employee.EventParticipationsTable,
-			Columns: []string{employee.EventParticipationsColumn},
-			Bidi:    false,
-			Target: &sqlgraph.EdgeTarget{
-				IDSpec: sqlgraph.NewFieldSpec(eventparticipant.FieldID, field.TypeUUID),
+				IDSpec: sqlgraph.NewFieldSpec(dzoorganization.FieldID, field.TypeUUID),
 			},
 		}
 		for _, k := range nodes {

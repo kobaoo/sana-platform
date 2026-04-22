@@ -4,10 +4,12 @@ package ent
 
 import (
 	"context"
+	"errors"
 	"fmt"
+	"time"
 
+	"encore.app/db/ent/dzoorganization"
 	"encore.app/db/ent/employee"
-	"encore.app/db/ent/eventparticipant"
 	"entgo.io/ent/dialect/sql/sqlgraph"
 	"entgo.io/ent/schema/field"
 	"github.com/google/uuid"
@@ -20,25 +22,173 @@ type EmployeeCreate struct {
 	hooks    []Hook
 }
 
+// SetClientID sets the "client_id" field.
+func (_c *EmployeeCreate) SetClientID(v uuid.UUID) *EmployeeCreate {
+	_c.mutation.SetClientID(v)
+	return _c
+}
+
+// SetDzoID sets the "dzo_id" field.
+func (_c *EmployeeCreate) SetDzoID(v uuid.UUID) *EmployeeCreate {
+	_c.mutation.SetDzoID(v)
+	return _c
+}
+
+// SetPosition sets the "position" field.
+func (_c *EmployeeCreate) SetPosition(v string) *EmployeeCreate {
+	_c.mutation.SetPosition(v)
+	return _c
+}
+
+// SetNillablePosition sets the "position" field if the given value is not nil.
+func (_c *EmployeeCreate) SetNillablePosition(v *string) *EmployeeCreate {
+	if v != nil {
+		_c.SetPosition(*v)
+	}
+	return _c
+}
+
+// SetFullName sets the "full_name" field.
+func (_c *EmployeeCreate) SetFullName(v string) *EmployeeCreate {
+	_c.mutation.SetFullName(v)
+	return _c
+}
+
+// SetShortName sets the "short_name" field.
+func (_c *EmployeeCreate) SetShortName(v string) *EmployeeCreate {
+	_c.mutation.SetShortName(v)
+	return _c
+}
+
+// SetNillableShortName sets the "short_name" field if the given value is not nil.
+func (_c *EmployeeCreate) SetNillableShortName(v *string) *EmployeeCreate {
+	if v != nil {
+		_c.SetShortName(*v)
+	}
+	return _c
+}
+
+// SetDepartment sets the "department" field.
+func (_c *EmployeeCreate) SetDepartment(v string) *EmployeeCreate {
+	_c.mutation.SetDepartment(v)
+	return _c
+}
+
+// SetNillableDepartment sets the "department" field if the given value is not nil.
+func (_c *EmployeeCreate) SetNillableDepartment(v *string) *EmployeeCreate {
+	if v != nil {
+		_c.SetDepartment(*v)
+	}
+	return _c
+}
+
+// SetDirection sets the "direction" field.
+func (_c *EmployeeCreate) SetDirection(v string) *EmployeeCreate {
+	_c.mutation.SetDirection(v)
+	return _c
+}
+
+// SetNillableDirection sets the "direction" field if the given value is not nil.
+func (_c *EmployeeCreate) SetNillableDirection(v *string) *EmployeeCreate {
+	if v != nil {
+		_c.SetDirection(*v)
+	}
+	return _c
+}
+
+// SetEmail sets the "email" field.
+func (_c *EmployeeCreate) SetEmail(v string) *EmployeeCreate {
+	_c.mutation.SetEmail(v)
+	return _c
+}
+
+// SetInternalPhone sets the "internal_phone" field.
+func (_c *EmployeeCreate) SetInternalPhone(v string) *EmployeeCreate {
+	_c.mutation.SetInternalPhone(v)
+	return _c
+}
+
+// SetNillableInternalPhone sets the "internal_phone" field if the given value is not nil.
+func (_c *EmployeeCreate) SetNillableInternalPhone(v *string) *EmployeeCreate {
+	if v != nil {
+		_c.SetInternalPhone(*v)
+	}
+	return _c
+}
+
+// SetBirthDate sets the "birth_date" field.
+func (_c *EmployeeCreate) SetBirthDate(v time.Time) *EmployeeCreate {
+	_c.mutation.SetBirthDate(v)
+	return _c
+}
+
+// SetNillableBirthDate sets the "birth_date" field if the given value is not nil.
+func (_c *EmployeeCreate) SetNillableBirthDate(v *time.Time) *EmployeeCreate {
+	if v != nil {
+		_c.SetBirthDate(*v)
+	}
+	return _c
+}
+
+// SetIsActive sets the "is_active" field.
+func (_c *EmployeeCreate) SetIsActive(v bool) *EmployeeCreate {
+	_c.mutation.SetIsActive(v)
+	return _c
+}
+
+// SetNillableIsActive sets the "is_active" field if the given value is not nil.
+func (_c *EmployeeCreate) SetNillableIsActive(v *bool) *EmployeeCreate {
+	if v != nil {
+		_c.SetIsActive(*v)
+	}
+	return _c
+}
+
+// SetUserID sets the "user_id" field.
+func (_c *EmployeeCreate) SetUserID(v uuid.UUID) *EmployeeCreate {
+	_c.mutation.SetUserID(v)
+	return _c
+}
+
+// SetNillableUserID sets the "user_id" field if the given value is not nil.
+func (_c *EmployeeCreate) SetNillableUserID(v *uuid.UUID) *EmployeeCreate {
+	if v != nil {
+		_c.SetUserID(*v)
+	}
+	return _c
+}
+
+// SetIsDeleted sets the "is_deleted" field.
+func (_c *EmployeeCreate) SetIsDeleted(v bool) *EmployeeCreate {
+	_c.mutation.SetIsDeleted(v)
+	return _c
+}
+
+// SetNillableIsDeleted sets the "is_deleted" field if the given value is not nil.
+func (_c *EmployeeCreate) SetNillableIsDeleted(v *bool) *EmployeeCreate {
+	if v != nil {
+		_c.SetIsDeleted(*v)
+	}
+	return _c
+}
+
 // SetID sets the "id" field.
 func (_c *EmployeeCreate) SetID(v uuid.UUID) *EmployeeCreate {
 	_c.mutation.SetID(v)
 	return _c
 }
 
-// AddEventParticipationIDs adds the "event_participations" edge to the EventParticipant entity by IDs.
-func (_c *EmployeeCreate) AddEventParticipationIDs(ids ...uuid.UUID) *EmployeeCreate {
-	_c.mutation.AddEventParticipationIDs(ids...)
+// SetNillableID sets the "id" field if the given value is not nil.
+func (_c *EmployeeCreate) SetNillableID(v *uuid.UUID) *EmployeeCreate {
+	if v != nil {
+		_c.SetID(*v)
+	}
 	return _c
 }
 
-// AddEventParticipations adds the "event_participations" edges to the EventParticipant entity.
-func (_c *EmployeeCreate) AddEventParticipations(v ...*EventParticipant) *EmployeeCreate {
-	ids := make([]uuid.UUID, len(v))
-	for i := range v {
-		ids[i] = v[i].ID
-	}
-	return _c.AddEventParticipationIDs(ids...)
+// SetDzo sets the "dzo" edge to the DzoOrganization entity.
+func (_c *EmployeeCreate) SetDzo(v *DzoOrganization) *EmployeeCreate {
+	return _c.SetDzoID(v.ID)
 }
 
 // Mutation returns the EmployeeMutation object of the builder.
@@ -48,6 +198,7 @@ func (_c *EmployeeCreate) Mutation() *EmployeeMutation {
 
 // Save creates the Employee in the database.
 func (_c *EmployeeCreate) Save(ctx context.Context) (*Employee, error) {
+	_c.defaults()
 	return withHooks(ctx, _c.sqlSave, _c.mutation, _c.hooks)
 }
 
@@ -73,8 +224,80 @@ func (_c *EmployeeCreate) ExecX(ctx context.Context) {
 	}
 }
 
+// defaults sets the default values of the builder before save.
+func (_c *EmployeeCreate) defaults() {
+	if _, ok := _c.mutation.IsActive(); !ok {
+		v := employee.DefaultIsActive
+		_c.mutation.SetIsActive(v)
+	}
+	if _, ok := _c.mutation.IsDeleted(); !ok {
+		v := employee.DefaultIsDeleted
+		_c.mutation.SetIsDeleted(v)
+	}
+	if _, ok := _c.mutation.ID(); !ok {
+		v := employee.DefaultID()
+		_c.mutation.SetID(v)
+	}
+}
+
 // check runs all checks and user-defined validators on the builder.
 func (_c *EmployeeCreate) check() error {
+	if _, ok := _c.mutation.ClientID(); !ok {
+		return &ValidationError{Name: "client_id", err: errors.New(`ent: missing required field "Employee.client_id"`)}
+	}
+	if _, ok := _c.mutation.DzoID(); !ok {
+		return &ValidationError{Name: "dzo_id", err: errors.New(`ent: missing required field "Employee.dzo_id"`)}
+	}
+	if v, ok := _c.mutation.Position(); ok {
+		if err := employee.PositionValidator(v); err != nil {
+			return &ValidationError{Name: "position", err: fmt.Errorf(`ent: validator failed for field "Employee.position": %w`, err)}
+		}
+	}
+	if _, ok := _c.mutation.FullName(); !ok {
+		return &ValidationError{Name: "full_name", err: errors.New(`ent: missing required field "Employee.full_name"`)}
+	}
+	if v, ok := _c.mutation.FullName(); ok {
+		if err := employee.FullNameValidator(v); err != nil {
+			return &ValidationError{Name: "full_name", err: fmt.Errorf(`ent: validator failed for field "Employee.full_name": %w`, err)}
+		}
+	}
+	if v, ok := _c.mutation.ShortName(); ok {
+		if err := employee.ShortNameValidator(v); err != nil {
+			return &ValidationError{Name: "short_name", err: fmt.Errorf(`ent: validator failed for field "Employee.short_name": %w`, err)}
+		}
+	}
+	if v, ok := _c.mutation.Department(); ok {
+		if err := employee.DepartmentValidator(v); err != nil {
+			return &ValidationError{Name: "department", err: fmt.Errorf(`ent: validator failed for field "Employee.department": %w`, err)}
+		}
+	}
+	if v, ok := _c.mutation.Direction(); ok {
+		if err := employee.DirectionValidator(v); err != nil {
+			return &ValidationError{Name: "direction", err: fmt.Errorf(`ent: validator failed for field "Employee.direction": %w`, err)}
+		}
+	}
+	if _, ok := _c.mutation.Email(); !ok {
+		return &ValidationError{Name: "email", err: errors.New(`ent: missing required field "Employee.email"`)}
+	}
+	if v, ok := _c.mutation.Email(); ok {
+		if err := employee.EmailValidator(v); err != nil {
+			return &ValidationError{Name: "email", err: fmt.Errorf(`ent: validator failed for field "Employee.email": %w`, err)}
+		}
+	}
+	if v, ok := _c.mutation.InternalPhone(); ok {
+		if err := employee.InternalPhoneValidator(v); err != nil {
+			return &ValidationError{Name: "internal_phone", err: fmt.Errorf(`ent: validator failed for field "Employee.internal_phone": %w`, err)}
+		}
+	}
+	if _, ok := _c.mutation.IsActive(); !ok {
+		return &ValidationError{Name: "is_active", err: errors.New(`ent: missing required field "Employee.is_active"`)}
+	}
+	if _, ok := _c.mutation.IsDeleted(); !ok {
+		return &ValidationError{Name: "is_deleted", err: errors.New(`ent: missing required field "Employee.is_deleted"`)}
+	}
+	if len(_c.mutation.DzoIDs()) == 0 {
+		return &ValidationError{Name: "dzo", err: errors.New(`ent: missing required edge "Employee.dzo"`)}
+	}
 	return nil
 }
 
@@ -110,20 +333,69 @@ func (_c *EmployeeCreate) createSpec() (*Employee, *sqlgraph.CreateSpec) {
 		_node.ID = id
 		_spec.ID.Value = &id
 	}
-	if nodes := _c.mutation.EventParticipationsIDs(); len(nodes) > 0 {
+	if value, ok := _c.mutation.ClientID(); ok {
+		_spec.SetField(employee.FieldClientID, field.TypeUUID, value)
+		_node.ClientID = value
+	}
+	if value, ok := _c.mutation.Position(); ok {
+		_spec.SetField(employee.FieldPosition, field.TypeString, value)
+		_node.Position = &value
+	}
+	if value, ok := _c.mutation.FullName(); ok {
+		_spec.SetField(employee.FieldFullName, field.TypeString, value)
+		_node.FullName = value
+	}
+	if value, ok := _c.mutation.ShortName(); ok {
+		_spec.SetField(employee.FieldShortName, field.TypeString, value)
+		_node.ShortName = &value
+	}
+	if value, ok := _c.mutation.Department(); ok {
+		_spec.SetField(employee.FieldDepartment, field.TypeString, value)
+		_node.Department = &value
+	}
+	if value, ok := _c.mutation.Direction(); ok {
+		_spec.SetField(employee.FieldDirection, field.TypeString, value)
+		_node.Direction = &value
+	}
+	if value, ok := _c.mutation.Email(); ok {
+		_spec.SetField(employee.FieldEmail, field.TypeString, value)
+		_node.Email = value
+	}
+	if value, ok := _c.mutation.InternalPhone(); ok {
+		_spec.SetField(employee.FieldInternalPhone, field.TypeString, value)
+		_node.InternalPhone = &value
+	}
+	if value, ok := _c.mutation.BirthDate(); ok {
+		_spec.SetField(employee.FieldBirthDate, field.TypeTime, value)
+		_node.BirthDate = &value
+	}
+	if value, ok := _c.mutation.IsActive(); ok {
+		_spec.SetField(employee.FieldIsActive, field.TypeBool, value)
+		_node.IsActive = value
+	}
+	if value, ok := _c.mutation.UserID(); ok {
+		_spec.SetField(employee.FieldUserID, field.TypeUUID, value)
+		_node.UserID = &value
+	}
+	if value, ok := _c.mutation.IsDeleted(); ok {
+		_spec.SetField(employee.FieldIsDeleted, field.TypeBool, value)
+		_node.IsDeleted = value
+	}
+	if nodes := _c.mutation.DzoIDs(); len(nodes) > 0 {
 		edge := &sqlgraph.EdgeSpec{
-			Rel:     sqlgraph.O2M,
-			Inverse: false,
-			Table:   employee.EventParticipationsTable,
-			Columns: []string{employee.EventParticipationsColumn},
+			Rel:     sqlgraph.M2O,
+			Inverse: true,
+			Table:   employee.DzoTable,
+			Columns: []string{employee.DzoColumn},
 			Bidi:    false,
 			Target: &sqlgraph.EdgeTarget{
-				IDSpec: sqlgraph.NewFieldSpec(eventparticipant.FieldID, field.TypeUUID),
+				IDSpec: sqlgraph.NewFieldSpec(dzoorganization.FieldID, field.TypeUUID),
 			},
 		}
 		for _, k := range nodes {
 			edge.Target.Nodes = append(edge.Target.Nodes, k)
 		}
+		_node.DzoID = nodes[0]
 		_spec.Edges = append(_spec.Edges, edge)
 	}
 	return _node, _spec
@@ -147,6 +419,7 @@ func (_c *EmployeeCreateBulk) Save(ctx context.Context) ([]*Employee, error) {
 	for i := range _c.builders {
 		func(i int, root context.Context) {
 			builder := _c.builders[i]
+			builder.defaults()
 			var mut Mutator = MutateFunc(func(ctx context.Context, m Mutation) (Value, error) {
 				mutation, ok := m.(*EmployeeMutation)
 				if !ok {

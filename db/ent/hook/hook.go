@@ -9,16 +9,28 @@ import (
 	"encore.app/db/ent"
 )
 
-// The ClientsFunc type is an adapter to allow the use of ordinary
-// function as Clients mutator.
-type ClientsFunc func(context.Context, *ent.ClientsMutation) (ent.Value, error)
+// The CompanyFunc type is an adapter to allow the use of ordinary
+// function as Company mutator.
+type CompanyFunc func(context.Context, *ent.CompanyMutation) (ent.Value, error)
 
 // Mutate calls f(ctx, m).
-func (f ClientsFunc) Mutate(ctx context.Context, m ent.Mutation) (ent.Value, error) {
-	if mv, ok := m.(*ent.ClientsMutation); ok {
+func (f CompanyFunc) Mutate(ctx context.Context, m ent.Mutation) (ent.Value, error) {
+	if mv, ok := m.(*ent.CompanyMutation); ok {
 		return f(ctx, mv)
 	}
-	return nil, fmt.Errorf("unexpected mutation type %T. expect *ent.ClientsMutation", m)
+	return nil, fmt.Errorf("unexpected mutation type %T. expect *ent.CompanyMutation", m)
+}
+
+// The DzoOrganizationFunc type is an adapter to allow the use of ordinary
+// function as DzoOrganization mutator.
+type DzoOrganizationFunc func(context.Context, *ent.DzoOrganizationMutation) (ent.Value, error)
+
+// Mutate calls f(ctx, m).
+func (f DzoOrganizationFunc) Mutate(ctx context.Context, m ent.Mutation) (ent.Value, error) {
+	if mv, ok := m.(*ent.DzoOrganizationMutation); ok {
+		return f(ctx, mv)
+	}
+	return nil, fmt.Errorf("unexpected mutation type %T. expect *ent.DzoOrganizationMutation", m)
 }
 
 // The EmployeeFunc type is an adapter to allow the use of ordinary
@@ -31,30 +43,6 @@ func (f EmployeeFunc) Mutate(ctx context.Context, m ent.Mutation) (ent.Value, er
 		return f(ctx, mv)
 	}
 	return nil, fmt.Errorf("unexpected mutation type %T. expect *ent.EmployeeMutation", m)
-}
-
-// The EventFunc type is an adapter to allow the use of ordinary
-// function as Event mutator.
-type EventFunc func(context.Context, *ent.EventMutation) (ent.Value, error)
-
-// Mutate calls f(ctx, m).
-func (f EventFunc) Mutate(ctx context.Context, m ent.Mutation) (ent.Value, error) {
-	if mv, ok := m.(*ent.EventMutation); ok {
-		return f(ctx, mv)
-	}
-	return nil, fmt.Errorf("unexpected mutation type %T. expect *ent.EventMutation", m)
-}
-
-// The EventParticipantFunc type is an adapter to allow the use of ordinary
-// function as EventParticipant mutator.
-type EventParticipantFunc func(context.Context, *ent.EventParticipantMutation) (ent.Value, error)
-
-// Mutate calls f(ctx, m).
-func (f EventParticipantFunc) Mutate(ctx context.Context, m ent.Mutation) (ent.Value, error) {
-	if mv, ok := m.(*ent.EventParticipantMutation); ok {
-		return f(ctx, mv)
-	}
-	return nil, fmt.Errorf("unexpected mutation type %T. expect *ent.EventParticipantMutation", m)
 }
 
 // The OrganizationFunc type is an adapter to allow the use of ordinary

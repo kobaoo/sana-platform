@@ -96,6 +96,11 @@ func UpdatedAt(v time.Time) predicate.User {
 	return predicate.User(sql.FieldEQ(FieldUpdatedAt, v))
 }
 
+// ClientID applies equality check predicate on the "client_id" field. It's identical to ClientIDEQ.
+func ClientID(v uuid.UUID) predicate.User {
+	return predicate.User(sql.FieldEQ(FieldClientID, v))
+}
+
 // KeycloakUserIDEQ applies the EQ predicate on the "keycloak_user_id" field.
 func KeycloakUserIDEQ(v string) predicate.User {
 	return predicate.User(sql.FieldEQ(FieldKeycloakUserID, v))
@@ -441,44 +446,51 @@ func UpdatedAtLTE(v time.Time) predicate.User {
 	return predicate.User(sql.FieldLTE(FieldUpdatedAt, v))
 }
 
-// HasHostedEvents applies the HasEdge predicate on the "hosted_events" edge.
-func HasHostedEvents() predicate.User {
+// ClientIDEQ applies the EQ predicate on the "client_id" field.
+func ClientIDEQ(v uuid.UUID) predicate.User {
+	return predicate.User(sql.FieldEQ(FieldClientID, v))
+}
+
+// ClientIDNEQ applies the NEQ predicate on the "client_id" field.
+func ClientIDNEQ(v uuid.UUID) predicate.User {
+	return predicate.User(sql.FieldNEQ(FieldClientID, v))
+}
+
+// ClientIDIn applies the In predicate on the "client_id" field.
+func ClientIDIn(vs ...uuid.UUID) predicate.User {
+	return predicate.User(sql.FieldIn(FieldClientID, vs...))
+}
+
+// ClientIDNotIn applies the NotIn predicate on the "client_id" field.
+func ClientIDNotIn(vs ...uuid.UUID) predicate.User {
+	return predicate.User(sql.FieldNotIn(FieldClientID, vs...))
+}
+
+// ClientIDIsNil applies the IsNil predicate on the "client_id" field.
+func ClientIDIsNil() predicate.User {
+	return predicate.User(sql.FieldIsNull(FieldClientID))
+}
+
+// ClientIDNotNil applies the NotNil predicate on the "client_id" field.
+func ClientIDNotNil() predicate.User {
+	return predicate.User(sql.FieldNotNull(FieldClientID))
+}
+
+// HasClient applies the HasEdge predicate on the "client" edge.
+func HasClient() predicate.User {
 	return predicate.User(func(s *sql.Selector) {
 		step := sqlgraph.NewStep(
 			sqlgraph.From(Table, FieldID),
-			sqlgraph.Edge(sqlgraph.O2M, false, HostedEventsTable, HostedEventsColumn),
+			sqlgraph.Edge(sqlgraph.M2O, true, ClientTable, ClientColumn),
 		)
 		sqlgraph.HasNeighbors(s, step)
 	})
 }
 
-// HasHostedEventsWith applies the HasEdge predicate on the "hosted_events" edge with a given conditions (other predicates).
-func HasHostedEventsWith(preds ...predicate.Event) predicate.User {
+// HasClientWith applies the HasEdge predicate on the "client" edge with a given conditions (other predicates).
+func HasClientWith(preds ...predicate.Company) predicate.User {
 	return predicate.User(func(s *sql.Selector) {
-		step := newHostedEventsStep()
-		sqlgraph.HasNeighborsWith(s, step, func(s *sql.Selector) {
-			for _, p := range preds {
-				p(s)
-			}
-		})
-	})
-}
-
-// HasReviewedParticipations applies the HasEdge predicate on the "reviewed_participations" edge.
-func HasReviewedParticipations() predicate.User {
-	return predicate.User(func(s *sql.Selector) {
-		step := sqlgraph.NewStep(
-			sqlgraph.From(Table, FieldID),
-			sqlgraph.Edge(sqlgraph.O2M, false, ReviewedParticipationsTable, ReviewedParticipationsColumn),
-		)
-		sqlgraph.HasNeighbors(s, step)
-	})
-}
-
-// HasReviewedParticipationsWith applies the HasEdge predicate on the "reviewed_participations" edge with a given conditions (other predicates).
-func HasReviewedParticipationsWith(preds ...predicate.EventParticipant) predicate.User {
-	return predicate.User(func(s *sql.Selector) {
-		step := newReviewedParticipationsStep()
+		step := newClientStep()
 		sqlgraph.HasNeighborsWith(s, step, func(s *sql.Selector) {
 			for _, p := range preds {
 				p(s)

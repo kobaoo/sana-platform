@@ -4,12 +4,11 @@ package ent
 
 import (
 	"context"
-	"database/sql/driver"
 	"fmt"
 	"math"
 
+	"encore.app/db/ent/dzoorganization"
 	"encore.app/db/ent/employee"
-	"encore.app/db/ent/eventparticipant"
 	"encore.app/db/ent/predicate"
 	"entgo.io/ent"
 	"entgo.io/ent/dialect/sql"
@@ -21,11 +20,11 @@ import (
 // EmployeeQuery is the builder for querying Employee entities.
 type EmployeeQuery struct {
 	config
-	ctx                     *QueryContext
-	order                   []employee.OrderOption
-	inters                  []Interceptor
-	predicates              []predicate.Employee
-	withEventParticipations *EventParticipantQuery
+	ctx        *QueryContext
+	order      []employee.OrderOption
+	inters     []Interceptor
+	predicates []predicate.Employee
+	withDzo    *DzoOrganizationQuery
 	// intermediate query (i.e. traversal path).
 	sql  *sql.Selector
 	path func(context.Context) (*sql.Selector, error)
@@ -62,9 +61,9 @@ func (_q *EmployeeQuery) Order(o ...employee.OrderOption) *EmployeeQuery {
 	return _q
 }
 
-// QueryEventParticipations chains the current query on the "event_participations" edge.
-func (_q *EmployeeQuery) QueryEventParticipations() *EventParticipantQuery {
-	query := (&EventParticipantClient{config: _q.config}).Query()
+// QueryDzo chains the current query on the "dzo" edge.
+func (_q *EmployeeQuery) QueryDzo() *DzoOrganizationQuery {
+	query := (&DzoOrganizationClient{config: _q.config}).Query()
 	query.path = func(ctx context.Context) (fromU *sql.Selector, err error) {
 		if err := _q.prepareQuery(ctx); err != nil {
 			return nil, err
@@ -75,8 +74,8 @@ func (_q *EmployeeQuery) QueryEventParticipations() *EventParticipantQuery {
 		}
 		step := sqlgraph.NewStep(
 			sqlgraph.From(employee.Table, employee.FieldID, selector),
-			sqlgraph.To(eventparticipant.Table, eventparticipant.FieldID),
-			sqlgraph.Edge(sqlgraph.O2M, false, employee.EventParticipationsTable, employee.EventParticipationsColumn),
+			sqlgraph.To(dzoorganization.Table, dzoorganization.FieldID),
+			sqlgraph.Edge(sqlgraph.M2O, true, employee.DzoTable, employee.DzoColumn),
 		)
 		fromU = sqlgraph.SetNeighbors(_q.driver.Dialect(), step)
 		return fromU, nil
@@ -271,31 +270,43 @@ func (_q *EmployeeQuery) Clone() *EmployeeQuery {
 		return nil
 	}
 	return &EmployeeQuery{
-		config:                  _q.config,
-		ctx:                     _q.ctx.Clone(),
-		order:                   append([]employee.OrderOption{}, _q.order...),
-		inters:                  append([]Interceptor{}, _q.inters...),
-		predicates:              append([]predicate.Employee{}, _q.predicates...),
-		withEventParticipations: _q.withEventParticipations.Clone(),
+		config:     _q.config,
+		ctx:        _q.ctx.Clone(),
+		order:      append([]employee.OrderOption{}, _q.order...),
+		inters:     append([]Interceptor{}, _q.inters...),
+		predicates: append([]predicate.Employee{}, _q.predicates...),
+		withDzo:    _q.withDzo.Clone(),
 		// clone intermediate query.
 		sql:  _q.sql.Clone(),
 		path: _q.path,
 	}
 }
 
-// WithEventParticipations tells the query-builder to eager-load the nodes that are connected to
-// the "event_participations" edge. The optional arguments are used to configure the query builder of the edge.
-func (_q *EmployeeQuery) WithEventParticipations(opts ...func(*EventParticipantQuery)) *EmployeeQuery {
-	query := (&EventParticipantClient{config: _q.config}).Query()
+// WithDzo tells the query-builder to eager-load the nodes that are connected to
+// the "dzo" edge. The optional arguments are used to configure the query builder of the edge.
+func (_q *EmployeeQuery) WithDzo(opts ...func(*DzoOrganizationQuery)) *EmployeeQuery {
+	query := (&DzoOrganizationClient{config: _q.config}).Query()
 	for _, opt := range opts {
 		opt(query)
 	}
-	_q.withEventParticipations = query
+	_q.withDzo = query
 	return _q
 }
 
 // GroupBy is used to group vertices by one or more fields/columns.
 // It is often used with aggregate functions, like: count, max, mean, min, sum.
+//
+// Example:
+//
+//	var v []struct {
+//		ClientID uuid.UUID `json:"client_id,omitempty"`
+//		Count int `json:"count,omitempty"`
+//	}
+//
+//	client.Employee.Query().
+//		GroupBy(employee.FieldClientID).
+//		Aggregate(ent.Count()).
+//		Scan(ctx, &v)
 func (_q *EmployeeQuery) GroupBy(field string, fields ...string) *EmployeeGroupBy {
 	_q.ctx.Fields = append([]string{field}, fields...)
 	grbuild := &EmployeeGroupBy{build: _q}
@@ -307,6 +318,16 @@ func (_q *EmployeeQuery) GroupBy(field string, fields ...string) *EmployeeGroupB
 
 // Select allows the selection one or more fields/columns for the given query,
 // instead of selecting all fields in the entity.
+//
+// Example:
+//
+//	var v []struct {
+//		ClientID uuid.UUID `json:"client_id,omitempty"`
+//	}
+//
+//	client.Employee.Query().
+//		Select(employee.FieldClientID).
+//		Scan(ctx, &v)
 func (_q *EmployeeQuery) Select(fields ...string) *EmployeeSelect {
 	_q.ctx.Fields = append(_q.ctx.Fields, fields...)
 	sbuild := &EmployeeSelect{EmployeeQuery: _q}
@@ -351,7 +372,7 @@ func (_q *EmployeeQuery) sqlAll(ctx context.Context, hooks ...queryHook) ([]*Emp
 		nodes       = []*Employee{}
 		_spec       = _q.querySpec()
 		loadedTypes = [1]bool{
-			_q.withEventParticipations != nil,
+			_q.withDzo != nil,
 		}
 	)
 	_spec.ScanValues = func(columns []string) ([]any, error) {
@@ -372,45 +393,41 @@ func (_q *EmployeeQuery) sqlAll(ctx context.Context, hooks ...queryHook) ([]*Emp
 	if len(nodes) == 0 {
 		return nodes, nil
 	}
-	if query := _q.withEventParticipations; query != nil {
-		if err := _q.loadEventParticipations(ctx, query, nodes,
-			func(n *Employee) { n.Edges.EventParticipations = []*EventParticipant{} },
-			func(n *Employee, e *EventParticipant) {
-				n.Edges.EventParticipations = append(n.Edges.EventParticipations, e)
-			}); err != nil {
+	if query := _q.withDzo; query != nil {
+		if err := _q.loadDzo(ctx, query, nodes, nil,
+			func(n *Employee, e *DzoOrganization) { n.Edges.Dzo = e }); err != nil {
 			return nil, err
 		}
 	}
 	return nodes, nil
 }
 
-func (_q *EmployeeQuery) loadEventParticipations(ctx context.Context, query *EventParticipantQuery, nodes []*Employee, init func(*Employee), assign func(*Employee, *EventParticipant)) error {
-	fks := make([]driver.Value, 0, len(nodes))
-	nodeids := make(map[uuid.UUID]*Employee)
+func (_q *EmployeeQuery) loadDzo(ctx context.Context, query *DzoOrganizationQuery, nodes []*Employee, init func(*Employee), assign func(*Employee, *DzoOrganization)) error {
+	ids := make([]uuid.UUID, 0, len(nodes))
+	nodeids := make(map[uuid.UUID][]*Employee)
 	for i := range nodes {
-		fks = append(fks, nodes[i].ID)
-		nodeids[nodes[i].ID] = nodes[i]
-		if init != nil {
-			init(nodes[i])
+		fk := nodes[i].DzoID
+		if _, ok := nodeids[fk]; !ok {
+			ids = append(ids, fk)
 		}
+		nodeids[fk] = append(nodeids[fk], nodes[i])
 	}
-	if len(query.ctx.Fields) > 0 {
-		query.ctx.AppendFieldOnce(eventparticipant.FieldEmployeeID)
+	if len(ids) == 0 {
+		return nil
 	}
-	query.Where(predicate.EventParticipant(func(s *sql.Selector) {
-		s.Where(sql.InValues(s.C(employee.EventParticipationsColumn), fks...))
-	}))
+	query.Where(dzoorganization.IDIn(ids...))
 	neighbors, err := query.All(ctx)
 	if err != nil {
 		return err
 	}
 	for _, n := range neighbors {
-		fk := n.EmployeeID
-		node, ok := nodeids[fk]
+		nodes, ok := nodeids[n.ID]
 		if !ok {
-			return fmt.Errorf(`unexpected referenced foreign-key "employee_id" returned %v for node %v`, fk, n.ID)
+			return fmt.Errorf(`unexpected foreign-key "dzo_id" returned %v`, n.ID)
 		}
-		assign(node, n)
+		for i := range nodes {
+			assign(nodes[i], n)
+		}
 	}
 	return nil
 }
@@ -439,6 +456,9 @@ func (_q *EmployeeQuery) querySpec() *sqlgraph.QuerySpec {
 			if fields[i] != employee.FieldID {
 				_spec.Node.Columns = append(_spec.Node.Columns, fields[i])
 			}
+		}
+		if _q.withDzo != nil {
+			_spec.Node.AddColumnOnce(employee.FieldDzoID)
 		}
 	}
 	if ps := _q.predicates; len(ps) > 0 {

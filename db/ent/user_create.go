@@ -8,8 +8,7 @@ import (
 	"fmt"
 	"time"
 
-	"encore.app/db/ent/event"
-	"encore.app/db/ent/eventparticipant"
+	"encore.app/db/ent/company"
 	"encore.app/db/ent/user"
 	"entgo.io/ent/dialect/sql/sqlgraph"
 	"entgo.io/ent/schema/field"
@@ -119,6 +118,20 @@ func (_c *UserCreate) SetNillableUpdatedAt(v *time.Time) *UserCreate {
 	return _c
 }
 
+// SetClientID sets the "client_id" field.
+func (_c *UserCreate) SetClientID(v uuid.UUID) *UserCreate {
+	_c.mutation.SetClientID(v)
+	return _c
+}
+
+// SetNillableClientID sets the "client_id" field if the given value is not nil.
+func (_c *UserCreate) SetNillableClientID(v *uuid.UUID) *UserCreate {
+	if v != nil {
+		_c.SetClientID(*v)
+	}
+	return _c
+}
+
 // SetID sets the "id" field.
 func (_c *UserCreate) SetID(v uuid.UUID) *UserCreate {
 	_c.mutation.SetID(v)
@@ -133,34 +146,9 @@ func (_c *UserCreate) SetNillableID(v *uuid.UUID) *UserCreate {
 	return _c
 }
 
-// AddHostedEventIDs adds the "hosted_events" edge to the Event entity by IDs.
-func (_c *UserCreate) AddHostedEventIDs(ids ...uuid.UUID) *UserCreate {
-	_c.mutation.AddHostedEventIDs(ids...)
-	return _c
-}
-
-// AddHostedEvents adds the "hosted_events" edges to the Event entity.
-func (_c *UserCreate) AddHostedEvents(v ...*Event) *UserCreate {
-	ids := make([]uuid.UUID, len(v))
-	for i := range v {
-		ids[i] = v[i].ID
-	}
-	return _c.AddHostedEventIDs(ids...)
-}
-
-// AddReviewedParticipationIDs adds the "reviewed_participations" edge to the EventParticipant entity by IDs.
-func (_c *UserCreate) AddReviewedParticipationIDs(ids ...uuid.UUID) *UserCreate {
-	_c.mutation.AddReviewedParticipationIDs(ids...)
-	return _c
-}
-
-// AddReviewedParticipations adds the "reviewed_participations" edges to the EventParticipant entity.
-func (_c *UserCreate) AddReviewedParticipations(v ...*EventParticipant) *UserCreate {
-	ids := make([]uuid.UUID, len(v))
-	for i := range v {
-		ids[i] = v[i].ID
-	}
-	return _c.AddReviewedParticipationIDs(ids...)
+// SetClient sets the "client" edge to the Company entity.
+func (_c *UserCreate) SetClient(v *Company) *UserCreate {
+	return _c.SetClientID(v.ID)
 }
 
 // Mutation returns the UserMutation object of the builder.
@@ -329,36 +317,21 @@ func (_c *UserCreate) createSpec() (*User, *sqlgraph.CreateSpec) {
 		_spec.SetField(user.FieldUpdatedAt, field.TypeTime, value)
 		_node.UpdatedAt = value
 	}
-	if nodes := _c.mutation.HostedEventsIDs(); len(nodes) > 0 {
+	if nodes := _c.mutation.ClientIDs(); len(nodes) > 0 {
 		edge := &sqlgraph.EdgeSpec{
-			Rel:     sqlgraph.O2M,
-			Inverse: false,
-			Table:   user.HostedEventsTable,
-			Columns: []string{user.HostedEventsColumn},
+			Rel:     sqlgraph.M2O,
+			Inverse: true,
+			Table:   user.ClientTable,
+			Columns: []string{user.ClientColumn},
 			Bidi:    false,
 			Target: &sqlgraph.EdgeTarget{
-				IDSpec: sqlgraph.NewFieldSpec(event.FieldID, field.TypeUUID),
+				IDSpec: sqlgraph.NewFieldSpec(company.FieldID, field.TypeUUID),
 			},
 		}
 		for _, k := range nodes {
 			edge.Target.Nodes = append(edge.Target.Nodes, k)
 		}
-		_spec.Edges = append(_spec.Edges, edge)
-	}
-	if nodes := _c.mutation.ReviewedParticipationsIDs(); len(nodes) > 0 {
-		edge := &sqlgraph.EdgeSpec{
-			Rel:     sqlgraph.O2M,
-			Inverse: false,
-			Table:   user.ReviewedParticipationsTable,
-			Columns: []string{user.ReviewedParticipationsColumn},
-			Bidi:    false,
-			Target: &sqlgraph.EdgeTarget{
-				IDSpec: sqlgraph.NewFieldSpec(eventparticipant.FieldID, field.TypeUUID),
-			},
-		}
-		for _, k := range nodes {
-			edge.Target.Nodes = append(edge.Target.Nodes, k)
-		}
+		_node.ClientID = nodes[0]
 		_spec.Edges = append(_spec.Edges, edge)
 	}
 	return _node, _spec

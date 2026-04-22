@@ -56,14 +56,18 @@ func (User) Fields() []ent.Field {
 			SchemaType(map[string]string{
 				dialect.Postgres: "timestamptz",
 			}),
+		field.UUID("client_id", uuid.UUID{}).
+			Comment("Reference to clients.id").
+			Optional(),
 	}
 }
 
 func (User) Edges() []ent.Edge {
 	return []ent.Edge{
-		edge.To("hosted_events", Event.Type),
-
-		edge.To("reviewed_participations", EventParticipant.Type),
+		edge.From("client", Company.Type).
+			Ref("users").
+			Field("client_id").
+			Unique(),
 	}
 }
 

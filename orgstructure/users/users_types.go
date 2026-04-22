@@ -13,6 +13,7 @@ type User struct {
 	Email          string               `json:"email"`
 	Role           authhandler.UserRole `json:"role"`
 	DzoID          *string              `json:"dzo_id"`
+	ClientID       *string              `json:"client_id,omitempty"`
 	IsActive       bool                 `json:"is_active"`
 	// IsOnboarded is false for admins registered via RegisterAdmin who have not yet
 	// logged in for the first time.  It becomes true automatically on first login.
@@ -30,6 +31,7 @@ type CreateUserRequest struct {
 	Email          string               `json:"email"`
 	Role           authhandler.UserRole `json:"role"`
 	DzoID          *string              `json:"dzo_id,omitempty"`
+	ClientID       *string              `json:"client_id,omitempty"`
 }
 
 // RegisterAdminRequest is the request body for registering a new admin (Flow 4).
@@ -37,6 +39,7 @@ type RegisterAdminRequest struct {
 	KeycloakUserID string  `json:"keycloak_user_id"`
 	Email          string  `json:"email"`
 	DzoID          *string `json:"dzo_id,omitempty"`
+	ClientID       *string `json:"client_id,omitempty"`
 }
 
 // AssignRoleRequest is the request body for assigning a role (Flow 3).

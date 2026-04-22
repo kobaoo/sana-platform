@@ -8,8 +8,7 @@ import (
 	"fmt"
 	"time"
 
-	"encore.app/db/ent/event"
-	"encore.app/db/ent/eventparticipant"
+	"encore.app/db/ent/company"
 	"encore.app/db/ent/predicate"
 	"encore.app/db/ent/user"
 	"entgo.io/ent/dialect/sql"
@@ -127,34 +126,29 @@ func (_u *UserUpdate) SetUpdatedAt(v time.Time) *UserUpdate {
 	return _u
 }
 
-// AddHostedEventIDs adds the "hosted_events" edge to the Event entity by IDs.
-func (_u *UserUpdate) AddHostedEventIDs(ids ...uuid.UUID) *UserUpdate {
-	_u.mutation.AddHostedEventIDs(ids...)
+// SetClientID sets the "client_id" field.
+func (_u *UserUpdate) SetClientID(v uuid.UUID) *UserUpdate {
+	_u.mutation.SetClientID(v)
 	return _u
 }
 
-// AddHostedEvents adds the "hosted_events" edges to the Event entity.
-func (_u *UserUpdate) AddHostedEvents(v ...*Event) *UserUpdate {
-	ids := make([]uuid.UUID, len(v))
-	for i := range v {
-		ids[i] = v[i].ID
+// SetNillableClientID sets the "client_id" field if the given value is not nil.
+func (_u *UserUpdate) SetNillableClientID(v *uuid.UUID) *UserUpdate {
+	if v != nil {
+		_u.SetClientID(*v)
 	}
-	return _u.AddHostedEventIDs(ids...)
-}
-
-// AddReviewedParticipationIDs adds the "reviewed_participations" edge to the EventParticipant entity by IDs.
-func (_u *UserUpdate) AddReviewedParticipationIDs(ids ...uuid.UUID) *UserUpdate {
-	_u.mutation.AddReviewedParticipationIDs(ids...)
 	return _u
 }
 
-// AddReviewedParticipations adds the "reviewed_participations" edges to the EventParticipant entity.
-func (_u *UserUpdate) AddReviewedParticipations(v ...*EventParticipant) *UserUpdate {
-	ids := make([]uuid.UUID, len(v))
-	for i := range v {
-		ids[i] = v[i].ID
-	}
-	return _u.AddReviewedParticipationIDs(ids...)
+// ClearClientID clears the value of the "client_id" field.
+func (_u *UserUpdate) ClearClientID() *UserUpdate {
+	_u.mutation.ClearClientID()
+	return _u
+}
+
+// SetClient sets the "client" edge to the Company entity.
+func (_u *UserUpdate) SetClient(v *Company) *UserUpdate {
+	return _u.SetClientID(v.ID)
 }
 
 // Mutation returns the UserMutation object of the builder.
@@ -162,46 +156,10 @@ func (_u *UserUpdate) Mutation() *UserMutation {
 	return _u.mutation
 }
 
-// ClearHostedEvents clears all "hosted_events" edges to the Event entity.
-func (_u *UserUpdate) ClearHostedEvents() *UserUpdate {
-	_u.mutation.ClearHostedEvents()
+// ClearClient clears the "client" edge to the Company entity.
+func (_u *UserUpdate) ClearClient() *UserUpdate {
+	_u.mutation.ClearClient()
 	return _u
-}
-
-// RemoveHostedEventIDs removes the "hosted_events" edge to Event entities by IDs.
-func (_u *UserUpdate) RemoveHostedEventIDs(ids ...uuid.UUID) *UserUpdate {
-	_u.mutation.RemoveHostedEventIDs(ids...)
-	return _u
-}
-
-// RemoveHostedEvents removes "hosted_events" edges to Event entities.
-func (_u *UserUpdate) RemoveHostedEvents(v ...*Event) *UserUpdate {
-	ids := make([]uuid.UUID, len(v))
-	for i := range v {
-		ids[i] = v[i].ID
-	}
-	return _u.RemoveHostedEventIDs(ids...)
-}
-
-// ClearReviewedParticipations clears all "reviewed_participations" edges to the EventParticipant entity.
-func (_u *UserUpdate) ClearReviewedParticipations() *UserUpdate {
-	_u.mutation.ClearReviewedParticipations()
-	return _u
-}
-
-// RemoveReviewedParticipationIDs removes the "reviewed_participations" edge to EventParticipant entities by IDs.
-func (_u *UserUpdate) RemoveReviewedParticipationIDs(ids ...uuid.UUID) *UserUpdate {
-	_u.mutation.RemoveReviewedParticipationIDs(ids...)
-	return _u
-}
-
-// RemoveReviewedParticipations removes "reviewed_participations" edges to EventParticipant entities.
-func (_u *UserUpdate) RemoveReviewedParticipations(v ...*EventParticipant) *UserUpdate {
-	ids := make([]uuid.UUID, len(v))
-	for i := range v {
-		ids[i] = v[i].ID
-	}
-	return _u.RemoveReviewedParticipationIDs(ids...)
 }
 
 // Save executes the query and returns the number of nodes affected by the update operation.
@@ -296,89 +254,28 @@ func (_u *UserUpdate) sqlSave(ctx context.Context) (_node int, err error) {
 	if value, ok := _u.mutation.UpdatedAt(); ok {
 		_spec.SetField(user.FieldUpdatedAt, field.TypeTime, value)
 	}
-	if _u.mutation.HostedEventsCleared() {
+	if _u.mutation.ClientCleared() {
 		edge := &sqlgraph.EdgeSpec{
-			Rel:     sqlgraph.O2M,
-			Inverse: false,
-			Table:   user.HostedEventsTable,
-			Columns: []string{user.HostedEventsColumn},
+			Rel:     sqlgraph.M2O,
+			Inverse: true,
+			Table:   user.ClientTable,
+			Columns: []string{user.ClientColumn},
 			Bidi:    false,
 			Target: &sqlgraph.EdgeTarget{
-				IDSpec: sqlgraph.NewFieldSpec(event.FieldID, field.TypeUUID),
+				IDSpec: sqlgraph.NewFieldSpec(company.FieldID, field.TypeUUID),
 			},
 		}
 		_spec.Edges.Clear = append(_spec.Edges.Clear, edge)
 	}
-	if nodes := _u.mutation.RemovedHostedEventsIDs(); len(nodes) > 0 && !_u.mutation.HostedEventsCleared() {
+	if nodes := _u.mutation.ClientIDs(); len(nodes) > 0 {
 		edge := &sqlgraph.EdgeSpec{
-			Rel:     sqlgraph.O2M,
-			Inverse: false,
-			Table:   user.HostedEventsTable,
-			Columns: []string{user.HostedEventsColumn},
+			Rel:     sqlgraph.M2O,
+			Inverse: true,
+			Table:   user.ClientTable,
+			Columns: []string{user.ClientColumn},
 			Bidi:    false,
 			Target: &sqlgraph.EdgeTarget{
-				IDSpec: sqlgraph.NewFieldSpec(event.FieldID, field.TypeUUID),
-			},
-		}
-		for _, k := range nodes {
-			edge.Target.Nodes = append(edge.Target.Nodes, k)
-		}
-		_spec.Edges.Clear = append(_spec.Edges.Clear, edge)
-	}
-	if nodes := _u.mutation.HostedEventsIDs(); len(nodes) > 0 {
-		edge := &sqlgraph.EdgeSpec{
-			Rel:     sqlgraph.O2M,
-			Inverse: false,
-			Table:   user.HostedEventsTable,
-			Columns: []string{user.HostedEventsColumn},
-			Bidi:    false,
-			Target: &sqlgraph.EdgeTarget{
-				IDSpec: sqlgraph.NewFieldSpec(event.FieldID, field.TypeUUID),
-			},
-		}
-		for _, k := range nodes {
-			edge.Target.Nodes = append(edge.Target.Nodes, k)
-		}
-		_spec.Edges.Add = append(_spec.Edges.Add, edge)
-	}
-	if _u.mutation.ReviewedParticipationsCleared() {
-		edge := &sqlgraph.EdgeSpec{
-			Rel:     sqlgraph.O2M,
-			Inverse: false,
-			Table:   user.ReviewedParticipationsTable,
-			Columns: []string{user.ReviewedParticipationsColumn},
-			Bidi:    false,
-			Target: &sqlgraph.EdgeTarget{
-				IDSpec: sqlgraph.NewFieldSpec(eventparticipant.FieldID, field.TypeUUID),
-			},
-		}
-		_spec.Edges.Clear = append(_spec.Edges.Clear, edge)
-	}
-	if nodes := _u.mutation.RemovedReviewedParticipationsIDs(); len(nodes) > 0 && !_u.mutation.ReviewedParticipationsCleared() {
-		edge := &sqlgraph.EdgeSpec{
-			Rel:     sqlgraph.O2M,
-			Inverse: false,
-			Table:   user.ReviewedParticipationsTable,
-			Columns: []string{user.ReviewedParticipationsColumn},
-			Bidi:    false,
-			Target: &sqlgraph.EdgeTarget{
-				IDSpec: sqlgraph.NewFieldSpec(eventparticipant.FieldID, field.TypeUUID),
-			},
-		}
-		for _, k := range nodes {
-			edge.Target.Nodes = append(edge.Target.Nodes, k)
-		}
-		_spec.Edges.Clear = append(_spec.Edges.Clear, edge)
-	}
-	if nodes := _u.mutation.ReviewedParticipationsIDs(); len(nodes) > 0 {
-		edge := &sqlgraph.EdgeSpec{
-			Rel:     sqlgraph.O2M,
-			Inverse: false,
-			Table:   user.ReviewedParticipationsTable,
-			Columns: []string{user.ReviewedParticipationsColumn},
-			Bidi:    false,
-			Target: &sqlgraph.EdgeTarget{
-				IDSpec: sqlgraph.NewFieldSpec(eventparticipant.FieldID, field.TypeUUID),
+				IDSpec: sqlgraph.NewFieldSpec(company.FieldID, field.TypeUUID),
 			},
 		}
 		for _, k := range nodes {
@@ -502,34 +399,29 @@ func (_u *UserUpdateOne) SetUpdatedAt(v time.Time) *UserUpdateOne {
 	return _u
 }
 
-// AddHostedEventIDs adds the "hosted_events" edge to the Event entity by IDs.
-func (_u *UserUpdateOne) AddHostedEventIDs(ids ...uuid.UUID) *UserUpdateOne {
-	_u.mutation.AddHostedEventIDs(ids...)
+// SetClientID sets the "client_id" field.
+func (_u *UserUpdateOne) SetClientID(v uuid.UUID) *UserUpdateOne {
+	_u.mutation.SetClientID(v)
 	return _u
 }
 
-// AddHostedEvents adds the "hosted_events" edges to the Event entity.
-func (_u *UserUpdateOne) AddHostedEvents(v ...*Event) *UserUpdateOne {
-	ids := make([]uuid.UUID, len(v))
-	for i := range v {
-		ids[i] = v[i].ID
+// SetNillableClientID sets the "client_id" field if the given value is not nil.
+func (_u *UserUpdateOne) SetNillableClientID(v *uuid.UUID) *UserUpdateOne {
+	if v != nil {
+		_u.SetClientID(*v)
 	}
-	return _u.AddHostedEventIDs(ids...)
-}
-
-// AddReviewedParticipationIDs adds the "reviewed_participations" edge to the EventParticipant entity by IDs.
-func (_u *UserUpdateOne) AddReviewedParticipationIDs(ids ...uuid.UUID) *UserUpdateOne {
-	_u.mutation.AddReviewedParticipationIDs(ids...)
 	return _u
 }
 
-// AddReviewedParticipations adds the "reviewed_participations" edges to the EventParticipant entity.
-func (_u *UserUpdateOne) AddReviewedParticipations(v ...*EventParticipant) *UserUpdateOne {
-	ids := make([]uuid.UUID, len(v))
-	for i := range v {
-		ids[i] = v[i].ID
-	}
-	return _u.AddReviewedParticipationIDs(ids...)
+// ClearClientID clears the value of the "client_id" field.
+func (_u *UserUpdateOne) ClearClientID() *UserUpdateOne {
+	_u.mutation.ClearClientID()
+	return _u
+}
+
+// SetClient sets the "client" edge to the Company entity.
+func (_u *UserUpdateOne) SetClient(v *Company) *UserUpdateOne {
+	return _u.SetClientID(v.ID)
 }
 
 // Mutation returns the UserMutation object of the builder.
@@ -537,46 +429,10 @@ func (_u *UserUpdateOne) Mutation() *UserMutation {
 	return _u.mutation
 }
 
-// ClearHostedEvents clears all "hosted_events" edges to the Event entity.
-func (_u *UserUpdateOne) ClearHostedEvents() *UserUpdateOne {
-	_u.mutation.ClearHostedEvents()
+// ClearClient clears the "client" edge to the Company entity.
+func (_u *UserUpdateOne) ClearClient() *UserUpdateOne {
+	_u.mutation.ClearClient()
 	return _u
-}
-
-// RemoveHostedEventIDs removes the "hosted_events" edge to Event entities by IDs.
-func (_u *UserUpdateOne) RemoveHostedEventIDs(ids ...uuid.UUID) *UserUpdateOne {
-	_u.mutation.RemoveHostedEventIDs(ids...)
-	return _u
-}
-
-// RemoveHostedEvents removes "hosted_events" edges to Event entities.
-func (_u *UserUpdateOne) RemoveHostedEvents(v ...*Event) *UserUpdateOne {
-	ids := make([]uuid.UUID, len(v))
-	for i := range v {
-		ids[i] = v[i].ID
-	}
-	return _u.RemoveHostedEventIDs(ids...)
-}
-
-// ClearReviewedParticipations clears all "reviewed_participations" edges to the EventParticipant entity.
-func (_u *UserUpdateOne) ClearReviewedParticipations() *UserUpdateOne {
-	_u.mutation.ClearReviewedParticipations()
-	return _u
-}
-
-// RemoveReviewedParticipationIDs removes the "reviewed_participations" edge to EventParticipant entities by IDs.
-func (_u *UserUpdateOne) RemoveReviewedParticipationIDs(ids ...uuid.UUID) *UserUpdateOne {
-	_u.mutation.RemoveReviewedParticipationIDs(ids...)
-	return _u
-}
-
-// RemoveReviewedParticipations removes "reviewed_participations" edges to EventParticipant entities.
-func (_u *UserUpdateOne) RemoveReviewedParticipations(v ...*EventParticipant) *UserUpdateOne {
-	ids := make([]uuid.UUID, len(v))
-	for i := range v {
-		ids[i] = v[i].ID
-	}
-	return _u.RemoveReviewedParticipationIDs(ids...)
 }
 
 // Where appends a list predicates to the UserUpdate builder.
@@ -701,89 +557,28 @@ func (_u *UserUpdateOne) sqlSave(ctx context.Context) (_node *User, err error) {
 	if value, ok := _u.mutation.UpdatedAt(); ok {
 		_spec.SetField(user.FieldUpdatedAt, field.TypeTime, value)
 	}
-	if _u.mutation.HostedEventsCleared() {
+	if _u.mutation.ClientCleared() {
 		edge := &sqlgraph.EdgeSpec{
-			Rel:     sqlgraph.O2M,
-			Inverse: false,
-			Table:   user.HostedEventsTable,
-			Columns: []string{user.HostedEventsColumn},
+			Rel:     sqlgraph.M2O,
+			Inverse: true,
+			Table:   user.ClientTable,
+			Columns: []string{user.ClientColumn},
 			Bidi:    false,
 			Target: &sqlgraph.EdgeTarget{
-				IDSpec: sqlgraph.NewFieldSpec(event.FieldID, field.TypeUUID),
+				IDSpec: sqlgraph.NewFieldSpec(company.FieldID, field.TypeUUID),
 			},
 		}
 		_spec.Edges.Clear = append(_spec.Edges.Clear, edge)
 	}
-	if nodes := _u.mutation.RemovedHostedEventsIDs(); len(nodes) > 0 && !_u.mutation.HostedEventsCleared() {
+	if nodes := _u.mutation.ClientIDs(); len(nodes) > 0 {
 		edge := &sqlgraph.EdgeSpec{
-			Rel:     sqlgraph.O2M,
-			Inverse: false,
-			Table:   user.HostedEventsTable,
-			Columns: []string{user.HostedEventsColumn},
+			Rel:     sqlgraph.M2O,
+			Inverse: true,
+			Table:   user.ClientTable,
+			Columns: []string{user.ClientColumn},
 			Bidi:    false,
 			Target: &sqlgraph.EdgeTarget{
-				IDSpec: sqlgraph.NewFieldSpec(event.FieldID, field.TypeUUID),
-			},
-		}
-		for _, k := range nodes {
-			edge.Target.Nodes = append(edge.Target.Nodes, k)
-		}
-		_spec.Edges.Clear = append(_spec.Edges.Clear, edge)
-	}
-	if nodes := _u.mutation.HostedEventsIDs(); len(nodes) > 0 {
-		edge := &sqlgraph.EdgeSpec{
-			Rel:     sqlgraph.O2M,
-			Inverse: false,
-			Table:   user.HostedEventsTable,
-			Columns: []string{user.HostedEventsColumn},
-			Bidi:    false,
-			Target: &sqlgraph.EdgeTarget{
-				IDSpec: sqlgraph.NewFieldSpec(event.FieldID, field.TypeUUID),
-			},
-		}
-		for _, k := range nodes {
-			edge.Target.Nodes = append(edge.Target.Nodes, k)
-		}
-		_spec.Edges.Add = append(_spec.Edges.Add, edge)
-	}
-	if _u.mutation.ReviewedParticipationsCleared() {
-		edge := &sqlgraph.EdgeSpec{
-			Rel:     sqlgraph.O2M,
-			Inverse: false,
-			Table:   user.ReviewedParticipationsTable,
-			Columns: []string{user.ReviewedParticipationsColumn},
-			Bidi:    false,
-			Target: &sqlgraph.EdgeTarget{
-				IDSpec: sqlgraph.NewFieldSpec(eventparticipant.FieldID, field.TypeUUID),
-			},
-		}
-		_spec.Edges.Clear = append(_spec.Edges.Clear, edge)
-	}
-	if nodes := _u.mutation.RemovedReviewedParticipationsIDs(); len(nodes) > 0 && !_u.mutation.ReviewedParticipationsCleared() {
-		edge := &sqlgraph.EdgeSpec{
-			Rel:     sqlgraph.O2M,
-			Inverse: false,
-			Table:   user.ReviewedParticipationsTable,
-			Columns: []string{user.ReviewedParticipationsColumn},
-			Bidi:    false,
-			Target: &sqlgraph.EdgeTarget{
-				IDSpec: sqlgraph.NewFieldSpec(eventparticipant.FieldID, field.TypeUUID),
-			},
-		}
-		for _, k := range nodes {
-			edge.Target.Nodes = append(edge.Target.Nodes, k)
-		}
-		_spec.Edges.Clear = append(_spec.Edges.Clear, edge)
-	}
-	if nodes := _u.mutation.ReviewedParticipationsIDs(); len(nodes) > 0 {
-		edge := &sqlgraph.EdgeSpec{
-			Rel:     sqlgraph.O2M,
-			Inverse: false,
-			Table:   user.ReviewedParticipationsTable,
-			Columns: []string{user.ReviewedParticipationsColumn},
-			Bidi:    false,
-			Target: &sqlgraph.EdgeTarget{
-				IDSpec: sqlgraph.NewFieldSpec(eventparticipant.FieldID, field.TypeUUID),
+				IDSpec: sqlgraph.NewFieldSpec(company.FieldID, field.TypeUUID),
 			},
 		}
 		for _, k := range nodes {

@@ -31,26 +31,19 @@ const (
 	FieldCreatedAt = "created_at"
 	// FieldUpdatedAt holds the string denoting the updated_at field in the database.
 	FieldUpdatedAt = "updated_at"
-	// EdgeHostedEvents holds the string denoting the hosted_events edge name in mutations.
-	EdgeHostedEvents = "hosted_events"
-	// EdgeReviewedParticipations holds the string denoting the reviewed_participations edge name in mutations.
-	EdgeReviewedParticipations = "reviewed_participations"
+	// FieldClientID holds the string denoting the client_id field in the database.
+	FieldClientID = "client_id"
+	// EdgeClient holds the string denoting the client edge name in mutations.
+	EdgeClient = "client"
 	// Table holds the table name of the user in the database.
 	Table = "users"
-	// HostedEventsTable is the table that holds the hosted_events relation/edge.
-	HostedEventsTable = "events"
-	// HostedEventsInverseTable is the table name for the Event entity.
-	// It exists in this package in order to avoid circular dependency with the "event" package.
-	HostedEventsInverseTable = "events"
-	// HostedEventsColumn is the table column denoting the hosted_events relation/edge.
-	HostedEventsColumn = "host_id"
-	// ReviewedParticipationsTable is the table that holds the reviewed_participations relation/edge.
-	ReviewedParticipationsTable = "event_participants"
-	// ReviewedParticipationsInverseTable is the table name for the EventParticipant entity.
-	// It exists in this package in order to avoid circular dependency with the "eventparticipant" package.
-	ReviewedParticipationsInverseTable = "event_participants"
-	// ReviewedParticipationsColumn is the table column denoting the reviewed_participations relation/edge.
-	ReviewedParticipationsColumn = "reviewed_by"
+	// ClientTable is the table that holds the client relation/edge.
+	ClientTable = "users"
+	// ClientInverseTable is the table name for the Company entity.
+	// It exists in this package in order to avoid circular dependency with the "company" package.
+	ClientInverseTable = "clients"
+	// ClientColumn is the table column denoting the client relation/edge.
+	ClientColumn = "client_id"
 )
 
 // Columns holds all SQL columns for user fields.
@@ -64,6 +57,7 @@ var Columns = []string{
 	FieldIsOnboarded,
 	FieldCreatedAt,
 	FieldUpdatedAt,
+	FieldClientID,
 }
 
 // ValidColumn reports if the column name is valid (part of the table columns).
@@ -147,44 +141,21 @@ func ByUpdatedAt(opts ...sql.OrderTermOption) OrderOption {
 	return sql.OrderByField(FieldUpdatedAt, opts...).ToFunc()
 }
 
-// ByHostedEventsCount orders the results by hosted_events count.
-func ByHostedEventsCount(opts ...sql.OrderTermOption) OrderOption {
-	return func(s *sql.Selector) {
-		sqlgraph.OrderByNeighborsCount(s, newHostedEventsStep(), opts...)
-	}
+// ByClientID orders the results by the client_id field.
+func ByClientID(opts ...sql.OrderTermOption) OrderOption {
+	return sql.OrderByField(FieldClientID, opts...).ToFunc()
 }
 
-// ByHostedEvents orders the results by hosted_events terms.
-func ByHostedEvents(term sql.OrderTerm, terms ...sql.OrderTerm) OrderOption {
+// ByClientField orders the results by client field.
+func ByClientField(field string, opts ...sql.OrderTermOption) OrderOption {
 	return func(s *sql.Selector) {
-		sqlgraph.OrderByNeighborTerms(s, newHostedEventsStep(), append([]sql.OrderTerm{term}, terms...)...)
+		sqlgraph.OrderByNeighborTerms(s, newClientStep(), sql.OrderByField(field, opts...))
 	}
 }
-
-// ByReviewedParticipationsCount orders the results by reviewed_participations count.
-func ByReviewedParticipationsCount(opts ...sql.OrderTermOption) OrderOption {
-	return func(s *sql.Selector) {
-		sqlgraph.OrderByNeighborsCount(s, newReviewedParticipationsStep(), opts...)
-	}
-}
-
-// ByReviewedParticipations orders the results by reviewed_participations terms.
-func ByReviewedParticipations(term sql.OrderTerm, terms ...sql.OrderTerm) OrderOption {
-	return func(s *sql.Selector) {
-		sqlgraph.OrderByNeighborTerms(s, newReviewedParticipationsStep(), append([]sql.OrderTerm{term}, terms...)...)
-	}
-}
-func newHostedEventsStep() *sqlgraph.Step {
+func newClientStep() *sqlgraph.Step {
 	return sqlgraph.NewStep(
 		sqlgraph.From(Table, FieldID),
-		sqlgraph.To(HostedEventsInverseTable, FieldID),
-		sqlgraph.Edge(sqlgraph.O2M, false, HostedEventsTable, HostedEventsColumn),
-	)
-}
-func newReviewedParticipationsStep() *sqlgraph.Step {
-	return sqlgraph.NewStep(
-		sqlgraph.From(Table, FieldID),
-		sqlgraph.To(ReviewedParticipationsInverseTable, FieldID),
-		sqlgraph.Edge(sqlgraph.O2M, false, ReviewedParticipationsTable, ReviewedParticipationsColumn),
+		sqlgraph.To(ClientInverseTable, FieldID),
+		sqlgraph.Edge(sqlgraph.M2O, true, ClientTable, ClientColumn),
 	)
 }
