@@ -8,6 +8,8 @@ import (
 	"encore.app/db/ent/company"
 	"encore.app/db/ent/dzoorganization"
 	"encore.app/db/ent/employee"
+	"encore.app/db/ent/event"
+	"encore.app/db/ent/eventparticipant"
 	"encore.app/db/ent/organization"
 	"encore.app/db/ent/schema"
 	"encore.app/db/ent/user"
@@ -174,6 +176,42 @@ func init() {
 	employeeDescID := employeeFields[0].Descriptor()
 	// employee.DefaultID holds the default value on creation for the id field.
 	employee.DefaultID = employeeDescID.Default.(func() uuid.UUID)
+	eventFields := schema.Event{}.Fields()
+	_ = eventFields
+	// eventDescTitle is the schema descriptor for title field.
+	eventDescTitle := eventFields[3].Descriptor()
+	// event.TitleValidator is a validator for the "title" field. It is called by the builders before save.
+	event.TitleValidator = eventDescTitle.Validators[0].(func(string) error)
+	// eventDescCreatedAt is the schema descriptor for created_at field.
+	eventDescCreatedAt := eventFields[9].Descriptor()
+	// event.DefaultCreatedAt holds the default value on creation for the created_at field.
+	event.DefaultCreatedAt = eventDescCreatedAt.Default.(func() time.Time)
+	// eventDescUpdatedAt is the schema descriptor for updated_at field.
+	eventDescUpdatedAt := eventFields[10].Descriptor()
+	// event.DefaultUpdatedAt holds the default value on creation for the updated_at field.
+	event.DefaultUpdatedAt = eventDescUpdatedAt.Default.(func() time.Time)
+	// event.UpdateDefaultUpdatedAt holds the default value on update for the updated_at field.
+	event.UpdateDefaultUpdatedAt = eventDescUpdatedAt.UpdateDefault.(func() time.Time)
+	// eventDescID is the schema descriptor for id field.
+	eventDescID := eventFields[0].Descriptor()
+	// event.DefaultID holds the default value on creation for the id field.
+	event.DefaultID = eventDescID.Default.(func() uuid.UUID)
+	eventparticipantFields := schema.EventParticipant{}.Fields()
+	_ = eventparticipantFields
+	// eventparticipantDescCreatedAt is the schema descriptor for created_at field.
+	eventparticipantDescCreatedAt := eventparticipantFields[7].Descriptor()
+	// eventparticipant.DefaultCreatedAt holds the default value on creation for the created_at field.
+	eventparticipant.DefaultCreatedAt = eventparticipantDescCreatedAt.Default.(func() time.Time)
+	// eventparticipantDescUpdatedAt is the schema descriptor for updated_at field.
+	eventparticipantDescUpdatedAt := eventparticipantFields[8].Descriptor()
+	// eventparticipant.DefaultUpdatedAt holds the default value on creation for the updated_at field.
+	eventparticipant.DefaultUpdatedAt = eventparticipantDescUpdatedAt.Default.(func() time.Time)
+	// eventparticipant.UpdateDefaultUpdatedAt holds the default value on update for the updated_at field.
+	eventparticipant.UpdateDefaultUpdatedAt = eventparticipantDescUpdatedAt.UpdateDefault.(func() time.Time)
+	// eventparticipantDescID is the schema descriptor for id field.
+	eventparticipantDescID := eventparticipantFields[0].Descriptor()
+	// eventparticipant.DefaultID holds the default value on creation for the id field.
+	eventparticipant.DefaultID = eventparticipantDescID.Default.(func() uuid.UUID)
 	organizationFields := schema.Organization{}.Fields()
 	_ = organizationFields
 	// organizationDescName is the schema descriptor for name field.

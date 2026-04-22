@@ -8,6 +8,7 @@ import (
 
 	"entgo.io/ent/dialect/sql"
 	"entgo.io/ent/dialect/sql/sqlgraph"
+	"github.com/google/uuid"
 )
 
 const (
@@ -45,8 +46,8 @@ const (
 	Table = "events"
 	// ClientsTable is the table that holds the clients relation/edge.
 	ClientsTable = "events"
-	// ClientsInverseTable is the table name for the Clients entity.
-	// It exists in this package in order to avoid circular dependency with the "clients" package.
+	// ClientsInverseTable is the table name for the Company entity.
+	// It exists in this package in order to avoid circular dependency with the "company" package.
 	ClientsInverseTable = "clients"
 	// ClientsColumn is the table column denoting the clients relation/edge.
 	ClientsColumn = "client_id"
@@ -100,6 +101,8 @@ var (
 	DefaultUpdatedAt func() time.Time
 	// UpdateDefaultUpdatedAt holds the default value on update for the "updated_at" field.
 	UpdateDefaultUpdatedAt func() time.Time
+	// DefaultID holds the default value on creation for the "id" field.
+	DefaultID func() uuid.UUID
 )
 
 // Status defines the type for the "status" enum field.

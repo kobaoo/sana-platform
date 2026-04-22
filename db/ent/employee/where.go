@@ -829,6 +829,29 @@ func HasDzoWith(preds ...predicate.DzoOrganization) predicate.Employee {
 	})
 }
 
+// HasEventParticipations applies the HasEdge predicate on the "event_participations" edge.
+func HasEventParticipations() predicate.Employee {
+	return predicate.Employee(func(s *sql.Selector) {
+		step := sqlgraph.NewStep(
+			sqlgraph.From(Table, FieldID),
+			sqlgraph.Edge(sqlgraph.O2M, false, EventParticipationsTable, EventParticipationsColumn),
+		)
+		sqlgraph.HasNeighbors(s, step)
+	})
+}
+
+// HasEventParticipationsWith applies the HasEdge predicate on the "event_participations" edge with a given conditions (other predicates).
+func HasEventParticipationsWith(preds ...predicate.EventParticipant) predicate.Employee {
+	return predicate.Employee(func(s *sql.Selector) {
+		step := newEventParticipationsStep()
+		sqlgraph.HasNeighborsWith(s, step, func(s *sql.Selector) {
+			for _, p := range preds {
+				p(s)
+			}
+		})
+	})
+}
+
 // And groups predicates with the AND operator between them.
 func And(predicates ...predicate.Employee) predicate.Employee {
 	return predicate.Employee(sql.AndPredicates(predicates...))

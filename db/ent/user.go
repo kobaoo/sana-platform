@@ -47,9 +47,13 @@ type User struct {
 type UserEdges struct {
 	// Client holds the value of the client edge.
 	Client *Company `json:"client,omitempty"`
+	// HostedEvents holds the value of the hosted_events edge.
+	HostedEvents []*Event `json:"hosted_events,omitempty"`
+	// ReviewedParticipations holds the value of the reviewed_participations edge.
+	ReviewedParticipations []*EventParticipant `json:"reviewed_participations,omitempty"`
 	// loadedTypes holds the information for reporting if a
 	// type was loaded (or requested) in eager-loading or not.
-	loadedTypes [1]bool
+	loadedTypes [3]bool
 }
 
 // ClientOrErr returns the Client value or an error if the edge
@@ -61,6 +65,24 @@ func (e UserEdges) ClientOrErr() (*Company, error) {
 		return nil, &NotFoundError{label: company.Label}
 	}
 	return nil, &NotLoadedError{edge: "client"}
+}
+
+// HostedEventsOrErr returns the HostedEvents value or an error if the edge
+// was not loaded in eager-loading.
+func (e UserEdges) HostedEventsOrErr() ([]*Event, error) {
+	if e.loadedTypes[1] {
+		return e.HostedEvents, nil
+	}
+	return nil, &NotLoadedError{edge: "hosted_events"}
+}
+
+// ReviewedParticipationsOrErr returns the ReviewedParticipations value or an error if the edge
+// was not loaded in eager-loading.
+func (e UserEdges) ReviewedParticipationsOrErr() ([]*EventParticipant, error) {
+	if e.loadedTypes[2] {
+		return e.ReviewedParticipations, nil
+	}
+	return nil, &NotLoadedError{edge: "reviewed_participations"}
 }
 
 // scanValues returns the types for scanning values from sql.Rows.
@@ -170,6 +192,16 @@ func (_m *User) Value(name string) (ent.Value, error) {
 // QueryClient queries the "client" edge of the User entity.
 func (_m *User) QueryClient() *CompanyQuery {
 	return NewUserClient(_m.config).QueryClient(_m)
+}
+
+// QueryHostedEvents queries the "hosted_events" edge of the User entity.
+func (_m *User) QueryHostedEvents() *EventQuery {
+	return NewUserClient(_m.config).QueryHostedEvents(_m)
+}
+
+// QueryReviewedParticipations queries the "reviewed_participations" edge of the User entity.
+func (_m *User) QueryReviewedParticipations() *EventParticipantQuery {
+	return NewUserClient(_m.config).QueryReviewedParticipations(_m)
 }
 
 // Update returns a builder for updating this User.

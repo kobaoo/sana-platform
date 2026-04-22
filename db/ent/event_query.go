@@ -8,7 +8,7 @@ import (
 	"fmt"
 	"math"
 
-	"encore.app/db/ent/clients"
+	"encore.app/db/ent/company"
 	"encore.app/db/ent/event"
 	"encore.app/db/ent/eventparticipant"
 	"encore.app/db/ent/predicate"
@@ -27,7 +27,7 @@ type EventQuery struct {
 	order            []event.OrderOption
 	inters           []Interceptor
 	predicates       []predicate.Event
-	withClients      *ClientsQuery
+	withClients      *CompanyQuery
 	withHost         *UserQuery
 	withParticipants *EventParticipantQuery
 	// intermediate query (i.e. traversal path).
@@ -67,8 +67,8 @@ func (_q *EventQuery) Order(o ...event.OrderOption) *EventQuery {
 }
 
 // QueryClients chains the current query on the "clients" edge.
-func (_q *EventQuery) QueryClients() *ClientsQuery {
-	query := (&ClientsClient{config: _q.config}).Query()
+func (_q *EventQuery) QueryClients() *CompanyQuery {
+	query := (&CompanyClient{config: _q.config}).Query()
 	query.path = func(ctx context.Context) (fromU *sql.Selector, err error) {
 		if err := _q.prepareQuery(ctx); err != nil {
 			return nil, err
@@ -79,7 +79,7 @@ func (_q *EventQuery) QueryClients() *ClientsQuery {
 		}
 		step := sqlgraph.NewStep(
 			sqlgraph.From(event.Table, event.FieldID, selector),
-			sqlgraph.To(clients.Table, clients.FieldID),
+			sqlgraph.To(company.Table, company.FieldID),
 			sqlgraph.Edge(sqlgraph.M2O, true, event.ClientsTable, event.ClientsColumn),
 		)
 		fromU = sqlgraph.SetNeighbors(_q.driver.Dialect(), step)
@@ -335,8 +335,8 @@ func (_q *EventQuery) Clone() *EventQuery {
 
 // WithClients tells the query-builder to eager-load the nodes that are connected to
 // the "clients" edge. The optional arguments are used to configure the query builder of the edge.
-func (_q *EventQuery) WithClients(opts ...func(*ClientsQuery)) *EventQuery {
-	query := (&ClientsClient{config: _q.config}).Query()
+func (_q *EventQuery) WithClients(opts ...func(*CompanyQuery)) *EventQuery {
+	query := (&CompanyClient{config: _q.config}).Query()
 	for _, opt := range opts {
 		opt(query)
 	}
@@ -470,7 +470,7 @@ func (_q *EventQuery) sqlAll(ctx context.Context, hooks ...queryHook) ([]*Event,
 	}
 	if query := _q.withClients; query != nil {
 		if err := _q.loadClients(ctx, query, nodes, nil,
-			func(n *Event, e *Clients) { n.Edges.Clients = e }); err != nil {
+			func(n *Event, e *Company) { n.Edges.Clients = e }); err != nil {
 			return nil, err
 		}
 	}
@@ -490,7 +490,7 @@ func (_q *EventQuery) sqlAll(ctx context.Context, hooks ...queryHook) ([]*Event,
 	return nodes, nil
 }
 
-func (_q *EventQuery) loadClients(ctx context.Context, query *ClientsQuery, nodes []*Event, init func(*Event), assign func(*Event, *Clients)) error {
+func (_q *EventQuery) loadClients(ctx context.Context, query *CompanyQuery, nodes []*Event, init func(*Event), assign func(*Event, *Company)) error {
 	ids := make([]uuid.UUID, 0, len(nodes))
 	nodeids := make(map[uuid.UUID][]*Event)
 	for i := range nodes {
@@ -503,7 +503,7 @@ func (_q *EventQuery) loadClients(ctx context.Context, query *ClientsQuery, node
 	if len(ids) == 0 {
 		return nil
 	}
-	query.Where(clients.IDIn(ids...))
+	query.Where(company.IDIn(ids...))
 	neighbors, err := query.All(ctx)
 	if err != nil {
 		return err

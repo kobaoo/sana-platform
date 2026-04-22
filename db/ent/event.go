@@ -7,7 +7,7 @@ import (
 	"strings"
 	"time"
 
-	"encore.app/db/ent/clients"
+	"encore.app/db/ent/company"
 	"encore.app/db/ent/event"
 	"encore.app/db/ent/user"
 	"entgo.io/ent"
@@ -49,7 +49,7 @@ type Event struct {
 // EventEdges holds the relations/edges for other nodes in the graph.
 type EventEdges struct {
 	// Clients holds the value of the clients edge.
-	Clients *Clients `json:"clients,omitempty"`
+	Clients *Company `json:"clients,omitempty"`
 	// Host holds the value of the host edge.
 	Host *User `json:"host,omitempty"`
 	// Participants holds the value of the participants edge.
@@ -61,11 +61,11 @@ type EventEdges struct {
 
 // ClientsOrErr returns the Clients value or an error if the edge
 // was not loaded in eager-loading, or loaded but was not found.
-func (e EventEdges) ClientsOrErr() (*Clients, error) {
+func (e EventEdges) ClientsOrErr() (*Company, error) {
 	if e.Clients != nil {
 		return e.Clients, nil
 	} else if e.loadedTypes[0] {
-		return nil, &NotFoundError{label: clients.Label}
+		return nil, &NotFoundError{label: company.Label}
 	}
 	return nil, &NotLoadedError{edge: "clients"}
 }
@@ -199,7 +199,7 @@ func (_m *Event) Value(name string) (ent.Value, error) {
 }
 
 // QueryClients queries the "clients" edge of the Event entity.
-func (_m *Event) QueryClients() *ClientsQuery {
+func (_m *Event) QueryClients() *CompanyQuery {
 	return NewEventClient(_m.config).QueryClients(_m)
 }
 

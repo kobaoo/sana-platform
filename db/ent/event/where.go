@@ -583,7 +583,7 @@ func HasClients() predicate.Event {
 }
 
 // HasClientsWith applies the HasEdge predicate on the "clients" edge with a given conditions (other predicates).
-func HasClientsWith(preds ...predicate.Clients) predicate.Event {
+func HasClientsWith(preds ...predicate.Company) predicate.Event {
 	return predicate.Event(func(s *sql.Selector) {
 		step := newClientsStep()
 		sqlgraph.HasNeighborsWith(s, step, func(s *sql.Selector) {

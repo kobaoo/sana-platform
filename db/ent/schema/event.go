@@ -17,6 +17,7 @@ type Event struct {
 func (Event) Fields() []ent.Field {
 	return []ent.Field{
 		field.UUID("id", uuid.UUID{}).
+			Default(uuid.New).
 			Unique().
 			Immutable(),
 		field.UUID("client_id", uuid.UUID{}),
@@ -50,7 +51,7 @@ func (Event) Fields() []ent.Field {
 
 func (Event) Edges() []ent.Edge {
 	return []ent.Edge{
-		edge.From("clients", Clients.Type).
+		edge.From("clients", Company.Type).
 			Field("client_id").
 			Ref("events").
 			Unique().

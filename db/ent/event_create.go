@@ -8,7 +8,7 @@ import (
 	"fmt"
 	"time"
 
-	"encore.app/db/ent/clients"
+	"encore.app/db/ent/company"
 	"encore.app/db/ent/event"
 	"encore.app/db/ent/eventparticipant"
 	"encore.app/db/ent/user"
@@ -138,14 +138,22 @@ func (_c *EventCreate) SetID(v uuid.UUID) *EventCreate {
 	return _c
 }
 
-// SetClientsID sets the "clients" edge to the Clients entity by ID.
+// SetNillableID sets the "id" field if the given value is not nil.
+func (_c *EventCreate) SetNillableID(v *uuid.UUID) *EventCreate {
+	if v != nil {
+		_c.SetID(*v)
+	}
+	return _c
+}
+
+// SetClientsID sets the "clients" edge to the Company entity by ID.
 func (_c *EventCreate) SetClientsID(id uuid.UUID) *EventCreate {
 	_c.mutation.SetClientsID(id)
 	return _c
 }
 
-// SetClients sets the "clients" edge to the Clients entity.
-func (_c *EventCreate) SetClients(v *Clients) *EventCreate {
+// SetClients sets the "clients" edge to the Company entity.
+func (_c *EventCreate) SetClients(v *Company) *EventCreate {
 	return _c.SetClientsID(v.ID)
 }
 
@@ -215,6 +223,10 @@ func (_c *EventCreate) defaults() {
 	if _, ok := _c.mutation.UpdatedAt(); !ok {
 		v := event.DefaultUpdatedAt()
 		_c.mutation.SetUpdatedAt(v)
+	}
+	if _, ok := _c.mutation.ID(); !ok {
+		v := event.DefaultID()
+		_c.mutation.SetID(v)
 	}
 }
 
@@ -332,7 +344,7 @@ func (_c *EventCreate) createSpec() (*Event, *sqlgraph.CreateSpec) {
 			Columns: []string{event.ClientsColumn},
 			Bidi:    false,
 			Target: &sqlgraph.EdgeTarget{
-				IDSpec: sqlgraph.NewFieldSpec(clients.FieldID, field.TypeUUID),
+				IDSpec: sqlgraph.NewFieldSpec(company.FieldID, field.TypeUUID),
 			},
 		}
 		for _, k := range nodes {

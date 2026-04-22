@@ -57,5 +57,6 @@ func (Company) Fields() []ent.Field {
 func (Company) Edges() []ent.Edge {
 	return []ent.Edge{
 		edge.To("users", User.Type),
+		edge.To("events", Event.Type),
 	}
 }

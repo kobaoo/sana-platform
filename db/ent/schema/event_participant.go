@@ -17,6 +17,7 @@ type EventParticipant struct {
 func (EventParticipant) Fields() []ent.Field {
 	return []ent.Field{
 		field.UUID("id", uuid.UUID{}).
+			Default(uuid.New).
 			Unique().
 			Immutable(),
 		field.UUID("event_id", uuid.UUID{}),

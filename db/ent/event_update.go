@@ -8,7 +8,7 @@ import (
 	"fmt"
 	"time"
 
-	"encore.app/db/ent/clients"
+	"encore.app/db/ent/company"
 	"encore.app/db/ent/event"
 	"encore.app/db/ent/eventparticipant"
 	"encore.app/db/ent/predicate"
@@ -168,14 +168,14 @@ func (_u *EventUpdate) SetUpdatedAt(v time.Time) *EventUpdate {
 	return _u
 }
 
-// SetClientsID sets the "clients" edge to the Clients entity by ID.
+// SetClientsID sets the "clients" edge to the Company entity by ID.
 func (_u *EventUpdate) SetClientsID(id uuid.UUID) *EventUpdate {
 	_u.mutation.SetClientsID(id)
 	return _u
 }
 
-// SetClients sets the "clients" edge to the Clients entity.
-func (_u *EventUpdate) SetClients(v *Clients) *EventUpdate {
+// SetClients sets the "clients" edge to the Company entity.
+func (_u *EventUpdate) SetClients(v *Company) *EventUpdate {
 	return _u.SetClientsID(v.ID)
 }
 
@@ -204,7 +204,7 @@ func (_u *EventUpdate) Mutation() *EventMutation {
 	return _u.mutation
 }
 
-// ClearClients clears the "clients" edge to the Clients entity.
+// ClearClients clears the "clients" edge to the Company entity.
 func (_u *EventUpdate) ClearClients() *EventUpdate {
 	_u.mutation.ClearClients()
 	return _u
@@ -344,7 +344,7 @@ func (_u *EventUpdate) sqlSave(ctx context.Context) (_node int, err error) {
 			Columns: []string{event.ClientsColumn},
 			Bidi:    false,
 			Target: &sqlgraph.EdgeTarget{
-				IDSpec: sqlgraph.NewFieldSpec(clients.FieldID, field.TypeUUID),
+				IDSpec: sqlgraph.NewFieldSpec(company.FieldID, field.TypeUUID),
 			},
 		}
 		_spec.Edges.Clear = append(_spec.Edges.Clear, edge)
@@ -357,7 +357,7 @@ func (_u *EventUpdate) sqlSave(ctx context.Context) (_node int, err error) {
 			Columns: []string{event.ClientsColumn},
 			Bidi:    false,
 			Target: &sqlgraph.EdgeTarget{
-				IDSpec: sqlgraph.NewFieldSpec(clients.FieldID, field.TypeUUID),
+				IDSpec: sqlgraph.NewFieldSpec(company.FieldID, field.TypeUUID),
 			},
 		}
 		for _, k := range nodes {
@@ -595,14 +595,14 @@ func (_u *EventUpdateOne) SetUpdatedAt(v time.Time) *EventUpdateOne {
 	return _u
 }
 
-// SetClientsID sets the "clients" edge to the Clients entity by ID.
+// SetClientsID sets the "clients" edge to the Company entity by ID.
 func (_u *EventUpdateOne) SetClientsID(id uuid.UUID) *EventUpdateOne {
 	_u.mutation.SetClientsID(id)
 	return _u
 }
 
-// SetClients sets the "clients" edge to the Clients entity.
-func (_u *EventUpdateOne) SetClients(v *Clients) *EventUpdateOne {
+// SetClients sets the "clients" edge to the Company entity.
+func (_u *EventUpdateOne) SetClients(v *Company) *EventUpdateOne {
 	return _u.SetClientsID(v.ID)
 }
 
@@ -631,7 +631,7 @@ func (_u *EventUpdateOne) Mutation() *EventMutation {
 	return _u.mutation
 }
 
-// ClearClients clears the "clients" edge to the Clients entity.
+// ClearClients clears the "clients" edge to the Company entity.
 func (_u *EventUpdateOne) ClearClients() *EventUpdateOne {
 	_u.mutation.ClearClients()
 	return _u
@@ -801,7 +801,7 @@ func (_u *EventUpdateOne) sqlSave(ctx context.Context) (_node *Event, err error)
 			Columns: []string{event.ClientsColumn},
 			Bidi:    false,
 			Target: &sqlgraph.EdgeTarget{
-				IDSpec: sqlgraph.NewFieldSpec(clients.FieldID, field.TypeUUID),
+				IDSpec: sqlgraph.NewFieldSpec(company.FieldID, field.TypeUUID),
 			},
 		}
 		_spec.Edges.Clear = append(_spec.Edges.Clear, edge)
@@ -814,7 +814,7 @@ func (_u *EventUpdateOne) sqlSave(ctx context.Context) (_node *Event, err error)
 			Columns: []string{event.ClientsColumn},
 			Bidi:    false,
 			Target: &sqlgraph.EdgeTarget{
-				IDSpec: sqlgraph.NewFieldSpec(clients.FieldID, field.TypeUUID),
+				IDSpec: sqlgraph.NewFieldSpec(company.FieldID, field.TypeUUID),
 			},
 		}
 		for _, k := range nodes {

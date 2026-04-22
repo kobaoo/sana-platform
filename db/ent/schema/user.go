@@ -68,6 +68,8 @@ func (User) Edges() []ent.Edge {
 			Ref("users").
 			Field("client_id").
 			Unique(),
+		edge.To("hosted_events", Event.Type),
+		edge.To("reviewed_participations", EventParticipant.Type),
 	}
 }
 

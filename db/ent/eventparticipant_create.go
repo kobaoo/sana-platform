@@ -126,6 +126,14 @@ func (_c *EventParticipantCreate) SetID(v uuid.UUID) *EventParticipantCreate {
 	return _c
 }
 
+// SetNillableID sets the "id" field if the given value is not nil.
+func (_c *EventParticipantCreate) SetNillableID(v *uuid.UUID) *EventParticipantCreate {
+	if v != nil {
+		_c.SetID(*v)
+	}
+	return _c
+}
+
 // SetEvent sets the "event" edge to the Event entity.
 func (_c *EventParticipantCreate) SetEvent(v *Event) *EventParticipantCreate {
 	return _c.SetEventID(v.ID)
@@ -201,6 +209,10 @@ func (_c *EventParticipantCreate) defaults() {
 	if _, ok := _c.mutation.UpdatedAt(); !ok {
 		v := eventparticipant.DefaultUpdatedAt()
 		_c.mutation.SetUpdatedAt(v)
+	}
+	if _, ok := _c.mutation.ID(); !ok {
+		v := eventparticipant.DefaultID()
+		_c.mutation.SetID(v)
 	}
 }
 

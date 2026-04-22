@@ -55,9 +55,11 @@ type Employee struct {
 type EmployeeEdges struct {
 	// Dzo holds the value of the dzo edge.
 	Dzo *DzoOrganization `json:"dzo,omitempty"`
+	// EventParticipations holds the value of the event_participations edge.
+	EventParticipations []*EventParticipant `json:"event_participations,omitempty"`
 	// loadedTypes holds the information for reporting if a
 	// type was loaded (or requested) in eager-loading or not.
-	loadedTypes [1]bool
+	loadedTypes [2]bool
 }
 
 // DzoOrErr returns the Dzo value or an error if the edge
@@ -69,6 +71,15 @@ func (e EmployeeEdges) DzoOrErr() (*DzoOrganization, error) {
 		return nil, &NotFoundError{label: dzoorganization.Label}
 	}
 	return nil, &NotLoadedError{edge: "dzo"}
+}
+
+// EventParticipationsOrErr returns the EventParticipations value or an error if the edge
+// was not loaded in eager-loading.
+func (e EmployeeEdges) EventParticipationsOrErr() ([]*EventParticipant, error) {
+	if e.loadedTypes[1] {
+		return e.EventParticipations, nil
+	}
+	return nil, &NotLoadedError{edge: "event_participations"}
 }
 
 // scanValues returns the types for scanning values from sql.Rows.
@@ -208,6 +219,11 @@ func (_m *Employee) Value(name string) (ent.Value, error) {
 // QueryDzo queries the "dzo" edge of the Employee entity.
 func (_m *Employee) QueryDzo() *DzoOrganizationQuery {
 	return NewEmployeeClient(_m.config).QueryDzo(_m)
+}
+
+// QueryEventParticipations queries the "event_participations" edge of the Employee entity.
+func (_m *Employee) QueryEventParticipations() *EventParticipantQuery {
+	return NewEmployeeClient(_m.config).QueryEventParticipations(_m)
 }
 
 // Update returns a builder for updating this Employee.
