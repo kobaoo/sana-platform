@@ -2,7 +2,10 @@ package contractssuppliers
 
 import (
 	"context"
+	"net/http"
+	"path/filepath"
 	"strings"
+	"time"
 
 	"encore.app/auth/authhandler"
 	"encore.app/db/ent"
@@ -10,6 +13,7 @@ import (
 	csh "encore.app/orgstructure/contracts_suppliers_history"
 	"encore.dev/beta/errs"
 	"encore.dev/rlog"
+	"encore.dev/storage/objects"
 	"encore.dev/storage/sqldb"
 	"entgo.io/ent/dialect"
 	entsql "entgo.io/ent/dialect/sql"
@@ -21,6 +25,10 @@ import (
 var (
 	db     = sqldb.Named("lms")
 	Client = newEntClient()
+
+	// contractFiles stores uploaded contract documents (pdf/png/jpeg).
+	// Keyed by "<contract_id>/<file_name>".
+	contractFiles = objects.NewBucket("contract-files", objects.BucketConfig{})
 )
 
 func newEntClient() *ent.Client {
@@ -171,33 +179,138 @@ func DeleteContract(ctx context.Context, id string) (*DeleteContractResponse, er
 }
 
 // AddAmendment records an amendment (доп. соглашение) on the contract.
+// Only one amendment is allowed per contract; a second attempt returns 409.
+// Recomputes total_with_amendment and remaining_amount.
 //
 //encore:api auth method=POST path=/contracts-suppliers/id/:id/amendment
 func AddAmendment(ctx context.Context, id string, req *AmendmentRequest) (*GetContractResponse, error) {
 	if _, err := requirePermission(); err != nil {
 		return nil, err
 	}
-	return nil, errs.B().Code(errs.Unimplemented).Msg("AddAmendment not implemented").Err()
-}
 
-// Spend decreases the contract's remaining budget.
-//
-//encore:api auth method=POST path=/contracts-suppliers/id/:id/spend
-func Spend(ctx context.Context, id string, req *SpendRequest) (*GetContractResponse, error) {
-	if _, err := requirePermission(); err != nil {
+	if err := validateAmendmentRequest(req); err != nil {
 		return nil, err
 	}
-	return nil, errs.B().Code(errs.Unimplemented).Msg("Spend not implemented").Err()
+
+	rowBefore, err := queryContractByID(ctx, id)
+	if err != nil {
+		return nil, err
+	}
+	if !rowBefore.IsActive {
+		return nil, errs.B().Code(errs.NotFound).Msg("contract not found").Err()
+	}
+	if rowBefore.AmendmentNumber != nil {
+		return nil, errs.B().Code(errs.AlreadyExists).Msg("amendment already exists for this contract").Err()
+	}
+
+	rowAfter, err := applyAmendment(ctx, rowBefore, req)
+	if err != nil {
+		return nil, err
+	}
+
+	if auditErr := csh.InsertAuditRecord(ctx, id, csh.OpUpdate,
+		csh.EntToContract(rowBefore), csh.EntToContract(rowAfter)); auditErr != nil {
+		rlog.Error("contracts-suppliers: failed to write audit record",
+			"contract_id", id, "err", auditErr)
+	}
+
+	return &GetContractResponse{Contract: *entToContract(rowAfter)}, nil
 }
 
-// UploadFile attaches a contract document (pdf/jpg/png).
+// UploadFile attaches a contract document (pdf/jpg/png) to the contract.
+// Replaces any previously uploaded file. Max size 25 MB.
 //
 //encore:api auth method=POST path=/contracts-suppliers/id/:id/upload-file
-func UploadFile(ctx context.Context, id string) (*MessageResponse, error) {
+func UploadFile(ctx context.Context, id string, req *UploadFileRequest) (*GetContractResponse, error) {
 	if _, err := requirePermission(); err != nil {
 		return nil, err
 	}
-	return nil, errs.B().Code(errs.Unimplemented).Msg("UploadFile not implemented").Err()
+
+	if err := validateUploadFileRequest(req); err != nil {
+		return nil, err
+	}
+
+	rowBefore, err := queryContractByID(ctx, id)
+	if err != nil {
+		return nil, err
+	}
+	if !rowBefore.IsActive {
+		return nil, errs.B().Code(errs.NotFound).Msg("contract not found").Err()
+	}
+
+	mimeType := http.DetectContentType(req.FileData)
+	if !isAllowedMimeType(mimeType) {
+		return nil, errs.B().Code(errs.InvalidArgument).
+			Msgf("unsupported file type %q; allowed: pdf, png, jpeg", mimeType).Err()
+	}
+
+	newKey := buildFileKey(id, req.FileName)
+	if err := uploadFileToBucket(ctx, newKey, req.FileData); err != nil {
+		return nil, err
+	}
+
+	// If replacing a different key, remove the old object (best-effort).
+	if rowBefore.FileKey != nil && *rowBefore.FileKey != newKey {
+		if rmErr := contractFiles.Remove(ctx, *rowBefore.FileKey); rmErr != nil {
+			rlog.Error("contracts-suppliers: failed to remove old file",
+				"contract_id", id, "key", *rowBefore.FileKey, "err", rmErr)
+		}
+	}
+
+	rowAfter, err := updateContractFileFields(ctx, rowBefore, newKey, req.FileName, int64(len(req.FileData)), mimeType)
+	if err != nil {
+		// Roll back the bucket upload to avoid orphaned objects.
+		if rmErr := contractFiles.Remove(ctx, newKey); rmErr != nil {
+			rlog.Error("contracts-suppliers: failed to remove orphaned file",
+				"contract_id", id, "key", newKey, "err", rmErr)
+		}
+		return nil, err
+	}
+
+	if auditErr := csh.InsertAuditRecord(ctx, id, csh.OpUpdate,
+		csh.EntToContract(rowBefore), csh.EntToContract(rowAfter)); auditErr != nil {
+		rlog.Error("contracts-suppliers: failed to write audit record",
+			"contract_id", id, "err", auditErr)
+	}
+
+	return &GetContractResponse{Contract: *entToContract(rowAfter)}, nil
+}
+
+// GetFileURL returns a short-lived signed URL to download the contract's file.
+//
+//encore:api auth method=GET path=/contracts-suppliers/id/:id/file-url
+func GetFileURL(ctx context.Context, id string) (*FileURLResponse, error) {
+	if _, err := requirePermission(); err != nil {
+		return nil, err
+	}
+
+	row, err := queryContractByID(ctx, id)
+	if err != nil {
+		return nil, err
+	}
+	if !row.IsActive {
+		return nil, errs.B().Code(errs.NotFound).Msg("contract not found").Err()
+	}
+	if row.FileKey == nil {
+		return nil, errs.B().Code(errs.NotFound).Msg("no file uploaded for this contract").Err()
+	}
+
+	signed, err := contractFiles.SignedDownloadURL(ctx, *row.FileKey, objects.WithTTL(signedURLTTL))
+	if err != nil {
+		return nil, errs.B().Code(errs.Internal).Msg("failed to generate signed url").Cause(err).Err()
+	}
+
+	resp := &FileURLResponse{
+		URL:       signed.URL,
+		ExpiresAt: time.Now().Add(signedURLTTL),
+	}
+	if row.FileName != nil {
+		resp.FileName = *row.FileName
+	}
+	if row.FileMimeType != nil {
+		resp.MimeType = *row.FileMimeType
+	}
+	return resp, nil
 }
 
 // ImportContracts bulk-imports contracts from CSV/XLSX.
@@ -216,7 +329,25 @@ const (
 	defaultPage  = 1
 	defaultLimit = 20
 	maxLimit     = 100
+
+	// expiringSoonWindow is the threshold for marking a contract EXPIRING_SOON.
+	expiringSoonWindow = 30 * 24 * time.Hour
 )
+
+// computeStatus derives the lifecycle status from end_date.
+// Contracts without end_date are treated as ACTIVE.
+func computeStatus(now time.Time, endDate *time.Time) ContractStatus {
+	if endDate == nil {
+		return StatusActive
+	}
+	if !now.Before(*endDate) {
+		return StatusExpired
+	}
+	if endDate.Sub(now) <= expiringSoonWindow {
+		return StatusExpiringSoon
+	}
+	return StatusActive
+}
 
 // applyFilterDefaults normalizes page and limit: page >= 1, limit in [1, 100].
 func applyFilterDefaults(page, limit int) (int, int) {
@@ -250,6 +381,35 @@ func queryContractsFiltered(ctx context.Context, filter *ListContractsFilter, pa
 		q = q.Where(contractsupplier.ContractNumberContainsFold(search))
 	}
 
+	if status := strings.TrimSpace(filter.Status); status != "" {
+		s := ContractStatus(status)
+		if !s.IsValid() {
+			return nil, 0, errs.B().Code(errs.InvalidArgument).Msg("invalid status; allowed: ACTIVE, EXPIRED, EXPIRING_SOON").Err()
+		}
+		now := time.Now()
+		switch s {
+		case StatusExpired:
+			q = q.Where(contractsupplier.EndDateLTE(now))
+		case StatusExpiringSoon:
+			q = q.Where(
+				contractsupplier.EndDateGT(now),
+				contractsupplier.EndDateLTE(now.Add(expiringSoonWindow)),
+			)
+		case StatusActive:
+			q = q.Where(contractsupplier.Or(
+				contractsupplier.EndDateIsNil(),
+				contractsupplier.EndDateGT(now.Add(expiringSoonWindow)),
+			))
+		}
+	}
+
+	if !filter.ExpiryDateFrom.IsZero() {
+		q = q.Where(contractsupplier.EndDateGTE(filter.ExpiryDateFrom))
+	}
+	if !filter.ExpiryDateTo.IsZero() {
+		q = q.Where(contractsupplier.EndDateLTE(filter.ExpiryDateTo))
+	}
+
 	total, err := q.Count(ctx)
 	if err != nil {
 		return nil, 0, errs.B().Code(errs.Internal).Msg("failed to count contracts").Cause(err).Err()
@@ -271,7 +431,7 @@ func validateUpdateRequest(req *UpdateContractRequest) error {
 	if req == nil {
 		return errs.B().Code(errs.InvalidArgument).Msg("request body is required").Err()
 	}
-	if req.ContractNumber == nil && req.VatFlag == nil && req.SignedDate == nil &&
+	if req.ContractNumber == nil && req.VatFlag == nil && req.SignedDate == nil && req.EndDate == nil &&
 		req.AmountCurrency == nil && req.Currency == nil && req.BalanceAtYearEnd == nil {
 		return errs.B().Code(errs.InvalidArgument).Msg("no fields to update").Err()
 	}
@@ -280,6 +440,9 @@ func validateUpdateRequest(req *UpdateContractRequest) error {
 	}
 	if req.SignedDate != nil && req.SignedDate.IsZero() {
 		return errs.B().Code(errs.InvalidArgument).Msg("signed_date cannot be zero").Err()
+	}
+	if req.EndDate != nil && req.EndDate.IsZero() {
+		return errs.B().Code(errs.InvalidArgument).Msg("end_date cannot be zero").Err()
 	}
 	return nil
 }
@@ -296,6 +459,9 @@ func updateContract(ctx context.Context, row *ent.ContractSupplier, req *UpdateC
 	if req.SignedDate != nil {
 		upd.SetSignedDate(*req.SignedDate)
 	}
+	if req.EndDate != nil {
+		upd.SetEndDate(*req.EndDate)
+	}
 	if req.AmountCurrency != nil {
 		upd.SetAmountCurrency(*req.AmountCurrency)
 	}
@@ -309,6 +475,100 @@ func updateContract(ctx context.Context, row *ent.ContractSupplier, req *UpdateC
 	updated, err := upd.Save(ctx)
 	if err != nil {
 		return nil, errs.B().Code(errs.Internal).Msg("failed to update contract").Cause(err).Err()
+	}
+	return updated, nil
+}
+
+const (
+	maxUploadSize = 25 * 1024 * 1024
+	signedURLTTL  = 15 * time.Minute
+)
+
+var allowedMimeTypes = map[string]struct{}{
+	"application/pdf": {},
+	"image/png":       {},
+	"image/jpeg":      {},
+}
+
+func isAllowedMimeType(mime string) bool {
+	_, ok := allowedMimeTypes[mime]
+	return ok
+}
+
+func validateUploadFileRequest(req *UploadFileRequest) error {
+	if req == nil {
+		return errs.B().Code(errs.InvalidArgument).Msg("request body is required").Err()
+	}
+	if strings.TrimSpace(req.FileName) == "" {
+		return errs.B().Code(errs.InvalidArgument).Msg("file_name is required").Err()
+	}
+	if len(req.FileData) == 0 {
+		return errs.B().Code(errs.InvalidArgument).Msg("file_data is required").Err()
+	}
+	if len(req.FileData) > maxUploadSize {
+		return errs.B().Code(errs.InvalidArgument).Msg("file_data exceeds 25 MB limit").Err()
+	}
+	return nil
+}
+
+// buildFileKey produces a deterministic bucket key: "<contract_id>/<basename>".
+// Strips any directory components from the user-supplied file name.
+func buildFileKey(contractID, fileName string) string {
+	return contractID + "/" + filepath.Base(strings.TrimSpace(fileName))
+}
+
+func uploadFileToBucket(ctx context.Context, key string, data []byte) error {
+	w := contractFiles.Upload(ctx, key)
+	if _, err := w.Write(data); err != nil {
+		w.Abort(err)
+		return errs.B().Code(errs.Internal).Msg("failed to upload file").Cause(err).Err()
+	}
+	if err := w.Close(); err != nil {
+		return errs.B().Code(errs.Internal).Msg("failed to finalize upload").Cause(err).Err()
+	}
+	return nil
+}
+
+func updateContractFileFields(ctx context.Context, row *ent.ContractSupplier, key, name string, size int64, mime string) (*ent.ContractSupplier, error) {
+	updated, err := Client.ContractSupplier.UpdateOne(row).
+		SetFileKey(key).
+		SetFileName(name).
+		SetFileSize(size).
+		SetFileMimeType(mime).
+		Save(ctx)
+	if err != nil {
+		return nil, errs.B().Code(errs.Internal).Msg("failed to save file metadata").Cause(err).Err()
+	}
+	return updated, nil
+}
+
+func validateAmendmentRequest(req *AmendmentRequest) error {
+	if req == nil {
+		return errs.B().Code(errs.InvalidArgument).Msg("request body is required").Err()
+	}
+	if strings.TrimSpace(req.AmendmentNumber) == "" {
+		return errs.B().Code(errs.InvalidArgument).Msg("amendment_number is required").Err()
+	}
+	if req.AmendmentDate.IsZero() {
+		return errs.B().Code(errs.InvalidArgument).Msg("amendment_date is required").Err()
+	}
+	// TODO: revisit once business confirms whether negative amendments (scope reduction) are needed.
+	if req.AmendmentAmount <= 0 {
+		return errs.B().Code(errs.InvalidArgument).Msg("amendment_amount must be > 0").Err()
+	}
+	return nil
+}
+
+func applyAmendment(ctx context.Context, row *ent.ContractSupplier, req *AmendmentRequest) (*ent.ContractSupplier, error) {
+	updated, err := Client.ContractSupplier.UpdateOne(row).
+		SetAmendmentNumber(strings.TrimSpace(req.AmendmentNumber)).
+		SetAmendmentDate(req.AmendmentDate).
+		SetAmendmentAmount(req.AmendmentAmount).
+		SetTotalWithAmendment(row.Amount + req.AmendmentAmount).
+		SetRemainingAmount(row.RemainingAmount + req.AmendmentAmount).
+		Save(ctx)
+	if err != nil {
+		return nil, errs.B().Code(errs.Internal).Msg("failed to apply amendment").Cause(err).Err()
 	}
 	return updated, nil
 }
@@ -356,6 +616,9 @@ func validateCreateRequest(req *CreateContractRequest) error {
 	if req.SignedDate.IsZero() {
 		return errs.B().Code(errs.InvalidArgument).Msg("signed_date is required").Err()
 	}
+	if req.EndDate != nil && !req.EndDate.After(req.SignedDate) {
+		return errs.B().Code(errs.InvalidArgument).Msg("end_date must be after signed_date").Err()
+	}
 	return nil
 }
 
@@ -370,6 +633,7 @@ func insertContract(ctx context.Context, supplierID string, req *CreateContractR
 		SetContractNumber(strings.TrimSpace(req.ContractNumber)).
 		SetVatFlag(req.VatFlag).
 		SetSignedDate(req.SignedDate).
+		SetNillableEndDate(req.EndDate).
 		SetAmount(req.Amount).
 		SetNillableAmountCurrency(req.AmountCurrency).
 		SetNillableCurrency(req.Currency).
@@ -391,6 +655,8 @@ func entToContract(e *ent.ContractSupplier) *ContractSupplier {
 		ContractNumber:     e.ContractNumber,
 		VatFlag:            e.VatFlag,
 		SignedDate:         e.SignedDate,
+		EndDate:            e.EndDate,
+		Status:             computeStatus(time.Now(), e.EndDate),
 		Amount:             e.Amount,
 		AmountCurrency:     e.AmountCurrency,
 		Currency:           e.Currency,
@@ -400,6 +666,10 @@ func entToContract(e *ent.ContractSupplier) *ContractSupplier {
 		AmendmentAmount:    e.AmendmentAmount,
 		TotalWithAmendment: e.TotalWithAmendment,
 		RemainingAmount:    e.RemainingAmount,
+		FileKey:            e.FileKey,
+		FileName:           e.FileName,
+		FileSize:           e.FileSize,
+		FileMimeType:       e.FileMimeType,
 		IsActive:           e.IsActive,
 		CreatedAt:          e.CreatedAt,
 		UpdatedAt:          e.UpdatedAt,

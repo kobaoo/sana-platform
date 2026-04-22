@@ -28,12 +28,14 @@ func (s ContractStatus) IsValid() bool {
 // cost_per_person, head_count, local_content_share_pct, contract_category,
 // actual_spent, uso_lektor_cost (see calc-logic spreadsheet).
 type ContractSupplier struct {
-	ID                 string     `json:"id"`
-	SupplierID         string     `json:"supplier_id"`
-	ContractNumber     string     `json:"contract_number"`
-	VatFlag            bool       `json:"vat_flag"`
-	SignedDate         time.Time  `json:"signed_date"`
-	Amount             float64    `json:"amount"`
+	ID                 string         `json:"id"`
+	SupplierID         string         `json:"supplier_id"`
+	ContractNumber     string         `json:"contract_number"`
+	VatFlag            bool           `json:"vat_flag"`
+	SignedDate         time.Time      `json:"signed_date"`
+	EndDate            *time.Time     `json:"end_date,omitempty"`
+	Status             ContractStatus `json:"status"`
+	Amount             float64        `json:"amount"`
 	AmountCurrency     *float64   `json:"amount_currency,omitempty"`
 	Currency           *string    `json:"currency,omitempty"`
 	BalanceAtYearEnd   *float64   `json:"balance_at_year_end,omitempty"`
@@ -42,6 +44,10 @@ type ContractSupplier struct {
 	AmendmentAmount    *float64   `json:"amendment_amount,omitempty"`
 	TotalWithAmendment float64    `json:"total_with_amendment"`
 	RemainingAmount    float64    `json:"remaining_amount"`
+	FileKey            *string    `json:"file_key,omitempty"`
+	FileName           *string    `json:"file_name,omitempty"`
+	FileSize           *int64     `json:"file_size,omitempty"`
+	FileMimeType       *string    `json:"file_mime_type,omitempty"`
 	IsActive           bool       `json:"is_active"`
 	CreatedAt          time.Time  `json:"created_at"`
 	UpdatedAt          time.Time  `json:"updated_at"`
@@ -55,6 +61,7 @@ type CreateContractRequest struct {
 	ContractNumber   string     `json:"contract_number"`
 	VatFlag          bool       `json:"vat_flag"`
 	SignedDate       time.Time  `json:"signed_date"`
+	EndDate          *time.Time `json:"end_date,omitempty"`
 	Amount           float64    `json:"amount"`
 	AmountCurrency   *float64   `json:"amount_currency,omitempty"`
 	Currency         *string    `json:"currency,omitempty"`
@@ -71,6 +78,7 @@ type UpdateContractRequest struct {
 	ContractNumber   *string    `json:"contract_number,omitempty"`
 	VatFlag          *bool      `json:"vat_flag,omitempty"`
 	SignedDate       *time.Time `json:"signed_date,omitempty"`
+	EndDate          *time.Time `json:"end_date,omitempty"`
 	AmountCurrency   *float64   `json:"amount_currency,omitempty"`
 	Currency         *string    `json:"currency,omitempty"`
 	BalanceAtYearEnd *float64   `json:"balance_at_year_end,omitempty"`
@@ -83,11 +91,12 @@ type AmendmentRequest struct {
 	AmendmentAmount float64   `json:"amendment_amount"`
 }
 
-// SpendRequest is the body for POST /contracts-suppliers/id/:id/spend.
-// Decreases remaining_amount by the given amount.
-type SpendRequest struct {
-	Amount float64 `json:"amount"`
-	Reason string  `json:"reason,omitempty"`
+// UploadFileRequest is the body for POST /contracts-suppliers/id/:id/upload-file.
+// file_data is base64-encoded bytes of the file contents.
+// Accepted MIME types: application/pdf, image/png, image/jpeg. Max size 25 MB.
+type UploadFileRequest struct {
+	FileName string `json:"file_name"`
+	FileData []byte `json:"file_data"`
 }
 
 // ListContractsFilter holds query-string filters for GET /contracts-suppliers.
@@ -126,6 +135,14 @@ type ListContractsResponse struct {
 // DeleteContractResponse confirms a soft-delete.
 type DeleteContractResponse struct {
 	Message string `json:"message"`
+}
+
+// FileURLResponse carries a signed download URL for the contract's attached file.
+type FileURLResponse struct {
+	URL       string    `json:"url"`
+	FileName  string    `json:"file_name"`
+	MimeType  string    `json:"mime_type"`
+	ExpiresAt time.Time `json:"expires_at"`
 }
 
 // MessageResponse is a generic message response.

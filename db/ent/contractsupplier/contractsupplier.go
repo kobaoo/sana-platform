@@ -22,6 +22,8 @@ const (
 	FieldVatFlag = "vat_flag"
 	// FieldSignedDate holds the string denoting the signed_date field in the database.
 	FieldSignedDate = "signed_date"
+	// FieldEndDate holds the string denoting the end_date field in the database.
+	FieldEndDate = "end_date"
 	// FieldAmount holds the string denoting the amount field in the database.
 	FieldAmount = "amount"
 	// FieldAmountCurrency holds the string denoting the amount_currency field in the database.
@@ -40,6 +42,14 @@ const (
 	FieldTotalWithAmendment = "total_with_amendment"
 	// FieldRemainingAmount holds the string denoting the remaining_amount field in the database.
 	FieldRemainingAmount = "remaining_amount"
+	// FieldFileKey holds the string denoting the file_key field in the database.
+	FieldFileKey = "file_key"
+	// FieldFileName holds the string denoting the file_name field in the database.
+	FieldFileName = "file_name"
+	// FieldFileSize holds the string denoting the file_size field in the database.
+	FieldFileSize = "file_size"
+	// FieldFileMimeType holds the string denoting the file_mime_type field in the database.
+	FieldFileMimeType = "file_mime_type"
 	// FieldIsActive holds the string denoting the is_active field in the database.
 	FieldIsActive = "is_active"
 	// FieldCreatedAt holds the string denoting the created_at field in the database.
@@ -57,6 +67,7 @@ var Columns = []string{
 	FieldContractNumber,
 	FieldVatFlag,
 	FieldSignedDate,
+	FieldEndDate,
 	FieldAmount,
 	FieldAmountCurrency,
 	FieldCurrency,
@@ -66,6 +77,10 @@ var Columns = []string{
 	FieldAmendmentAmount,
 	FieldTotalWithAmendment,
 	FieldRemainingAmount,
+	FieldFileKey,
+	FieldFileName,
+	FieldFileSize,
+	FieldFileMimeType,
 	FieldIsActive,
 	FieldCreatedAt,
 	FieldUpdatedAt,
@@ -90,6 +105,12 @@ var (
 	CurrencyValidator func(string) error
 	// AmendmentNumberValidator is a validator for the "amendment_number" field. It is called by the builders before save.
 	AmendmentNumberValidator func(string) error
+	// FileKeyValidator is a validator for the "file_key" field. It is called by the builders before save.
+	FileKeyValidator func(string) error
+	// FileNameValidator is a validator for the "file_name" field. It is called by the builders before save.
+	FileNameValidator func(string) error
+	// FileMimeTypeValidator is a validator for the "file_mime_type" field. It is called by the builders before save.
+	FileMimeTypeValidator func(string) error
 	// DefaultIsActive holds the default value on creation for the "is_active" field.
 	DefaultIsActive bool
 	// DefaultCreatedAt holds the default value on creation for the "created_at" field.
@@ -128,6 +149,11 @@ func ByVatFlag(opts ...sql.OrderTermOption) OrderOption {
 // BySignedDate orders the results by the signed_date field.
 func BySignedDate(opts ...sql.OrderTermOption) OrderOption {
 	return sql.OrderByField(FieldSignedDate, opts...).ToFunc()
+}
+
+// ByEndDate orders the results by the end_date field.
+func ByEndDate(opts ...sql.OrderTermOption) OrderOption {
+	return sql.OrderByField(FieldEndDate, opts...).ToFunc()
 }
 
 // ByAmount orders the results by the amount field.
@@ -173,6 +199,26 @@ func ByTotalWithAmendment(opts ...sql.OrderTermOption) OrderOption {
 // ByRemainingAmount orders the results by the remaining_amount field.
 func ByRemainingAmount(opts ...sql.OrderTermOption) OrderOption {
 	return sql.OrderByField(FieldRemainingAmount, opts...).ToFunc()
+}
+
+// ByFileKey orders the results by the file_key field.
+func ByFileKey(opts ...sql.OrderTermOption) OrderOption {
+	return sql.OrderByField(FieldFileKey, opts...).ToFunc()
+}
+
+// ByFileName orders the results by the file_name field.
+func ByFileName(opts ...sql.OrderTermOption) OrderOption {
+	return sql.OrderByField(FieldFileName, opts...).ToFunc()
+}
+
+// ByFileSize orders the results by the file_size field.
+func ByFileSize(opts ...sql.OrderTermOption) OrderOption {
+	return sql.OrderByField(FieldFileSize, opts...).ToFunc()
+}
+
+// ByFileMimeType orders the results by the file_mime_type field.
+func ByFileMimeType(opts ...sql.OrderTermOption) OrderOption {
+	return sql.OrderByField(FieldFileMimeType, opts...).ToFunc()
 }
 
 // ByIsActive orders the results by the is_active field.

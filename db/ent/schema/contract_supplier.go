@@ -31,6 +31,12 @@ func (ContractSupplier) Fields() []ent.Field {
 			SchemaType(map[string]string{
 				dialect.Postgres: "date",
 			}),
+		field.Time("end_date").
+			Optional().
+			Nillable().
+			SchemaType(map[string]string{
+				dialect.Postgres: "date",
+			}),
 		field.Float("amount").
 			SchemaType(map[string]string{
 				dialect.Postgres: "decimal(14,2)",
@@ -75,6 +81,21 @@ func (ContractSupplier) Fields() []ent.Field {
 			SchemaType(map[string]string{
 				dialect.Postgres: "decimal(14,2)",
 			}),
+		field.String("file_key").
+			MaxLen(500).
+			Optional().
+			Nillable(),
+		field.String("file_name").
+			MaxLen(255).
+			Optional().
+			Nillable(),
+		field.Int64("file_size").
+			Optional().
+			Nillable(),
+		field.String("file_mime_type").
+			MaxLen(100).
+			Optional().
+			Nillable(),
 		field.Bool("is_active").
 			Default(true),
 		field.Time("created_at").

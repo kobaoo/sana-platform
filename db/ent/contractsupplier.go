@@ -26,6 +26,8 @@ type ContractSupplier struct {
 	VatFlag bool `json:"vat_flag,omitempty"`
 	// SignedDate holds the value of the "signed_date" field.
 	SignedDate time.Time `json:"signed_date,omitempty"`
+	// EndDate holds the value of the "end_date" field.
+	EndDate *time.Time `json:"end_date,omitempty"`
 	// Amount holds the value of the "amount" field.
 	Amount float64 `json:"amount,omitempty"`
 	// AmountCurrency holds the value of the "amount_currency" field.
@@ -44,6 +46,14 @@ type ContractSupplier struct {
 	TotalWithAmendment float64 `json:"total_with_amendment,omitempty"`
 	// RemainingAmount holds the value of the "remaining_amount" field.
 	RemainingAmount float64 `json:"remaining_amount,omitempty"`
+	// FileKey holds the value of the "file_key" field.
+	FileKey *string `json:"file_key,omitempty"`
+	// FileName holds the value of the "file_name" field.
+	FileName *string `json:"file_name,omitempty"`
+	// FileSize holds the value of the "file_size" field.
+	FileSize *int64 `json:"file_size,omitempty"`
+	// FileMimeType holds the value of the "file_mime_type" field.
+	FileMimeType *string `json:"file_mime_type,omitempty"`
 	// IsActive holds the value of the "is_active" field.
 	IsActive bool `json:"is_active,omitempty"`
 	// CreatedAt holds the value of the "created_at" field.
@@ -62,9 +72,11 @@ func (*ContractSupplier) scanValues(columns []string) ([]any, error) {
 			values[i] = new(sql.NullBool)
 		case contractsupplier.FieldAmount, contractsupplier.FieldAmountCurrency, contractsupplier.FieldBalanceAtYearEnd, contractsupplier.FieldAmendmentAmount, contractsupplier.FieldTotalWithAmendment, contractsupplier.FieldRemainingAmount:
 			values[i] = new(sql.NullFloat64)
-		case contractsupplier.FieldContractNumber, contractsupplier.FieldCurrency, contractsupplier.FieldAmendmentNumber:
+		case contractsupplier.FieldFileSize:
+			values[i] = new(sql.NullInt64)
+		case contractsupplier.FieldContractNumber, contractsupplier.FieldCurrency, contractsupplier.FieldAmendmentNumber, contractsupplier.FieldFileKey, contractsupplier.FieldFileName, contractsupplier.FieldFileMimeType:
 			values[i] = new(sql.NullString)
-		case contractsupplier.FieldSignedDate, contractsupplier.FieldAmendmentDate, contractsupplier.FieldCreatedAt, contractsupplier.FieldUpdatedAt:
+		case contractsupplier.FieldSignedDate, contractsupplier.FieldEndDate, contractsupplier.FieldAmendmentDate, contractsupplier.FieldCreatedAt, contractsupplier.FieldUpdatedAt:
 			values[i] = new(sql.NullTime)
 		case contractsupplier.FieldID, contractsupplier.FieldSupplierID:
 			values[i] = new(uuid.UUID)
@@ -112,6 +124,13 @@ func (_m *ContractSupplier) assignValues(columns []string, values []any) error {
 				return fmt.Errorf("unexpected type %T for field signed_date", values[i])
 			} else if value.Valid {
 				_m.SignedDate = value.Time
+			}
+		case contractsupplier.FieldEndDate:
+			if value, ok := values[i].(*sql.NullTime); !ok {
+				return fmt.Errorf("unexpected type %T for field end_date", values[i])
+			} else if value.Valid {
+				_m.EndDate = new(time.Time)
+				*_m.EndDate = value.Time
 			}
 		case contractsupplier.FieldAmount:
 			if value, ok := values[i].(*sql.NullFloat64); !ok {
@@ -172,6 +191,34 @@ func (_m *ContractSupplier) assignValues(columns []string, values []any) error {
 				return fmt.Errorf("unexpected type %T for field remaining_amount", values[i])
 			} else if value.Valid {
 				_m.RemainingAmount = value.Float64
+			}
+		case contractsupplier.FieldFileKey:
+			if value, ok := values[i].(*sql.NullString); !ok {
+				return fmt.Errorf("unexpected type %T for field file_key", values[i])
+			} else if value.Valid {
+				_m.FileKey = new(string)
+				*_m.FileKey = value.String
+			}
+		case contractsupplier.FieldFileName:
+			if value, ok := values[i].(*sql.NullString); !ok {
+				return fmt.Errorf("unexpected type %T for field file_name", values[i])
+			} else if value.Valid {
+				_m.FileName = new(string)
+				*_m.FileName = value.String
+			}
+		case contractsupplier.FieldFileSize:
+			if value, ok := values[i].(*sql.NullInt64); !ok {
+				return fmt.Errorf("unexpected type %T for field file_size", values[i])
+			} else if value.Valid {
+				_m.FileSize = new(int64)
+				*_m.FileSize = value.Int64
+			}
+		case contractsupplier.FieldFileMimeType:
+			if value, ok := values[i].(*sql.NullString); !ok {
+				return fmt.Errorf("unexpected type %T for field file_mime_type", values[i])
+			} else if value.Valid {
+				_m.FileMimeType = new(string)
+				*_m.FileMimeType = value.String
 			}
 		case contractsupplier.FieldIsActive:
 			if value, ok := values[i].(*sql.NullBool); !ok {
@@ -239,6 +286,11 @@ func (_m *ContractSupplier) String() string {
 	builder.WriteString("signed_date=")
 	builder.WriteString(_m.SignedDate.Format(time.ANSIC))
 	builder.WriteString(", ")
+	if v := _m.EndDate; v != nil {
+		builder.WriteString("end_date=")
+		builder.WriteString(v.Format(time.ANSIC))
+	}
+	builder.WriteString(", ")
 	builder.WriteString("amount=")
 	builder.WriteString(fmt.Sprintf("%v", _m.Amount))
 	builder.WriteString(", ")
@@ -277,6 +329,26 @@ func (_m *ContractSupplier) String() string {
 	builder.WriteString(", ")
 	builder.WriteString("remaining_amount=")
 	builder.WriteString(fmt.Sprintf("%v", _m.RemainingAmount))
+	builder.WriteString(", ")
+	if v := _m.FileKey; v != nil {
+		builder.WriteString("file_key=")
+		builder.WriteString(*v)
+	}
+	builder.WriteString(", ")
+	if v := _m.FileName; v != nil {
+		builder.WriteString("file_name=")
+		builder.WriteString(*v)
+	}
+	builder.WriteString(", ")
+	if v := _m.FileSize; v != nil {
+		builder.WriteString("file_size=")
+		builder.WriteString(fmt.Sprintf("%v", *v))
+	}
+	builder.WriteString(", ")
+	if v := _m.FileMimeType; v != nil {
+		builder.WriteString("file_mime_type=")
+		builder.WriteString(*v)
+	}
 	builder.WriteString(", ")
 	builder.WriteString("is_active=")
 	builder.WriteString(fmt.Sprintf("%v", _m.IsActive))

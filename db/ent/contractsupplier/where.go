@@ -75,6 +75,11 @@ func SignedDate(v time.Time) predicate.ContractSupplier {
 	return predicate.ContractSupplier(sql.FieldEQ(FieldSignedDate, v))
 }
 
+// EndDate applies equality check predicate on the "end_date" field. It's identical to EndDateEQ.
+func EndDate(v time.Time) predicate.ContractSupplier {
+	return predicate.ContractSupplier(sql.FieldEQ(FieldEndDate, v))
+}
+
 // Amount applies equality check predicate on the "amount" field. It's identical to AmountEQ.
 func Amount(v float64) predicate.ContractSupplier {
 	return predicate.ContractSupplier(sql.FieldEQ(FieldAmount, v))
@@ -118,6 +123,26 @@ func TotalWithAmendment(v float64) predicate.ContractSupplier {
 // RemainingAmount applies equality check predicate on the "remaining_amount" field. It's identical to RemainingAmountEQ.
 func RemainingAmount(v float64) predicate.ContractSupplier {
 	return predicate.ContractSupplier(sql.FieldEQ(FieldRemainingAmount, v))
+}
+
+// FileKey applies equality check predicate on the "file_key" field. It's identical to FileKeyEQ.
+func FileKey(v string) predicate.ContractSupplier {
+	return predicate.ContractSupplier(sql.FieldEQ(FieldFileKey, v))
+}
+
+// FileName applies equality check predicate on the "file_name" field. It's identical to FileNameEQ.
+func FileName(v string) predicate.ContractSupplier {
+	return predicate.ContractSupplier(sql.FieldEQ(FieldFileName, v))
+}
+
+// FileSize applies equality check predicate on the "file_size" field. It's identical to FileSizeEQ.
+func FileSize(v int64) predicate.ContractSupplier {
+	return predicate.ContractSupplier(sql.FieldEQ(FieldFileSize, v))
+}
+
+// FileMimeType applies equality check predicate on the "file_mime_type" field. It's identical to FileMimeTypeEQ.
+func FileMimeType(v string) predicate.ContractSupplier {
+	return predicate.ContractSupplier(sql.FieldEQ(FieldFileMimeType, v))
 }
 
 // IsActive applies equality check predicate on the "is_active" field. It's identical to IsActiveEQ.
@@ -288,6 +313,56 @@ func SignedDateLT(v time.Time) predicate.ContractSupplier {
 // SignedDateLTE applies the LTE predicate on the "signed_date" field.
 func SignedDateLTE(v time.Time) predicate.ContractSupplier {
 	return predicate.ContractSupplier(sql.FieldLTE(FieldSignedDate, v))
+}
+
+// EndDateEQ applies the EQ predicate on the "end_date" field.
+func EndDateEQ(v time.Time) predicate.ContractSupplier {
+	return predicate.ContractSupplier(sql.FieldEQ(FieldEndDate, v))
+}
+
+// EndDateNEQ applies the NEQ predicate on the "end_date" field.
+func EndDateNEQ(v time.Time) predicate.ContractSupplier {
+	return predicate.ContractSupplier(sql.FieldNEQ(FieldEndDate, v))
+}
+
+// EndDateIn applies the In predicate on the "end_date" field.
+func EndDateIn(vs ...time.Time) predicate.ContractSupplier {
+	return predicate.ContractSupplier(sql.FieldIn(FieldEndDate, vs...))
+}
+
+// EndDateNotIn applies the NotIn predicate on the "end_date" field.
+func EndDateNotIn(vs ...time.Time) predicate.ContractSupplier {
+	return predicate.ContractSupplier(sql.FieldNotIn(FieldEndDate, vs...))
+}
+
+// EndDateGT applies the GT predicate on the "end_date" field.
+func EndDateGT(v time.Time) predicate.ContractSupplier {
+	return predicate.ContractSupplier(sql.FieldGT(FieldEndDate, v))
+}
+
+// EndDateGTE applies the GTE predicate on the "end_date" field.
+func EndDateGTE(v time.Time) predicate.ContractSupplier {
+	return predicate.ContractSupplier(sql.FieldGTE(FieldEndDate, v))
+}
+
+// EndDateLT applies the LT predicate on the "end_date" field.
+func EndDateLT(v time.Time) predicate.ContractSupplier {
+	return predicate.ContractSupplier(sql.FieldLT(FieldEndDate, v))
+}
+
+// EndDateLTE applies the LTE predicate on the "end_date" field.
+func EndDateLTE(v time.Time) predicate.ContractSupplier {
+	return predicate.ContractSupplier(sql.FieldLTE(FieldEndDate, v))
+}
+
+// EndDateIsNil applies the IsNil predicate on the "end_date" field.
+func EndDateIsNil() predicate.ContractSupplier {
+	return predicate.ContractSupplier(sql.FieldIsNull(FieldEndDate))
+}
+
+// EndDateNotNil applies the NotNil predicate on the "end_date" field.
+func EndDateNotNil() predicate.ContractSupplier {
+	return predicate.ContractSupplier(sql.FieldNotNull(FieldEndDate))
 }
 
 // AmountEQ applies the EQ predicate on the "amount" field.
@@ -758,6 +833,281 @@ func RemainingAmountLT(v float64) predicate.ContractSupplier {
 // RemainingAmountLTE applies the LTE predicate on the "remaining_amount" field.
 func RemainingAmountLTE(v float64) predicate.ContractSupplier {
 	return predicate.ContractSupplier(sql.FieldLTE(FieldRemainingAmount, v))
+}
+
+// FileKeyEQ applies the EQ predicate on the "file_key" field.
+func FileKeyEQ(v string) predicate.ContractSupplier {
+	return predicate.ContractSupplier(sql.FieldEQ(FieldFileKey, v))
+}
+
+// FileKeyNEQ applies the NEQ predicate on the "file_key" field.
+func FileKeyNEQ(v string) predicate.ContractSupplier {
+	return predicate.ContractSupplier(sql.FieldNEQ(FieldFileKey, v))
+}
+
+// FileKeyIn applies the In predicate on the "file_key" field.
+func FileKeyIn(vs ...string) predicate.ContractSupplier {
+	return predicate.ContractSupplier(sql.FieldIn(FieldFileKey, vs...))
+}
+
+// FileKeyNotIn applies the NotIn predicate on the "file_key" field.
+func FileKeyNotIn(vs ...string) predicate.ContractSupplier {
+	return predicate.ContractSupplier(sql.FieldNotIn(FieldFileKey, vs...))
+}
+
+// FileKeyGT applies the GT predicate on the "file_key" field.
+func FileKeyGT(v string) predicate.ContractSupplier {
+	return predicate.ContractSupplier(sql.FieldGT(FieldFileKey, v))
+}
+
+// FileKeyGTE applies the GTE predicate on the "file_key" field.
+func FileKeyGTE(v string) predicate.ContractSupplier {
+	return predicate.ContractSupplier(sql.FieldGTE(FieldFileKey, v))
+}
+
+// FileKeyLT applies the LT predicate on the "file_key" field.
+func FileKeyLT(v string) predicate.ContractSupplier {
+	return predicate.ContractSupplier(sql.FieldLT(FieldFileKey, v))
+}
+
+// FileKeyLTE applies the LTE predicate on the "file_key" field.
+func FileKeyLTE(v string) predicate.ContractSupplier {
+	return predicate.ContractSupplier(sql.FieldLTE(FieldFileKey, v))
+}
+
+// FileKeyContains applies the Contains predicate on the "file_key" field.
+func FileKeyContains(v string) predicate.ContractSupplier {
+	return predicate.ContractSupplier(sql.FieldContains(FieldFileKey, v))
+}
+
+// FileKeyHasPrefix applies the HasPrefix predicate on the "file_key" field.
+func FileKeyHasPrefix(v string) predicate.ContractSupplier {
+	return predicate.ContractSupplier(sql.FieldHasPrefix(FieldFileKey, v))
+}
+
+// FileKeyHasSuffix applies the HasSuffix predicate on the "file_key" field.
+func FileKeyHasSuffix(v string) predicate.ContractSupplier {
+	return predicate.ContractSupplier(sql.FieldHasSuffix(FieldFileKey, v))
+}
+
+// FileKeyIsNil applies the IsNil predicate on the "file_key" field.
+func FileKeyIsNil() predicate.ContractSupplier {
+	return predicate.ContractSupplier(sql.FieldIsNull(FieldFileKey))
+}
+
+// FileKeyNotNil applies the NotNil predicate on the "file_key" field.
+func FileKeyNotNil() predicate.ContractSupplier {
+	return predicate.ContractSupplier(sql.FieldNotNull(FieldFileKey))
+}
+
+// FileKeyEqualFold applies the EqualFold predicate on the "file_key" field.
+func FileKeyEqualFold(v string) predicate.ContractSupplier {
+	return predicate.ContractSupplier(sql.FieldEqualFold(FieldFileKey, v))
+}
+
+// FileKeyContainsFold applies the ContainsFold predicate on the "file_key" field.
+func FileKeyContainsFold(v string) predicate.ContractSupplier {
+	return predicate.ContractSupplier(sql.FieldContainsFold(FieldFileKey, v))
+}
+
+// FileNameEQ applies the EQ predicate on the "file_name" field.
+func FileNameEQ(v string) predicate.ContractSupplier {
+	return predicate.ContractSupplier(sql.FieldEQ(FieldFileName, v))
+}
+
+// FileNameNEQ applies the NEQ predicate on the "file_name" field.
+func FileNameNEQ(v string) predicate.ContractSupplier {
+	return predicate.ContractSupplier(sql.FieldNEQ(FieldFileName, v))
+}
+
+// FileNameIn applies the In predicate on the "file_name" field.
+func FileNameIn(vs ...string) predicate.ContractSupplier {
+	return predicate.ContractSupplier(sql.FieldIn(FieldFileName, vs...))
+}
+
+// FileNameNotIn applies the NotIn predicate on the "file_name" field.
+func FileNameNotIn(vs ...string) predicate.ContractSupplier {
+	return predicate.ContractSupplier(sql.FieldNotIn(FieldFileName, vs...))
+}
+
+// FileNameGT applies the GT predicate on the "file_name" field.
+func FileNameGT(v string) predicate.ContractSupplier {
+	return predicate.ContractSupplier(sql.FieldGT(FieldFileName, v))
+}
+
+// FileNameGTE applies the GTE predicate on the "file_name" field.
+func FileNameGTE(v string) predicate.ContractSupplier {
+	return predicate.ContractSupplier(sql.FieldGTE(FieldFileName, v))
+}
+
+// FileNameLT applies the LT predicate on the "file_name" field.
+func FileNameLT(v string) predicate.ContractSupplier {
+	return predicate.ContractSupplier(sql.FieldLT(FieldFileName, v))
+}
+
+// FileNameLTE applies the LTE predicate on the "file_name" field.
+func FileNameLTE(v string) predicate.ContractSupplier {
+	return predicate.ContractSupplier(sql.FieldLTE(FieldFileName, v))
+}
+
+// FileNameContains applies the Contains predicate on the "file_name" field.
+func FileNameContains(v string) predicate.ContractSupplier {
+	return predicate.ContractSupplier(sql.FieldContains(FieldFileName, v))
+}
+
+// FileNameHasPrefix applies the HasPrefix predicate on the "file_name" field.
+func FileNameHasPrefix(v string) predicate.ContractSupplier {
+	return predicate.ContractSupplier(sql.FieldHasPrefix(FieldFileName, v))
+}
+
+// FileNameHasSuffix applies the HasSuffix predicate on the "file_name" field.
+func FileNameHasSuffix(v string) predicate.ContractSupplier {
+	return predicate.ContractSupplier(sql.FieldHasSuffix(FieldFileName, v))
+}
+
+// FileNameIsNil applies the IsNil predicate on the "file_name" field.
+func FileNameIsNil() predicate.ContractSupplier {
+	return predicate.ContractSupplier(sql.FieldIsNull(FieldFileName))
+}
+
+// FileNameNotNil applies the NotNil predicate on the "file_name" field.
+func FileNameNotNil() predicate.ContractSupplier {
+	return predicate.ContractSupplier(sql.FieldNotNull(FieldFileName))
+}
+
+// FileNameEqualFold applies the EqualFold predicate on the "file_name" field.
+func FileNameEqualFold(v string) predicate.ContractSupplier {
+	return predicate.ContractSupplier(sql.FieldEqualFold(FieldFileName, v))
+}
+
+// FileNameContainsFold applies the ContainsFold predicate on the "file_name" field.
+func FileNameContainsFold(v string) predicate.ContractSupplier {
+	return predicate.ContractSupplier(sql.FieldContainsFold(FieldFileName, v))
+}
+
+// FileSizeEQ applies the EQ predicate on the "file_size" field.
+func FileSizeEQ(v int64) predicate.ContractSupplier {
+	return predicate.ContractSupplier(sql.FieldEQ(FieldFileSize, v))
+}
+
+// FileSizeNEQ applies the NEQ predicate on the "file_size" field.
+func FileSizeNEQ(v int64) predicate.ContractSupplier {
+	return predicate.ContractSupplier(sql.FieldNEQ(FieldFileSize, v))
+}
+
+// FileSizeIn applies the In predicate on the "file_size" field.
+func FileSizeIn(vs ...int64) predicate.ContractSupplier {
+	return predicate.ContractSupplier(sql.FieldIn(FieldFileSize, vs...))
+}
+
+// FileSizeNotIn applies the NotIn predicate on the "file_size" field.
+func FileSizeNotIn(vs ...int64) predicate.ContractSupplier {
+	return predicate.ContractSupplier(sql.FieldNotIn(FieldFileSize, vs...))
+}
+
+// FileSizeGT applies the GT predicate on the "file_size" field.
+func FileSizeGT(v int64) predicate.ContractSupplier {
+	return predicate.ContractSupplier(sql.FieldGT(FieldFileSize, v))
+}
+
+// FileSizeGTE applies the GTE predicate on the "file_size" field.
+func FileSizeGTE(v int64) predicate.ContractSupplier {
+	return predicate.ContractSupplier(sql.FieldGTE(FieldFileSize, v))
+}
+
+// FileSizeLT applies the LT predicate on the "file_size" field.
+func FileSizeLT(v int64) predicate.ContractSupplier {
+	return predicate.ContractSupplier(sql.FieldLT(FieldFileSize, v))
+}
+
+// FileSizeLTE applies the LTE predicate on the "file_size" field.
+func FileSizeLTE(v int64) predicate.ContractSupplier {
+	return predicate.ContractSupplier(sql.FieldLTE(FieldFileSize, v))
+}
+
+// FileSizeIsNil applies the IsNil predicate on the "file_size" field.
+func FileSizeIsNil() predicate.ContractSupplier {
+	return predicate.ContractSupplier(sql.FieldIsNull(FieldFileSize))
+}
+
+// FileSizeNotNil applies the NotNil predicate on the "file_size" field.
+func FileSizeNotNil() predicate.ContractSupplier {
+	return predicate.ContractSupplier(sql.FieldNotNull(FieldFileSize))
+}
+
+// FileMimeTypeEQ applies the EQ predicate on the "file_mime_type" field.
+func FileMimeTypeEQ(v string) predicate.ContractSupplier {
+	return predicate.ContractSupplier(sql.FieldEQ(FieldFileMimeType, v))
+}
+
+// FileMimeTypeNEQ applies the NEQ predicate on the "file_mime_type" field.
+func FileMimeTypeNEQ(v string) predicate.ContractSupplier {
+	return predicate.ContractSupplier(sql.FieldNEQ(FieldFileMimeType, v))
+}
+
+// FileMimeTypeIn applies the In predicate on the "file_mime_type" field.
+func FileMimeTypeIn(vs ...string) predicate.ContractSupplier {
+	return predicate.ContractSupplier(sql.FieldIn(FieldFileMimeType, vs...))
+}
+
+// FileMimeTypeNotIn applies the NotIn predicate on the "file_mime_type" field.
+func FileMimeTypeNotIn(vs ...string) predicate.ContractSupplier {
+	return predicate.ContractSupplier(sql.FieldNotIn(FieldFileMimeType, vs...))
+}
+
+// FileMimeTypeGT applies the GT predicate on the "file_mime_type" field.
+func FileMimeTypeGT(v string) predicate.ContractSupplier {
+	return predicate.ContractSupplier(sql.FieldGT(FieldFileMimeType, v))
+}
+
+// FileMimeTypeGTE applies the GTE predicate on the "file_mime_type" field.
+func FileMimeTypeGTE(v string) predicate.ContractSupplier {
+	return predicate.ContractSupplier(sql.FieldGTE(FieldFileMimeType, v))
+}
+
+// FileMimeTypeLT applies the LT predicate on the "file_mime_type" field.
+func FileMimeTypeLT(v string) predicate.ContractSupplier {
+	return predicate.ContractSupplier(sql.FieldLT(FieldFileMimeType, v))
+}
+
+// FileMimeTypeLTE applies the LTE predicate on the "file_mime_type" field.
+func FileMimeTypeLTE(v string) predicate.ContractSupplier {
+	return predicate.ContractSupplier(sql.FieldLTE(FieldFileMimeType, v))
+}
+
+// FileMimeTypeContains applies the Contains predicate on the "file_mime_type" field.
+func FileMimeTypeContains(v string) predicate.ContractSupplier {
+	return predicate.ContractSupplier(sql.FieldContains(FieldFileMimeType, v))
+}
+
+// FileMimeTypeHasPrefix applies the HasPrefix predicate on the "file_mime_type" field.
+func FileMimeTypeHasPrefix(v string) predicate.ContractSupplier {
+	return predicate.ContractSupplier(sql.FieldHasPrefix(FieldFileMimeType, v))
+}
+
+// FileMimeTypeHasSuffix applies the HasSuffix predicate on the "file_mime_type" field.
+func FileMimeTypeHasSuffix(v string) predicate.ContractSupplier {
+	return predicate.ContractSupplier(sql.FieldHasSuffix(FieldFileMimeType, v))
+}
+
+// FileMimeTypeIsNil applies the IsNil predicate on the "file_mime_type" field.
+func FileMimeTypeIsNil() predicate.ContractSupplier {
+	return predicate.ContractSupplier(sql.FieldIsNull(FieldFileMimeType))
+}
+
+// FileMimeTypeNotNil applies the NotNil predicate on the "file_mime_type" field.
+func FileMimeTypeNotNil() predicate.ContractSupplier {
+	return predicate.ContractSupplier(sql.FieldNotNull(FieldFileMimeType))
+}
+
+// FileMimeTypeEqualFold applies the EqualFold predicate on the "file_mime_type" field.
+func FileMimeTypeEqualFold(v string) predicate.ContractSupplier {
+	return predicate.ContractSupplier(sql.FieldEqualFold(FieldFileMimeType, v))
+}
+
+// FileMimeTypeContainsFold applies the ContainsFold predicate on the "file_mime_type" field.
+func FileMimeTypeContainsFold(v string) predicate.ContractSupplier {
+	return predicate.ContractSupplier(sql.FieldContainsFold(FieldFileMimeType, v))
 }
 
 // IsActiveEQ applies the EQ predicate on the "is_active" field.
