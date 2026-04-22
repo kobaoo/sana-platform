@@ -112,3 +112,22 @@ type parsedSupplierRow struct {
 	BinOrIIN        *string
 	LocalContentPct *float64
 }
+
+// SupplierWithBudget — supplier with aggregated budget data from contract_suppliers.
+type SupplierWithBudget struct {
+	ID              string       `json:"id"`
+	ClientID        *string      `json:"client_id"`
+	Type            SupplierType `json:"type"`
+	Name            string       `json:"name"`
+	BinOrIIN        *string      `json:"bin_or_iin,omitempty"`
+	LocalContentPct *float64     `json:"local_content_pct,omitempty"`
+	IsActive        bool         `json:"is_active"`
+	BudgetTotal     float64      `json:"budget_total"`
+	BudgetUsed      float64      `json:"budget_used"`
+	BudgetRemaining float64      `json:"budget_remaining"`
+}
+
+// ListSuppliersWithBudgetResponse — response for supplier list with budget aggregation.
+type ListSuppliersWithBudgetResponse struct {
+	Suppliers []SupplierWithBudget `json:"suppliers"`
+}

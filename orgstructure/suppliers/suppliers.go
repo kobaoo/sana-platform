@@ -109,6 +109,18 @@ func ListSuppliers(ctx context.Context, params *ListSuppliersParams) (*ListSuppl
 	return &ListSuppliersResponse{Suppliers: suppliers}, nil
 }
 
+// ListSuppliersWithBudget returns active suppliers with aggregated budget totals from contracts.
+//
+//encore:api auth method=GET path=/supplier/budget
+func ListSuppliersWithBudget(ctx context.Context) (*ListSuppliersWithBudgetResponse, error) {
+	suppliers, err := querySuppliersWithBudget(ctx)
+	if err != nil {
+		return nil, err
+	}
+
+	return &ListSuppliersWithBudgetResponse{Suppliers: suppliers}, nil
+}
+
 // GetSupplier returns supplier by id.
 //
 //encore:api auth method=GET path=/suppliers/:id
@@ -607,6 +619,58 @@ func parseSupplierXLSX(data []byte) ([][]string, error) {
 
 func normalizeSupplierHeader(h string) string {
 	return strings.ToLower(strings.TrimSpace(h))
+}
+
+func querySuppliersWithBudget(ctx context.Context) ([]SupplierWithBudget, error) {
+	rows, err := db.Query(ctx, `
+		SELECT
+			s.id,
+			s.client_id,
+			s.type,
+			s.name,
+			s.bin_or_iin,
+			s.local_content_pct,
+			s.is_active,
+			COALESCE(SUM(cs.total_with_amendment), 0)                               AS budget_total,
+			COALESCE(SUM(cs.total_with_amendment) - SUM(cs.remaining_amount), 0)    AS budget_used,
+			COALESCE(SUM(cs.remaining_amount), 0)                                   AS budget_remaining
+		FROM suppliers s
+		LEFT JOIN contract_suppliers cs ON cs.supplier_id = s.id AND cs.is_active = TRUE
+		WHERE s.is_active = TRUE
+		GROUP BY s.id, s.client_id, s.type, s.name, s.bin_or_iin, s.local_content_pct, s.is_active
+		ORDER BY s.name ASC
+	`)
+	if err != nil {
+		return nil, errs.B().Code(errs.Internal).Msg("failed to list suppliers with budget").Cause(err).Err()
+	}
+	defer rows.Close()
+
+	result := []SupplierWithBudget{}
+	for rows.Next() {
+		var s SupplierWithBudget
+
+		if err := rows.Scan(
+			&s.ID,
+			&s.ClientID,
+			&s.Type,
+			&s.Name,
+			&s.BinOrIIN,
+			&s.LocalContentPct,
+			&s.IsActive,
+			&s.BudgetTotal,
+			&s.BudgetUsed,
+			&s.BudgetRemaining,
+		); err != nil {
+			return nil, errs.B().Code(errs.Internal).Msg("failed to scan supplier with budget").Cause(err).Err()
+		}
+
+		result = append(result, s)
+	}
+	if err := rows.Err(); err != nil {
+		return nil, errs.B().Code(errs.Internal).Msg("failed to iterate suppliers with budget").Cause(err).Err()
+	}
+
+	return result, nil
 }
 
 // ════ HELPERS ════
