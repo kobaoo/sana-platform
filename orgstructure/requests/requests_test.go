@@ -73,6 +73,59 @@ func makeActors(t *testing.T) (uuid.UUID, uuid.UUID) {
 	return hrID, admID
 }
 
+func ensureCompanyAndDZO(t *testing.T) (uuid.UUID, uuid.UUID) {
+	t.Helper()
+
+	companyID := uuid.New()
+
+	_, err := Client.Company.
+		Create().
+		SetID(companyID).
+		SetName("Test Client " + companyID.String()).
+		Save(ctx())
+	if err != nil && !ent.IsConstraintError(err) {
+		t.Fatalf("create company failed: %v", err)
+	}
+
+	return companyID, ensureDZO(t, companyID)
+}
+
+func ensureDZO(t *testing.T, companyID uuid.UUID) uuid.UUID {
+	t.Helper()
+
+	dzoID := uuid.New()
+	_, err := Client.DzoOrganization.
+		Create().
+		SetID(dzoID).
+		SetClientID(companyID).
+		SetName("Test DZO " + dzoID.String()).
+		Save(ctx())
+	if err != nil && !ent.IsConstraintError(err) {
+		t.Fatalf("create dzo failed: %v", err)
+	}
+
+	return dzoID
+}
+
+func ensureEmployee(t *testing.T, companyID, dzoID uuid.UUID, fullName string) uuid.UUID {
+	t.Helper()
+
+	employeeID := uuid.New()
+	_, err := Client.Employee.
+		Create().
+		SetID(employeeID).
+		SetClientID(companyID).
+		SetDzoID(dzoID).
+		SetFullName(fullName).
+		SetEmail(strings.ToLower(strings.ReplaceAll(fullName, " ", ".")) + "-" + employeeID.String() + "@test.com").
+		Save(ctx())
+	if err != nil {
+		t.Fatalf("create employee failed: %v", err)
+	}
+
+	return employeeID
+}
+
 func makeRequest(t *testing.T, initiator uuid.UUID) *RequestResponse {
 	t.Helper()
 
@@ -112,7 +165,7 @@ func TestGetRequest(t *testing.T) {
 	hrID, _ := makeActors(t)
 	r := makeRequest(t, hrID)
 
-	resp, err := GetRequest(ctx(), toEncoreUUID(r.ID))
+	resp, err := GetRequest(authCtxFor(hrID, authhandler.RoleHR), toEncoreUUID(r.ID))
 	if err != nil {
 		t.Fatalf("unexpected error: %v", err)
 	}
@@ -189,5 +242,124 @@ func TestFinalize(t *testing.T) {
 
 	if final.Status != "APPROVED" {
 		t.Fatalf("expected APPROVED")
+	}
+}
+
+func TestCreateArchiveRequest(t *testing.T) {
+	_, admID := makeActors(t)
+	companyID, dzoA := ensureCompanyAndDZO(t)
+	dzoB := ensureDZO(t, companyID)
+	employeeA := ensureEmployee(t, companyID, dzoA, "Archive Employee A")
+	employeeB := ensureEmployee(t, companyID, dzoB, "Archive Employee B")
+
+	title := "Archived external learning"
+	resp, err := CreateArchiveRequest(authCtxFor(admID, authhandler.RoleADM), &CreateArchiveRequestRequest{
+		Kind:        string(RequestKindArchived),
+		Title:       &title,
+		Category:    "external_learning",
+		EmployeeIDs: []uuid.UUID{employeeA, employeeB},
+		Contracts: []ArchiveRequestContractInput{
+			{DzoID: dzoA, FileName: "contract-a.pdf", FileURL: "s3://contracts/a.pdf"},
+			{DzoID: dzoB, FileName: "contract-b.pdf", FileURL: "s3://contracts/b.pdf"},
+		},
+	})
+	if err != nil {
+		t.Fatalf("unexpected error: %v", err)
+	}
+
+	if resp.Kind != string(RequestKindArchived) {
+		t.Fatalf("expected archived kind, got %s", resp.Kind)
+	}
+	if resp.Status != "COMPLETED" {
+		t.Fatalf("expected COMPLETED, got %s", resp.Status)
+	}
+	if resp.CompletedAt == nil {
+		t.Fatal("expected completed_at to be set")
+	}
+	if len(resp.EmployeeIDs) != 2 {
+		t.Fatalf("expected 2 employees, got %d", len(resp.EmployeeIDs))
+	}
+	if len(resp.Contracts) != 2 {
+		t.Fatalf("expected 2 contracts, got %d", len(resp.Contracts))
+	}
+}
+
+func TestCreateArchiveRequestRequiresAdmin(t *testing.T) {
+	hrID, _ := makeActors(t)
+	companyID, dzoID := ensureCompanyAndDZO(t)
+	employeeID := ensureEmployee(t, companyID, dzoID, "Archive Employee HR")
+
+	_, err := CreateArchiveRequest(authCtxFor(hrID, authhandler.RoleHR), &CreateArchiveRequestRequest{
+		Kind:        string(RequestKindClosed),
+		Category:    "manual_expense",
+		EmployeeIDs: []uuid.UUID{employeeID},
+		Contracts: []ArchiveRequestContractInput{
+			{DzoID: dzoID, FileName: "contract.pdf", FileURL: "s3://contracts/contract.pdf"},
+		},
+	})
+	if err == nil {
+		t.Fatal("expected permission error")
+	}
+	if errs.Code(err) != errs.PermissionDenied {
+		t.Fatalf("expected PermissionDenied, got %v", errs.Code(err))
+	}
+}
+
+func TestCreateArchiveRequestRequiresContractPerDZO(t *testing.T) {
+	_, admID := makeActors(t)
+	companyID, dzoA := ensureCompanyAndDZO(t)
+	dzoB := ensureDZO(t, companyID)
+	employeeA := ensureEmployee(t, companyID, dzoA, "Archive Employee One")
+	employeeB := ensureEmployee(t, companyID, dzoB, "Archive Employee Two")
+
+	_, err := CreateArchiveRequest(authCtxFor(admID, authhandler.RoleADM), &CreateArchiveRequestRequest{
+		Kind:        string(RequestKindClosed),
+		Category:    "manual_expense",
+		EmployeeIDs: []uuid.UUID{employeeA, employeeB},
+		Contracts: []ArchiveRequestContractInput{
+			{DzoID: dzoA, FileName: "contract-a.pdf", FileURL: "s3://contracts/a.pdf"},
+		},
+	})
+	if err == nil {
+		t.Fatal("expected validation error")
+	}
+	if errs.Code(err) != errs.InvalidArgument {
+		t.Fatalf("expected InvalidArgument, got %v", errs.Code(err))
+	}
+}
+
+func TestArchiveRequestHiddenFromHR(t *testing.T) {
+	hrID, admID := makeActors(t)
+	companyID, dzoID := ensureCompanyAndDZO(t)
+	employeeID := ensureEmployee(t, companyID, dzoID, "Archive Employee Hidden")
+
+	archiveResp, err := CreateArchiveRequest(authCtxFor(admID, authhandler.RoleADM), &CreateArchiveRequestRequest{
+		Kind:        string(RequestKindArchived),
+		Category:    "manual_expense",
+		EmployeeIDs: []uuid.UUID{employeeID},
+		Contracts: []ArchiveRequestContractInput{
+			{DzoID: dzoID, FileName: "contract.pdf", FileURL: "s3://contracts/contract.pdf"},
+		},
+	})
+	if err != nil {
+		t.Fatalf("create archive failed: %v", err)
+	}
+
+	listResp, err := ListRequests(authCtxFor(hrID, authhandler.RoleHR))
+	if err != nil {
+		t.Fatalf("list requests failed: %v", err)
+	}
+	for _, item := range listResp.Items {
+		if item.ID == archiveResp.ID {
+			t.Fatal("hr should not see archive request in list")
+		}
+	}
+
+	_, err = GetRequest(authCtxFor(hrID, authhandler.RoleHR), toEncoreUUID(archiveResp.ID))
+	if err == nil {
+		t.Fatal("expected permission error when hr opens archive request")
+	}
+	if errs.Code(err) != errs.PermissionDenied {
+		t.Fatalf("expected PermissionDenied, got %v", errs.Code(err))
 	}
 }

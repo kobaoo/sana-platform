@@ -69,6 +69,30 @@ func (f RequestFunc) Mutate(ctx context.Context, m ent.Mutation) (ent.Value, err
 	return nil, fmt.Errorf("unexpected mutation type %T. expect *ent.RequestMutation", m)
 }
 
+// The RequestDzoContractFunc type is an adapter to allow the use of ordinary
+// function as RequestDzoContract mutator.
+type RequestDzoContractFunc func(context.Context, *ent.RequestDzoContractMutation) (ent.Value, error)
+
+// Mutate calls f(ctx, m).
+func (f RequestDzoContractFunc) Mutate(ctx context.Context, m ent.Mutation) (ent.Value, error) {
+	if mv, ok := m.(*ent.RequestDzoContractMutation); ok {
+		return f(ctx, mv)
+	}
+	return nil, fmt.Errorf("unexpected mutation type %T. expect *ent.RequestDzoContractMutation", m)
+}
+
+// The RequestEmployeeFunc type is an adapter to allow the use of ordinary
+// function as RequestEmployee mutator.
+type RequestEmployeeFunc func(context.Context, *ent.RequestEmployeeMutation) (ent.Value, error)
+
+// Mutate calls f(ctx, m).
+func (f RequestEmployeeFunc) Mutate(ctx context.Context, m ent.Mutation) (ent.Value, error) {
+	if mv, ok := m.(*ent.RequestEmployeeMutation); ok {
+		return f(ctx, mv)
+	}
+	return nil, fmt.Errorf("unexpected mutation type %T. expect *ent.RequestEmployeeMutation", m)
+}
+
 // The TrainingEventFunc type is an adapter to allow the use of ordinary
 // function as TrainingEvent mutator.
 type TrainingEventFunc func(context.Context, *ent.TrainingEventMutation) (ent.Value, error)

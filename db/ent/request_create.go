@@ -40,6 +40,48 @@ func (_c *RequestCreate) SetEntityType(v string) *RequestCreate {
 	return _c
 }
 
+// SetKind sets the "kind" field.
+func (_c *RequestCreate) SetKind(v string) *RequestCreate {
+	_c.mutation.SetKind(v)
+	return _c
+}
+
+// SetNillableKind sets the "kind" field if the given value is not nil.
+func (_c *RequestCreate) SetNillableKind(v *string) *RequestCreate {
+	if v != nil {
+		_c.SetKind(*v)
+	}
+	return _c
+}
+
+// SetTitle sets the "title" field.
+func (_c *RequestCreate) SetTitle(v string) *RequestCreate {
+	_c.mutation.SetTitle(v)
+	return _c
+}
+
+// SetNillableTitle sets the "title" field if the given value is not nil.
+func (_c *RequestCreate) SetNillableTitle(v *string) *RequestCreate {
+	if v != nil {
+		_c.SetTitle(*v)
+	}
+	return _c
+}
+
+// SetCategory sets the "category" field.
+func (_c *RequestCreate) SetCategory(v string) *RequestCreate {
+	_c.mutation.SetCategory(v)
+	return _c
+}
+
+// SetNillableCategory sets the "category" field if the given value is not nil.
+func (_c *RequestCreate) SetNillableCategory(v *string) *RequestCreate {
+	if v != nil {
+		_c.SetCategory(*v)
+	}
+	return _c
+}
+
 // SetStep sets the "step" field.
 func (_c *RequestCreate) SetStep(v int) *RequestCreate {
 	_c.mutation.SetStep(v)
@@ -64,6 +106,34 @@ func (_c *RequestCreate) SetCreatedAt(v time.Time) *RequestCreate {
 func (_c *RequestCreate) SetNillableCreatedAt(v *time.Time) *RequestCreate {
 	if v != nil {
 		_c.SetCreatedAt(*v)
+	}
+	return _c
+}
+
+// SetUpdatedAt sets the "updated_at" field.
+func (_c *RequestCreate) SetUpdatedAt(v time.Time) *RequestCreate {
+	_c.mutation.SetUpdatedAt(v)
+	return _c
+}
+
+// SetNillableUpdatedAt sets the "updated_at" field if the given value is not nil.
+func (_c *RequestCreate) SetNillableUpdatedAt(v *time.Time) *RequestCreate {
+	if v != nil {
+		_c.SetUpdatedAt(*v)
+	}
+	return _c
+}
+
+// SetCompletedAt sets the "completed_at" field.
+func (_c *RequestCreate) SetCompletedAt(v time.Time) *RequestCreate {
+	_c.mutation.SetCompletedAt(v)
+	return _c
+}
+
+// SetNillableCompletedAt sets the "completed_at" field if the given value is not nil.
+func (_c *RequestCreate) SetNillableCompletedAt(v *time.Time) *RequestCreate {
+	if v != nil {
+		_c.SetCompletedAt(*v)
 	}
 	return _c
 }
@@ -136,6 +206,10 @@ func (_c *RequestCreate) ExecX(ctx context.Context) {
 
 // defaults sets the default values of the builder before save.
 func (_c *RequestCreate) defaults() {
+	if _, ok := _c.mutation.Kind(); !ok {
+		v := request.DefaultKind
+		_c.mutation.SetKind(v)
+	}
 	if _, ok := _c.mutation.Step(); !ok {
 		v := request.DefaultStep
 		_c.mutation.SetStep(v)
@@ -143,6 +217,10 @@ func (_c *RequestCreate) defaults() {
 	if _, ok := _c.mutation.CreatedAt(); !ok {
 		v := request.DefaultCreatedAt()
 		_c.mutation.SetCreatedAt(v)
+	}
+	if _, ok := _c.mutation.UpdatedAt(); !ok {
+		v := request.DefaultUpdatedAt()
+		_c.mutation.SetUpdatedAt(v)
 	}
 	if _, ok := _c.mutation.Status(); !ok {
 		v := request.DefaultStatus
@@ -170,11 +248,32 @@ func (_c *RequestCreate) check() error {
 			return &ValidationError{Name: "entity_type", err: fmt.Errorf(`ent: validator failed for field "Request.entity_type": %w`, err)}
 		}
 	}
+	if _, ok := _c.mutation.Kind(); !ok {
+		return &ValidationError{Name: "kind", err: errors.New(`ent: missing required field "Request.kind"`)}
+	}
+	if v, ok := _c.mutation.Kind(); ok {
+		if err := request.KindValidator(v); err != nil {
+			return &ValidationError{Name: "kind", err: fmt.Errorf(`ent: validator failed for field "Request.kind": %w`, err)}
+		}
+	}
+	if v, ok := _c.mutation.Title(); ok {
+		if err := request.TitleValidator(v); err != nil {
+			return &ValidationError{Name: "title", err: fmt.Errorf(`ent: validator failed for field "Request.title": %w`, err)}
+		}
+	}
+	if v, ok := _c.mutation.Category(); ok {
+		if err := request.CategoryValidator(v); err != nil {
+			return &ValidationError{Name: "category", err: fmt.Errorf(`ent: validator failed for field "Request.category": %w`, err)}
+		}
+	}
 	if _, ok := _c.mutation.Step(); !ok {
 		return &ValidationError{Name: "step", err: errors.New(`ent: missing required field "Request.step"`)}
 	}
 	if _, ok := _c.mutation.CreatedAt(); !ok {
 		return &ValidationError{Name: "created_at", err: errors.New(`ent: missing required field "Request.created_at"`)}
+	}
+	if _, ok := _c.mutation.UpdatedAt(); !ok {
+		return &ValidationError{Name: "updated_at", err: errors.New(`ent: missing required field "Request.updated_at"`)}
 	}
 	if _, ok := _c.mutation.Status(); !ok {
 		return &ValidationError{Name: "status", err: errors.New(`ent: missing required field "Request.status"`)}
@@ -230,6 +329,18 @@ func (_c *RequestCreate) createSpec() (*Request, *sqlgraph.CreateSpec) {
 		_spec.SetField(request.FieldEntityType, field.TypeString, value)
 		_node.EntityType = value
 	}
+	if value, ok := _c.mutation.Kind(); ok {
+		_spec.SetField(request.FieldKind, field.TypeString, value)
+		_node.Kind = value
+	}
+	if value, ok := _c.mutation.Title(); ok {
+		_spec.SetField(request.FieldTitle, field.TypeString, value)
+		_node.Title = &value
+	}
+	if value, ok := _c.mutation.Category(); ok {
+		_spec.SetField(request.FieldCategory, field.TypeString, value)
+		_node.Category = &value
+	}
 	if value, ok := _c.mutation.Step(); ok {
 		_spec.SetField(request.FieldStep, field.TypeInt, value)
 		_node.Step = value
@@ -237,6 +348,14 @@ func (_c *RequestCreate) createSpec() (*Request, *sqlgraph.CreateSpec) {
 	if value, ok := _c.mutation.CreatedAt(); ok {
 		_spec.SetField(request.FieldCreatedAt, field.TypeTime, value)
 		_node.CreatedAt = value
+	}
+	if value, ok := _c.mutation.UpdatedAt(); ok {
+		_spec.SetField(request.FieldUpdatedAt, field.TypeTime, value)
+		_node.UpdatedAt = value
+	}
+	if value, ok := _c.mutation.CompletedAt(); ok {
+		_spec.SetField(request.FieldCompletedAt, field.TypeTime, value)
+		_node.CompletedAt = &value
 	}
 	if value, ok := _c.mutation.Status(); ok {
 		_spec.SetField(request.FieldStatus, field.TypeString, value)

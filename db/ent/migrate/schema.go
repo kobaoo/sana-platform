@@ -115,8 +115,13 @@ var (
 		{Name: "id", Type: field.TypeUUID, Unique: true},
 		{Name: "entity_id", Type: field.TypeUUID},
 		{Name: "entity_type", Type: field.TypeString, Size: 50},
+		{Name: "kind", Type: field.TypeString, Size: 30, Default: "REGULAR"},
+		{Name: "title", Type: field.TypeString, Nullable: true, Size: 255},
+		{Name: "category", Type: field.TypeString, Nullable: true, Size: 100},
 		{Name: "step", Type: field.TypeInt, Default: 0},
 		{Name: "created_at", Type: field.TypeTime, SchemaType: map[string]string{"postgres": "timestamptz"}},
+		{Name: "updated_at", Type: field.TypeTime, SchemaType: map[string]string{"postgres": "timestamptz"}},
+		{Name: "completed_at", Type: field.TypeTime, Nullable: true, SchemaType: map[string]string{"postgres": "timestamptz"}},
 		{Name: "status", Type: field.TypeString, Size: 50, Default: "PENDING"},
 		{Name: "initiator_id", Type: field.TypeUUID},
 	}
@@ -128,7 +133,7 @@ var (
 		ForeignKeys: []*schema.ForeignKey{
 			{
 				Symbol:     "requests_users_requests",
-				Columns:    []*schema.Column{RequestsColumns[6]},
+				Columns:    []*schema.Column{RequestsColumns[11]},
 				RefColumns: []*schema.Column{UsersColumns[0]},
 				OnDelete:   schema.NoAction,
 			},
@@ -137,7 +142,7 @@ var (
 			{
 				Name:    "request_initiator_id",
 				Unique:  false,
-				Columns: []*schema.Column{RequestsColumns[6]},
+				Columns: []*schema.Column{RequestsColumns[11]},
 			},
 			{
 				Name:    "request_entity_id",
@@ -145,14 +150,71 @@ var (
 				Columns: []*schema.Column{RequestsColumns[1]},
 			},
 			{
+				Name:    "request_kind",
+				Unique:  false,
+				Columns: []*schema.Column{RequestsColumns[3]},
+			},
+			{
 				Name:    "request_status",
 				Unique:  false,
-				Columns: []*schema.Column{RequestsColumns[5]},
+				Columns: []*schema.Column{RequestsColumns[10]},
 			},
 			{
 				Name:    "request_step",
 				Unique:  false,
-				Columns: []*schema.Column{RequestsColumns[3]},
+				Columns: []*schema.Column{RequestsColumns[6]},
+			},
+		},
+	}
+	// RequestDzoContractsColumns holds the columns for the "request_dzo_contracts" table.
+	RequestDzoContractsColumns = []*schema.Column{
+		{Name: "id", Type: field.TypeUUID, Unique: true},
+		{Name: "request_id", Type: field.TypeUUID},
+		{Name: "dzo_id", Type: field.TypeUUID},
+		{Name: "file_name", Type: field.TypeString, Size: 255},
+		{Name: "file_url", Type: field.TypeString, Size: 1024},
+		{Name: "created_at", Type: field.TypeTime, SchemaType: map[string]string{"postgres": "timestamptz"}},
+	}
+	// RequestDzoContractsTable holds the schema information for the "request_dzo_contracts" table.
+	RequestDzoContractsTable = &schema.Table{
+		Name:       "request_dzo_contracts",
+		Columns:    RequestDzoContractsColumns,
+		PrimaryKey: []*schema.Column{RequestDzoContractsColumns[0]},
+		Indexes: []*schema.Index{
+			{
+				Name:    "requestdzocontract_request_id",
+				Unique:  false,
+				Columns: []*schema.Column{RequestDzoContractsColumns[1]},
+			},
+			{
+				Name:    "requestdzocontract_dzo_id",
+				Unique:  false,
+				Columns: []*schema.Column{RequestDzoContractsColumns[2]},
+			},
+		},
+	}
+	// RequestEmployeesColumns holds the columns for the "request_employees" table.
+	RequestEmployeesColumns = []*schema.Column{
+		{Name: "id", Type: field.TypeUUID, Unique: true},
+		{Name: "request_id", Type: field.TypeUUID},
+		{Name: "employee_id", Type: field.TypeUUID},
+		{Name: "created_at", Type: field.TypeTime, SchemaType: map[string]string{"postgres": "timestamptz"}},
+	}
+	// RequestEmployeesTable holds the schema information for the "request_employees" table.
+	RequestEmployeesTable = &schema.Table{
+		Name:       "request_employees",
+		Columns:    RequestEmployeesColumns,
+		PrimaryKey: []*schema.Column{RequestEmployeesColumns[0]},
+		Indexes: []*schema.Index{
+			{
+				Name:    "requestemployee_request_id",
+				Unique:  false,
+				Columns: []*schema.Column{RequestEmployeesColumns[1]},
+			},
+			{
+				Name:    "requestemployee_employee_id",
+				Unique:  false,
+				Columns: []*schema.Column{RequestEmployeesColumns[2]},
 			},
 		},
 	}
@@ -245,6 +307,8 @@ var (
 		EmployeesTable,
 		OrganizationsTable,
 		RequestsTable,
+		RequestDzoContractsTable,
+		RequestEmployeesTable,
 		TrainingEventsTable,
 		TrainingParticipantsTable,
 		UsersTable,

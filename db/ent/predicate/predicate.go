@@ -21,6 +21,12 @@ type Organization func(*sql.Selector)
 // Request is the predicate function for request builders.
 type Request func(*sql.Selector)
 
+// RequestDzoContract is the predicate function for requestdzocontract builders.
+type RequestDzoContract func(*sql.Selector)
+
+// RequestEmployee is the predicate function for requestemployee builders.
+type RequestEmployee func(*sql.Selector)
+
 // TrainingEvent is the predicate function for trainingevent builders.
 type TrainingEvent func(*sql.Selector)
 

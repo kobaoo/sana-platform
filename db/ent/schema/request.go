@@ -26,11 +26,35 @@ func (Request) Fields() []ent.Field {
 		field.String("entity_type").
 			MaxLen(50).
 			NotEmpty(),
+		field.String("kind").
+			MaxLen(30).
+			NotEmpty().
+			Default("REGULAR"),
+		field.String("title").
+			MaxLen(255).
+			Optional().
+			Nillable(),
+		field.String("category").
+			MaxLen(100).
+			Optional().
+			Nillable(),
 		field.Int("step").
 			Default(0),
 		field.Time("created_at").
 			Default(time.Now).
 			Immutable().
+			SchemaType(map[string]string{
+				dialect.Postgres: "timestamptz",
+			}),
+		field.Time("updated_at").
+			Default(time.Now).
+			UpdateDefault(time.Now).
+			SchemaType(map[string]string{
+				dialect.Postgres: "timestamptz",
+			}),
+		field.Time("completed_at").
+			Optional().
+			Nillable().
 			SchemaType(map[string]string{
 				dialect.Postgres: "timestamptz",
 			}),
@@ -55,6 +79,7 @@ func (Request) Indexes() []ent.Index {
 	return []ent.Index{
 		index.Fields("initiator_id"),
 		index.Fields("entity_id"),
+		index.Fields("kind"),
 		index.Fields("status"),
 		index.Fields("step"),
 	}

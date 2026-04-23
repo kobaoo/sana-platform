@@ -25,10 +25,20 @@ type Request struct {
 	EntityID uuid.UUID `json:"entity_id,omitempty"`
 	// EntityType holds the value of the "entity_type" field.
 	EntityType string `json:"entity_type,omitempty"`
+	// Kind holds the value of the "kind" field.
+	Kind string `json:"kind,omitempty"`
+	// Title holds the value of the "title" field.
+	Title *string `json:"title,omitempty"`
+	// Category holds the value of the "category" field.
+	Category *string `json:"category,omitempty"`
 	// Step holds the value of the "step" field.
 	Step int `json:"step,omitempty"`
 	// CreatedAt holds the value of the "created_at" field.
 	CreatedAt time.Time `json:"created_at,omitempty"`
+	// UpdatedAt holds the value of the "updated_at" field.
+	UpdatedAt time.Time `json:"updated_at,omitempty"`
+	// CompletedAt holds the value of the "completed_at" field.
+	CompletedAt *time.Time `json:"completed_at,omitempty"`
 	// Status holds the value of the "status" field.
 	Status string `json:"status,omitempty"`
 	// Edges holds the relations/edges for other nodes in the graph.
@@ -64,9 +74,9 @@ func (*Request) scanValues(columns []string) ([]any, error) {
 		switch columns[i] {
 		case request.FieldStep:
 			values[i] = new(sql.NullInt64)
-		case request.FieldEntityType, request.FieldStatus:
+		case request.FieldEntityType, request.FieldKind, request.FieldTitle, request.FieldCategory, request.FieldStatus:
 			values[i] = new(sql.NullString)
-		case request.FieldCreatedAt:
+		case request.FieldCreatedAt, request.FieldUpdatedAt, request.FieldCompletedAt:
 			values[i] = new(sql.NullTime)
 		case request.FieldID, request.FieldInitiatorID, request.FieldEntityID:
 			values[i] = new(uuid.UUID)
@@ -109,6 +119,26 @@ func (_m *Request) assignValues(columns []string, values []any) error {
 			} else if value.Valid {
 				_m.EntityType = value.String
 			}
+		case request.FieldKind:
+			if value, ok := values[i].(*sql.NullString); !ok {
+				return fmt.Errorf("unexpected type %T for field kind", values[i])
+			} else if value.Valid {
+				_m.Kind = value.String
+			}
+		case request.FieldTitle:
+			if value, ok := values[i].(*sql.NullString); !ok {
+				return fmt.Errorf("unexpected type %T for field title", values[i])
+			} else if value.Valid {
+				_m.Title = new(string)
+				*_m.Title = value.String
+			}
+		case request.FieldCategory:
+			if value, ok := values[i].(*sql.NullString); !ok {
+				return fmt.Errorf("unexpected type %T for field category", values[i])
+			} else if value.Valid {
+				_m.Category = new(string)
+				*_m.Category = value.String
+			}
 		case request.FieldStep:
 			if value, ok := values[i].(*sql.NullInt64); !ok {
 				return fmt.Errorf("unexpected type %T for field step", values[i])
@@ -120,6 +150,19 @@ func (_m *Request) assignValues(columns []string, values []any) error {
 				return fmt.Errorf("unexpected type %T for field created_at", values[i])
 			} else if value.Valid {
 				_m.CreatedAt = value.Time
+			}
+		case request.FieldUpdatedAt:
+			if value, ok := values[i].(*sql.NullTime); !ok {
+				return fmt.Errorf("unexpected type %T for field updated_at", values[i])
+			} else if value.Valid {
+				_m.UpdatedAt = value.Time
+			}
+		case request.FieldCompletedAt:
+			if value, ok := values[i].(*sql.NullTime); !ok {
+				return fmt.Errorf("unexpected type %T for field completed_at", values[i])
+			} else if value.Valid {
+				_m.CompletedAt = new(time.Time)
+				*_m.CompletedAt = value.Time
 			}
 		case request.FieldStatus:
 			if value, ok := values[i].(*sql.NullString); !ok {
@@ -177,11 +220,32 @@ func (_m *Request) String() string {
 	builder.WriteString("entity_type=")
 	builder.WriteString(_m.EntityType)
 	builder.WriteString(", ")
+	builder.WriteString("kind=")
+	builder.WriteString(_m.Kind)
+	builder.WriteString(", ")
+	if v := _m.Title; v != nil {
+		builder.WriteString("title=")
+		builder.WriteString(*v)
+	}
+	builder.WriteString(", ")
+	if v := _m.Category; v != nil {
+		builder.WriteString("category=")
+		builder.WriteString(*v)
+	}
+	builder.WriteString(", ")
 	builder.WriteString("step=")
 	builder.WriteString(fmt.Sprintf("%v", _m.Step))
 	builder.WriteString(", ")
 	builder.WriteString("created_at=")
 	builder.WriteString(_m.CreatedAt.Format(time.ANSIC))
+	builder.WriteString(", ")
+	builder.WriteString("updated_at=")
+	builder.WriteString(_m.UpdatedAt.Format(time.ANSIC))
+	builder.WriteString(", ")
+	if v := _m.CompletedAt; v != nil {
+		builder.WriteString("completed_at=")
+		builder.WriteString(v.Format(time.ANSIC))
+	}
 	builder.WriteString(", ")
 	builder.WriteString("status=")
 	builder.WriteString(_m.Status)

@@ -6,6 +6,7 @@ import (
 	"context"
 	"errors"
 	"fmt"
+	"time"
 
 	"encore.app/db/ent/predicate"
 	"encore.app/db/ent/request"
@@ -71,6 +72,60 @@ func (_u *RequestUpdate) SetNillableEntityType(v *string) *RequestUpdate {
 	return _u
 }
 
+// SetKind sets the "kind" field.
+func (_u *RequestUpdate) SetKind(v string) *RequestUpdate {
+	_u.mutation.SetKind(v)
+	return _u
+}
+
+// SetNillableKind sets the "kind" field if the given value is not nil.
+func (_u *RequestUpdate) SetNillableKind(v *string) *RequestUpdate {
+	if v != nil {
+		_u.SetKind(*v)
+	}
+	return _u
+}
+
+// SetTitle sets the "title" field.
+func (_u *RequestUpdate) SetTitle(v string) *RequestUpdate {
+	_u.mutation.SetTitle(v)
+	return _u
+}
+
+// SetNillableTitle sets the "title" field if the given value is not nil.
+func (_u *RequestUpdate) SetNillableTitle(v *string) *RequestUpdate {
+	if v != nil {
+		_u.SetTitle(*v)
+	}
+	return _u
+}
+
+// ClearTitle clears the value of the "title" field.
+func (_u *RequestUpdate) ClearTitle() *RequestUpdate {
+	_u.mutation.ClearTitle()
+	return _u
+}
+
+// SetCategory sets the "category" field.
+func (_u *RequestUpdate) SetCategory(v string) *RequestUpdate {
+	_u.mutation.SetCategory(v)
+	return _u
+}
+
+// SetNillableCategory sets the "category" field if the given value is not nil.
+func (_u *RequestUpdate) SetNillableCategory(v *string) *RequestUpdate {
+	if v != nil {
+		_u.SetCategory(*v)
+	}
+	return _u
+}
+
+// ClearCategory clears the value of the "category" field.
+func (_u *RequestUpdate) ClearCategory() *RequestUpdate {
+	_u.mutation.ClearCategory()
+	return _u
+}
+
 // SetStep sets the "step" field.
 func (_u *RequestUpdate) SetStep(v int) *RequestUpdate {
 	_u.mutation.ResetStep()
@@ -89,6 +144,32 @@ func (_u *RequestUpdate) SetNillableStep(v *int) *RequestUpdate {
 // AddStep adds value to the "step" field.
 func (_u *RequestUpdate) AddStep(v int) *RequestUpdate {
 	_u.mutation.AddStep(v)
+	return _u
+}
+
+// SetUpdatedAt sets the "updated_at" field.
+func (_u *RequestUpdate) SetUpdatedAt(v time.Time) *RequestUpdate {
+	_u.mutation.SetUpdatedAt(v)
+	return _u
+}
+
+// SetCompletedAt sets the "completed_at" field.
+func (_u *RequestUpdate) SetCompletedAt(v time.Time) *RequestUpdate {
+	_u.mutation.SetCompletedAt(v)
+	return _u
+}
+
+// SetNillableCompletedAt sets the "completed_at" field if the given value is not nil.
+func (_u *RequestUpdate) SetNillableCompletedAt(v *time.Time) *RequestUpdate {
+	if v != nil {
+		_u.SetCompletedAt(*v)
+	}
+	return _u
+}
+
+// ClearCompletedAt clears the value of the "completed_at" field.
+func (_u *RequestUpdate) ClearCompletedAt() *RequestUpdate {
+	_u.mutation.ClearCompletedAt()
 	return _u
 }
 
@@ -124,6 +205,7 @@ func (_u *RequestUpdate) ClearInitiator() *RequestUpdate {
 
 // Save executes the query and returns the number of nodes affected by the update operation.
 func (_u *RequestUpdate) Save(ctx context.Context) (int, error) {
+	_u.defaults()
 	return withHooks(ctx, _u.sqlSave, _u.mutation, _u.hooks)
 }
 
@@ -149,11 +231,34 @@ func (_u *RequestUpdate) ExecX(ctx context.Context) {
 	}
 }
 
+// defaults sets the default values of the builder before save.
+func (_u *RequestUpdate) defaults() {
+	if _, ok := _u.mutation.UpdatedAt(); !ok {
+		v := request.UpdateDefaultUpdatedAt()
+		_u.mutation.SetUpdatedAt(v)
+	}
+}
+
 // check runs all checks and user-defined validators on the builder.
 func (_u *RequestUpdate) check() error {
 	if v, ok := _u.mutation.EntityType(); ok {
 		if err := request.EntityTypeValidator(v); err != nil {
 			return &ValidationError{Name: "entity_type", err: fmt.Errorf(`ent: validator failed for field "Request.entity_type": %w`, err)}
+		}
+	}
+	if v, ok := _u.mutation.Kind(); ok {
+		if err := request.KindValidator(v); err != nil {
+			return &ValidationError{Name: "kind", err: fmt.Errorf(`ent: validator failed for field "Request.kind": %w`, err)}
+		}
+	}
+	if v, ok := _u.mutation.Title(); ok {
+		if err := request.TitleValidator(v); err != nil {
+			return &ValidationError{Name: "title", err: fmt.Errorf(`ent: validator failed for field "Request.title": %w`, err)}
+		}
+	}
+	if v, ok := _u.mutation.Category(); ok {
+		if err := request.CategoryValidator(v); err != nil {
+			return &ValidationError{Name: "category", err: fmt.Errorf(`ent: validator failed for field "Request.category": %w`, err)}
 		}
 	}
 	if v, ok := _u.mutation.Status(); ok {
@@ -185,11 +290,35 @@ func (_u *RequestUpdate) sqlSave(ctx context.Context) (_node int, err error) {
 	if value, ok := _u.mutation.EntityType(); ok {
 		_spec.SetField(request.FieldEntityType, field.TypeString, value)
 	}
+	if value, ok := _u.mutation.Kind(); ok {
+		_spec.SetField(request.FieldKind, field.TypeString, value)
+	}
+	if value, ok := _u.mutation.Title(); ok {
+		_spec.SetField(request.FieldTitle, field.TypeString, value)
+	}
+	if _u.mutation.TitleCleared() {
+		_spec.ClearField(request.FieldTitle, field.TypeString)
+	}
+	if value, ok := _u.mutation.Category(); ok {
+		_spec.SetField(request.FieldCategory, field.TypeString, value)
+	}
+	if _u.mutation.CategoryCleared() {
+		_spec.ClearField(request.FieldCategory, field.TypeString)
+	}
 	if value, ok := _u.mutation.Step(); ok {
 		_spec.SetField(request.FieldStep, field.TypeInt, value)
 	}
 	if value, ok := _u.mutation.AddedStep(); ok {
 		_spec.AddField(request.FieldStep, field.TypeInt, value)
+	}
+	if value, ok := _u.mutation.UpdatedAt(); ok {
+		_spec.SetField(request.FieldUpdatedAt, field.TypeTime, value)
+	}
+	if value, ok := _u.mutation.CompletedAt(); ok {
+		_spec.SetField(request.FieldCompletedAt, field.TypeTime, value)
+	}
+	if _u.mutation.CompletedAtCleared() {
+		_spec.ClearField(request.FieldCompletedAt, field.TypeTime)
 	}
 	if value, ok := _u.mutation.Status(); ok {
 		_spec.SetField(request.FieldStatus, field.TypeString, value)
@@ -285,6 +414,60 @@ func (_u *RequestUpdateOne) SetNillableEntityType(v *string) *RequestUpdateOne {
 	return _u
 }
 
+// SetKind sets the "kind" field.
+func (_u *RequestUpdateOne) SetKind(v string) *RequestUpdateOne {
+	_u.mutation.SetKind(v)
+	return _u
+}
+
+// SetNillableKind sets the "kind" field if the given value is not nil.
+func (_u *RequestUpdateOne) SetNillableKind(v *string) *RequestUpdateOne {
+	if v != nil {
+		_u.SetKind(*v)
+	}
+	return _u
+}
+
+// SetTitle sets the "title" field.
+func (_u *RequestUpdateOne) SetTitle(v string) *RequestUpdateOne {
+	_u.mutation.SetTitle(v)
+	return _u
+}
+
+// SetNillableTitle sets the "title" field if the given value is not nil.
+func (_u *RequestUpdateOne) SetNillableTitle(v *string) *RequestUpdateOne {
+	if v != nil {
+		_u.SetTitle(*v)
+	}
+	return _u
+}
+
+// ClearTitle clears the value of the "title" field.
+func (_u *RequestUpdateOne) ClearTitle() *RequestUpdateOne {
+	_u.mutation.ClearTitle()
+	return _u
+}
+
+// SetCategory sets the "category" field.
+func (_u *RequestUpdateOne) SetCategory(v string) *RequestUpdateOne {
+	_u.mutation.SetCategory(v)
+	return _u
+}
+
+// SetNillableCategory sets the "category" field if the given value is not nil.
+func (_u *RequestUpdateOne) SetNillableCategory(v *string) *RequestUpdateOne {
+	if v != nil {
+		_u.SetCategory(*v)
+	}
+	return _u
+}
+
+// ClearCategory clears the value of the "category" field.
+func (_u *RequestUpdateOne) ClearCategory() *RequestUpdateOne {
+	_u.mutation.ClearCategory()
+	return _u
+}
+
 // SetStep sets the "step" field.
 func (_u *RequestUpdateOne) SetStep(v int) *RequestUpdateOne {
 	_u.mutation.ResetStep()
@@ -303,6 +486,32 @@ func (_u *RequestUpdateOne) SetNillableStep(v *int) *RequestUpdateOne {
 // AddStep adds value to the "step" field.
 func (_u *RequestUpdateOne) AddStep(v int) *RequestUpdateOne {
 	_u.mutation.AddStep(v)
+	return _u
+}
+
+// SetUpdatedAt sets the "updated_at" field.
+func (_u *RequestUpdateOne) SetUpdatedAt(v time.Time) *RequestUpdateOne {
+	_u.mutation.SetUpdatedAt(v)
+	return _u
+}
+
+// SetCompletedAt sets the "completed_at" field.
+func (_u *RequestUpdateOne) SetCompletedAt(v time.Time) *RequestUpdateOne {
+	_u.mutation.SetCompletedAt(v)
+	return _u
+}
+
+// SetNillableCompletedAt sets the "completed_at" field if the given value is not nil.
+func (_u *RequestUpdateOne) SetNillableCompletedAt(v *time.Time) *RequestUpdateOne {
+	if v != nil {
+		_u.SetCompletedAt(*v)
+	}
+	return _u
+}
+
+// ClearCompletedAt clears the value of the "completed_at" field.
+func (_u *RequestUpdateOne) ClearCompletedAt() *RequestUpdateOne {
+	_u.mutation.ClearCompletedAt()
 	return _u
 }
 
@@ -351,6 +560,7 @@ func (_u *RequestUpdateOne) Select(field string, fields ...string) *RequestUpdat
 
 // Save executes the query and returns the updated Request entity.
 func (_u *RequestUpdateOne) Save(ctx context.Context) (*Request, error) {
+	_u.defaults()
 	return withHooks(ctx, _u.sqlSave, _u.mutation, _u.hooks)
 }
 
@@ -376,11 +586,34 @@ func (_u *RequestUpdateOne) ExecX(ctx context.Context) {
 	}
 }
 
+// defaults sets the default values of the builder before save.
+func (_u *RequestUpdateOne) defaults() {
+	if _, ok := _u.mutation.UpdatedAt(); !ok {
+		v := request.UpdateDefaultUpdatedAt()
+		_u.mutation.SetUpdatedAt(v)
+	}
+}
+
 // check runs all checks and user-defined validators on the builder.
 func (_u *RequestUpdateOne) check() error {
 	if v, ok := _u.mutation.EntityType(); ok {
 		if err := request.EntityTypeValidator(v); err != nil {
 			return &ValidationError{Name: "entity_type", err: fmt.Errorf(`ent: validator failed for field "Request.entity_type": %w`, err)}
+		}
+	}
+	if v, ok := _u.mutation.Kind(); ok {
+		if err := request.KindValidator(v); err != nil {
+			return &ValidationError{Name: "kind", err: fmt.Errorf(`ent: validator failed for field "Request.kind": %w`, err)}
+		}
+	}
+	if v, ok := _u.mutation.Title(); ok {
+		if err := request.TitleValidator(v); err != nil {
+			return &ValidationError{Name: "title", err: fmt.Errorf(`ent: validator failed for field "Request.title": %w`, err)}
+		}
+	}
+	if v, ok := _u.mutation.Category(); ok {
+		if err := request.CategoryValidator(v); err != nil {
+			return &ValidationError{Name: "category", err: fmt.Errorf(`ent: validator failed for field "Request.category": %w`, err)}
 		}
 	}
 	if v, ok := _u.mutation.Status(); ok {
@@ -429,11 +662,35 @@ func (_u *RequestUpdateOne) sqlSave(ctx context.Context) (_node *Request, err er
 	if value, ok := _u.mutation.EntityType(); ok {
 		_spec.SetField(request.FieldEntityType, field.TypeString, value)
 	}
+	if value, ok := _u.mutation.Kind(); ok {
+		_spec.SetField(request.FieldKind, field.TypeString, value)
+	}
+	if value, ok := _u.mutation.Title(); ok {
+		_spec.SetField(request.FieldTitle, field.TypeString, value)
+	}
+	if _u.mutation.TitleCleared() {
+		_spec.ClearField(request.FieldTitle, field.TypeString)
+	}
+	if value, ok := _u.mutation.Category(); ok {
+		_spec.SetField(request.FieldCategory, field.TypeString, value)
+	}
+	if _u.mutation.CategoryCleared() {
+		_spec.ClearField(request.FieldCategory, field.TypeString)
+	}
 	if value, ok := _u.mutation.Step(); ok {
 		_spec.SetField(request.FieldStep, field.TypeInt, value)
 	}
 	if value, ok := _u.mutation.AddedStep(); ok {
 		_spec.AddField(request.FieldStep, field.TypeInt, value)
+	}
+	if value, ok := _u.mutation.UpdatedAt(); ok {
+		_spec.SetField(request.FieldUpdatedAt, field.TypeTime, value)
+	}
+	if value, ok := _u.mutation.CompletedAt(); ok {
+		_spec.SetField(request.FieldCompletedAt, field.TypeTime, value)
+	}
+	if _u.mutation.CompletedAtCleared() {
+		_spec.ClearField(request.FieldCompletedAt, field.TypeTime)
 	}
 	if value, ok := _u.mutation.Status(); ok {
 		_spec.SetField(request.FieldStatus, field.TypeString, value)
