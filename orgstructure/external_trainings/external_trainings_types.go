@@ -25,17 +25,18 @@ type UpdateExternalTrainingRequest struct {
 }
 
 type ExternalTrainingResponse struct {
-	ID                string     `json:"id"`
-	Name              string     `json:"name"`
-	CategoryID        string     `json:"category_id,omitempty"`
-	Format            string     `json:"format"`
-	Capacity          int        `json:"capacity"`
-	SupplierID        string     `json:"supplier_id"`
-	ContractID        string     `json:"contract_id"`
-	SupplierCostVAT   *float64   `json:"supplier_cost_vat,omitempty"`
-	StartDate         time.Time  `json:"start_date"`
-	ResponsibleUserID string     `json:"responsible_user_id,omitempty"`
-	CreatedAt         time.Time  `json:"created_at"`
+	ID                string    `json:"id"`
+	Name              string    `json:"name"`
+	CategoryID        string    `json:"category_id,omitempty"`
+	Format            string    `json:"format"`
+	Capacity          int       `json:"capacity"`
+	SupplierID        string    `json:"supplier_id"`
+	ContractID        string    `json:"contract_id"`
+	SupplierCostVAT   *float64  `json:"supplier_cost_vat,omitempty"`
+	StartDate         time.Time `json:"start_date"`
+	ResponsibleUserID string    `json:"responsible_user_id,omitempty"`
+	CreatedAt         time.Time `json:"created_at"`
+	IsDeleted         bool      `json:"is_deleted"`
 }
 
 type ListExternalTrainingsResponse struct {

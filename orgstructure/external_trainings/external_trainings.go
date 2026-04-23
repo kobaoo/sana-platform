@@ -142,6 +142,7 @@ func ListExternalTrainings(ctx context.Context) (*ListExternalTrainingsResponse,
 
 	rows, err := Client.ExternalTrainingEvent.
 		Query().
+		Where(externaltrainingevent.IsDeletedEQ(false)).
 		Order(ent.Desc(externaltrainingevent.FieldCreatedAt)).
 		All(ctx)
 
@@ -261,7 +262,8 @@ func DeleteExternalTraining(ctx context.Context, id string) (*DeleteExternalTrai
 	}
 
 	err = Client.ExternalTrainingEvent.
-		DeleteOneID(trainingID).
+		UpdateOneID(trainingID).
+		SetIsDeleted(true).
 		Exec(ctx)
 
 	if err != nil {
@@ -291,6 +293,7 @@ func toResponse(et *ent.ExternalTrainingEvent, ad *authhandler.AuthData) *Extern
 		CreatedAt:  et.CreatedAt,
 		SupplierID: et.SupplierID.String(),
 		ContractID: et.ContractID.String(),
+		IsDeleted:  et.IsDeleted,
 	}
 
 	if et.Format != nil {
