@@ -37,6 +37,8 @@ const (
 	EdgeClient = "client"
 	// EdgeRequests holds the string denoting the requests edge name in mutations.
 	EdgeRequests = "requests"
+	// EdgeResponsibleExternalTrainingEvents holds the string denoting the responsible_external_training_events edge name in mutations.
+	EdgeResponsibleExternalTrainingEvents = "responsible_external_training_events"
 	// Table holds the table name of the user in the database.
 	Table = "users"
 	// ClientTable is the table that holds the client relation/edge.
@@ -53,6 +55,13 @@ const (
 	RequestsInverseTable = "requests"
 	// RequestsColumn is the table column denoting the requests relation/edge.
 	RequestsColumn = "initiator_id"
+	// ResponsibleExternalTrainingEventsTable is the table that holds the responsible_external_training_events relation/edge.
+	ResponsibleExternalTrainingEventsTable = "external_training_events"
+	// ResponsibleExternalTrainingEventsInverseTable is the table name for the ExternalTrainingEvent entity.
+	// It exists in this package in order to avoid circular dependency with the "externaltrainingevent" package.
+	ResponsibleExternalTrainingEventsInverseTable = "external_training_events"
+	// ResponsibleExternalTrainingEventsColumn is the table column denoting the responsible_external_training_events relation/edge.
+	ResponsibleExternalTrainingEventsColumn = "responsible_user_id"
 )
 
 // Columns holds all SQL columns for user fields.
@@ -175,6 +184,20 @@ func ByRequests(term sql.OrderTerm, terms ...sql.OrderTerm) OrderOption {
 		sqlgraph.OrderByNeighborTerms(s, newRequestsStep(), append([]sql.OrderTerm{term}, terms...)...)
 	}
 }
+
+// ByResponsibleExternalTrainingEventsCount orders the results by responsible_external_training_events count.
+func ByResponsibleExternalTrainingEventsCount(opts ...sql.OrderTermOption) OrderOption {
+	return func(s *sql.Selector) {
+		sqlgraph.OrderByNeighborsCount(s, newResponsibleExternalTrainingEventsStep(), opts...)
+	}
+}
+
+// ByResponsibleExternalTrainingEvents orders the results by responsible_external_training_events terms.
+func ByResponsibleExternalTrainingEvents(term sql.OrderTerm, terms ...sql.OrderTerm) OrderOption {
+	return func(s *sql.Selector) {
+		sqlgraph.OrderByNeighborTerms(s, newResponsibleExternalTrainingEventsStep(), append([]sql.OrderTerm{term}, terms...)...)
+	}
+}
 func newClientStep() *sqlgraph.Step {
 	return sqlgraph.NewStep(
 		sqlgraph.From(Table, FieldID),
@@ -187,5 +210,12 @@ func newRequestsStep() *sqlgraph.Step {
 		sqlgraph.From(Table, FieldID),
 		sqlgraph.To(RequestsInverseTable, FieldID),
 		sqlgraph.Edge(sqlgraph.O2M, false, RequestsTable, RequestsColumn),
+	)
+}
+func newResponsibleExternalTrainingEventsStep() *sqlgraph.Step {
+	return sqlgraph.NewStep(
+		sqlgraph.From(Table, FieldID),
+		sqlgraph.To(ResponsibleExternalTrainingEventsInverseTable, FieldID),
+		sqlgraph.Edge(sqlgraph.O2M, false, ResponsibleExternalTrainingEventsTable, ResponsibleExternalTrainingEventsColumn),
 	)
 }

@@ -6,6 +6,9 @@ import (
 	"entgo.io/ent/dialect/sql"
 )
 
+// Category is the predicate function for category builders.
+type Category func(*sql.Selector)
+
 // Company is the predicate function for company builders.
 type Company func(*sql.Selector)
 
@@ -21,11 +24,23 @@ type DzoOrganization func(*sql.Selector)
 // Employee is the predicate function for employee builders.
 type Employee func(*sql.Selector)
 
+// ExternalTrainingEvent is the predicate function for externaltrainingevent builders.
+type ExternalTrainingEvent func(*sql.Selector)
+
 // Organization is the predicate function for organization builders.
 type Organization func(*sql.Selector)
 
+// Request is the predicate function for request builders.
+type Request func(*sql.Selector)
+
 // Supplier is the predicate function for supplier builders.
 type Supplier func(*sql.Selector)
+
+// TrainingEvent is the predicate function for trainingevent builders.
+type TrainingEvent func(*sql.Selector)
+
+// TrainingParticipant is the predicate function for trainingparticipant builders.
+type TrainingParticipant func(*sql.Selector)
 
 // User is the predicate function for user builders.
 type User func(*sql.Selector)

@@ -9,6 +9,7 @@ import (
 	"math"
 
 	"encore.app/db/ent/company"
+	"encore.app/db/ent/externaltrainingevent"
 	"encore.app/db/ent/predicate"
 	"encore.app/db/ent/request"
 	"encore.app/db/ent/user"
@@ -22,12 +23,13 @@ import (
 // UserQuery is the builder for querying User entities.
 type UserQuery struct {
 	config
-	ctx          *QueryContext
-	order        []user.OrderOption
-	inters       []Interceptor
-	predicates   []predicate.User
-	withClient   *CompanyQuery
-	withRequests *RequestQuery
+	ctx                                   *QueryContext
+	order                                 []user.OrderOption
+	inters                                []Interceptor
+	predicates                            []predicate.User
+	withClient                            *CompanyQuery
+	withRequests                          *RequestQuery
+	withResponsibleExternalTrainingEvents *ExternalTrainingEventQuery
 	// intermediate query (i.e. traversal path).
 	sql  *sql.Selector
 	path func(context.Context) (*sql.Selector, error)
@@ -101,6 +103,28 @@ func (_q *UserQuery) QueryRequests() *RequestQuery {
 			sqlgraph.From(user.Table, user.FieldID, selector),
 			sqlgraph.To(request.Table, request.FieldID),
 			sqlgraph.Edge(sqlgraph.O2M, false, user.RequestsTable, user.RequestsColumn),
+		)
+		fromU = sqlgraph.SetNeighbors(_q.driver.Dialect(), step)
+		return fromU, nil
+	}
+	return query
+}
+
+// QueryResponsibleExternalTrainingEvents chains the current query on the "responsible_external_training_events" edge.
+func (_q *UserQuery) QueryResponsibleExternalTrainingEvents() *ExternalTrainingEventQuery {
+	query := (&ExternalTrainingEventClient{config: _q.config}).Query()
+	query.path = func(ctx context.Context) (fromU *sql.Selector, err error) {
+		if err := _q.prepareQuery(ctx); err != nil {
+			return nil, err
+		}
+		selector := _q.sqlQuery(ctx)
+		if err := selector.Err(); err != nil {
+			return nil, err
+		}
+		step := sqlgraph.NewStep(
+			sqlgraph.From(user.Table, user.FieldID, selector),
+			sqlgraph.To(externaltrainingevent.Table, externaltrainingevent.FieldID),
+			sqlgraph.Edge(sqlgraph.O2M, false, user.ResponsibleExternalTrainingEventsTable, user.ResponsibleExternalTrainingEventsColumn),
 		)
 		fromU = sqlgraph.SetNeighbors(_q.driver.Dialect(), step)
 		return fromU, nil
@@ -295,13 +319,14 @@ func (_q *UserQuery) Clone() *UserQuery {
 		return nil
 	}
 	return &UserQuery{
-		config:       _q.config,
-		ctx:          _q.ctx.Clone(),
-		order:        append([]user.OrderOption{}, _q.order...),
-		inters:       append([]Interceptor{}, _q.inters...),
-		predicates:   append([]predicate.User{}, _q.predicates...),
-		withClient:   _q.withClient.Clone(),
-		withRequests: _q.withRequests.Clone(),
+		config:                                _q.config,
+		ctx:                                   _q.ctx.Clone(),
+		order:                                 append([]user.OrderOption{}, _q.order...),
+		inters:                                append([]Interceptor{}, _q.inters...),
+		predicates:                            append([]predicate.User{}, _q.predicates...),
+		withClient:                            _q.withClient.Clone(),
+		withRequests:                          _q.withRequests.Clone(),
+		withResponsibleExternalTrainingEvents: _q.withResponsibleExternalTrainingEvents.Clone(),
 		// clone intermediate query.
 		sql:  _q.sql.Clone(),
 		path: _q.path,
@@ -327,6 +352,17 @@ func (_q *UserQuery) WithRequests(opts ...func(*RequestQuery)) *UserQuery {
 		opt(query)
 	}
 	_q.withRequests = query
+	return _q
+}
+
+// WithResponsibleExternalTrainingEvents tells the query-builder to eager-load the nodes that are connected to
+// the "responsible_external_training_events" edge. The optional arguments are used to configure the query builder of the edge.
+func (_q *UserQuery) WithResponsibleExternalTrainingEvents(opts ...func(*ExternalTrainingEventQuery)) *UserQuery {
+	query := (&ExternalTrainingEventClient{config: _q.config}).Query()
+	for _, opt := range opts {
+		opt(query)
+	}
+	_q.withResponsibleExternalTrainingEvents = query
 	return _q
 }
 
@@ -408,9 +444,10 @@ func (_q *UserQuery) sqlAll(ctx context.Context, hooks ...queryHook) ([]*User, e
 	var (
 		nodes       = []*User{}
 		_spec       = _q.querySpec()
-		loadedTypes = [2]bool{
+		loadedTypes = [3]bool{
 			_q.withClient != nil,
 			_q.withRequests != nil,
+			_q.withResponsibleExternalTrainingEvents != nil,
 		}
 	)
 	_spec.ScanValues = func(columns []string) ([]any, error) {
@@ -441,6 +478,15 @@ func (_q *UserQuery) sqlAll(ctx context.Context, hooks ...queryHook) ([]*User, e
 		if err := _q.loadRequests(ctx, query, nodes,
 			func(n *User) { n.Edges.Requests = []*Request{} },
 			func(n *User, e *Request) { n.Edges.Requests = append(n.Edges.Requests, e) }); err != nil {
+			return nil, err
+		}
+	}
+	if query := _q.withResponsibleExternalTrainingEvents; query != nil {
+		if err := _q.loadResponsibleExternalTrainingEvents(ctx, query, nodes,
+			func(n *User) { n.Edges.ResponsibleExternalTrainingEvents = []*ExternalTrainingEvent{} },
+			func(n *User, e *ExternalTrainingEvent) {
+				n.Edges.ResponsibleExternalTrainingEvents = append(n.Edges.ResponsibleExternalTrainingEvents, e)
+			}); err != nil {
 			return nil, err
 		}
 	}
@@ -501,6 +547,39 @@ func (_q *UserQuery) loadRequests(ctx context.Context, query *RequestQuery, node
 		node, ok := nodeids[fk]
 		if !ok {
 			return fmt.Errorf(`unexpected referenced foreign-key "initiator_id" returned %v for node %v`, fk, n.ID)
+		}
+		assign(node, n)
+	}
+	return nil
+}
+func (_q *UserQuery) loadResponsibleExternalTrainingEvents(ctx context.Context, query *ExternalTrainingEventQuery, nodes []*User, init func(*User), assign func(*User, *ExternalTrainingEvent)) error {
+	fks := make([]driver.Value, 0, len(nodes))
+	nodeids := make(map[uuid.UUID]*User)
+	for i := range nodes {
+		fks = append(fks, nodes[i].ID)
+		nodeids[nodes[i].ID] = nodes[i]
+		if init != nil {
+			init(nodes[i])
+		}
+	}
+	if len(query.ctx.Fields) > 0 {
+		query.ctx.AppendFieldOnce(externaltrainingevent.FieldResponsibleUserID)
+	}
+	query.Where(predicate.ExternalTrainingEvent(func(s *sql.Selector) {
+		s.Where(sql.InValues(s.C(user.ResponsibleExternalTrainingEventsColumn), fks...))
+	}))
+	neighbors, err := query.All(ctx)
+	if err != nil {
+		return err
+	}
+	for _, n := range neighbors {
+		fk := n.ResponsibleUserID
+		if fk == nil {
+			return fmt.Errorf(`foreign-key "responsible_user_id" is nil for node %v`, n.ID)
+		}
+		node, ok := nodeids[*fk]
+		if !ok {
+			return fmt.Errorf(`unexpected referenced foreign-key "responsible_user_id" returned %v for node %v`, *fk, n.ID)
 		}
 		assign(node, n)
 	}

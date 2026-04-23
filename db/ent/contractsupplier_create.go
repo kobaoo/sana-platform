@@ -9,6 +9,7 @@ import (
 	"time"
 
 	"encore.app/db/ent/contractsupplier"
+	"encore.app/db/ent/externaltrainingevent"
 	"entgo.io/ent/dialect/sql/sqlgraph"
 	"entgo.io/ent/schema/field"
 	"github.com/google/uuid"
@@ -281,6 +282,21 @@ func (_c *ContractSupplierCreate) SetNillableID(v *uuid.UUID) *ContractSupplierC
 	return _c
 }
 
+// AddExternalTrainingEventIDs adds the "external_training_events" edge to the ExternalTrainingEvent entity by IDs.
+func (_c *ContractSupplierCreate) AddExternalTrainingEventIDs(ids ...uuid.UUID) *ContractSupplierCreate {
+	_c.mutation.AddExternalTrainingEventIDs(ids...)
+	return _c
+}
+
+// AddExternalTrainingEvents adds the "external_training_events" edges to the ExternalTrainingEvent entity.
+func (_c *ContractSupplierCreate) AddExternalTrainingEvents(v ...*ExternalTrainingEvent) *ContractSupplierCreate {
+	ids := make([]uuid.UUID, len(v))
+	for i := range v {
+		ids[i] = v[i].ID
+	}
+	return _c.AddExternalTrainingEventIDs(ids...)
+}
+
 // Mutation returns the ContractSupplierMutation object of the builder.
 func (_c *ContractSupplierCreate) Mutation() *ContractSupplierMutation {
 	return _c.mutation
@@ -518,6 +534,22 @@ func (_c *ContractSupplierCreate) createSpec() (*ContractSupplier, *sqlgraph.Cre
 	if value, ok := _c.mutation.UpdatedAt(); ok {
 		_spec.SetField(contractsupplier.FieldUpdatedAt, field.TypeTime, value)
 		_node.UpdatedAt = value
+	}
+	if nodes := _c.mutation.ExternalTrainingEventsIDs(); len(nodes) > 0 {
+		edge := &sqlgraph.EdgeSpec{
+			Rel:     sqlgraph.O2M,
+			Inverse: false,
+			Table:   contractsupplier.ExternalTrainingEventsTable,
+			Columns: []string{contractsupplier.ExternalTrainingEventsColumn},
+			Bidi:    false,
+			Target: &sqlgraph.EdgeTarget{
+				IDSpec: sqlgraph.NewFieldSpec(externaltrainingevent.FieldID, field.TypeUUID),
+			},
+		}
+		for _, k := range nodes {
+			edge.Target.Nodes = append(edge.Target.Nodes, k)
+		}
+		_spec.Edges = append(_spec.Edges, edge)
 	}
 	return _node, _spec
 }

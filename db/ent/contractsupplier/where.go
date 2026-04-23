@@ -7,6 +7,7 @@ import (
 
 	"encore.app/db/ent/predicate"
 	"entgo.io/ent/dialect/sql"
+	"entgo.io/ent/dialect/sql/sqlgraph"
 	"github.com/google/uuid"
 )
 
@@ -1198,6 +1199,29 @@ func UpdatedAtLT(v time.Time) predicate.ContractSupplier {
 // UpdatedAtLTE applies the LTE predicate on the "updated_at" field.
 func UpdatedAtLTE(v time.Time) predicate.ContractSupplier {
 	return predicate.ContractSupplier(sql.FieldLTE(FieldUpdatedAt, v))
+}
+
+// HasExternalTrainingEvents applies the HasEdge predicate on the "external_training_events" edge.
+func HasExternalTrainingEvents() predicate.ContractSupplier {
+	return predicate.ContractSupplier(func(s *sql.Selector) {
+		step := sqlgraph.NewStep(
+			sqlgraph.From(Table, FieldID),
+			sqlgraph.Edge(sqlgraph.O2M, false, ExternalTrainingEventsTable, ExternalTrainingEventsColumn),
+		)
+		sqlgraph.HasNeighbors(s, step)
+	})
+}
+
+// HasExternalTrainingEventsWith applies the HasEdge predicate on the "external_training_events" edge with a given conditions (other predicates).
+func HasExternalTrainingEventsWith(preds ...predicate.ExternalTrainingEvent) predicate.ContractSupplier {
+	return predicate.ContractSupplier(func(s *sql.Selector) {
+		step := newExternalTrainingEventsStep()
+		sqlgraph.HasNeighborsWith(s, step, func(s *sql.Selector) {
+			for _, p := range preds {
+				p(s)
+			}
+		})
+	})
 }
 
 // And groups predicates with the AND operator between them.

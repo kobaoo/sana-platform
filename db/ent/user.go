@@ -49,9 +49,11 @@ type UserEdges struct {
 	Client *Company `json:"client,omitempty"`
 	// Requests holds the value of the requests edge.
 	Requests []*Request `json:"requests,omitempty"`
+	// ResponsibleExternalTrainingEvents holds the value of the responsible_external_training_events edge.
+	ResponsibleExternalTrainingEvents []*ExternalTrainingEvent `json:"responsible_external_training_events,omitempty"`
 	// loadedTypes holds the information for reporting if a
 	// type was loaded (or requested) in eager-loading or not.
-	loadedTypes [2]bool
+	loadedTypes [3]bool
 }
 
 // ClientOrErr returns the Client value or an error if the edge
@@ -72,6 +74,15 @@ func (e UserEdges) RequestsOrErr() ([]*Request, error) {
 		return e.Requests, nil
 	}
 	return nil, &NotLoadedError{edge: "requests"}
+}
+
+// ResponsibleExternalTrainingEventsOrErr returns the ResponsibleExternalTrainingEvents value or an error if the edge
+// was not loaded in eager-loading.
+func (e UserEdges) ResponsibleExternalTrainingEventsOrErr() ([]*ExternalTrainingEvent, error) {
+	if e.loadedTypes[2] {
+		return e.ResponsibleExternalTrainingEvents, nil
+	}
+	return nil, &NotLoadedError{edge: "responsible_external_training_events"}
 }
 
 // scanValues returns the types for scanning values from sql.Rows.
@@ -186,6 +197,11 @@ func (_m *User) QueryClient() *CompanyQuery {
 // QueryRequests queries the "requests" edge of the User entity.
 func (_m *User) QueryRequests() *RequestQuery {
 	return NewUserClient(_m.config).QueryRequests(_m)
+}
+
+// QueryResponsibleExternalTrainingEvents queries the "responsible_external_training_events" edge of the User entity.
+func (_m *User) QueryResponsibleExternalTrainingEvents() *ExternalTrainingEventQuery {
+	return NewUserClient(_m.config).QueryResponsibleExternalTrainingEvents(_m)
 }
 
 // Update returns a builder for updating this User.

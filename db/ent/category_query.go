@@ -8,7 +8,7 @@ import (
 	"fmt"
 	"math"
 
-	"encore.app/db/ent/contractsupplier"
+	"encore.app/db/ent/category"
 	"encore.app/db/ent/externaltrainingevent"
 	"encore.app/db/ent/predicate"
 	"entgo.io/ent"
@@ -18,52 +18,52 @@ import (
 	"github.com/google/uuid"
 )
 
-// ContractSupplierQuery is the builder for querying ContractSupplier entities.
-type ContractSupplierQuery struct {
+// CategoryQuery is the builder for querying Category entities.
+type CategoryQuery struct {
 	config
 	ctx                        *QueryContext
-	order                      []contractsupplier.OrderOption
+	order                      []category.OrderOption
 	inters                     []Interceptor
-	predicates                 []predicate.ContractSupplier
+	predicates                 []predicate.Category
 	withExternalTrainingEvents *ExternalTrainingEventQuery
 	// intermediate query (i.e. traversal path).
 	sql  *sql.Selector
 	path func(context.Context) (*sql.Selector, error)
 }
 
-// Where adds a new predicate for the ContractSupplierQuery builder.
-func (_q *ContractSupplierQuery) Where(ps ...predicate.ContractSupplier) *ContractSupplierQuery {
+// Where adds a new predicate for the CategoryQuery builder.
+func (_q *CategoryQuery) Where(ps ...predicate.Category) *CategoryQuery {
 	_q.predicates = append(_q.predicates, ps...)
 	return _q
 }
 
 // Limit the number of records to be returned by this query.
-func (_q *ContractSupplierQuery) Limit(limit int) *ContractSupplierQuery {
+func (_q *CategoryQuery) Limit(limit int) *CategoryQuery {
 	_q.ctx.Limit = &limit
 	return _q
 }
 
 // Offset to start from.
-func (_q *ContractSupplierQuery) Offset(offset int) *ContractSupplierQuery {
+func (_q *CategoryQuery) Offset(offset int) *CategoryQuery {
 	_q.ctx.Offset = &offset
 	return _q
 }
 
 // Unique configures the query builder to filter duplicate records on query.
 // By default, unique is set to true, and can be disabled using this method.
-func (_q *ContractSupplierQuery) Unique(unique bool) *ContractSupplierQuery {
+func (_q *CategoryQuery) Unique(unique bool) *CategoryQuery {
 	_q.ctx.Unique = &unique
 	return _q
 }
 
 // Order specifies how the records should be ordered.
-func (_q *ContractSupplierQuery) Order(o ...contractsupplier.OrderOption) *ContractSupplierQuery {
+func (_q *CategoryQuery) Order(o ...category.OrderOption) *CategoryQuery {
 	_q.order = append(_q.order, o...)
 	return _q
 }
 
 // QueryExternalTrainingEvents chains the current query on the "external_training_events" edge.
-func (_q *ContractSupplierQuery) QueryExternalTrainingEvents() *ExternalTrainingEventQuery {
+func (_q *CategoryQuery) QueryExternalTrainingEvents() *ExternalTrainingEventQuery {
 	query := (&ExternalTrainingEventClient{config: _q.config}).Query()
 	query.path = func(ctx context.Context) (fromU *sql.Selector, err error) {
 		if err := _q.prepareQuery(ctx); err != nil {
@@ -74,9 +74,9 @@ func (_q *ContractSupplierQuery) QueryExternalTrainingEvents() *ExternalTraining
 			return nil, err
 		}
 		step := sqlgraph.NewStep(
-			sqlgraph.From(contractsupplier.Table, contractsupplier.FieldID, selector),
+			sqlgraph.From(category.Table, category.FieldID, selector),
 			sqlgraph.To(externaltrainingevent.Table, externaltrainingevent.FieldID),
-			sqlgraph.Edge(sqlgraph.O2M, false, contractsupplier.ExternalTrainingEventsTable, contractsupplier.ExternalTrainingEventsColumn),
+			sqlgraph.Edge(sqlgraph.O2M, false, category.ExternalTrainingEventsTable, category.ExternalTrainingEventsColumn),
 		)
 		fromU = sqlgraph.SetNeighbors(_q.driver.Dialect(), step)
 		return fromU, nil
@@ -84,21 +84,21 @@ func (_q *ContractSupplierQuery) QueryExternalTrainingEvents() *ExternalTraining
 	return query
 }
 
-// First returns the first ContractSupplier entity from the query.
-// Returns a *NotFoundError when no ContractSupplier was found.
-func (_q *ContractSupplierQuery) First(ctx context.Context) (*ContractSupplier, error) {
+// First returns the first Category entity from the query.
+// Returns a *NotFoundError when no Category was found.
+func (_q *CategoryQuery) First(ctx context.Context) (*Category, error) {
 	nodes, err := _q.Limit(1).All(setContextOp(ctx, _q.ctx, ent.OpQueryFirst))
 	if err != nil {
 		return nil, err
 	}
 	if len(nodes) == 0 {
-		return nil, &NotFoundError{contractsupplier.Label}
+		return nil, &NotFoundError{category.Label}
 	}
 	return nodes[0], nil
 }
 
 // FirstX is like First, but panics if an error occurs.
-func (_q *ContractSupplierQuery) FirstX(ctx context.Context) *ContractSupplier {
+func (_q *CategoryQuery) FirstX(ctx context.Context) *Category {
 	node, err := _q.First(ctx)
 	if err != nil && !IsNotFound(err) {
 		panic(err)
@@ -106,22 +106,22 @@ func (_q *ContractSupplierQuery) FirstX(ctx context.Context) *ContractSupplier {
 	return node
 }
 
-// FirstID returns the first ContractSupplier ID from the query.
-// Returns a *NotFoundError when no ContractSupplier ID was found.
-func (_q *ContractSupplierQuery) FirstID(ctx context.Context) (id uuid.UUID, err error) {
+// FirstID returns the first Category ID from the query.
+// Returns a *NotFoundError when no Category ID was found.
+func (_q *CategoryQuery) FirstID(ctx context.Context) (id uuid.UUID, err error) {
 	var ids []uuid.UUID
 	if ids, err = _q.Limit(1).IDs(setContextOp(ctx, _q.ctx, ent.OpQueryFirstID)); err != nil {
 		return
 	}
 	if len(ids) == 0 {
-		err = &NotFoundError{contractsupplier.Label}
+		err = &NotFoundError{category.Label}
 		return
 	}
 	return ids[0], nil
 }
 
 // FirstIDX is like FirstID, but panics if an error occurs.
-func (_q *ContractSupplierQuery) FirstIDX(ctx context.Context) uuid.UUID {
+func (_q *CategoryQuery) FirstIDX(ctx context.Context) uuid.UUID {
 	id, err := _q.FirstID(ctx)
 	if err != nil && !IsNotFound(err) {
 		panic(err)
@@ -129,10 +129,10 @@ func (_q *ContractSupplierQuery) FirstIDX(ctx context.Context) uuid.UUID {
 	return id
 }
 
-// Only returns a single ContractSupplier entity found by the query, ensuring it only returns one.
-// Returns a *NotSingularError when more than one ContractSupplier entity is found.
-// Returns a *NotFoundError when no ContractSupplier entities are found.
-func (_q *ContractSupplierQuery) Only(ctx context.Context) (*ContractSupplier, error) {
+// Only returns a single Category entity found by the query, ensuring it only returns one.
+// Returns a *NotSingularError when more than one Category entity is found.
+// Returns a *NotFoundError when no Category entities are found.
+func (_q *CategoryQuery) Only(ctx context.Context) (*Category, error) {
 	nodes, err := _q.Limit(2).All(setContextOp(ctx, _q.ctx, ent.OpQueryOnly))
 	if err != nil {
 		return nil, err
@@ -141,14 +141,14 @@ func (_q *ContractSupplierQuery) Only(ctx context.Context) (*ContractSupplier, e
 	case 1:
 		return nodes[0], nil
 	case 0:
-		return nil, &NotFoundError{contractsupplier.Label}
+		return nil, &NotFoundError{category.Label}
 	default:
-		return nil, &NotSingularError{contractsupplier.Label}
+		return nil, &NotSingularError{category.Label}
 	}
 }
 
 // OnlyX is like Only, but panics if an error occurs.
-func (_q *ContractSupplierQuery) OnlyX(ctx context.Context) *ContractSupplier {
+func (_q *CategoryQuery) OnlyX(ctx context.Context) *Category {
 	node, err := _q.Only(ctx)
 	if err != nil {
 		panic(err)
@@ -156,10 +156,10 @@ func (_q *ContractSupplierQuery) OnlyX(ctx context.Context) *ContractSupplier {
 	return node
 }
 
-// OnlyID is like Only, but returns the only ContractSupplier ID in the query.
-// Returns a *NotSingularError when more than one ContractSupplier ID is found.
+// OnlyID is like Only, but returns the only Category ID in the query.
+// Returns a *NotSingularError when more than one Category ID is found.
 // Returns a *NotFoundError when no entities are found.
-func (_q *ContractSupplierQuery) OnlyID(ctx context.Context) (id uuid.UUID, err error) {
+func (_q *CategoryQuery) OnlyID(ctx context.Context) (id uuid.UUID, err error) {
 	var ids []uuid.UUID
 	if ids, err = _q.Limit(2).IDs(setContextOp(ctx, _q.ctx, ent.OpQueryOnlyID)); err != nil {
 		return
@@ -168,15 +168,15 @@ func (_q *ContractSupplierQuery) OnlyID(ctx context.Context) (id uuid.UUID, err 
 	case 1:
 		id = ids[0]
 	case 0:
-		err = &NotFoundError{contractsupplier.Label}
+		err = &NotFoundError{category.Label}
 	default:
-		err = &NotSingularError{contractsupplier.Label}
+		err = &NotSingularError{category.Label}
 	}
 	return
 }
 
 // OnlyIDX is like OnlyID, but panics if an error occurs.
-func (_q *ContractSupplierQuery) OnlyIDX(ctx context.Context) uuid.UUID {
+func (_q *CategoryQuery) OnlyIDX(ctx context.Context) uuid.UUID {
 	id, err := _q.OnlyID(ctx)
 	if err != nil {
 		panic(err)
@@ -184,18 +184,18 @@ func (_q *ContractSupplierQuery) OnlyIDX(ctx context.Context) uuid.UUID {
 	return id
 }
 
-// All executes the query and returns a list of ContractSuppliers.
-func (_q *ContractSupplierQuery) All(ctx context.Context) ([]*ContractSupplier, error) {
+// All executes the query and returns a list of Categories.
+func (_q *CategoryQuery) All(ctx context.Context) ([]*Category, error) {
 	ctx = setContextOp(ctx, _q.ctx, ent.OpQueryAll)
 	if err := _q.prepareQuery(ctx); err != nil {
 		return nil, err
 	}
-	qr := querierAll[[]*ContractSupplier, *ContractSupplierQuery]()
-	return withInterceptors[[]*ContractSupplier](ctx, _q, qr, _q.inters)
+	qr := querierAll[[]*Category, *CategoryQuery]()
+	return withInterceptors[[]*Category](ctx, _q, qr, _q.inters)
 }
 
 // AllX is like All, but panics if an error occurs.
-func (_q *ContractSupplierQuery) AllX(ctx context.Context) []*ContractSupplier {
+func (_q *CategoryQuery) AllX(ctx context.Context) []*Category {
 	nodes, err := _q.All(ctx)
 	if err != nil {
 		panic(err)
@@ -203,20 +203,20 @@ func (_q *ContractSupplierQuery) AllX(ctx context.Context) []*ContractSupplier {
 	return nodes
 }
 
-// IDs executes the query and returns a list of ContractSupplier IDs.
-func (_q *ContractSupplierQuery) IDs(ctx context.Context) (ids []uuid.UUID, err error) {
+// IDs executes the query and returns a list of Category IDs.
+func (_q *CategoryQuery) IDs(ctx context.Context) (ids []uuid.UUID, err error) {
 	if _q.ctx.Unique == nil && _q.path != nil {
 		_q.Unique(true)
 	}
 	ctx = setContextOp(ctx, _q.ctx, ent.OpQueryIDs)
-	if err = _q.Select(contractsupplier.FieldID).Scan(ctx, &ids); err != nil {
+	if err = _q.Select(category.FieldID).Scan(ctx, &ids); err != nil {
 		return nil, err
 	}
 	return ids, nil
 }
 
 // IDsX is like IDs, but panics if an error occurs.
-func (_q *ContractSupplierQuery) IDsX(ctx context.Context) []uuid.UUID {
+func (_q *CategoryQuery) IDsX(ctx context.Context) []uuid.UUID {
 	ids, err := _q.IDs(ctx)
 	if err != nil {
 		panic(err)
@@ -225,16 +225,16 @@ func (_q *ContractSupplierQuery) IDsX(ctx context.Context) []uuid.UUID {
 }
 
 // Count returns the count of the given query.
-func (_q *ContractSupplierQuery) Count(ctx context.Context) (int, error) {
+func (_q *CategoryQuery) Count(ctx context.Context) (int, error) {
 	ctx = setContextOp(ctx, _q.ctx, ent.OpQueryCount)
 	if err := _q.prepareQuery(ctx); err != nil {
 		return 0, err
 	}
-	return withInterceptors[int](ctx, _q, querierCount[*ContractSupplierQuery](), _q.inters)
+	return withInterceptors[int](ctx, _q, querierCount[*CategoryQuery](), _q.inters)
 }
 
 // CountX is like Count, but panics if an error occurs.
-func (_q *ContractSupplierQuery) CountX(ctx context.Context) int {
+func (_q *CategoryQuery) CountX(ctx context.Context) int {
 	count, err := _q.Count(ctx)
 	if err != nil {
 		panic(err)
@@ -243,7 +243,7 @@ func (_q *ContractSupplierQuery) CountX(ctx context.Context) int {
 }
 
 // Exist returns true if the query has elements in the graph.
-func (_q *ContractSupplierQuery) Exist(ctx context.Context) (bool, error) {
+func (_q *CategoryQuery) Exist(ctx context.Context) (bool, error) {
 	ctx = setContextOp(ctx, _q.ctx, ent.OpQueryExist)
 	switch _, err := _q.FirstID(ctx); {
 	case IsNotFound(err):
@@ -256,7 +256,7 @@ func (_q *ContractSupplierQuery) Exist(ctx context.Context) (bool, error) {
 }
 
 // ExistX is like Exist, but panics if an error occurs.
-func (_q *ContractSupplierQuery) ExistX(ctx context.Context) bool {
+func (_q *CategoryQuery) ExistX(ctx context.Context) bool {
 	exist, err := _q.Exist(ctx)
 	if err != nil {
 		panic(err)
@@ -264,18 +264,18 @@ func (_q *ContractSupplierQuery) ExistX(ctx context.Context) bool {
 	return exist
 }
 
-// Clone returns a duplicate of the ContractSupplierQuery builder, including all associated steps. It can be
+// Clone returns a duplicate of the CategoryQuery builder, including all associated steps. It can be
 // used to prepare common query builders and use them differently after the clone is made.
-func (_q *ContractSupplierQuery) Clone() *ContractSupplierQuery {
+func (_q *CategoryQuery) Clone() *CategoryQuery {
 	if _q == nil {
 		return nil
 	}
-	return &ContractSupplierQuery{
+	return &CategoryQuery{
 		config:                     _q.config,
 		ctx:                        _q.ctx.Clone(),
-		order:                      append([]contractsupplier.OrderOption{}, _q.order...),
+		order:                      append([]category.OrderOption{}, _q.order...),
 		inters:                     append([]Interceptor{}, _q.inters...),
-		predicates:                 append([]predicate.ContractSupplier{}, _q.predicates...),
+		predicates:                 append([]predicate.Category{}, _q.predicates...),
 		withExternalTrainingEvents: _q.withExternalTrainingEvents.Clone(),
 		// clone intermediate query.
 		sql:  _q.sql.Clone(),
@@ -285,7 +285,7 @@ func (_q *ContractSupplierQuery) Clone() *ContractSupplierQuery {
 
 // WithExternalTrainingEvents tells the query-builder to eager-load the nodes that are connected to
 // the "external_training_events" edge. The optional arguments are used to configure the query builder of the edge.
-func (_q *ContractSupplierQuery) WithExternalTrainingEvents(opts ...func(*ExternalTrainingEventQuery)) *ContractSupplierQuery {
+func (_q *CategoryQuery) WithExternalTrainingEvents(opts ...func(*ExternalTrainingEventQuery)) *CategoryQuery {
 	query := (&ExternalTrainingEventClient{config: _q.config}).Query()
 	for _, opt := range opts {
 		opt(query)
@@ -300,19 +300,19 @@ func (_q *ContractSupplierQuery) WithExternalTrainingEvents(opts ...func(*Extern
 // Example:
 //
 //	var v []struct {
-//		SupplierID uuid.UUID `json:"supplier_id,omitempty"`
+//		Name string `json:"name,omitempty"`
 //		Count int `json:"count,omitempty"`
 //	}
 //
-//	client.ContractSupplier.Query().
-//		GroupBy(contractsupplier.FieldSupplierID).
+//	client.Category.Query().
+//		GroupBy(category.FieldName).
 //		Aggregate(ent.Count()).
 //		Scan(ctx, &v)
-func (_q *ContractSupplierQuery) GroupBy(field string, fields ...string) *ContractSupplierGroupBy {
+func (_q *CategoryQuery) GroupBy(field string, fields ...string) *CategoryGroupBy {
 	_q.ctx.Fields = append([]string{field}, fields...)
-	grbuild := &ContractSupplierGroupBy{build: _q}
+	grbuild := &CategoryGroupBy{build: _q}
 	grbuild.flds = &_q.ctx.Fields
-	grbuild.label = contractsupplier.Label
+	grbuild.label = category.Label
 	grbuild.scan = grbuild.Scan
 	return grbuild
 }
@@ -323,26 +323,26 @@ func (_q *ContractSupplierQuery) GroupBy(field string, fields ...string) *Contra
 // Example:
 //
 //	var v []struct {
-//		SupplierID uuid.UUID `json:"supplier_id,omitempty"`
+//		Name string `json:"name,omitempty"`
 //	}
 //
-//	client.ContractSupplier.Query().
-//		Select(contractsupplier.FieldSupplierID).
+//	client.Category.Query().
+//		Select(category.FieldName).
 //		Scan(ctx, &v)
-func (_q *ContractSupplierQuery) Select(fields ...string) *ContractSupplierSelect {
+func (_q *CategoryQuery) Select(fields ...string) *CategorySelect {
 	_q.ctx.Fields = append(_q.ctx.Fields, fields...)
-	sbuild := &ContractSupplierSelect{ContractSupplierQuery: _q}
-	sbuild.label = contractsupplier.Label
+	sbuild := &CategorySelect{CategoryQuery: _q}
+	sbuild.label = category.Label
 	sbuild.flds, sbuild.scan = &_q.ctx.Fields, sbuild.Scan
 	return sbuild
 }
 
-// Aggregate returns a ContractSupplierSelect configured with the given aggregations.
-func (_q *ContractSupplierQuery) Aggregate(fns ...AggregateFunc) *ContractSupplierSelect {
+// Aggregate returns a CategorySelect configured with the given aggregations.
+func (_q *CategoryQuery) Aggregate(fns ...AggregateFunc) *CategorySelect {
 	return _q.Select().Aggregate(fns...)
 }
 
-func (_q *ContractSupplierQuery) prepareQuery(ctx context.Context) error {
+func (_q *CategoryQuery) prepareQuery(ctx context.Context) error {
 	for _, inter := range _q.inters {
 		if inter == nil {
 			return fmt.Errorf("ent: uninitialized interceptor (forgotten import ent/runtime?)")
@@ -354,7 +354,7 @@ func (_q *ContractSupplierQuery) prepareQuery(ctx context.Context) error {
 		}
 	}
 	for _, f := range _q.ctx.Fields {
-		if !contractsupplier.ValidColumn(f) {
+		if !category.ValidColumn(f) {
 			return &ValidationError{Name: f, err: fmt.Errorf("ent: invalid field %q for query", f)}
 		}
 	}
@@ -368,19 +368,19 @@ func (_q *ContractSupplierQuery) prepareQuery(ctx context.Context) error {
 	return nil
 }
 
-func (_q *ContractSupplierQuery) sqlAll(ctx context.Context, hooks ...queryHook) ([]*ContractSupplier, error) {
+func (_q *CategoryQuery) sqlAll(ctx context.Context, hooks ...queryHook) ([]*Category, error) {
 	var (
-		nodes       = []*ContractSupplier{}
+		nodes       = []*Category{}
 		_spec       = _q.querySpec()
 		loadedTypes = [1]bool{
 			_q.withExternalTrainingEvents != nil,
 		}
 	)
 	_spec.ScanValues = func(columns []string) ([]any, error) {
-		return (*ContractSupplier).scanValues(nil, columns)
+		return (*Category).scanValues(nil, columns)
 	}
 	_spec.Assign = func(columns []string, values []any) error {
-		node := &ContractSupplier{config: _q.config}
+		node := &Category{config: _q.config}
 		nodes = append(nodes, node)
 		node.Edges.loadedTypes = loadedTypes
 		return node.assignValues(columns, values)
@@ -396,8 +396,8 @@ func (_q *ContractSupplierQuery) sqlAll(ctx context.Context, hooks ...queryHook)
 	}
 	if query := _q.withExternalTrainingEvents; query != nil {
 		if err := _q.loadExternalTrainingEvents(ctx, query, nodes,
-			func(n *ContractSupplier) { n.Edges.ExternalTrainingEvents = []*ExternalTrainingEvent{} },
-			func(n *ContractSupplier, e *ExternalTrainingEvent) {
+			func(n *Category) { n.Edges.ExternalTrainingEvents = []*ExternalTrainingEvent{} },
+			func(n *Category, e *ExternalTrainingEvent) {
 				n.Edges.ExternalTrainingEvents = append(n.Edges.ExternalTrainingEvents, e)
 			}); err != nil {
 			return nil, err
@@ -406,9 +406,9 @@ func (_q *ContractSupplierQuery) sqlAll(ctx context.Context, hooks ...queryHook)
 	return nodes, nil
 }
 
-func (_q *ContractSupplierQuery) loadExternalTrainingEvents(ctx context.Context, query *ExternalTrainingEventQuery, nodes []*ContractSupplier, init func(*ContractSupplier), assign func(*ContractSupplier, *ExternalTrainingEvent)) error {
+func (_q *CategoryQuery) loadExternalTrainingEvents(ctx context.Context, query *ExternalTrainingEventQuery, nodes []*Category, init func(*Category), assign func(*Category, *ExternalTrainingEvent)) error {
 	fks := make([]driver.Value, 0, len(nodes))
-	nodeids := make(map[uuid.UUID]*ContractSupplier)
+	nodeids := make(map[uuid.UUID]*Category)
 	for i := range nodes {
 		fks = append(fks, nodes[i].ID)
 		nodeids[nodes[i].ID] = nodes[i]
@@ -417,27 +417,30 @@ func (_q *ContractSupplierQuery) loadExternalTrainingEvents(ctx context.Context,
 		}
 	}
 	if len(query.ctx.Fields) > 0 {
-		query.ctx.AppendFieldOnce(externaltrainingevent.FieldContractID)
+		query.ctx.AppendFieldOnce(externaltrainingevent.FieldCategoryID)
 	}
 	query.Where(predicate.ExternalTrainingEvent(func(s *sql.Selector) {
-		s.Where(sql.InValues(s.C(contractsupplier.ExternalTrainingEventsColumn), fks...))
+		s.Where(sql.InValues(s.C(category.ExternalTrainingEventsColumn), fks...))
 	}))
 	neighbors, err := query.All(ctx)
 	if err != nil {
 		return err
 	}
 	for _, n := range neighbors {
-		fk := n.ContractID
-		node, ok := nodeids[fk]
+		fk := n.CategoryID
+		if fk == nil {
+			return fmt.Errorf(`foreign-key "category_id" is nil for node %v`, n.ID)
+		}
+		node, ok := nodeids[*fk]
 		if !ok {
-			return fmt.Errorf(`unexpected referenced foreign-key "contract_id" returned %v for node %v`, fk, n.ID)
+			return fmt.Errorf(`unexpected referenced foreign-key "category_id" returned %v for node %v`, *fk, n.ID)
 		}
 		assign(node, n)
 	}
 	return nil
 }
 
-func (_q *ContractSupplierQuery) sqlCount(ctx context.Context) (int, error) {
+func (_q *CategoryQuery) sqlCount(ctx context.Context) (int, error) {
 	_spec := _q.querySpec()
 	_spec.Node.Columns = _q.ctx.Fields
 	if len(_q.ctx.Fields) > 0 {
@@ -446,8 +449,8 @@ func (_q *ContractSupplierQuery) sqlCount(ctx context.Context) (int, error) {
 	return sqlgraph.CountNodes(ctx, _q.driver, _spec)
 }
 
-func (_q *ContractSupplierQuery) querySpec() *sqlgraph.QuerySpec {
-	_spec := sqlgraph.NewQuerySpec(contractsupplier.Table, contractsupplier.Columns, sqlgraph.NewFieldSpec(contractsupplier.FieldID, field.TypeUUID))
+func (_q *CategoryQuery) querySpec() *sqlgraph.QuerySpec {
+	_spec := sqlgraph.NewQuerySpec(category.Table, category.Columns, sqlgraph.NewFieldSpec(category.FieldID, field.TypeUUID))
 	_spec.From = _q.sql
 	if unique := _q.ctx.Unique; unique != nil {
 		_spec.Unique = *unique
@@ -456,9 +459,9 @@ func (_q *ContractSupplierQuery) querySpec() *sqlgraph.QuerySpec {
 	}
 	if fields := _q.ctx.Fields; len(fields) > 0 {
 		_spec.Node.Columns = make([]string, 0, len(fields))
-		_spec.Node.Columns = append(_spec.Node.Columns, contractsupplier.FieldID)
+		_spec.Node.Columns = append(_spec.Node.Columns, category.FieldID)
 		for i := range fields {
-			if fields[i] != contractsupplier.FieldID {
+			if fields[i] != category.FieldID {
 				_spec.Node.Columns = append(_spec.Node.Columns, fields[i])
 			}
 		}
@@ -486,12 +489,12 @@ func (_q *ContractSupplierQuery) querySpec() *sqlgraph.QuerySpec {
 	return _spec
 }
 
-func (_q *ContractSupplierQuery) sqlQuery(ctx context.Context) *sql.Selector {
+func (_q *CategoryQuery) sqlQuery(ctx context.Context) *sql.Selector {
 	builder := sql.Dialect(_q.driver.Dialect())
-	t1 := builder.Table(contractsupplier.Table)
+	t1 := builder.Table(category.Table)
 	columns := _q.ctx.Fields
 	if len(columns) == 0 {
-		columns = contractsupplier.Columns
+		columns = category.Columns
 	}
 	selector := builder.Select(t1.Columns(columns...)...).From(t1)
 	if _q.sql != nil {
@@ -518,28 +521,28 @@ func (_q *ContractSupplierQuery) sqlQuery(ctx context.Context) *sql.Selector {
 	return selector
 }
 
-// ContractSupplierGroupBy is the group-by builder for ContractSupplier entities.
-type ContractSupplierGroupBy struct {
+// CategoryGroupBy is the group-by builder for Category entities.
+type CategoryGroupBy struct {
 	selector
-	build *ContractSupplierQuery
+	build *CategoryQuery
 }
 
 // Aggregate adds the given aggregation functions to the group-by query.
-func (_g *ContractSupplierGroupBy) Aggregate(fns ...AggregateFunc) *ContractSupplierGroupBy {
+func (_g *CategoryGroupBy) Aggregate(fns ...AggregateFunc) *CategoryGroupBy {
 	_g.fns = append(_g.fns, fns...)
 	return _g
 }
 
 // Scan applies the selector query and scans the result into the given value.
-func (_g *ContractSupplierGroupBy) Scan(ctx context.Context, v any) error {
+func (_g *CategoryGroupBy) Scan(ctx context.Context, v any) error {
 	ctx = setContextOp(ctx, _g.build.ctx, ent.OpQueryGroupBy)
 	if err := _g.build.prepareQuery(ctx); err != nil {
 		return err
 	}
-	return scanWithInterceptors[*ContractSupplierQuery, *ContractSupplierGroupBy](ctx, _g.build, _g, _g.build.inters, v)
+	return scanWithInterceptors[*CategoryQuery, *CategoryGroupBy](ctx, _g.build, _g, _g.build.inters, v)
 }
 
-func (_g *ContractSupplierGroupBy) sqlScan(ctx context.Context, root *ContractSupplierQuery, v any) error {
+func (_g *CategoryGroupBy) sqlScan(ctx context.Context, root *CategoryQuery, v any) error {
 	selector := root.sqlQuery(ctx).Select()
 	aggregation := make([]string, 0, len(_g.fns))
 	for _, fn := range _g.fns {
@@ -566,28 +569,28 @@ func (_g *ContractSupplierGroupBy) sqlScan(ctx context.Context, root *ContractSu
 	return sql.ScanSlice(rows, v)
 }
 
-// ContractSupplierSelect is the builder for selecting fields of ContractSupplier entities.
-type ContractSupplierSelect struct {
-	*ContractSupplierQuery
+// CategorySelect is the builder for selecting fields of Category entities.
+type CategorySelect struct {
+	*CategoryQuery
 	selector
 }
 
 // Aggregate adds the given aggregation functions to the selector query.
-func (_s *ContractSupplierSelect) Aggregate(fns ...AggregateFunc) *ContractSupplierSelect {
+func (_s *CategorySelect) Aggregate(fns ...AggregateFunc) *CategorySelect {
 	_s.fns = append(_s.fns, fns...)
 	return _s
 }
 
 // Scan applies the selector query and scans the result into the given value.
-func (_s *ContractSupplierSelect) Scan(ctx context.Context, v any) error {
+func (_s *CategorySelect) Scan(ctx context.Context, v any) error {
 	ctx = setContextOp(ctx, _s.ctx, ent.OpQuerySelect)
 	if err := _s.prepareQuery(ctx); err != nil {
 		return err
 	}
-	return scanWithInterceptors[*ContractSupplierQuery, *ContractSupplierSelect](ctx, _s.ContractSupplierQuery, _s, _s.inters, v)
+	return scanWithInterceptors[*CategoryQuery, *CategorySelect](ctx, _s.CategoryQuery, _s, _s.inters, v)
 }
 
-func (_s *ContractSupplierSelect) sqlScan(ctx context.Context, root *ContractSupplierQuery, v any) error {
+func (_s *CategorySelect) sqlScan(ctx context.Context, root *CategoryQuery, v any) error {
 	selector := root.sqlQuery(ctx)
 	aggregation := make([]string, 0, len(_s.fns))
 	for _, fn := range _s.fns {
