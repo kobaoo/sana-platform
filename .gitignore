@@ -9,6 +9,8 @@ encore.gen.cue
 CLAUDE.md
 AGENTS.md
 
-.env.secrets.local.cue
+.env
+
+.secrets.local.cue
 
 .claude/
