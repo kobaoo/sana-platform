@@ -21,6 +21,12 @@ type Organization func(*sql.Selector)
 // Request is the predicate function for request builders.
 type Request func(*sql.Selector)
 
+// ScormCourse is the predicate function for scormcourse builders.
+type ScormCourse func(*sql.Selector)
+
+// ScormProgress is the predicate function for scormprogress builders.
+type ScormProgress func(*sql.Selector)
+
 // TrainingEvent is the predicate function for trainingevent builders.
 type TrainingEvent func(*sql.Selector)
 
