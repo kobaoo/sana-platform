@@ -25,6 +25,78 @@ var (
 		Columns:    ClientsColumns,
 		PrimaryKey: []*schema.Column{ClientsColumns[0]},
 	}
+	// ContractSuppliersColumns holds the columns for the "contract_suppliers" table.
+	ContractSuppliersColumns = []*schema.Column{
+		{Name: "id", Type: field.TypeUUID, Unique: true},
+		{Name: "supplier_id", Type: field.TypeUUID},
+		{Name: "contract_number", Type: field.TypeString, Size: 100},
+		{Name: "vat_flag", Type: field.TypeBool, Default: false},
+		{Name: "signed_date", Type: field.TypeTime, SchemaType: map[string]string{"postgres": "date"}},
+		{Name: "end_date", Type: field.TypeTime, Nullable: true, SchemaType: map[string]string{"postgres": "date"}},
+		{Name: "amount", Type: field.TypeFloat64, SchemaType: map[string]string{"postgres": "decimal(14,2)"}},
+		{Name: "amount_currency", Type: field.TypeFloat64, Nullable: true, SchemaType: map[string]string{"postgres": "decimal(14,2)"}},
+		{Name: "currency", Type: field.TypeString, Nullable: true, Size: 10},
+		{Name: "balance_at_year_end", Type: field.TypeFloat64, Nullable: true, SchemaType: map[string]string{"postgres": "decimal(14,2)"}},
+		{Name: "amendment_number", Type: field.TypeString, Nullable: true, Size: 100},
+		{Name: "amendment_date", Type: field.TypeTime, Nullable: true, SchemaType: map[string]string{"postgres": "date"}},
+		{Name: "amendment_amount", Type: field.TypeFloat64, Nullable: true, SchemaType: map[string]string{"postgres": "decimal(14,2)"}},
+		{Name: "total_with_amendment", Type: field.TypeFloat64, SchemaType: map[string]string{"postgres": "decimal(14,2)"}},
+		{Name: "remaining_amount", Type: field.TypeFloat64, SchemaType: map[string]string{"postgres": "decimal(14,2)"}},
+		{Name: "file_key", Type: field.TypeString, Nullable: true, Size: 500},
+		{Name: "file_name", Type: field.TypeString, Nullable: true, Size: 255},
+		{Name: "file_size", Type: field.TypeInt64, Nullable: true},
+		{Name: "file_mime_type", Type: field.TypeString, Nullable: true, Size: 100},
+		{Name: "is_active", Type: field.TypeBool, Default: true},
+		{Name: "created_at", Type: field.TypeTime, Default: "NOW()", SchemaType: map[string]string{"postgres": "timestamptz"}},
+		{Name: "updated_at", Type: field.TypeTime, Default: "NOW()", SchemaType: map[string]string{"postgres": "timestamptz"}},
+	}
+	// ContractSuppliersTable holds the schema information for the "contract_suppliers" table.
+	ContractSuppliersTable = &schema.Table{
+		Name:       "contract_suppliers",
+		Columns:    ContractSuppliersColumns,
+		PrimaryKey: []*schema.Column{ContractSuppliersColumns[0]},
+		Indexes: []*schema.Index{
+			{
+				Name:    "contract_supplier_supplier_id",
+				Unique:  false,
+				Columns: []*schema.Column{ContractSuppliersColumns[1]},
+			},
+			{
+				Name:    "contract_supplier_contract_number",
+				Unique:  false,
+				Columns: []*schema.Column{ContractSuppliersColumns[2]},
+			},
+		},
+	}
+	// ContractSupplierHistoriesColumns holds the columns for the "contract_supplier_histories" table.
+	ContractSupplierHistoriesColumns = []*schema.Column{
+		{Name: "id", Type: field.TypeInt, Increment: true},
+		{Name: "history_id", Type: field.TypeUUID, Unique: true},
+		{Name: "contract_id", Type: field.TypeUUID},
+		{Name: "operation_type", Type: field.TypeString, Size: 50},
+		{Name: "changed_at", Type: field.TypeTime, SchemaType: map[string]string{"postgres": "timestamptz"}},
+		{Name: "changed_by", Type: field.TypeUUID, Nullable: true},
+		{Name: "snapshot", Type: field.TypeJSON, Nullable: true},
+		{Name: "diff", Type: field.TypeJSON, Nullable: true},
+	}
+	// ContractSupplierHistoriesTable holds the schema information for the "contract_supplier_histories" table.
+	ContractSupplierHistoriesTable = &schema.Table{
+		Name:       "contract_supplier_histories",
+		Columns:    ContractSupplierHistoriesColumns,
+		PrimaryKey: []*schema.Column{ContractSupplierHistoriesColumns[0]},
+		Indexes: []*schema.Index{
+			{
+				Name:    "contract_supplier_history_contract_id",
+				Unique:  false,
+				Columns: []*schema.Column{ContractSupplierHistoriesColumns[2]},
+			},
+			{
+				Name:    "contract_supplier_history_changed_at",
+				Unique:  false,
+				Columns: []*schema.Column{ContractSupplierHistoriesColumns[4]},
+			},
+		},
+	}
 	// DzoOrganizationsColumns holds the columns for the "dzo_organizations" table.
 	DzoOrganizationsColumns = []*schema.Column{
 		{Name: "id", Type: field.TypeUUID},
@@ -33,8 +105,6 @@ var (
 		{Name: "short_name", Type: field.TypeString, Nullable: true, Size: 100},
 		{Name: "bin", Type: field.TypeString, Nullable: true, Size: 12},
 		{Name: "is_active", Type: field.TypeBool, Default: true},
-		{Name: "created_at", Type: field.TypeTime},
-		{Name: "updated_at", Type: field.TypeTime},
 	}
 	// DzoOrganizationsTable holds the schema information for the "dzo_organizations" table.
 	DzoOrganizationsTable = &schema.Table{
@@ -110,94 +180,38 @@ var (
 			},
 		},
 	}
-	// RequestsColumns holds the columns for the "requests" table.
-	RequestsColumns = []*schema.Column{
+	// SuppliersColumns holds the columns for the "suppliers" table.
+	SuppliersColumns = []*schema.Column{
 		{Name: "id", Type: field.TypeUUID, Unique: true},
-		{Name: "entity_id", Type: field.TypeUUID},
-		{Name: "entity_type", Type: field.TypeString, Size: 50},
-		{Name: "step", Type: field.TypeInt, Default: 0},
-		{Name: "created_at", Type: field.TypeTime, SchemaType: map[string]string{"postgres": "timestamptz"}},
-		{Name: "status", Type: field.TypeString, Size: 50, Default: "PENDING"},
-		{Name: "initiator_id", Type: field.TypeUUID},
+		{Name: "client_id", Type: field.TypeUUID},
+		{Name: "type", Type: field.TypeEnum, Enums: []string{"LEGAL", "INDIVIDUAL"}},
+		{Name: "name", Type: field.TypeString, Size: 300},
+		{Name: "bin_or_iin", Type: field.TypeString, Unique: true, Nullable: true, Size: 12},
+		{Name: "local_content_pct", Type: field.TypeFloat64, Nullable: true, SchemaType: map[string]string{"postgres": "decimal(5,2)"}},
+		{Name: "is_active", Type: field.TypeBool, Default: true},
 	}
-	// RequestsTable holds the schema information for the "requests" table.
-	RequestsTable = &schema.Table{
-		Name:       "requests",
-		Columns:    RequestsColumns,
-		PrimaryKey: []*schema.Column{RequestsColumns[0]},
-		ForeignKeys: []*schema.ForeignKey{
-			{
-				Symbol:     "requests_users_requests",
-				Columns:    []*schema.Column{RequestsColumns[6]},
-				RefColumns: []*schema.Column{UsersColumns[0]},
-				OnDelete:   schema.NoAction,
-			},
-		},
+	// SuppliersTable holds the schema information for the "suppliers" table.
+	SuppliersTable = &schema.Table{
+		Name:       "suppliers",
+		Columns:    SuppliersColumns,
+		PrimaryKey: []*schema.Column{SuppliersColumns[0]},
 		Indexes: []*schema.Index{
 			{
-				Name:    "request_initiator_id",
+				Name:    "supplier_client_id",
 				Unique:  false,
-				Columns: []*schema.Column{RequestsColumns[6]},
+				Columns: []*schema.Column{SuppliersColumns[1]},
 			},
 			{
-				Name:    "request_entity_id",
+				Name:    "supplier_type",
 				Unique:  false,
-				Columns: []*schema.Column{RequestsColumns[1]},
+				Columns: []*schema.Column{SuppliersColumns[2]},
 			},
 			{
-				Name:    "request_status",
+				Name:    "supplier_is_active",
 				Unique:  false,
-				Columns: []*schema.Column{RequestsColumns[5]},
-			},
-			{
-				Name:    "request_step",
-				Unique:  false,
-				Columns: []*schema.Column{RequestsColumns[3]},
+				Columns: []*schema.Column{SuppliersColumns[6]},
 			},
 		},
-	}
-	// TrainingEventsColumns holds the columns for the "training_events" table.
-	TrainingEventsColumns = []*schema.Column{
-		{Name: "id", Type: field.TypeUUID},
-		{Name: "title", Type: field.TypeString},
-		{Name: "start_date", Type: field.TypeTime},
-		{Name: "end_date", Type: field.TypeTime},
-		{Name: "location_type", Type: field.TypeString},
-		{Name: "location_city", Type: field.TypeString, Nullable: true},
-		{Name: "category_id", Type: field.TypeUUID},
-		{Name: "direction", Type: field.TypeString, Nullable: true},
-		{Name: "dzo_id", Type: field.TypeUUID},
-		{Name: "dzo_contract_id", Type: field.TypeUUID, Nullable: true},
-		{Name: "participants_count", Type: field.TypeInt},
-		{Name: "cost_per_person_vat", Type: field.TypeFloat64, Nullable: true},
-		{Name: "cost_group_vat", Type: field.TypeFloat64, Nullable: true},
-		{Name: "kyu_hourly_rate", Type: field.TypeFloat64, Nullable: true},
-		{Name: "supplier_id", Type: field.TypeUUID, Nullable: true},
-		{Name: "supplier_contract_id", Type: field.TypeUUID, Nullable: true},
-		{Name: "supplier_cost_vat", Type: field.TypeFloat64, Nullable: true},
-		{Name: "supplier_cost_currency", Type: field.TypeFloat64, Nullable: true},
-		{Name: "supplier_currency", Type: field.TypeString, Nullable: true},
-		{Name: "local_content_pct", Type: field.TypeFloat64, Nullable: true},
-	}
-	// TrainingEventsTable holds the schema information for the "training_events" table.
-	TrainingEventsTable = &schema.Table{
-		Name:       "training_events",
-		Columns:    TrainingEventsColumns,
-		PrimaryKey: []*schema.Column{TrainingEventsColumns[0]},
-	}
-	// TrainingParticipantsColumns holds the columns for the "training_participants" table.
-	TrainingParticipantsColumns = []*schema.Column{
-		{Name: "id", Type: field.TypeUUID},
-		{Name: "event_id", Type: field.TypeUUID},
-		{Name: "employee_id", Type: field.TypeUUID},
-		{Name: "status", Type: field.TypeString},
-		{Name: "certificate_id", Type: field.TypeUUID, Nullable: true},
-	}
-	// TrainingParticipantsTable holds the schema information for the "training_participants" table.
-	TrainingParticipantsTable = &schema.Table{
-		Name:       "training_participants",
-		Columns:    TrainingParticipantsColumns,
-		PrimaryKey: []*schema.Column{TrainingParticipantsColumns[0]},
 	}
 	// UsersColumns holds the columns for the "users" table.
 	UsersColumns = []*schema.Column{
@@ -241,12 +255,12 @@ var (
 	// Tables holds all the tables in the schema.
 	Tables = []*schema.Table{
 		ClientsTable,
+		ContractSuppliersTable,
+		ContractSupplierHistoriesTable,
 		DzoOrganizationsTable,
 		EmployeesTable,
 		OrganizationsTable,
-		RequestsTable,
-		TrainingEventsTable,
-		TrainingParticipantsTable,
+		SuppliersTable,
 		UsersTable,
 	}
 )
@@ -263,6 +277,5 @@ func init() {
 		Table: "employees",
 	}
 	OrganizationsTable.ForeignKeys[0].RefTable = OrganizationsTable
-	RequestsTable.ForeignKeys[0].RefTable = UsersTable
 	UsersTable.ForeignKeys[0].RefTable = ClientsTable
 }

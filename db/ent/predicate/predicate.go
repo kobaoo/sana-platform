@@ -9,6 +9,12 @@ import (
 // Company is the predicate function for company builders.
 type Company func(*sql.Selector)
 
+// ContractSupplier is the predicate function for contractsupplier builders.
+type ContractSupplier func(*sql.Selector)
+
+// ContractSupplierHistory is the predicate function for contractsupplierhistory builders.
+type ContractSupplierHistory func(*sql.Selector)
+
 // DzoOrganization is the predicate function for dzoorganization builders.
 type DzoOrganization func(*sql.Selector)
 
@@ -18,14 +24,8 @@ type Employee func(*sql.Selector)
 // Organization is the predicate function for organization builders.
 type Organization func(*sql.Selector)
 
-// Request is the predicate function for request builders.
-type Request func(*sql.Selector)
-
-// TrainingEvent is the predicate function for trainingevent builders.
-type TrainingEvent func(*sql.Selector)
-
-// TrainingParticipant is the predicate function for trainingparticipant builders.
-type TrainingParticipant func(*sql.Selector)
+// Supplier is the predicate function for supplier builders.
+type Supplier func(*sql.Selector)
 
 // User is the predicate function for user builders.
 type User func(*sql.Selector)

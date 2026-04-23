@@ -14,18 +14,18 @@ type Tx struct {
 	config
 	// Company is the client for interacting with the Company builders.
 	Company *CompanyClient
+	// ContractSupplier is the client for interacting with the ContractSupplier builders.
+	ContractSupplier *ContractSupplierClient
+	// ContractSupplierHistory is the client for interacting with the ContractSupplierHistory builders.
+	ContractSupplierHistory *ContractSupplierHistoryClient
 	// DzoOrganization is the client for interacting with the DzoOrganization builders.
 	DzoOrganization *DzoOrganizationClient
 	// Employee is the client for interacting with the Employee builders.
 	Employee *EmployeeClient
 	// Organization is the client for interacting with the Organization builders.
 	Organization *OrganizationClient
-	// Request is the client for interacting with the Request builders.
-	Request *RequestClient
-	// TrainingEvent is the client for interacting with the TrainingEvent builders.
-	TrainingEvent *TrainingEventClient
-	// TrainingParticipant is the client for interacting with the TrainingParticipant builders.
-	TrainingParticipant *TrainingParticipantClient
+	// Supplier is the client for interacting with the Supplier builders.
+	Supplier *SupplierClient
 	// User is the client for interacting with the User builders.
 	User *UserClient
 
@@ -160,12 +160,12 @@ func (tx *Tx) Client() *Client {
 
 func (tx *Tx) init() {
 	tx.Company = NewCompanyClient(tx.config)
+	tx.ContractSupplier = NewContractSupplierClient(tx.config)
+	tx.ContractSupplierHistory = NewContractSupplierHistoryClient(tx.config)
 	tx.DzoOrganization = NewDzoOrganizationClient(tx.config)
 	tx.Employee = NewEmployeeClient(tx.config)
 	tx.Organization = NewOrganizationClient(tx.config)
-	tx.Request = NewRequestClient(tx.config)
-	tx.TrainingEvent = NewTrainingEventClient(tx.config)
-	tx.TrainingParticipant = NewTrainingParticipantClient(tx.config)
+	tx.Supplier = NewSupplierClient(tx.config)
 	tx.User = NewUserClient(tx.config)
 }
 
