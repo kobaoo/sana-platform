@@ -1,4 +1,4 @@
-package requests
+package certrequests
 
 import (
 	"testing"

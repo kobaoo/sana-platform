@@ -82,17 +82,11 @@ var (
 func checkColumn(t, c string) error {
 	initCheck.Do(func() {
 		columnCheck = sql.NewColumnCheck(map[string]func(string) bool{
-			certificate.Table:     certificate.ValidColumn,
-			company.Table:         company.ValidColumn,
-			dzoorganization.Table: dzoorganization.ValidColumn,
-			employee.Table:        employee.ValidColumn,
-			notification.Table:    notification.ValidColumn,
-			organization.Table:    organization.ValidColumn,
-			request.Table:         request.ValidColumn,
-			user.Table:            user.ValidColumn,
+			certificate.Table:         certificate.ValidColumn,
 			company.Table:             company.ValidColumn,
 			dzoorganization.Table:     dzoorganization.ValidColumn,
 			employee.Table:            employee.ValidColumn,
+			notification.Table:        notification.ValidColumn,
 			organization.Table:        organization.ValidColumn,
 			request.Table:             request.ValidColumn,
 			trainingevent.Table:       trainingevent.ValidColumn,

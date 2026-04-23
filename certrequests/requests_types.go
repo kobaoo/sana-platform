@@ -1,23 +1,10 @@
-package requests
+package certrequests
 
 import (
 	"time"
 
 	"github.com/google/uuid"
 )
-
-type CreateRequestRequest struct {
-	EntityID   uuid.UUID `json:"entity_id"`
-	EntityType string    `json:"entity_type"`
-}
-
-type UpdateRequestStepRequest struct {
-	Step int `json:"step"`
-}
-
-type UpdateRequestStatusRequest struct {
-	Status string `json:"status"`
-}
 
 type RequestResponse struct {
 	ID          uuid.UUID `json:"id"`

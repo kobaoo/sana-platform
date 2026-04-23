@@ -164,21 +164,13 @@ func (c *Client) Tx(ctx context.Context) (*Tx, error) {
 	cfg := c.config
 	cfg.driver = tx
 	return &Tx{
-		ctx:             ctx,
-		config:          cfg,
-		Certificate:     NewCertificateClient(cfg),
-		Company:         NewCompanyClient(cfg),
-		DzoOrganization: NewDzoOrganizationClient(cfg),
-		Employee:        NewEmployeeClient(cfg),
-		Notification:    NewNotificationClient(cfg),
-		Organization:    NewOrganizationClient(cfg),
-		Request:         NewRequestClient(cfg),
-		User:            NewUserClient(cfg),
 		ctx:                 ctx,
 		config:              cfg,
+		Certificate:         NewCertificateClient(cfg),
 		Company:             NewCompanyClient(cfg),
 		DzoOrganization:     NewDzoOrganizationClient(cfg),
 		Employee:            NewEmployeeClient(cfg),
+		Notification:        NewNotificationClient(cfg),
 		Organization:        NewOrganizationClient(cfg),
 		Request:             NewRequestClient(cfg),
 		TrainingEvent:       NewTrainingEventClient(cfg),
@@ -201,21 +193,13 @@ func (c *Client) BeginTx(ctx context.Context, opts *sql.TxOptions) (*Tx, error) 
 	cfg := c.config
 	cfg.driver = &txDriver{tx: tx, drv: c.driver}
 	return &Tx{
-		ctx:             ctx,
-		config:          cfg,
-		Certificate:     NewCertificateClient(cfg),
-		Company:         NewCompanyClient(cfg),
-		DzoOrganization: NewDzoOrganizationClient(cfg),
-		Employee:        NewEmployeeClient(cfg),
-		Notification:    NewNotificationClient(cfg),
-		Organization:    NewOrganizationClient(cfg),
-		Request:         NewRequestClient(cfg),
-		User:            NewUserClient(cfg),
 		ctx:                 ctx,
 		config:              cfg,
+		Certificate:         NewCertificateClient(cfg),
 		Company:             NewCompanyClient(cfg),
 		DzoOrganization:     NewDzoOrganizationClient(cfg),
 		Employee:            NewEmployeeClient(cfg),
+		Notification:        NewNotificationClient(cfg),
 		Organization:        NewOrganizationClient(cfg),
 		Request:             NewRequestClient(cfg),
 		TrainingEvent:       NewTrainingEventClient(cfg),
@@ -1762,16 +1746,10 @@ func (c *UserClient) mutate(ctx context.Context, m *UserMutation) (Value, error)
 type (
 	hooks struct {
 		Certificate, Company, DzoOrganization, Employee, Notification, Organization,
-		Request, User []ent.Hook
+		Request, TrainingEvent, TrainingParticipant, User []ent.Hook
 	}
 	inters struct {
 		Certificate, Company, DzoOrganization, Employee, Notification, Organization,
-		Request, User []ent.Interceptor
-		Company, DzoOrganization, Employee, Organization, Request, TrainingEvent,
-		TrainingParticipant, User []ent.Hook
-	}
-	inters struct {
-		Company, DzoOrganization, Employee, Organization, Request, TrainingEvent,
-		TrainingParticipant, User []ent.Interceptor
+		Request, TrainingEvent, TrainingParticipant, User []ent.Interceptor
 	}
 )

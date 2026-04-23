@@ -34,17 +34,11 @@ const (
 	OpUpdateOne = ent.OpUpdateOne
 
 	// Node types.
-	TypeCertificate     = "Certificate"
-	TypeCompany         = "Company"
-	TypeDzoOrganization = "DzoOrganization"
-	TypeEmployee        = "Employee"
-	TypeNotification    = "Notification"
-	TypeOrganization    = "Organization"
-	TypeRequest         = "Request"
-	TypeUser            = "User"
+	TypeCertificate         = "Certificate"
 	TypeCompany             = "Company"
 	TypeDzoOrganization     = "DzoOrganization"
 	TypeEmployee            = "Employee"
+	TypeNotification        = "Notification"
 	TypeOrganization        = "Organization"
 	TypeRequest             = "Request"
 	TypeTrainingEvent       = "TrainingEvent"
@@ -5290,20 +5284,6 @@ func (m *OrganizationMutation) ResetEdge(name string) error {
 // RequestMutation represents an operation that mutates the Request nodes in the graph.
 type RequestMutation struct {
 	config
-	op            Op
-	typ           string
-	id            *uuid.UUID
-	initiator_id  *uuid.UUID
-	entity_id     *uuid.UUID
-	entity_type   *string
-	step          *int
-	addstep       *int
-	created_at    *time.Time
-	status        *string
-	clearedFields map[string]struct{}
-	done          bool
-	oldValue      func(context.Context) (*Request, error)
-	predicates    []predicate.Request
 	op               Op
 	typ              string
 	id               *uuid.UUID
@@ -5427,13 +5407,11 @@ func (m *RequestMutation) IDs(ctx context.Context) ([]uuid.UUID, error) {
 
 // SetInitiatorID sets the "initiator_id" field.
 func (m *RequestMutation) SetInitiatorID(u uuid.UUID) {
-	m.initiator_id = &u
 	m.initiator = &u
 }
 
 // InitiatorID returns the value of the "initiator_id" field in the mutation.
 func (m *RequestMutation) InitiatorID() (r uuid.UUID, exists bool) {
-	v := m.initiator_id
 	v := m.initiator
 	if v == nil {
 		return
@@ -5460,7 +5438,6 @@ func (m *RequestMutation) OldInitiatorID(ctx context.Context) (v uuid.UUID, err 
 
 // ResetInitiatorID resets all changes to the "initiator_id" field.
 func (m *RequestMutation) ResetInitiatorID() {
-	m.initiator_id = nil
 	m.initiator = nil
 }
 
@@ -5726,7 +5703,6 @@ func (m *RequestMutation) Type() string {
 // AddedFields().
 func (m *RequestMutation) Fields() []string {
 	fields := make([]string, 0, 6)
-	if m.initiator_id != nil {
 	if m.initiator != nil {
 		fields = append(fields, request.FieldInitiatorID)
 	}
@@ -5925,7 +5901,6 @@ func (m *RequestMutation) ResetField(name string) error {
 
 // AddedEdges returns all edge names that were set/added in this mutation.
 func (m *RequestMutation) AddedEdges() []string {
-	edges := make([]string, 0, 0)
 	edges := make([]string, 0, 1)
 	if m.initiator != nil {
 		edges = append(edges, request.EdgeInitiator)
@@ -5947,7 +5922,6 @@ func (m *RequestMutation) AddedIDs(name string) []ent.Value {
 
 // RemovedEdges returns all edge names that were removed in this mutation.
 func (m *RequestMutation) RemovedEdges() []string {
-	edges := make([]string, 0, 0)
 	edges := make([]string, 0, 1)
 	return edges
 }
@@ -5960,7 +5934,6 @@ func (m *RequestMutation) RemovedIDs(name string) []ent.Value {
 
 // ClearedEdges returns all edge names that were cleared in this mutation.
 func (m *RequestMutation) ClearedEdges() []string {
-	edges := make([]string, 0, 0)
 	edges := make([]string, 0, 1)
 	if m.clearedinitiator {
 		edges = append(edges, request.EdgeInitiator)
@@ -5992,9 +5965,6 @@ func (m *RequestMutation) ClearEdge(name string) error {
 // ResetEdge resets all changes to the edge with the given name in this mutation.
 // It returns an error if the edge is not defined in the schema.
 func (m *RequestMutation) ResetEdge(name string) error {
-	return fmt.Errorf("unknown Request edge %s", name)
-}
-
 	switch name {
 	case request.EdgeInitiator:
 		m.ResetInitiator()
