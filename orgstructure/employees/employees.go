@@ -36,7 +36,6 @@ func newEntClient() *ent.Client {
 // ════ ENDPOINTS ════
 
 // CreateEmployee creates a new employee.
-//
 //encore:api auth method=POST path=/employees/create
 func CreateEmployee(ctx context.Context, req *CreateEmployeeRequest) (*GetEmployeeResponse, error) {
 	if strings.TrimSpace(req.FullName) == "" {
@@ -81,12 +80,122 @@ func CreateEmployee(ctx context.Context, req *CreateEmployeeRequest) (*GetEmploy
 	if err != nil {
 		return nil, errs.B().Code(errs.InvalidArgument).Msg("invalid company_id in token").Err()
 	}
-	emp, err := insertEmployee(ctx, clientUID, dzoUID, req)
+
+	// создаем пользователя в кейлоак до транзакции в бд
+	kcUserID, err := createKeycloakUser(ctx,strings.TrimSpace(req.Email),req.FullName,clientUID.String(),dzoUID.String(),)
 	if err != nil {
+		return nil, errs.B().Code(errs.Internal).Msg("failed to create keycloak user").Cause(err).Err()
+	}
+
+	// открываем дб транзакцию и создаём employee + user 
+	emp, err := insertEmployeeWithUser(ctx, clientUID, dzoUID, kcUserID, req)
+	if err != nil {
+		// если бд упала удаляем из keycloak чтобы не остался пустой юзер
+		deleteKeycloakUser(ctx, kcUserID)
 		return nil, err
 	}
 
 	return &GetEmployeeResponse{Employee: *emp}, nil
+}
+
+// insertEmployeeWithUser открывает ent транзакцию и создаёт:
+//   запись в таблице employees
+//   запись в таблице users 
+//   связывает employee.user_id к users.id
+//
+// если любой из шагов падает транзакция откатывается автоматически
+func insertEmployeeWithUser(
+	ctx context.Context,
+	clientID, dzoID uuid.UUID,
+	kcUserID string,
+	req *CreateEmployeeRequest,
+) (*Employee, error) {
+	tx, err := Client.Tx(ctx)
+	if err != nil {
+		return nil, errs.B().Code(errs.Internal).Msg("failed to begin transaction").Cause(err).Err()
+	}
+
+	defer func() {
+		if err != nil {
+			_ = tx.Rollback()
+		}
+	}()
+
+	// создаем запись в таблице employees (внутри транзакции)
+	empBuilder := tx.Employee.
+		Create().
+		SetClientID(clientID).
+		SetDzoID(dzoID).
+		SetFullName(req.FullName).
+		SetEmail(strings.TrimSpace(req.Email))
+
+	if req.Position != nil {
+		empBuilder = empBuilder.SetPosition(*req.Position)
+	}
+	if req.ShortName != nil {
+		empBuilder = empBuilder.SetShortName(*req.ShortName)
+	}
+	if req.Department != nil {
+		empBuilder = empBuilder.SetDepartment(*req.Department)
+	}
+	if req.Direction != nil {
+		empBuilder = empBuilder.SetDirection(*req.Direction)
+	}
+	if req.InternalPhone != nil {
+		empBuilder = empBuilder.SetInternalPhone(*req.InternalPhone)
+	}
+	if req.BirthDate != nil {
+		t, parseErr := time.Parse("2006-01-02", *req.BirthDate)
+		if parseErr != nil {
+			err = errs.B().Code(errs.InvalidArgument).Msg("invalid birth_date format, expected YYYY-MM-DD").Err()
+			return nil, err
+		}
+		empBuilder = empBuilder.SetBirthDate(t)
+	}
+
+	empRow, err := empBuilder.Save(ctx)
+	if err != nil {
+		err = errs.B().Code(errs.Internal).Msg("failed to create employee").Cause(err).Err()
+		return nil, err
+	}
+
+	// создаем запись в таблице users (внутри той же транзакции)
+	dzoIDStr := dzoID.String()
+	userRow, err := tx.User.
+		Create().
+		SetKeycloakUserID(kcUserID).
+		SetEmail(strings.TrimSpace(req.Email)).
+		SetRole("EMP").
+		SetDzoID(dzoID).
+		SetClientID(clientID).
+		Save(ctx)
+	if err != nil {
+		if ent.IsConstraintError(err) {
+			err = errs.B().Code(errs.AlreadyExists).Msg("user with this email already exists").Err()
+			return nil, err
+		}
+		err = errs.B().Code(errs.Internal).Msg("failed to create user").Cause(err).Err()
+		return nil, err
+	}
+	_ = dzoIDStr
+
+	// обновляем employee.user_id на ссылку на только что созданного user
+	empRow, err = tx.Employee.
+		UpdateOneID(empRow.ID).
+		SetUserID(userRow.ID).
+		Save(ctx)
+	if err != nil {
+		err = errs.B().Code(errs.Internal).Msg("failed to link employee to user").Cause(err).Err()
+		return nil, err
+	}
+
+	// коммитим транзакцию оба insert фиксируются одновременно
+	if err = tx.Commit(); err != nil {
+		err = errs.B().Code(errs.Internal).Msg("failed to commit transaction").Cause(err).Err()
+		return nil, err
+	}
+
+	return entToEmployee(empRow), nil
 }
 
 // ListEmployees returns all active employees, with an optional search filter.

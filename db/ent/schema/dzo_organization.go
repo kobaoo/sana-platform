@@ -1,6 +1,8 @@
 package schema
 
 import (
+	"time"
+
 	"entgo.io/ent"
 	"entgo.io/ent/dialect/entsql"
 	"entgo.io/ent/schema"
@@ -43,6 +45,14 @@ func (DzoOrganization) Fields() []ent.Field {
 
 		field.Bool("is_active").
 			Default(true),
+
+		field.Time("created_at").
+			Default(time.Now).
+			Immutable(),
+
+		field.Time("updated_at").
+			Default(time.Now).
+			UpdateDefault(time.Now),
 	}
 }
 func (DzoOrganization) Edges() []ent.Edge {

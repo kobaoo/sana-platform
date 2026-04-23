@@ -3,6 +3,7 @@ package dzo
 import (
 	"context"
 	"strings"
+	"time"
 
 	"encore.app/auth/authhandler"
 	"encore.dev/beta/auth"
@@ -198,10 +199,15 @@ func createDZO(ctx context.Context, req *CreateDZORequest) (*DZO, error) {
 		return nil, errs.B().Code(errs.InvalidArgument).Msg("invalid client_id").Err()
 	}
 
+	normalizedName := strings.TrimSpace(req.Name)
+	if normalizedName == "" {
+		return nil, errs.B().Code(errs.InvalidArgument).Msg("name is required").Err()
+	}
+
 	// uniqueness check
 	exists, err := Client.DzoOrganization.
 		Query().
-		Where(dzoorganization.NameEQ(req.Name)).
+		Where(dzoorganization.NameEQ(normalizedName)).
 		Exist(ctx)
 	if err != nil {
 		return nil, errs.B().Code(errs.Internal).Err()
@@ -214,16 +220,18 @@ func createDZO(ctx context.Context, req *CreateDZORequest) (*DZO, error) {
 		Create().
 		SetID(uuid.New()).
 		SetClientID(clientID).
-		SetName(req.Name).
+		SetName(normalizedName).
 		SetNillableShortName(req.ShortName).
 		SetNillableBin(req.BIN).
+		SetCreatedAt(time.Now()).
+		SetUpdatedAt(time.Now()).
 		Save(ctx)
 
 	if err != nil {
 		return nil, errs.B().Code(errs.Internal).Err()
 	}
 
-	return entToDZO(row), nil
+	return entToDZO(row, 0), nil
 }
 
 func queryActiveDZO(ctx context.Context) ([]DZO, error) {
@@ -238,7 +246,7 @@ func queryActiveDZO(ctx context.Context) ([]DZO, error) {
 
 	res := make([]DZO, 0, len(rows))
 	for _, r := range rows {
-		res = append(res, *entToDZO(r))
+		res = append(res, *entToDZO(r, 0))
 	}
 
 	return res, nil
@@ -264,7 +272,7 @@ func queryActiveDZOByClient(ctx context.Context, clientID string) ([]DZO, error)
 
 	res := make([]DZO, 0, len(rows))
 	for _, r := range rows {
-		res = append(res, *entToDZO(r))
+		res = append(res, *entToDZO(r, 0))
 	}
 
 	return res, nil
@@ -288,7 +296,12 @@ func queryDZOByID(ctx context.Context, id string) (*DZO, error) {
 		return nil, errs.B().Code(errs.Internal).Err()
 	}
 
-	return entToDZO(row), nil
+	empCount, _ := Client.Employee.
+		Query().
+		Where(employee.DzoIDEQ(uid), employee.IsDeletedEQ(false)).
+		Count(ctx)
+
+	return entToDZO(row, empCount), nil
 }
 
 func updateDZO(ctx context.Context, id string, req *UpdateDZORequest) (*DZO, error) {
@@ -297,10 +310,28 @@ func updateDZO(ctx context.Context, id string, req *UpdateDZORequest) (*DZO, err
 		return nil, errs.B().Code(errs.InvalidArgument).Err()
 	}
 
-	builder := Client.DzoOrganization.UpdateOneID(uid)
+	builder := Client.DzoOrganization.UpdateOneID(uid).SetUpdatedAt(time.Now())
 
 	if req.Name != nil {
-		builder.SetName(*req.Name)
+		normalizedName := strings.TrimSpace(*req.Name)
+		if normalizedName == "" {
+			return nil, errs.B().Code(errs.InvalidArgument).Msg("name is required").Err()
+		}
+
+		exists, err := Client.DzoOrganization.
+			Query().
+			Where(
+				dzoorganization.NameEQ(normalizedName),
+				dzoorganization.IDNEQ(uid),
+			).
+			Exist(ctx)
+		if err != nil {
+			return nil, errs.B().Code(errs.Internal).Err()
+		}
+		if exists {
+			return nil, errs.B().Code(errs.AlreadyExists).Msg("dzo already exists").Err()
+		}
+		builder.SetName(normalizedName)
 	}
 	if req.ShortName != nil {
 		builder.SetShortName(*req.ShortName)
@@ -320,7 +351,12 @@ func updateDZO(ctx context.Context, id string, req *UpdateDZORequest) (*DZO, err
 		return nil, errs.B().Code(errs.Internal).Err()
 	}
 
-	return entToDZO(row), nil
+	empCount, _ := Client.Employee.
+		Query().
+		Where(employee.DzoIDEQ(uid), employee.IsDeletedEQ(false)).
+		Count(ctx)
+
+	return entToDZO(row, empCount), nil
 }
 
 func deleteDZO(ctx context.Context, id string) (int, error) {
@@ -378,13 +414,16 @@ func getAuthData() (*authhandler.AuthData, error) {
 
 // helper
 
-func entToDZO(e *ent.DzoOrganization) *DZO {
+func entToDZO(e *ent.DzoOrganization, employeesCount int) *DZO {
 	return &DZO{
-		ID:        e.ID.String(),
-		ClientID:  e.ClientID.String(),
-		Name:      e.Name,
-		ShortName: e.ShortName,
-		BIN:       e.Bin,
-		IsActive:  e.IsActive,
+		ID:             e.ID.String(),
+		ClientID:       e.ClientID.String(),
+		Name:           e.Name,
+		ShortName:      e.ShortName,
+		BIN:            e.Bin,
+		IsActive:       e.IsActive,
+		CreatedAt:      e.CreatedAt,
+		UpdatedAt:      e.UpdatedAt,
+		EmployeesCount: employeesCount,
 	}
 }

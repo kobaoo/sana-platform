@@ -68,6 +68,7 @@ func (User) Edges() []ent.Edge {
 			Ref("users").
 			Field("client_id").
 			Unique(),
+		edge.To("requests", Request.Type),
 	}
 }
 
