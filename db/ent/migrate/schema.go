@@ -167,6 +167,7 @@ var (
 		{Name: "start_date", Type: field.TypeTime},
 		{Name: "is_active", Type: field.TypeBool, Default: true},
 		{Name: "created_at", Type: field.TypeTime},
+		{Name: "is_deleted", Type: field.TypeBool, Default: false},
 		{Name: "category_id", Type: field.TypeUUID, Nullable: true},
 		{Name: "contract_id", Type: field.TypeUUID},
 		{Name: "supplier_id", Type: field.TypeUUID},
@@ -180,25 +181,25 @@ var (
 		ForeignKeys: []*schema.ForeignKey{
 			{
 				Symbol:     "external_training_events_categories_external_training_events",
-				Columns:    []*schema.Column{ExternalTrainingEventsColumns[8]},
+				Columns:    []*schema.Column{ExternalTrainingEventsColumns[9]},
 				RefColumns: []*schema.Column{CategoriesColumns[0]},
 				OnDelete:   schema.SetNull,
 			},
 			{
 				Symbol:     "external_training_events_contract_suppliers_external_training_events",
-				Columns:    []*schema.Column{ExternalTrainingEventsColumns[9]},
+				Columns:    []*schema.Column{ExternalTrainingEventsColumns[10]},
 				RefColumns: []*schema.Column{ContractSuppliersColumns[0]},
 				OnDelete:   schema.NoAction,
 			},
 			{
 				Symbol:     "external_training_events_suppliers_external_training_events",
-				Columns:    []*schema.Column{ExternalTrainingEventsColumns[10]},
+				Columns:    []*schema.Column{ExternalTrainingEventsColumns[11]},
 				RefColumns: []*schema.Column{SuppliersColumns[0]},
 				OnDelete:   schema.NoAction,
 			},
 			{
 				Symbol:     "external_training_events_users_responsible_external_training_events",
-				Columns:    []*schema.Column{ExternalTrainingEventsColumns[11]},
+				Columns:    []*schema.Column{ExternalTrainingEventsColumns[12]},
 				RefColumns: []*schema.Column{UsersColumns[0]},
 				OnDelete:   schema.SetNull,
 			},

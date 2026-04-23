@@ -169,6 +169,20 @@ func (_u *ExternalTrainingEventUpdate) ClearCategoryID() *ExternalTrainingEventU
 	return _u
 }
 
+// SetIsDeleted sets the "is_deleted" field.
+func (_u *ExternalTrainingEventUpdate) SetIsDeleted(v bool) *ExternalTrainingEventUpdate {
+	_u.mutation.SetIsDeleted(v)
+	return _u
+}
+
+// SetNillableIsDeleted sets the "is_deleted" field if the given value is not nil.
+func (_u *ExternalTrainingEventUpdate) SetNillableIsDeleted(v *bool) *ExternalTrainingEventUpdate {
+	if v != nil {
+		_u.SetIsDeleted(*v)
+	}
+	return _u
+}
+
 // SetSupplierID sets the "supplier_id" field.
 func (_u *ExternalTrainingEventUpdate) SetSupplierID(v uuid.UUID) *ExternalTrainingEventUpdate {
 	_u.mutation.SetSupplierID(v)
@@ -353,6 +367,9 @@ func (_u *ExternalTrainingEventUpdate) sqlSave(ctx context.Context) (_node int, 
 	}
 	if value, ok := _u.mutation.IsActive(); ok {
 		_spec.SetField(externaltrainingevent.FieldIsActive, field.TypeBool, value)
+	}
+	if value, ok := _u.mutation.IsDeleted(); ok {
+		_spec.SetField(externaltrainingevent.FieldIsDeleted, field.TypeBool, value)
 	}
 	if _u.mutation.CategoryCleared() {
 		edge := &sqlgraph.EdgeSpec{
@@ -626,6 +643,20 @@ func (_u *ExternalTrainingEventUpdateOne) ClearCategoryID() *ExternalTrainingEve
 	return _u
 }
 
+// SetIsDeleted sets the "is_deleted" field.
+func (_u *ExternalTrainingEventUpdateOne) SetIsDeleted(v bool) *ExternalTrainingEventUpdateOne {
+	_u.mutation.SetIsDeleted(v)
+	return _u
+}
+
+// SetNillableIsDeleted sets the "is_deleted" field if the given value is not nil.
+func (_u *ExternalTrainingEventUpdateOne) SetNillableIsDeleted(v *bool) *ExternalTrainingEventUpdateOne {
+	if v != nil {
+		_u.SetIsDeleted(*v)
+	}
+	return _u
+}
+
 // SetSupplierID sets the "supplier_id" field.
 func (_u *ExternalTrainingEventUpdateOne) SetSupplierID(v uuid.UUID) *ExternalTrainingEventUpdateOne {
 	_u.mutation.SetSupplierID(v)
@@ -840,6 +871,9 @@ func (_u *ExternalTrainingEventUpdateOne) sqlSave(ctx context.Context) (_node *E
 	}
 	if value, ok := _u.mutation.IsActive(); ok {
 		_spec.SetField(externaltrainingevent.FieldIsActive, field.TypeBool, value)
+	}
+	if value, ok := _u.mutation.IsDeleted(); ok {
+		_spec.SetField(externaltrainingevent.FieldIsDeleted, field.TypeBool, value)
 	}
 	if _u.mutation.CategoryCleared() {
 		edge := &sqlgraph.EdgeSpec{

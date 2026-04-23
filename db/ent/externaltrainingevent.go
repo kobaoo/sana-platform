@@ -38,6 +38,8 @@ type ExternalTrainingEvent struct {
 	CreatedAt time.Time `json:"created_at,omitempty"`
 	// CategoryID holds the value of the "category_id" field.
 	CategoryID *uuid.UUID `json:"category_id,omitempty"`
+	// IsDeleted holds the value of the "is_deleted" field.
+	IsDeleted bool `json:"is_deleted,omitempty"`
 	// SupplierID holds the value of the "supplier_id" field.
 	SupplierID uuid.UUID `json:"supplier_id,omitempty"`
 	// ContractID holds the value of the "contract_id" field.
@@ -116,7 +118,7 @@ func (*ExternalTrainingEvent) scanValues(columns []string) ([]any, error) {
 		switch columns[i] {
 		case externaltrainingevent.FieldCategoryID, externaltrainingevent.FieldResponsibleUserID:
 			values[i] = &sql.NullScanner{S: new(uuid.UUID)}
-		case externaltrainingevent.FieldIsActive:
+		case externaltrainingevent.FieldIsActive, externaltrainingevent.FieldIsDeleted:
 			values[i] = new(sql.NullBool)
 		case externaltrainingevent.FieldSupplierCostVat:
 			values[i] = new(sql.NullFloat64)
@@ -200,6 +202,12 @@ func (_m *ExternalTrainingEvent) assignValues(columns []string, values []any) er
 			} else if value.Valid {
 				_m.CategoryID = new(uuid.UUID)
 				*_m.CategoryID = *value.S.(*uuid.UUID)
+			}
+		case externaltrainingevent.FieldIsDeleted:
+			if value, ok := values[i].(*sql.NullBool); !ok {
+				return fmt.Errorf("unexpected type %T for field is_deleted", values[i])
+			} else if value.Valid {
+				_m.IsDeleted = value.Bool
 			}
 		case externaltrainingevent.FieldSupplierID:
 			if value, ok := values[i].(*uuid.UUID); !ok {
@@ -307,6 +315,9 @@ func (_m *ExternalTrainingEvent) String() string {
 		builder.WriteString("category_id=")
 		builder.WriteString(fmt.Sprintf("%v", *v))
 	}
+	builder.WriteString(", ")
+	builder.WriteString("is_deleted=")
+	builder.WriteString(fmt.Sprintf("%v", _m.IsDeleted))
 	builder.WriteString(", ")
 	builder.WriteString("supplier_id=")
 	builder.WriteString(fmt.Sprintf("%v", _m.SupplierID))

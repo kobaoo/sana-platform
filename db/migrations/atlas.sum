@@ -1,4 +1,4 @@
-h1:hNZEvDUNB+OJBzLOi+dz0DB2MRsRK1ySdUWJd3QSEGk=
+h1:STQQV/A/dqggsxuj8V7uyCOCYj2riwrknYizjnr5nqI=
 20260416133254_add_dzo_organizations_and_employee.up.sql h1:tHxSiit9OStmUVceHS33iKUEmrrDhFyOPjVOBXKXBkA=
 20260416154539_initial.up.sql h1:4hMjm/KzLwDsBjlATYUyMLm5B2q1yimYjPi9qmTx/ow=
 20260416170000_seed_users.up.sql h1:R8C4qekqRPt3lAEgO3HqO6wVn+ebRWGFQV9qn1MnOtg=
@@ -15,3 +15,4 @@ h1:hNZEvDUNB+OJBzLOi+dz0DB2MRsRK1ySdUWJd3QSEGk=
 20260423000000_create_categories_table.up.sql h1:KKPTHpaPV4GBijyR4gscGG6rw8qtUpHd8p41OzQOfGo=
 20260423111626_add_external_trainings.up.sql h1:8F/hQKPYhcbIY6kng0xkCui/IHyurK+dQct/AoFjrls=
 20260423130000_all_seeds.up.sql h1:ksh3WJwCmE9O5+wlROAarKAx8Aj7FaqZW6eQJNkl9rI=
+20260423182541_add_is_deleted_external_trainings.up.sql h1:tmBn64q15n6KMaM7uU6pMyLCnRyI4dFioeW1BEmQrfg=

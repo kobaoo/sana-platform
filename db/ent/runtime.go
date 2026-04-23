@@ -296,6 +296,10 @@ func init() {
 	externaltrainingeventDescCreatedAt := externaltrainingeventFields[7].Descriptor()
 	// externaltrainingevent.DefaultCreatedAt holds the default value on creation for the created_at field.
 	externaltrainingevent.DefaultCreatedAt = externaltrainingeventDescCreatedAt.Default.(func() time.Time)
+	// externaltrainingeventDescIsDeleted is the schema descriptor for is_deleted field.
+	externaltrainingeventDescIsDeleted := externaltrainingeventFields[9].Descriptor()
+	// externaltrainingevent.DefaultIsDeleted holds the default value on creation for the is_deleted field.
+	externaltrainingevent.DefaultIsDeleted = externaltrainingeventDescIsDeleted.Default.(bool)
 	// externaltrainingeventDescID is the schema descriptor for id field.
 	externaltrainingeventDescID := externaltrainingeventFields[0].Descriptor()
 	// externaltrainingevent.DefaultID holds the default value on creation for the id field.

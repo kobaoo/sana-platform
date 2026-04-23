@@ -31,6 +31,8 @@ const (
 	FieldCreatedAt = "created_at"
 	// FieldCategoryID holds the string denoting the category_id field in the database.
 	FieldCategoryID = "category_id"
+	// FieldIsDeleted holds the string denoting the is_deleted field in the database.
+	FieldIsDeleted = "is_deleted"
 	// FieldSupplierID holds the string denoting the supplier_id field in the database.
 	FieldSupplierID = "supplier_id"
 	// FieldContractID holds the string denoting the contract_id field in the database.
@@ -88,6 +90,7 @@ var Columns = []string{
 	FieldIsActive,
 	FieldCreatedAt,
 	FieldCategoryID,
+	FieldIsDeleted,
 	FieldSupplierID,
 	FieldContractID,
 	FieldResponsibleUserID,
@@ -110,6 +113,8 @@ var (
 	DefaultIsActive bool
 	// DefaultCreatedAt holds the default value on creation for the "created_at" field.
 	DefaultCreatedAt func() time.Time
+	// DefaultIsDeleted holds the default value on creation for the "is_deleted" field.
+	DefaultIsDeleted bool
 	// DefaultID holds the default value on creation for the "id" field.
 	DefaultID func() uuid.UUID
 )
@@ -160,6 +165,11 @@ func ByCreatedAt(opts ...sql.OrderTermOption) OrderOption {
 // ByCategoryID orders the results by the category_id field.
 func ByCategoryID(opts ...sql.OrderTermOption) OrderOption {
 	return sql.OrderByField(FieldCategoryID, opts...).ToFunc()
+}
+
+// ByIsDeleted orders the results by the is_deleted field.
+func ByIsDeleted(opts ...sql.OrderTermOption) OrderOption {
+	return sql.OrderByField(FieldIsDeleted, opts...).ToFunc()
 }
 
 // BySupplierID orders the results by the supplier_id field.

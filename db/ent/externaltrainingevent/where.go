@@ -96,6 +96,11 @@ func CategoryID(v uuid.UUID) predicate.ExternalTrainingEvent {
 	return predicate.ExternalTrainingEvent(sql.FieldEQ(FieldCategoryID, v))
 }
 
+// IsDeleted applies equality check predicate on the "is_deleted" field. It's identical to IsDeletedEQ.
+func IsDeleted(v bool) predicate.ExternalTrainingEvent {
+	return predicate.ExternalTrainingEvent(sql.FieldEQ(FieldIsDeleted, v))
+}
+
 // SupplierID applies equality check predicate on the "supplier_id" field. It's identical to SupplierIDEQ.
 func SupplierID(v uuid.UUID) predicate.ExternalTrainingEvent {
 	return predicate.ExternalTrainingEvent(sql.FieldEQ(FieldSupplierID, v))
@@ -469,6 +474,16 @@ func CategoryIDIsNil() predicate.ExternalTrainingEvent {
 // CategoryIDNotNil applies the NotNil predicate on the "category_id" field.
 func CategoryIDNotNil() predicate.ExternalTrainingEvent {
 	return predicate.ExternalTrainingEvent(sql.FieldNotNull(FieldCategoryID))
+}
+
+// IsDeletedEQ applies the EQ predicate on the "is_deleted" field.
+func IsDeletedEQ(v bool) predicate.ExternalTrainingEvent {
+	return predicate.ExternalTrainingEvent(sql.FieldEQ(FieldIsDeleted, v))
+}
+
+// IsDeletedNEQ applies the NEQ predicate on the "is_deleted" field.
+func IsDeletedNEQ(v bool) predicate.ExternalTrainingEvent {
+	return predicate.ExternalTrainingEvent(sql.FieldNEQ(FieldIsDeleted, v))
 }
 
 // SupplierIDEQ applies the EQ predicate on the "supplier_id" field.

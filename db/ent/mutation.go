@@ -5985,6 +5985,7 @@ type ExternalTrainingEventMutation struct {
 	start_date              *time.Time
 	is_active               *bool
 	created_at              *time.Time
+	is_deleted              *bool
 	clearedFields           map[string]struct{}
 	category                *uuid.UUID
 	clearedcategory         bool
@@ -6485,6 +6486,42 @@ func (m *ExternalTrainingEventMutation) ResetCategoryID() {
 	delete(m.clearedFields, externaltrainingevent.FieldCategoryID)
 }
 
+// SetIsDeleted sets the "is_deleted" field.
+func (m *ExternalTrainingEventMutation) SetIsDeleted(b bool) {
+	m.is_deleted = &b
+}
+
+// IsDeleted returns the value of the "is_deleted" field in the mutation.
+func (m *ExternalTrainingEventMutation) IsDeleted() (r bool, exists bool) {
+	v := m.is_deleted
+	if v == nil {
+		return
+	}
+	return *v, true
+}
+
+// OldIsDeleted returns the old "is_deleted" field's value of the ExternalTrainingEvent entity.
+// If the ExternalTrainingEvent object wasn't provided to the builder, the object is fetched from the database.
+// An error is returned if the mutation operation is not UpdateOne, or the database query fails.
+func (m *ExternalTrainingEventMutation) OldIsDeleted(ctx context.Context) (v bool, err error) {
+	if !m.op.Is(OpUpdateOne) {
+		return v, errors.New("OldIsDeleted is only allowed on UpdateOne operations")
+	}
+	if m.id == nil || m.oldValue == nil {
+		return v, errors.New("OldIsDeleted requires an ID field in the mutation")
+	}
+	oldValue, err := m.oldValue(ctx)
+	if err != nil {
+		return v, fmt.Errorf("querying old value for OldIsDeleted: %w", err)
+	}
+	return oldValue.IsDeleted, nil
+}
+
+// ResetIsDeleted resets all changes to the "is_deleted" field.
+func (m *ExternalTrainingEventMutation) ResetIsDeleted() {
+	m.is_deleted = nil
+}
+
 // SetSupplierID sets the "supplier_id" field.
 func (m *ExternalTrainingEventMutation) SetSupplierID(u uuid.UUID) {
 	m.supplier = &u
@@ -6748,7 +6785,7 @@ func (m *ExternalTrainingEventMutation) Type() string {
 // order to get all numeric fields that were incremented/decremented, call
 // AddedFields().
 func (m *ExternalTrainingEventMutation) Fields() []string {
-	fields := make([]string, 0, 11)
+	fields := make([]string, 0, 12)
 	if m.name != nil {
 		fields = append(fields, externaltrainingevent.FieldName)
 	}
@@ -6772,6 +6809,9 @@ func (m *ExternalTrainingEventMutation) Fields() []string {
 	}
 	if m.category != nil {
 		fields = append(fields, externaltrainingevent.FieldCategoryID)
+	}
+	if m.is_deleted != nil {
+		fields = append(fields, externaltrainingevent.FieldIsDeleted)
 	}
 	if m.supplier != nil {
 		fields = append(fields, externaltrainingevent.FieldSupplierID)
@@ -6806,6 +6846,8 @@ func (m *ExternalTrainingEventMutation) Field(name string) (ent.Value, bool) {
 		return m.CreatedAt()
 	case externaltrainingevent.FieldCategoryID:
 		return m.CategoryID()
+	case externaltrainingevent.FieldIsDeleted:
+		return m.IsDeleted()
 	case externaltrainingevent.FieldSupplierID:
 		return m.SupplierID()
 	case externaltrainingevent.FieldContractID:
@@ -6837,6 +6879,8 @@ func (m *ExternalTrainingEventMutation) OldField(ctx context.Context, name strin
 		return m.OldCreatedAt(ctx)
 	case externaltrainingevent.FieldCategoryID:
 		return m.OldCategoryID(ctx)
+	case externaltrainingevent.FieldIsDeleted:
+		return m.OldIsDeleted(ctx)
 	case externaltrainingevent.FieldSupplierID:
 		return m.OldSupplierID(ctx)
 	case externaltrainingevent.FieldContractID:
@@ -6907,6 +6951,13 @@ func (m *ExternalTrainingEventMutation) SetField(name string, value ent.Value) e
 			return fmt.Errorf("unexpected type %T for field %s", value, name)
 		}
 		m.SetCategoryID(v)
+		return nil
+	case externaltrainingevent.FieldIsDeleted:
+		v, ok := value.(bool)
+		if !ok {
+			return fmt.Errorf("unexpected type %T for field %s", value, name)
+		}
+		m.SetIsDeleted(v)
 		return nil
 	case externaltrainingevent.FieldSupplierID:
 		v, ok := value.(uuid.UUID)
@@ -7061,6 +7112,9 @@ func (m *ExternalTrainingEventMutation) ResetField(name string) error {
 		return nil
 	case externaltrainingevent.FieldCategoryID:
 		m.ResetCategoryID()
+		return nil
+	case externaltrainingevent.FieldIsDeleted:
+		m.ResetIsDeleted()
 		return nil
 	case externaltrainingevent.FieldSupplierID:
 		m.ResetSupplierID()

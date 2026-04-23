@@ -121,6 +121,20 @@ func (_c *ExternalTrainingEventCreate) SetNillableCategoryID(v *uuid.UUID) *Exte
 	return _c
 }
 
+// SetIsDeleted sets the "is_deleted" field.
+func (_c *ExternalTrainingEventCreate) SetIsDeleted(v bool) *ExternalTrainingEventCreate {
+	_c.mutation.SetIsDeleted(v)
+	return _c
+}
+
+// SetNillableIsDeleted sets the "is_deleted" field if the given value is not nil.
+func (_c *ExternalTrainingEventCreate) SetNillableIsDeleted(v *bool) *ExternalTrainingEventCreate {
+	if v != nil {
+		_c.SetIsDeleted(*v)
+	}
+	return _c
+}
+
 // SetSupplierID sets the "supplier_id" field.
 func (_c *ExternalTrainingEventCreate) SetSupplierID(v uuid.UUID) *ExternalTrainingEventCreate {
 	_c.mutation.SetSupplierID(v)
@@ -224,6 +238,10 @@ func (_c *ExternalTrainingEventCreate) defaults() {
 		v := externaltrainingevent.DefaultCreatedAt()
 		_c.mutation.SetCreatedAt(v)
 	}
+	if _, ok := _c.mutation.IsDeleted(); !ok {
+		v := externaltrainingevent.DefaultIsDeleted
+		_c.mutation.SetIsDeleted(v)
+	}
 	if _, ok := _c.mutation.ID(); !ok {
 		v := externaltrainingevent.DefaultID()
 		_c.mutation.SetID(v)
@@ -248,6 +266,9 @@ func (_c *ExternalTrainingEventCreate) check() error {
 	}
 	if _, ok := _c.mutation.CreatedAt(); !ok {
 		return &ValidationError{Name: "created_at", err: errors.New(`ent: missing required field "ExternalTrainingEvent.created_at"`)}
+	}
+	if _, ok := _c.mutation.IsDeleted(); !ok {
+		return &ValidationError{Name: "is_deleted", err: errors.New(`ent: missing required field "ExternalTrainingEvent.is_deleted"`)}
 	}
 	if _, ok := _c.mutation.SupplierID(); !ok {
 		return &ValidationError{Name: "supplier_id", err: errors.New(`ent: missing required field "ExternalTrainingEvent.supplier_id"`)}
@@ -323,6 +344,10 @@ func (_c *ExternalTrainingEventCreate) createSpec() (*ExternalTrainingEvent, *sq
 	if value, ok := _c.mutation.CreatedAt(); ok {
 		_spec.SetField(externaltrainingevent.FieldCreatedAt, field.TypeTime, value)
 		_node.CreatedAt = value
+	}
+	if value, ok := _c.mutation.IsDeleted(); ok {
+		_spec.SetField(externaltrainingevent.FieldIsDeleted, field.TypeBool, value)
+		_node.IsDeleted = value
 	}
 	if nodes := _c.mutation.CategoryIDs(); len(nodes) > 0 {
 		edge := &sqlgraph.EdgeSpec{

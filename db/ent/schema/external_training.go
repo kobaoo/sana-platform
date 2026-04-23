@@ -59,6 +59,8 @@ func (ExternalTrainingEvent) Fields() []ent.Field {
 			Optional().
 			Nillable(),
 
+		field.Bool("is_deleted").
+			Default(false),
 		field.UUID("supplier_id", uuid.UUID{}),
 
 		field.UUID("contract_id", uuid.UUID{}),
