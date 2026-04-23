@@ -13,6 +13,8 @@ import (
 	"encore.app/db/ent/organization"
 	"encore.app/db/ent/request"
 	"encore.app/db/ent/schema"
+	"encore.app/db/ent/trainingevent"
+	"encore.app/db/ent/trainingparticipant"
 	"encore.app/db/ent/user"
 	"github.com/google/uuid"
 )
@@ -131,6 +133,16 @@ func init() {
 	dzoorganizationDescIsActive := dzoorganizationFields[5].Descriptor()
 	// dzoorganization.DefaultIsActive holds the default value on creation for the is_active field.
 	dzoorganization.DefaultIsActive = dzoorganizationDescIsActive.Default.(bool)
+	// dzoorganizationDescCreatedAt is the schema descriptor for created_at field.
+	dzoorganizationDescCreatedAt := dzoorganizationFields[6].Descriptor()
+	// dzoorganization.DefaultCreatedAt holds the default value on creation for the created_at field.
+	dzoorganization.DefaultCreatedAt = dzoorganizationDescCreatedAt.Default.(func() time.Time)
+	// dzoorganizationDescUpdatedAt is the schema descriptor for updated_at field.
+	dzoorganizationDescUpdatedAt := dzoorganizationFields[7].Descriptor()
+	// dzoorganization.DefaultUpdatedAt holds the default value on creation for the updated_at field.
+	dzoorganization.DefaultUpdatedAt = dzoorganizationDescUpdatedAt.Default.(func() time.Time)
+	// dzoorganization.UpdateDefaultUpdatedAt holds the default value on update for the updated_at field.
+	dzoorganization.UpdateDefaultUpdatedAt = dzoorganizationDescUpdatedAt.UpdateDefault.(func() time.Time)
 	// dzoorganizationDescID is the schema descriptor for id field.
 	dzoorganizationDescID := dzoorganizationFields[0].Descriptor()
 	// dzoorganization.DefaultID holds the default value on creation for the id field.
@@ -343,6 +355,18 @@ func init() {
 	requestDescID := requestFields[0].Descriptor()
 	// request.DefaultID holds the default value on creation for the id field.
 	request.DefaultID = requestDescID.Default.(func() uuid.UUID)
+	trainingeventFields := schema.TrainingEvent{}.Fields()
+	_ = trainingeventFields
+	// trainingeventDescID is the schema descriptor for id field.
+	trainingeventDescID := trainingeventFields[0].Descriptor()
+	// trainingevent.DefaultID holds the default value on creation for the id field.
+	trainingevent.DefaultID = trainingeventDescID.Default.(func() uuid.UUID)
+	trainingparticipantFields := schema.TrainingParticipant{}.Fields()
+	_ = trainingparticipantFields
+	// trainingparticipantDescID is the schema descriptor for id field.
+	trainingparticipantDescID := trainingparticipantFields[0].Descriptor()
+	// trainingparticipant.DefaultID holds the default value on creation for the id field.
+	trainingparticipant.DefaultID = trainingparticipantDescID.Default.(func() uuid.UUID)
 	userFields := schema.User{}.Fields()
 	_ = userFields
 	// userDescKeycloakUserID is the schema descriptor for keycloak_user_id field.

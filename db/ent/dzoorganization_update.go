@@ -6,6 +6,7 @@ import (
 	"context"
 	"errors"
 	"fmt"
+	"time"
 
 	"encore.app/db/ent/dzoorganization"
 	"encore.app/db/ent/employee"
@@ -111,6 +112,12 @@ func (_u *DzoOrganizationUpdate) SetNillableIsActive(v *bool) *DzoOrganizationUp
 	return _u
 }
 
+// SetUpdatedAt sets the "updated_at" field.
+func (_u *DzoOrganizationUpdate) SetUpdatedAt(v time.Time) *DzoOrganizationUpdate {
+	_u.mutation.SetUpdatedAt(v)
+	return _u
+}
+
 // AddEmployeeIDs adds the "employees" edge to the Employee entity by IDs.
 func (_u *DzoOrganizationUpdate) AddEmployeeIDs(ids ...uuid.UUID) *DzoOrganizationUpdate {
 	_u.mutation.AddEmployeeIDs(ids...)
@@ -154,6 +161,7 @@ func (_u *DzoOrganizationUpdate) RemoveEmployees(v ...*Employee) *DzoOrganizatio
 
 // Save executes the query and returns the number of nodes affected by the update operation.
 func (_u *DzoOrganizationUpdate) Save(ctx context.Context) (int, error) {
+	_u.defaults()
 	return withHooks(ctx, _u.sqlSave, _u.mutation, _u.hooks)
 }
 
@@ -176,6 +184,14 @@ func (_u *DzoOrganizationUpdate) Exec(ctx context.Context) error {
 func (_u *DzoOrganizationUpdate) ExecX(ctx context.Context) {
 	if err := _u.Exec(ctx); err != nil {
 		panic(err)
+	}
+}
+
+// defaults sets the default values of the builder before save.
+func (_u *DzoOrganizationUpdate) defaults() {
+	if _, ok := _u.mutation.UpdatedAt(); !ok {
+		v := dzoorganization.UpdateDefaultUpdatedAt()
+		_u.mutation.SetUpdatedAt(v)
 	}
 }
 
@@ -231,6 +247,9 @@ func (_u *DzoOrganizationUpdate) sqlSave(ctx context.Context) (_node int, err er
 	}
 	if value, ok := _u.mutation.IsActive(); ok {
 		_spec.SetField(dzoorganization.FieldIsActive, field.TypeBool, value)
+	}
+	if value, ok := _u.mutation.UpdatedAt(); ok {
+		_spec.SetField(dzoorganization.FieldUpdatedAt, field.TypeTime, value)
 	}
 	if _u.mutation.EmployeesCleared() {
 		edge := &sqlgraph.EdgeSpec{
@@ -379,6 +398,12 @@ func (_u *DzoOrganizationUpdateOne) SetNillableIsActive(v *bool) *DzoOrganizatio
 	return _u
 }
 
+// SetUpdatedAt sets the "updated_at" field.
+func (_u *DzoOrganizationUpdateOne) SetUpdatedAt(v time.Time) *DzoOrganizationUpdateOne {
+	_u.mutation.SetUpdatedAt(v)
+	return _u
+}
+
 // AddEmployeeIDs adds the "employees" edge to the Employee entity by IDs.
 func (_u *DzoOrganizationUpdateOne) AddEmployeeIDs(ids ...uuid.UUID) *DzoOrganizationUpdateOne {
 	_u.mutation.AddEmployeeIDs(ids...)
@@ -435,6 +460,7 @@ func (_u *DzoOrganizationUpdateOne) Select(field string, fields ...string) *DzoO
 
 // Save executes the query and returns the updated DzoOrganization entity.
 func (_u *DzoOrganizationUpdateOne) Save(ctx context.Context) (*DzoOrganization, error) {
+	_u.defaults()
 	return withHooks(ctx, _u.sqlSave, _u.mutation, _u.hooks)
 }
 
@@ -457,6 +483,14 @@ func (_u *DzoOrganizationUpdateOne) Exec(ctx context.Context) error {
 func (_u *DzoOrganizationUpdateOne) ExecX(ctx context.Context) {
 	if err := _u.Exec(ctx); err != nil {
 		panic(err)
+	}
+}
+
+// defaults sets the default values of the builder before save.
+func (_u *DzoOrganizationUpdateOne) defaults() {
+	if _, ok := _u.mutation.UpdatedAt(); !ok {
+		v := dzoorganization.UpdateDefaultUpdatedAt()
+		_u.mutation.SetUpdatedAt(v)
 	}
 }
 
@@ -529,6 +563,9 @@ func (_u *DzoOrganizationUpdateOne) sqlSave(ctx context.Context) (_node *DzoOrga
 	}
 	if value, ok := _u.mutation.IsActive(); ok {
 		_spec.SetField(dzoorganization.FieldIsActive, field.TypeBool, value)
+	}
+	if value, ok := _u.mutation.UpdatedAt(); ok {
+		_spec.SetField(dzoorganization.FieldUpdatedAt, field.TypeTime, value)
 	}
 	if _u.mutation.EmployeesCleared() {
 		edge := &sqlgraph.EdgeSpec{

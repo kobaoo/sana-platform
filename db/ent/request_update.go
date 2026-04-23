@@ -9,6 +9,7 @@ import (
 
 	"encore.app/db/ent/predicate"
 	"encore.app/db/ent/request"
+	"encore.app/db/ent/user"
 	"entgo.io/ent/dialect/sql"
 	"entgo.io/ent/dialect/sql/sqlgraph"
 	"entgo.io/ent/schema/field"
@@ -105,9 +106,20 @@ func (_u *RequestUpdate) SetNillableStatus(v *string) *RequestUpdate {
 	return _u
 }
 
+// SetInitiator sets the "initiator" edge to the User entity.
+func (_u *RequestUpdate) SetInitiator(v *User) *RequestUpdate {
+	return _u.SetInitiatorID(v.ID)
+}
+
 // Mutation returns the RequestMutation object of the builder.
 func (_u *RequestUpdate) Mutation() *RequestMutation {
 	return _u.mutation
+}
+
+// ClearInitiator clears the "initiator" edge to the User entity.
+func (_u *RequestUpdate) ClearInitiator() *RequestUpdate {
+	_u.mutation.ClearInitiator()
+	return _u
 }
 
 // Save executes the query and returns the number of nodes affected by the update operation.
@@ -149,6 +161,9 @@ func (_u *RequestUpdate) check() error {
 			return &ValidationError{Name: "status", err: fmt.Errorf(`ent: validator failed for field "Request.status": %w`, err)}
 		}
 	}
+	if _u.mutation.InitiatorCleared() && len(_u.mutation.InitiatorIDs()) > 0 {
+		return errors.New(`ent: clearing a required unique edge "Request.initiator"`)
+	}
 	return nil
 }
 
@@ -164,9 +179,6 @@ func (_u *RequestUpdate) sqlSave(ctx context.Context) (_node int, err error) {
 			}
 		}
 	}
-	if value, ok := _u.mutation.InitiatorID(); ok {
-		_spec.SetField(request.FieldInitiatorID, field.TypeUUID, value)
-	}
 	if value, ok := _u.mutation.EntityID(); ok {
 		_spec.SetField(request.FieldEntityID, field.TypeUUID, value)
 	}
@@ -181,6 +193,35 @@ func (_u *RequestUpdate) sqlSave(ctx context.Context) (_node int, err error) {
 	}
 	if value, ok := _u.mutation.Status(); ok {
 		_spec.SetField(request.FieldStatus, field.TypeString, value)
+	}
+	if _u.mutation.InitiatorCleared() {
+		edge := &sqlgraph.EdgeSpec{
+			Rel:     sqlgraph.M2O,
+			Inverse: true,
+			Table:   request.InitiatorTable,
+			Columns: []string{request.InitiatorColumn},
+			Bidi:    false,
+			Target: &sqlgraph.EdgeTarget{
+				IDSpec: sqlgraph.NewFieldSpec(user.FieldID, field.TypeUUID),
+			},
+		}
+		_spec.Edges.Clear = append(_spec.Edges.Clear, edge)
+	}
+	if nodes := _u.mutation.InitiatorIDs(); len(nodes) > 0 {
+		edge := &sqlgraph.EdgeSpec{
+			Rel:     sqlgraph.M2O,
+			Inverse: true,
+			Table:   request.InitiatorTable,
+			Columns: []string{request.InitiatorColumn},
+			Bidi:    false,
+			Target: &sqlgraph.EdgeTarget{
+				IDSpec: sqlgraph.NewFieldSpec(user.FieldID, field.TypeUUID),
+			},
+		}
+		for _, k := range nodes {
+			edge.Target.Nodes = append(edge.Target.Nodes, k)
+		}
+		_spec.Edges.Add = append(_spec.Edges.Add, edge)
 	}
 	if _node, err = sqlgraph.UpdateNodes(ctx, _u.driver, _spec); err != nil {
 		if _, ok := err.(*sqlgraph.NotFoundError); ok {
@@ -279,9 +320,20 @@ func (_u *RequestUpdateOne) SetNillableStatus(v *string) *RequestUpdateOne {
 	return _u
 }
 
+// SetInitiator sets the "initiator" edge to the User entity.
+func (_u *RequestUpdateOne) SetInitiator(v *User) *RequestUpdateOne {
+	return _u.SetInitiatorID(v.ID)
+}
+
 // Mutation returns the RequestMutation object of the builder.
 func (_u *RequestUpdateOne) Mutation() *RequestMutation {
 	return _u.mutation
+}
+
+// ClearInitiator clears the "initiator" edge to the User entity.
+func (_u *RequestUpdateOne) ClearInitiator() *RequestUpdateOne {
+	_u.mutation.ClearInitiator()
+	return _u
 }
 
 // Where appends a list predicates to the RequestUpdate builder.
@@ -336,6 +388,9 @@ func (_u *RequestUpdateOne) check() error {
 			return &ValidationError{Name: "status", err: fmt.Errorf(`ent: validator failed for field "Request.status": %w`, err)}
 		}
 	}
+	if _u.mutation.InitiatorCleared() && len(_u.mutation.InitiatorIDs()) > 0 {
+		return errors.New(`ent: clearing a required unique edge "Request.initiator"`)
+	}
 	return nil
 }
 
@@ -368,9 +423,6 @@ func (_u *RequestUpdateOne) sqlSave(ctx context.Context) (_node *Request, err er
 			}
 		}
 	}
-	if value, ok := _u.mutation.InitiatorID(); ok {
-		_spec.SetField(request.FieldInitiatorID, field.TypeUUID, value)
-	}
 	if value, ok := _u.mutation.EntityID(); ok {
 		_spec.SetField(request.FieldEntityID, field.TypeUUID, value)
 	}
@@ -385,6 +437,35 @@ func (_u *RequestUpdateOne) sqlSave(ctx context.Context) (_node *Request, err er
 	}
 	if value, ok := _u.mutation.Status(); ok {
 		_spec.SetField(request.FieldStatus, field.TypeString, value)
+	}
+	if _u.mutation.InitiatorCleared() {
+		edge := &sqlgraph.EdgeSpec{
+			Rel:     sqlgraph.M2O,
+			Inverse: true,
+			Table:   request.InitiatorTable,
+			Columns: []string{request.InitiatorColumn},
+			Bidi:    false,
+			Target: &sqlgraph.EdgeTarget{
+				IDSpec: sqlgraph.NewFieldSpec(user.FieldID, field.TypeUUID),
+			},
+		}
+		_spec.Edges.Clear = append(_spec.Edges.Clear, edge)
+	}
+	if nodes := _u.mutation.InitiatorIDs(); len(nodes) > 0 {
+		edge := &sqlgraph.EdgeSpec{
+			Rel:     sqlgraph.M2O,
+			Inverse: true,
+			Table:   request.InitiatorTable,
+			Columns: []string{request.InitiatorColumn},
+			Bidi:    false,
+			Target: &sqlgraph.EdgeTarget{
+				IDSpec: sqlgraph.NewFieldSpec(user.FieldID, field.TypeUUID),
+			},
+		}
+		for _, k := range nodes {
+			edge.Target.Nodes = append(edge.Target.Nodes, k)
+		}
+		_spec.Edges.Add = append(_spec.Edges.Add, edge)
 	}
 	_node = &Request{config: _u.config}
 	_spec.Assign = _node.assignValues

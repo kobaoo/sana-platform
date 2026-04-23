@@ -7,6 +7,7 @@ import (
 
 	"encore.app/db/ent/predicate"
 	"entgo.io/ent/dialect/sql"
+	"entgo.io/ent/dialect/sql/sqlgraph"
 	"github.com/google/uuid"
 )
 
@@ -103,26 +104,6 @@ func InitiatorIDIn(vs ...uuid.UUID) predicate.Request {
 // InitiatorIDNotIn applies the NotIn predicate on the "initiator_id" field.
 func InitiatorIDNotIn(vs ...uuid.UUID) predicate.Request {
 	return predicate.Request(sql.FieldNotIn(FieldInitiatorID, vs...))
-}
-
-// InitiatorIDGT applies the GT predicate on the "initiator_id" field.
-func InitiatorIDGT(v uuid.UUID) predicate.Request {
-	return predicate.Request(sql.FieldGT(FieldInitiatorID, v))
-}
-
-// InitiatorIDGTE applies the GTE predicate on the "initiator_id" field.
-func InitiatorIDGTE(v uuid.UUID) predicate.Request {
-	return predicate.Request(sql.FieldGTE(FieldInitiatorID, v))
-}
-
-// InitiatorIDLT applies the LT predicate on the "initiator_id" field.
-func InitiatorIDLT(v uuid.UUID) predicate.Request {
-	return predicate.Request(sql.FieldLT(FieldInitiatorID, v))
-}
-
-// InitiatorIDLTE applies the LTE predicate on the "initiator_id" field.
-func InitiatorIDLTE(v uuid.UUID) predicate.Request {
-	return predicate.Request(sql.FieldLTE(FieldInitiatorID, v))
 }
 
 // EntityIDEQ applies the EQ predicate on the "entity_id" field.
@@ -373,6 +354,29 @@ func StatusEqualFold(v string) predicate.Request {
 // StatusContainsFold applies the ContainsFold predicate on the "status" field.
 func StatusContainsFold(v string) predicate.Request {
 	return predicate.Request(sql.FieldContainsFold(FieldStatus, v))
+}
+
+// HasInitiator applies the HasEdge predicate on the "initiator" edge.
+func HasInitiator() predicate.Request {
+	return predicate.Request(func(s *sql.Selector) {
+		step := sqlgraph.NewStep(
+			sqlgraph.From(Table, FieldID),
+			sqlgraph.Edge(sqlgraph.M2O, true, InitiatorTable, InitiatorColumn),
+		)
+		sqlgraph.HasNeighbors(s, step)
+	})
+}
+
+// HasInitiatorWith applies the HasEdge predicate on the "initiator" edge with a given conditions (other predicates).
+func HasInitiatorWith(preds ...predicate.User) predicate.Request {
+	return predicate.Request(func(s *sql.Selector) {
+		step := newInitiatorStep()
+		sqlgraph.HasNeighborsWith(s, step, func(s *sql.Selector) {
+			for _, p := range preds {
+				p(s)
+			}
+		})
+	})
 }
 
 // And groups predicates with the AND operator between them.

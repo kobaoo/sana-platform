@@ -6,6 +6,7 @@ import (
 	"time"
 
 	"entgo.io/ent/dialect/sql"
+	"entgo.io/ent/dialect/sql/sqlgraph"
 	"github.com/google/uuid"
 )
 
@@ -26,8 +27,17 @@ const (
 	FieldCreatedAt = "created_at"
 	// FieldStatus holds the string denoting the status field in the database.
 	FieldStatus = "status"
+	// EdgeInitiator holds the string denoting the initiator edge name in mutations.
+	EdgeInitiator = "initiator"
 	// Table holds the table name of the request in the database.
 	Table = "requests"
+	// InitiatorTable is the table that holds the initiator relation/edge.
+	InitiatorTable = "requests"
+	// InitiatorInverseTable is the table name for the User entity.
+	// It exists in this package in order to avoid circular dependency with the "user" package.
+	InitiatorInverseTable = "users"
+	// InitiatorColumn is the table column denoting the initiator relation/edge.
+	InitiatorColumn = "initiator_id"
 )
 
 // Columns holds all SQL columns for request fields.
@@ -102,4 +112,18 @@ func ByCreatedAt(opts ...sql.OrderTermOption) OrderOption {
 // ByStatus orders the results by the status field.
 func ByStatus(opts ...sql.OrderTermOption) OrderOption {
 	return sql.OrderByField(FieldStatus, opts...).ToFunc()
+}
+
+// ByInitiatorField orders the results by initiator field.
+func ByInitiatorField(field string, opts ...sql.OrderTermOption) OrderOption {
+	return func(s *sql.Selector) {
+		sqlgraph.OrderByNeighborTerms(s, newInitiatorStep(), sql.OrderByField(field, opts...))
+	}
+}
+func newInitiatorStep() *sqlgraph.Step {
+	return sqlgraph.NewStep(
+		sqlgraph.From(Table, FieldID),
+		sqlgraph.To(InitiatorInverseTable, FieldID),
+		sqlgraph.Edge(sqlgraph.M2O, true, InitiatorTable, InitiatorColumn),
+	)
 }

@@ -27,5 +27,11 @@ type Organization func(*sql.Selector)
 // Request is the predicate function for request builders.
 type Request func(*sql.Selector)
 
+// TrainingEvent is the predicate function for trainingevent builders.
+type TrainingEvent func(*sql.Selector)
+
+// TrainingParticipant is the predicate function for trainingparticipant builders.
+type TrainingParticipant func(*sql.Selector)
+
 // User is the predicate function for user builders.
 type User func(*sql.Selector)

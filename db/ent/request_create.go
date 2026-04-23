@@ -9,6 +9,7 @@ import (
 	"time"
 
 	"encore.app/db/ent/request"
+	"encore.app/db/ent/user"
 	"entgo.io/ent/dialect/sql/sqlgraph"
 	"entgo.io/ent/schema/field"
 	"github.com/google/uuid"
@@ -95,6 +96,11 @@ func (_c *RequestCreate) SetNillableID(v *uuid.UUID) *RequestCreate {
 	return _c
 }
 
+// SetInitiator sets the "initiator" edge to the User entity.
+func (_c *RequestCreate) SetInitiator(v *User) *RequestCreate {
+	return _c.SetInitiatorID(v.ID)
+}
+
 // Mutation returns the RequestMutation object of the builder.
 func (_c *RequestCreate) Mutation() *RequestMutation {
 	return _c.mutation
@@ -178,6 +184,9 @@ func (_c *RequestCreate) check() error {
 			return &ValidationError{Name: "status", err: fmt.Errorf(`ent: validator failed for field "Request.status": %w`, err)}
 		}
 	}
+	if len(_c.mutation.InitiatorIDs()) == 0 {
+		return &ValidationError{Name: "initiator", err: errors.New(`ent: missing required edge "Request.initiator"`)}
+	}
 	return nil
 }
 
@@ -213,10 +222,6 @@ func (_c *RequestCreate) createSpec() (*Request, *sqlgraph.CreateSpec) {
 		_node.ID = id
 		_spec.ID.Value = &id
 	}
-	if value, ok := _c.mutation.InitiatorID(); ok {
-		_spec.SetField(request.FieldInitiatorID, field.TypeUUID, value)
-		_node.InitiatorID = value
-	}
 	if value, ok := _c.mutation.EntityID(); ok {
 		_spec.SetField(request.FieldEntityID, field.TypeUUID, value)
 		_node.EntityID = value
@@ -236,6 +241,23 @@ func (_c *RequestCreate) createSpec() (*Request, *sqlgraph.CreateSpec) {
 	if value, ok := _c.mutation.Status(); ok {
 		_spec.SetField(request.FieldStatus, field.TypeString, value)
 		_node.Status = value
+	}
+	if nodes := _c.mutation.InitiatorIDs(); len(nodes) > 0 {
+		edge := &sqlgraph.EdgeSpec{
+			Rel:     sqlgraph.M2O,
+			Inverse: true,
+			Table:   request.InitiatorTable,
+			Columns: []string{request.InitiatorColumn},
+			Bidi:    false,
+			Target: &sqlgraph.EdgeTarget{
+				IDSpec: sqlgraph.NewFieldSpec(user.FieldID, field.TypeUUID),
+			},
+		}
+		for _, k := range nodes {
+			edge.Target.Nodes = append(edge.Target.Nodes, k)
+		}
+		_node.InitiatorID = nodes[0]
+		_spec.Edges = append(_spec.Edges, edge)
 	}
 	return _node, _spec
 }

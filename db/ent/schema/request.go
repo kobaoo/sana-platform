@@ -5,6 +5,7 @@ import (
 
 	"entgo.io/ent"
 	"entgo.io/ent/dialect"
+	"entgo.io/ent/schema/edge"
 	"entgo.io/ent/schema/field"
 	"entgo.io/ent/schema/index"
 	"github.com/google/uuid"
@@ -43,6 +44,16 @@ func (Request) Fields() []ent.Field {
 			MaxLen(50).
 			NotEmpty().
 			Default("PENDING"),
+	}
+}
+
+func (Request) Edges() []ent.Edge {
+	return []ent.Edge{
+		edge.From("initiator", User.Type).
+			Ref("requests").
+			Field("initiator_id").
+			Unique().
+			Required(),
 	}
 }
 

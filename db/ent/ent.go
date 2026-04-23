@@ -16,6 +16,8 @@ import (
 	"encore.app/db/ent/notification"
 	"encore.app/db/ent/organization"
 	"encore.app/db/ent/request"
+	"encore.app/db/ent/trainingevent"
+	"encore.app/db/ent/trainingparticipant"
 	"encore.app/db/ent/user"
 	"entgo.io/ent"
 	"entgo.io/ent/dialect/sql"
@@ -88,6 +90,14 @@ func checkColumn(t, c string) error {
 			organization.Table:    organization.ValidColumn,
 			request.Table:         request.ValidColumn,
 			user.Table:            user.ValidColumn,
+			company.Table:             company.ValidColumn,
+			dzoorganization.Table:     dzoorganization.ValidColumn,
+			employee.Table:            employee.ValidColumn,
+			organization.Table:        organization.ValidColumn,
+			request.Table:             request.ValidColumn,
+			trainingevent.Table:       trainingevent.ValidColumn,
+			trainingparticipant.Table: trainingparticipant.ValidColumn,
+			user.Table:                user.ValidColumn,
 		})
 	})
 	return columnCheck(t, c)
