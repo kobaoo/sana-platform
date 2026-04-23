@@ -39,7 +39,7 @@ func makeCert(t *testing.T, title string) *Certificate {
 func TestCreate_Success(t *testing.T) {
 	resp, err := Create(ctx(), &CreateRequest{
 		EmployeeID: uuid.New(),
-		Type:       "SCORM",
+		Type:       "EXTERNAL",
 		Title:      "Go Advanced",
 		IssuedDate: time.Now(),
 		EntityType: "SCORM_COURSE",
@@ -187,7 +187,7 @@ func TestUpdate_Success(t *testing.T) {
 	cert := makeCert(t, "Original Title")
 
 	resp, err := Update(ctx(), cert.ID, &UpdateRequest{
-		Type:       "SCORM",
+		Type:       "EXTERNAL",
 		Title:      "Updated Title",
 		IssuedDate: time.Now(),
 		EntityType: "SCORM_COURSE",

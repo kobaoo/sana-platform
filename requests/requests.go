@@ -32,8 +32,8 @@ func CreateRequest(ctx context.Context, req *CreateRequestRequest) (*RequestResp
 	if req.EntityID == uuid.Nil {
 		return nil, errs.B().Code(errs.InvalidArgument).Msg("entity_id is required").Err()
 	}
-	if strings.TrimSpace(req.EntityType) == "" {
-		return nil, errs.B().Code(errs.InvalidArgument).Msg("entity_type is required").Err()
+	if strings.TrimSpace(req.EntityType) != "CERTIFICATE_RENEWAL" {
+		return nil, errs.B().Code(errs.InvalidArgument).Msg("entity_type must be CERTIFICATE_RENEWAL").Err()
 	}
 
 	ad, err := getAuthData()
@@ -49,8 +49,8 @@ func CreateRequest(ctx context.Context, req *CreateRequestRequest) (*RequestResp
 		Create().
 		SetInitiatorID(initiatorID).
 		SetEntityID(req.EntityID).
-		SetEntityType(strings.TrimSpace(req.EntityType)).
-		SetStep(0).
+		SetEntityType("CERTIFICATE_RENEWAL").
+		SetStep(1).
 		SetStatus("PENDING").
 		Save(ctx)
 	if err != nil {
@@ -147,7 +147,7 @@ func UpdateRequestStep(ctx context.Context, id encoreuuid.UUID, req *UpdateReque
 	return toResponse(updated), nil
 }
 
-//encore:api auth method=PUT path=/requests/:id/status
+//encore:api auth method=PATCH path=/requests/:id/status
 func UpdateRequestStatus(ctx context.Context, id encoreuuid.UUID, req *UpdateRequestStatusRequest) (*RequestResponse, error) {
 	requestID := uuid.UUID(id)
 
@@ -156,15 +156,9 @@ func UpdateRequestStatus(ctx context.Context, id encoreuuid.UUID, req *UpdateReq
 	}
 
 	status := strings.ToUpper(strings.TrimSpace(req.Status))
-	if !isValidStatus(status) {
-		return nil, errs.B().Code(errs.InvalidArgument).Msg("invalid status").Err()
+	if status != "APPROVED" && status != "REJECTED" {
+		return nil, errs.B().Code(errs.InvalidArgument).Msg("status must be APPROVED or REJECTED").Err()
 	}
-
-	ad, err := getAuthData()
-	if err != nil {
-		return nil, err
-	}
-	role := strings.ToUpper(string(ad.Role))
 
 	existing, err := Client.Request.
 		Query().
@@ -177,14 +171,8 @@ func UpdateRequestStatus(ctx context.Context, id encoreuuid.UUID, req *UpdateReq
 		return nil, errs.B().Code(errs.Internal).Msg("failed to get request").Cause(err).Err()
 	}
 
-	if existing.Status == "APPROVED" || existing.Status == "CANCELLED" {
-		return nil, errs.B().Code(errs.InvalidArgument).Msg("request is already finalized").Err()
-	}
-
-	if status != "PENDING" {
-		if !canFinalize(role, existing.Step) {
-			return nil, errs.B().Code(errs.PermissionDenied).Msg("only HR can finalize request at step 3").Err()
-		}
+	if existing.Status != "PENDING" {
+		return nil, errs.B().Code(errs.InvalidArgument).Msg("заявка уже обработана").Err()
 	}
 
 	updated, err := existing.

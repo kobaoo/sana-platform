@@ -92,9 +92,8 @@ func Create(ctx context.Context, req *CreateRequest) (*GetCertResponse, error) {
 	if req.IssuedDate.IsZero() {
 		return nil, errs.B().Code(errs.InvalidArgument).Msg("issued_date is required").Err()
 	}
-	validTypes := map[string]bool{"EXTERNAL": true, "SCORM": true, "INTERNAL": true}
-	if !validTypes[req.Type] {
-		return nil, errs.B().Code(errs.InvalidArgument).Msg("type must be EXTERNAL, SCORM, or INTERNAL").Err()
+	if req.Type != "EXTERNAL" {
+		return nil, errs.B().Code(errs.InvalidArgument).Msg("type must be EXTERNAL").Err()
 	}
 
 	if ad, ok := auth.Data().(*authhandler.AuthData); ok && ad.Role == authhandler.RoleHR {
@@ -177,6 +176,66 @@ func Delete(ctx context.Context, id string) (*DeleteResponse, error) {
 	return &DeleteResponse{Message: "certificate deleted successfully"}, nil
 }
 
+// ListExpiring returns certificates expiring within the given number of days for a DZO.
+//
+//encore:api auth method=GET path=/expiring-certificates
+func ListExpiring(ctx context.Context, params *ExpiringParams) (*ListResponse, error) {
+	if params.DzoID == "" {
+		return nil, errs.B().Code(errs.InvalidArgument).Msg("dzo_id is required").Err()
+	}
+
+	days := params.Days
+	if days <= 0 {
+		days = 180
+	}
+
+	if ad, ok := auth.Data().(*authhandler.AuthData); ok && ad.Role == authhandler.RoleHR {
+		if ad.DzoID != params.DzoID {
+			return nil, errs.B().Code(errs.PermissionDenied).Msg("you can only view your own DZO").Err()
+		}
+	}
+
+	dzoUID, err := uuid.Parse(params.DzoID)
+	if err != nil {
+		return nil, errs.B().Code(errs.InvalidArgument).Msg("invalid dzo_id format").Err()
+	}
+
+	now := time.Now()
+	threshold := now.AddDate(0, 0, days)
+
+	empIDs, err := Client.Employee.Query().
+		Where(employee.DzoIDEQ(dzoUID), employee.IsDeletedEQ(false)).
+		IDs(ctx)
+	if err != nil {
+		return nil, errs.B().Code(errs.Internal).Msg("failed to query employees").Cause(err).Err()
+	}
+
+	query := Client.Certificate.Query().
+		Where(
+			certificate.IsActiveEQ(true),
+			certificate.ExpiryDateNotNil(),
+			certificate.ExpiryDateGT(now),
+			certificate.ExpiryDateLTE(threshold),
+		)
+
+	if len(empIDs) > 0 {
+		query = query.Where(certificate.EmployeeIDIn(empIDs...))
+	} else {
+		return &ListResponse{Certificates: []Certificate{}, Total: 0}, nil
+	}
+
+	rows, err := query.Order(ent.Asc(certificate.FieldExpiryDate)).All(ctx)
+	if err != nil {
+		return nil, errs.B().Code(errs.Internal).Msg("failed to query expiring certificates").Cause(err).Err()
+	}
+
+	certs := make([]Certificate, 0, len(rows))
+	for _, r := range rows {
+		certs = append(certs, *entToCert(r))
+	}
+	return &ListResponse{Certificates: certs, Total: len(certs)}, nil
+}
+
 // UploadFile uploads a PDF file for a certificate.
 //
 //encore:api auth raw method=POST path=/certificates/:id/upload
@@ -230,11 +289,14 @@ func queryCertByID(ctx context.Context, id string) (*Certificate, error) {
 }
 
 func queryExpiringCerts(ctx context.Context) ([]Certificate, error) {
-	threshold := time.Now().AddDate(0, 6, 0)
+	now := time.Now()
+	threshold := now.AddDate(0, 6, 0)
 	rows, err := Client.Certificate.Query().
 		Where(
-			certificate.ExpiryDateLTE(threshold),
 			certificate.IsActiveEQ(true),
+			certificate.ExpiryDateNotNil(),
+			certificate.ExpiryDateGT(now),
+			certificate.ExpiryDateLTE(threshold),
 		).All(ctx)
 	if err != nil {
 		return nil, errs.B().Code(errs.Internal).Err()
@@ -245,6 +307,38 @@ func queryExpiringCerts(ctx context.Context) ([]Certificate, error) {
 		certs = append(certs, *entToCert(r))
 	}
 	return certs, nil
+}
+
+// queryEmployeeDzoMap returns a map of employeeID → dzoID for the given certificates.
+func queryEmployeeDzoMap(ctx context.Context, certs []Certificate) (map[string]string, error) {
+	seen := make(map[uuid.UUID]struct{}, len(certs))
+	for _, c := range certs {
+		uid, err := uuid.Parse(c.EmployeeID)
+		if err == nil {
+			seen[uid] = struct{}{}
+		}
+	}
+	if len(seen) == 0 {
+		return map[string]string{}, nil
+	}
+
+	ids := make([]uuid.UUID, 0, len(seen))
+	for id := range seen {
+		ids = append(ids, id)
+	}
+
+	rows, err := Client.Employee.Query().
+		Where(employee.IDIn(ids...)).
+		All(ctx)
+	if err != nil {
+		return nil, errs.B().Code(errs.Internal).Msg("failed to query employee DZO map").Cause(err).Err()
+	}
+
+	m := make(map[string]string, len(rows))
+	for _, r := range rows {
+		m[r.ID.String()] = r.DzoID.String()
+	}
+	return m, nil
 }
 
 func softDeleteCert(ctx context.Context, id string) error {
@@ -312,14 +406,14 @@ func handleUpload(w http.ResponseWriter, r *http.Request) {
 	defer file.Close()
 
 	if strings.ToLower(filepath.Ext(header.Filename)) != ".pdf" {
-		http.Error(w, "only PDF files are allowed", http.StatusUnsupportedMediaType)
+		http.Error(w, "разрешены только PDF-файлы", http.StatusUnsupportedMediaType)
 		return
 	}
 
 	// Verify PDF magic bytes (%PDF)
 	magic := make([]byte, 4)
 	if n, _ := io.ReadFull(file, magic); n < 4 || string(magic) != "%PDF" {
-		http.Error(w, "only PDF files are allowed", http.StatusUnsupportedMediaType)
+		http.Error(w, "разрешены только PDF-файлы", http.StatusUnsupportedMediaType)
 		return
 	}
 	if _, err := file.Seek(0, io.SeekStart); err != nil {

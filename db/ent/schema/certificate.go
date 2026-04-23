@@ -22,7 +22,7 @@ func (Certificate) Fields() []ent.Field {
 			Immutable(),
 		field.UUID("employee_id", uuid.UUID{}),
 		field.Enum("type").
-			Values("EXTERNAL", "SCORM", "INTERNAL"),
+			Values("EXTERNAL"),
 		field.String("title").
 			MaxLen(300).
 			NotEmpty(),

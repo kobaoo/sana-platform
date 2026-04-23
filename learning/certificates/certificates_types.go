@@ -62,6 +62,12 @@ type ListParams struct {
 	EntityType string `query:"entity_type"`
 }
 
+// ExpiringParams holds query parameters for listing expiring certificates.
+type ExpiringParams struct {
+	DzoID string `query:"dzo_id"`
+	Days  int    `query:"days"`
+}
+
 // DeleteResponse is the response for deleting a certificate.
 type DeleteResponse struct {
 	Message string `json:"message"`
