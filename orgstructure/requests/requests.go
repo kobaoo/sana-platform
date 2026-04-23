@@ -224,7 +224,7 @@ func ApproveHRRequest(ctx context.Context, id encoreuuid.UUID) (*GetRequestRespo
 	return &GetRequestResponse{Detail: *detail}, nil
 }
 
-// CancelHRRequest cancels an HR subrequest.
+// CancelHRRequest rejects an HR subrequest.
 //
 //encore:api auth method=POST path=/requests/hr/:id/cancel
 func CancelHRRequest(ctx context.Context, id encoreuuid.UUID) (*GetRequestResponse, error) {
@@ -233,10 +233,10 @@ func CancelHRRequest(ctx context.Context, id encoreuuid.UUID) (*GetRequestRespon
 		return nil, err
 	}
 	if actor.Role != authhandler.RoleHR {
-		return nil, errs.B().Code(errs.PermissionDenied).Msg("only HR can cancel requests").Err()
+		return nil, errs.B().Code(errs.PermissionDenied).Msg("only HR can reject requests").Err()
 	}
 
-	detail, err := finalizeHRRequest(ctx, actor, uuid.UUID(id), RequestStatusCancelled)
+	detail, err := finalizeHRRequest(ctx, actor, uuid.UUID(id), RequestStatusRejected)
 	if err != nil {
 		return nil, err
 	}
@@ -968,7 +968,7 @@ func syncParentRequestStatusTx(ctx context.Context, tx *sqldb.Tx, parentID uuid.
 	case approvedChildren > 0:
 		status = RequestStatusApproved
 	default:
-		status = RequestStatusCancelled
+		status = RequestStatusRejected
 	}
 
 	if _, err := tx.Exec(ctx, `

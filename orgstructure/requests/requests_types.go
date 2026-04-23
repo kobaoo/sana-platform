@@ -25,12 +25,12 @@ const (
 	RequestStatusInProgress RequestStatus = "IN_PROGRESS"
 	RequestStatusPending    RequestStatus = "PENDING"
 	RequestStatusApproved   RequestStatus = "APPROVED"
-	RequestStatusCancelled  RequestStatus = "CANCELLED"
+	RequestStatusRejected   RequestStatus = "REJECTED"
 )
 
 func (s RequestStatus) IsValid() bool {
 	switch s {
-	case RequestStatusDraft, RequestStatusInProgress, RequestStatusPending, RequestStatusApproved, RequestStatusCancelled:
+	case RequestStatusDraft, RequestStatusInProgress, RequestStatusPending, RequestStatusApproved, RequestStatusRejected:
 		return true
 	default:
 		return false
