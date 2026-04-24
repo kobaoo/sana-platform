@@ -205,6 +205,11 @@ func UploadSuppliers(ctx context.Context, req *UploadSuppliersRequest) (*UploadS
 		return nil, errs.B().Code(errs.PermissionDenied).Msg("missing company in token").Err()
 	}
 
+	clientUID, err := uuid.Parse(ud.CompanyID)
+	if err != nil {
+		return nil, errs.B().Code(errs.Internal).Msg("invalid company id in token").Err()
+	}
+
 	if req == nil {
 		return nil, errs.B().Code(errs.InvalidArgument).Msg("request body is required").Err()
 	}
@@ -213,6 +218,11 @@ func UploadSuppliers(ctx context.Context, req *UploadSuppliersRequest) (*UploadS
 	}
 
 	parsedRows, previewRows, validationErrors, totalRows, err := parseAndValidateSupplierFile(req.FileData, req.FileName)
+	if err != nil {
+		return nil, err
+	}
+
+	parsedRows, previewRows, validationErrors, err = applySupplierBusinessRules(ctx, clientUID, parsedRows, previewRows, validationErrors)
 	if err != nil {
 		return nil, err
 	}
@@ -647,11 +657,101 @@ func parseSupplierXLSX(data []byte) ([][]string, error) {
 		return nil, fmt.Errorf("xlsx file has no sheets")
 	}
 
-	return f.GetRows(sheets[0])
+	rows, err := f.GetRows(sheets[0])
+	if err != nil {
+		return nil, err
+	}
+
+	for i, row := range rows {
+		for j, cell := range row {
+			rows[i][j] = normalizeExcelValue(cell)
+		}
+	}
+
+	return rows, nil
 }
 
 func normalizeSupplierHeader(h string) string {
 	return strings.ToLower(strings.TrimSpace(h))
+}
+
+func normalizeExcelValue(val string) string {
+	val = strings.TrimSpace(val)
+	if strings.ContainsAny(val, "eE") {
+		f, err := strconv.ParseFloat(val, 64)
+		if err == nil {
+			return strconv.FormatInt(int64(f), 10)
+		}
+	}
+	return val
+}
+
+// applySupplierBusinessRules checks DB-level constraints for each parsed row.
+// Marks rows with existing bin_or_iin as invalid.
+func applySupplierBusinessRules(
+	ctx context.Context,
+	clientID uuid.UUID,
+	parsedRows []parsedSupplierRow,
+	previewRows []UploadSupplierRow,
+	validationErrors []string,
+) ([]parsedSupplierRow, []UploadSupplierRow, []string, error) {
+	bins := []string{}
+	for _, row := range parsedRows {
+		if row.BinOrIIN != nil {
+			bins = append(bins, *row.BinOrIIN)
+		}
+	}
+
+	// check for duplicates in DB for bin_or_iin values from file
+	existingBins := map[string]struct{}{}
+	if len(bins) > 0 {
+		existing, err := Client.Supplier.
+			Query().
+			Where(
+				supplier.ClientIDEQ(clientID),
+				supplier.BinOrIinIn(bins...),
+				supplier.IsActiveEQ(true),
+			).
+			All(ctx)
+		if err != nil {
+			return nil, nil, nil, errs.B().Code(errs.Internal).Msg("failed to check existing suppliers").Cause(err).Err()
+		}
+		for _, s := range existing {
+			if s.BinOrIin != nil {
+				existingBins[*s.BinOrIin] = struct{}{}
+			}
+		}
+	}
+
+	// checking for duplicates within the file
+	seenBins := map[string]struct{}{}
+
+	validParsed := []parsedSupplierRow{}
+	for i, row := range parsedRows {
+		rowErrors := []string{}
+
+		if row.BinOrIIN != nil {
+			bin := *row.BinOrIIN
+
+			if _, exists := existingBins[bin]; exists {
+				rowErrors = append(rowErrors, fmt.Sprintf("bin_or_iin %s already exists in database", bin))
+			}
+			if _, seen := seenBins[bin]; seen {
+				rowErrors = append(rowErrors, fmt.Sprintf("bin_or_iin %s is duplicated in file", bin))
+			}
+			seenBins[bin] = struct{}{}
+		}
+
+		if len(rowErrors) > 0 {
+			previewRows[i].IsValid = false
+			previewRows[i].Include = false
+			previewRows[i].Errors = append(previewRows[i].Errors, rowErrors...)
+		} else {
+			validParsed = append(validParsed, row)
+		}
+	}
+
+	return validParsed, previewRows, validationErrors, nil
 }
 
 func querySuppliersWithBudget(
