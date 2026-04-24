@@ -11,6 +11,7 @@ import (
 	"testing"
 
 	"encore.app/auth/authhandler"
+	"encore.app/db/ent"
 	"encore.dev/beta/auth"
 	"encore.dev/beta/errs"
 	"github.com/google/uuid"
@@ -31,14 +32,36 @@ func ctx() context.Context {
 }
 
 // makeDzo inserts a DZO directly so tests don't depend on the dzo service.
+func testClientID(t *testing.T) uuid.UUID {
+	return makeClient(t)
+}
+
+func makeClient(t *testing.T) uuid.UUID {
+	t.Helper()
+
+	id := uuid.MustParse("00000000-0000-0000-0000-000000000001")
+
+	_, err := Client.Company.
+		Create().
+		SetID(id).
+		SetName("Test Company").
+		Save(ctx())
+
+	if err != nil && !ent.IsConstraintError(err) {
+		t.Fatalf("makeClient: %v", err)
+	}
+
+	return id
+}
+
 func makeDzo(t *testing.T) uuid.UUID {
 	t.Helper()
+
 	id := uuid.New()
-	clientID := uuid.New()
 	_, err := Client.DzoOrganization.Create().
 		SetID(id).
-		SetClientID(clientID).
-		SetName("Test DZO").
+		SetClientID(testClientID(t)).
+		SetName("Test DZO " + uuid.NewString()).
 		Save(ctx())
 	if err != nil {
 		t.Fatalf("makeDzo: %v", err)
@@ -48,14 +71,14 @@ func makeDzo(t *testing.T) uuid.UUID {
 
 func makeDzoName(t *testing.T) string {
 	t.Helper()
-	name := "testDzo"
-	clientID := uuid.New()
+
+	name := "testDzo-" + uuid.NewString()
 	_, err := Client.DzoOrganization.Create().
-		SetClientID(clientID).
+		SetClientID(testClientID(t)).
 		SetName(name).
 		Save(ctx())
 	if err != nil {
-		t.Fatalf("makeDzo: %v", err)
+		t.Fatalf("makeDzoName: %v", err)
 	}
 	return name
 }
@@ -63,15 +86,35 @@ func makeDzoName(t *testing.T) string {
 // makeEmployee bypasses CreateEmployee auth by calling insertEmployee directly.
 func makeEmployee(t *testing.T, dzoID uuid.UUID, email string) *Employee {
 	t.Helper()
+
 	clientID := uuid.MustParse("00000000-0000-0000-0000-000000000001")
-	emp, err := insertEmployee(ctx(), clientID, dzoID, &CreateEmployeeRequest{
-		FullName: "Test Employee",
-		Email:    email,
-	})
+	kcUserID := "test-kc-" + uuid.NewString()
+
+	userRow, err := Client.User.Create().
+		SetKeycloakUserID(kcUserID).
+		SetEmail(email).
+		SetRole(string(authhandler.RoleEMP)).
+		SetDzoID(dzoID).
+		SetClientID(clientID).
+		SetIsActive(true).
+		Save(ctx())
 	if err != nil {
-		t.Fatalf("makeEmployee: %v", err)
+		t.Fatalf("makeEmployee user: %v", err)
 	}
-	return emp
+
+	empRow, err := Client.Employee.Create().
+		SetClientID(clientID).
+		SetDzoID(dzoID).
+		SetFullName("Test Employee").
+		SetEmail(email).
+		SetUserID(userRow.ID).
+		SetIsDeleted(false).
+		Save(ctx())
+	if err != nil {
+		t.Fatalf("makeEmployee employee: %v", err)
+	}
+
+	return entToEmployee(empRow)
 }
 
 // ════ VALIDATE EMAIL ════
@@ -171,16 +214,8 @@ func TestGetEmployee_Success(t *testing.T) {
 
 func TestListEmployees_SearchByFullName(t *testing.T) {
 	dzoID := makeDzo(t)
-	clientID := uuid.MustParse("00000000-0000-0000-0000-000000000001")
-	_, err := insertEmployee(ctx(), clientID, dzoID, &CreateEmployeeRequest{
-		FullName: "Searchable Person",
-		Email:    "srchname@example.com",
-	})
-	if err != nil {
-		t.Fatalf("insertEmployee: %v", err)
-	}
-
-	resp, err := ListEmployees(ctx(), &ListEmployeesParams{Search: "Searchable"})
+	_ = makeEmployee(t, dzoID, "srchname@example.com")
+	resp, err := ListEmployees(ctx(), &ListEmployeesParams{Search: "Test"})
 	if err != nil {
 		t.Fatalf("unexpected error: %v", err)
 	}
