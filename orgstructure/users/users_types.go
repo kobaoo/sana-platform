@@ -34,12 +34,28 @@ type CreateUserRequest struct {
 	ClientID       *string              `json:"client_id,omitempty"`
 }
 
-// RegisterAdminRequest is the request body for registering a new admin (Flow 4).
+// RegisterAdminRequest is the request body for registering a new admin.
+// The backend creates the Keycloak account automatically — no pre-existing
+// Keycloak user is required.
+// ADM is scoped to an entire client (all DZOs inside it), so dzo_id is not
+// needed here. DZO assignment is only relevant for HR.
 type RegisterAdminRequest struct {
-	KeycloakUserID string  `json:"keycloak_user_id"`
-	Email          string  `json:"email"`
-	DzoID          *string `json:"dzo_id,omitempty"`
-	ClientID       *string `json:"client_id,omitempty"`
+	Email    string `json:"email"`
+	FirstName string `json:"first_name"`
+	LastName  string `json:"last_name"`
+	// TempPassword is the initial password. If omitted, one is auto-generated
+	// and returned in the response. Keycloak marks it as temporary so the
+	// admin is forced to change it on first login.
+	TempPassword *string `json:"temp_password,omitempty"`
+	// ClientID is the client (company) this admin will manage. Required.
+	ClientID string `json:"client_id"`
+}
+
+// RegisterAdminResponse wraps the created admin user and the temporary password.
+// TempPassword is always returned so the SA can share it with the new admin.
+type RegisterAdminResponse struct {
+	User         User   `json:"user"`
+	TempPassword string `json:"temp_password"`
 }
 
 // AssignRoleRequest is the request body for assigning a role (Flow 3).
