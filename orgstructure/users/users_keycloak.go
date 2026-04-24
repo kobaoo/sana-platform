@@ -3,9 +3,11 @@ package users
 import (
 	"bytes"
 	"context"
+	"crypto/rand"
 	"encoding/json"
 	"fmt"
 	"io"
+	"math/big"
 	"net/http"
 	"net/url"
 	"strings"
@@ -239,6 +241,234 @@ func syncRoleToKeycloak(ctx context.Context, kcUserID string, newRole authhandle
 		return
 	}
 	rlog.Info("keycloak sync: role updated", "kcUserID", kcUserID, "newRole", string(newRole))
+}
+
+// ════ USER CREATION & ATTRIBUTE SYNC ════
+
+// kcUserRepresentation is the Keycloak UserRepresentation used for create/update.
+type kcUserRepresentation struct {
+	ID          string              `json:"id,omitempty"`
+	Username    string              `json:"username,omitempty"`
+	Email       string              `json:"email,omitempty"`
+	FirstName   string              `json:"firstName,omitempty"`
+	LastName    string              `json:"lastName,omitempty"`
+	Enabled     *bool               `json:"enabled,omitempty"`
+	Credentials []kcCredentialRep   `json:"credentials,omitempty"`
+	Attributes  map[string][]string `json:"attributes,omitempty"`
+}
+
+type kcCredentialRep struct {
+	Type      string `json:"type"`
+	Value     string `json:"value"`
+	Temporary bool   `json:"temporary"`
+}
+
+// createUser creates a Keycloak user and returns their UUID.
+// The ID is extracted from the Location response header.
+func (k *keycloakAdminClient) createUser(token string, rep kcUserRepresentation) (string, error) {
+	usersURL := fmt.Sprintf("%s/admin/realms/%s/users", k.baseURL(), k.realm())
+	body, _ := json.Marshal(rep)
+
+	req, _ := http.NewRequest(http.MethodPost, usersURL, bytes.NewReader(body))
+	req.Header.Set("Authorization", "Bearer "+token)
+	req.Header.Set("Content-Type", "application/json")
+
+	resp, err := k.httpClient.Do(req)
+	if err != nil {
+		return "", err
+	}
+	defer resp.Body.Close()
+
+	if resp.StatusCode == http.StatusConflict {
+		return "", fmt.Errorf("user with this email already exists in Keycloak")
+	}
+	if resp.StatusCode != http.StatusCreated {
+		respBody, _ := io.ReadAll(resp.Body)
+		return "", fmt.Errorf("create user: status %d: %s", resp.StatusCode, respBody)
+	}
+
+	location := resp.Header.Get("Location")
+	if location == "" {
+		return "", fmt.Errorf("create user: no Location header in response")
+	}
+	parts := strings.Split(location, "/")
+	if len(parts) == 0 {
+		return "", fmt.Errorf("create user: invalid Location header: %s", location)
+	}
+	return parts[len(parts)-1], nil
+}
+
+// getUser fetches the full UserRepresentation from Keycloak.
+func (k *keycloakAdminClient) getUser(token, kcUserID string) (*kcUserRepresentation, error) {
+	userURL := fmt.Sprintf("%s/admin/realms/%s/users/%s", k.baseURL(), k.realm(), kcUserID)
+	req, _ := http.NewRequest(http.MethodGet, userURL, nil)
+	req.Header.Set("Authorization", "Bearer "+token)
+
+	resp, err := k.httpClient.Do(req)
+	if err != nil {
+		return nil, err
+	}
+	defer resp.Body.Close()
+
+	if resp.StatusCode != http.StatusOK {
+		respBody, _ := io.ReadAll(resp.Body)
+		return nil, fmt.Errorf("get user: status %d: %s", resp.StatusCode, respBody)
+	}
+
+	var rep kcUserRepresentation
+	if err := json.NewDecoder(resp.Body).Decode(&rep); err != nil {
+		return nil, err
+	}
+	return &rep, nil
+}
+
+// updateUser sends a full UserRepresentation update to Keycloak.
+func (k *keycloakAdminClient) updateUser(token, kcUserID string, rep kcUserRepresentation) error {
+	userURL := fmt.Sprintf("%s/admin/realms/%s/users/%s", k.baseURL(), k.realm(), kcUserID)
+	body, _ := json.Marshal(rep)
+
+	req, _ := http.NewRequest(http.MethodPut, userURL, bytes.NewReader(body))
+	req.Header.Set("Authorization", "Bearer "+token)
+	req.Header.Set("Content-Type", "application/json")
+
+	resp, err := k.httpClient.Do(req)
+	if err != nil {
+		return err
+	}
+	defer resp.Body.Close()
+
+	if resp.StatusCode != http.StatusNoContent {
+		respBody, _ := io.ReadAll(resp.Body)
+		return fmt.Errorf("update user: status %d: %s", resp.StatusCode, respBody)
+	}
+	return nil
+}
+
+// deleteUser deletes a Keycloak user — used for rollback when DB insert fails.
+func (k *keycloakAdminClient) deleteUser(token, kcUserID string) error {
+	userURL := fmt.Sprintf("%s/admin/realms/%s/users/%s", k.baseURL(), k.realm(), kcUserID)
+	req, _ := http.NewRequest(http.MethodDelete, userURL, nil)
+	req.Header.Set("Authorization", "Bearer "+token)
+
+	resp, err := k.httpClient.Do(req)
+	if err != nil {
+		return err
+	}
+	defer resp.Body.Close()
+
+	if resp.StatusCode != http.StatusNoContent {
+		respBody, _ := io.ReadAll(resp.Body)
+		return fmt.Errorf("delete user: status %d: %s", resp.StatusCode, respBody)
+	}
+	return nil
+}
+
+// createAndConfigureKeycloakAdmin creates a Keycloak user, assigns the ADM
+// realm role, and sets companyId/dzoId attributes so they appear in the JWT.
+// Returns the new Keycloak user UUID.
+func createAndConfigureKeycloakAdmin(ctx context.Context, email, firstName, lastName, tempPassword string, companyID, dzoID *string) (string, error) {
+	if secrets.KeycloakIssuerURL == "" || secrets.KeycloakAdminUser == "" {
+		return "", fmt.Errorf("keycloak admin credentials not configured")
+	}
+
+	token, err := kcAdmin.adminToken()
+	if err != nil {
+		return "", fmt.Errorf("keycloak admin token: %w", err)
+	}
+
+	enabled := true
+	attrs := make(map[string][]string)
+	if companyID != nil && *companyID != "" {
+		attrs["companyId"] = []string{*companyID}
+	}
+	if dzoID != nil && *dzoID != "" {
+		attrs["dzoId"] = []string{*dzoID}
+	}
+
+	rep := kcUserRepresentation{
+		Username:  email,
+		Email:     email,
+		FirstName: firstName,
+		LastName:  lastName,
+		Enabled:   &enabled,
+		Credentials: []kcCredentialRep{
+			{Type: "password", Value: tempPassword, Temporary: true},
+		},
+		Attributes: attrs,
+	}
+
+	kcUserID, err := kcAdmin.createUser(token, rep)
+	if err != nil {
+		return "", fmt.Errorf("create keycloak user: %w", err)
+	}
+
+	// Assign ADM realm role.
+	role, err := kcAdmin.getRoleByName(token, string(authhandler.RoleADM))
+	if err != nil {
+		_ = kcAdmin.deleteUser(token, kcUserID)
+		return "", fmt.Errorf("resolve ADM role: %w", err)
+	}
+	if err := kcAdmin.addRealmRole(token, kcUserID, role); err != nil {
+		_ = kcAdmin.deleteUser(token, kcUserID)
+		return "", fmt.Errorf("assign ADM role: %w", err)
+	}
+
+	rlog.Info("keycloak: admin created", "kcUserID", kcUserID, "email", email)
+	return kcUserID, nil
+}
+
+// syncAttributesToKeycloak updates the companyId and dzoId custom attributes
+// on a Keycloak user so they appear in subsequent JWT tokens.
+// Errors are logged but do not fail the API response.
+func syncAttributesToKeycloak(ctx context.Context, kcUserID, companyID, dzoID string) {
+	if secrets.KeycloakIssuerURL == "" || secrets.KeycloakAdminUser == "" {
+		rlog.Warn("keycloak attr sync skipped: admin credentials not configured")
+		return
+	}
+
+	token, err := kcAdmin.adminToken()
+	if err != nil {
+		rlog.Error("keycloak attr sync: failed to get admin token", "err", err.Error())
+		return
+	}
+
+	// Fetch the full representation to avoid accidentally clearing other fields.
+	rep, err := kcAdmin.getUser(token, kcUserID)
+	if err != nil {
+		rlog.Error("keycloak attr sync: failed to get user", "kcUserID", kcUserID, "err", err.Error())
+		return
+	}
+
+	if rep.Attributes == nil {
+		rep.Attributes = make(map[string][]string)
+	}
+	if companyID != "" {
+		rep.Attributes["companyId"] = []string{companyID}
+	}
+	if dzoID != "" {
+		rep.Attributes["dzoId"] = []string{dzoID}
+	}
+
+	if err := kcAdmin.updateUser(token, kcUserID, *rep); err != nil {
+		rlog.Error("keycloak attr sync: failed to update user", "kcUserID", kcUserID, "err", err.Error())
+		return
+	}
+	rlog.Info("keycloak attr sync: updated", "kcUserID", kcUserID, "companyID", companyID, "dzoID", dzoID)
+}
+
+// generateTempPassword generates a random alphanumeric+symbol password of the
+// given length using crypto/rand for security.
+func generateTempPassword(length int) (string, error) {
+	const charset = "abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789!@#$%"
+	result := make([]byte, length)
+	for i := range result {
+		n, err := rand.Int(rand.Reader, big.NewInt(int64(len(charset))))
+		if err != nil {
+			return "", err
+		}
+		result[i] = charset[n.Int64()]
+	}
+	return string(result), nil
 }
 
 // syncEnabledToKeycloak enables or disables the Keycloak account.

@@ -447,7 +447,7 @@ func TestApplyUploadBusinessRules_DuplicateEmailsInFile(t *testing.T) {
 		{RowNumber: 4, DzoName: dzo, Email: "unique@example.com", IsValid: true, Include: true, Errors: []string{}},
 	}
 
-	filtered, preview, validationErrors, err := applyUploadBusinessRules(context.Background(), parsedRows, previewRows, nil)
+	filtered, preview, validationErrors, err := applyUploadBusinessRules(context.Background(), parsedRows, previewRows, nil, "")
 	if err != nil {
 		t.Fatalf("unexpected error: %v", err)
 	}
