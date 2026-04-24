@@ -182,41 +182,6 @@ var (
 			},
 		},
 	}
-<<<<<<< HEAD
-	// SuppliersColumns holds the columns for the "suppliers" table.
-	SuppliersColumns = []*schema.Column{
-		{Name: "id", Type: field.TypeUUID, Unique: true},
-		{Name: "client_id", Type: field.TypeUUID},
-		{Name: "type", Type: field.TypeEnum, Enums: []string{"LEGAL", "INDIVIDUAL"}},
-		{Name: "name", Type: field.TypeString, Size: 300},
-		{Name: "bin_or_iin", Type: field.TypeString, Unique: true, Nullable: true, Size: 12},
-		{Name: "local_content_pct", Type: field.TypeFloat64, Nullable: true, SchemaType: map[string]string{"postgres": "decimal(5,2)"}},
-		{Name: "is_active", Type: field.TypeBool, Default: true},
-	}
-	// SuppliersTable holds the schema information for the "suppliers" table.
-	SuppliersTable = &schema.Table{
-		Name:       "suppliers",
-		Columns:    SuppliersColumns,
-		PrimaryKey: []*schema.Column{SuppliersColumns[0]},
-		Indexes: []*schema.Index{
-			{
-				Name:    "supplier_client_id",
-				Unique:  false,
-				Columns: []*schema.Column{SuppliersColumns[1]},
-			},
-			{
-				Name:    "supplier_type",
-				Unique:  false,
-				Columns: []*schema.Column{SuppliersColumns[2]},
-			},
-			{
-				Name:    "supplier_is_active",
-				Unique:  false,
-				Columns: []*schema.Column{SuppliersColumns[6]},
-			},
-		},
-	}
-=======
 	// RequestsColumns holds the columns for the "requests" table.
 	RequestsColumns = []*schema.Column{
 		{Name: "id", Type: field.TypeUUID, Unique: true},
@@ -263,6 +228,39 @@ var (
 			},
 		},
 	}
+	// SuppliersColumns holds the columns for the "suppliers" table.
+	SuppliersColumns = []*schema.Column{
+		{Name: "id", Type: field.TypeUUID, Unique: true},
+		{Name: "client_id", Type: field.TypeUUID},
+		{Name: "type", Type: field.TypeEnum, Enums: []string{"LEGAL", "INDIVIDUAL"}},
+		{Name: "name", Type: field.TypeString, Size: 300},
+		{Name: "bin_or_iin", Type: field.TypeString, Unique: true, Nullable: true, Size: 12},
+		{Name: "local_content_pct", Type: field.TypeFloat64, Nullable: true, SchemaType: map[string]string{"postgres": "decimal(5,2)"}},
+		{Name: "is_active", Type: field.TypeBool, Default: true},
+	}
+	// SuppliersTable holds the schema information for the "suppliers" table.
+	SuppliersTable = &schema.Table{
+		Name:       "suppliers",
+		Columns:    SuppliersColumns,
+		PrimaryKey: []*schema.Column{SuppliersColumns[0]},
+		Indexes: []*schema.Index{
+			{
+				Name:    "supplier_client_id",
+				Unique:  false,
+				Columns: []*schema.Column{SuppliersColumns[1]},
+			},
+			{
+				Name:    "supplier_type",
+				Unique:  false,
+				Columns: []*schema.Column{SuppliersColumns[2]},
+			},
+			{
+				Name:    "supplier_is_active",
+				Unique:  false,
+				Columns: []*schema.Column{SuppliersColumns[6]},
+			},
+		},
+	}
 	// TrainingEventsColumns holds the columns for the "training_events" table.
 	TrainingEventsColumns = []*schema.Column{
 		{Name: "id", Type: field.TypeUUID},
@@ -306,7 +304,6 @@ var (
 		Columns:    TrainingParticipantsColumns,
 		PrimaryKey: []*schema.Column{TrainingParticipantsColumns[0]},
 	}
->>>>>>> dev
 	// UsersColumns holds the columns for the "users" table.
 	UsersColumns = []*schema.Column{
 		{Name: "id", Type: field.TypeUUID, Unique: true},
@@ -354,13 +351,10 @@ var (
 		DzoOrganizationsTable,
 		EmployeesTable,
 		OrganizationsTable,
-<<<<<<< HEAD
-		SuppliersTable,
-=======
 		RequestsTable,
+		SuppliersTable,
 		TrainingEventsTable,
 		TrainingParticipantsTable,
->>>>>>> dev
 		UsersTable,
 	}
 )
