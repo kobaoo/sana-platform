@@ -4,9 +4,12 @@ import (
 	"bytes"
 	"context"
 	"fmt"
+	"math"
+	"net/mail"
 	"strings"
 	"time"
 
+	"encore.app/db/ent/user"
 	"encore.dev/beta/auth"
 	"encore.dev/beta/errs"
 	"encore.dev/storage/sqldb"
@@ -36,6 +39,7 @@ func newEntClient() *ent.Client {
 // ════ ENDPOINTS ════
 
 // CreateEmployee creates a new employee.
+//
 //encore:api auth method=POST path=/employees/create
 func CreateEmployee(ctx context.Context, req *CreateEmployeeRequest) (*GetEmployeeResponse, error) {
 	if strings.TrimSpace(req.FullName) == "" {
@@ -46,6 +50,11 @@ func CreateEmployee(ctx context.Context, req *CreateEmployeeRequest) (*GetEmploy
 	}
 	if err := validateEmail(req.Email); err != nil {
 		return nil, err
+	}
+	if req.Role != "" {
+		if req.Role == authhandler.RoleADM {
+			return nil, errs.B().Code(errs.PermissionDenied).Msg("admin cannot assign admin role for employee").Err()
+		}
 	}
 
 	dzoUID, err := uuid.Parse(req.DzoID)
@@ -82,12 +91,20 @@ func CreateEmployee(ctx context.Context, req *CreateEmployeeRequest) (*GetEmploy
 	}
 
 	// создаем пользователя в кейлоак до транзакции в бд
-	kcUserID, err := createKeycloakUser(ctx,strings.TrimSpace(req.Email),req.FullName,clientUID.String(),dzoUID.String(),)
+	kcUserID, err := kcAdmin.createKeycloakUser(ctx, strings.TrimSpace(req.Email), req.FullName, clientUID.String(), dzoUID.String())
 	if err != nil {
 		return nil, errs.B().Code(errs.Internal).Msg("failed to create keycloak user").Cause(err).Err()
 	}
+	role := req.Role
+	if role == "" {
+		role = authhandler.RoleEMP
+	}
+	if err := kcAdmin.assignRealmRoleToUser(ctx, kcUserID, string(role)); err != nil {
+		deleteKeycloakUser(ctx, kcUserID)
+		return nil, fmt.Errorf("failed to assign keycloak role: %w", err)
+	}
 
-	// открываем дб транзакцию и создаём employee + user 
+	// открываем дб транзакцию и создаём employee + user
 	emp, err := insertEmployeeWithUser(ctx, clientUID, dzoUID, kcUserID, req)
 	if err != nil {
 		// если бд упала удаляем из keycloak чтобы не остался пустой юзер
@@ -99,9 +116,10 @@ func CreateEmployee(ctx context.Context, req *CreateEmployeeRequest) (*GetEmploy
 }
 
 // insertEmployeeWithUser открывает ent транзакцию и создаёт:
-//   запись в таблице employees
-//   запись в таблице users 
-//   связывает employee.user_id к users.id
+//
+//	запись в таблице employees
+//	запись в таблице users
+//	связывает employee.user_id к users.id
 //
 // если любой из шагов падает транзакция откатывается автоматически
 func insertEmployeeWithUser(
@@ -165,7 +183,7 @@ func insertEmployeeWithUser(
 		Create().
 		SetKeycloakUserID(kcUserID).
 		SetEmail(strings.TrimSpace(req.Email)).
-		SetRole("EMP").
+		SetRole(string(req.Role)).
 		SetDzoID(dzoID).
 		SetClientID(clientID).
 		Save(ctx)
@@ -208,6 +226,10 @@ func ListEmployees(ctx context.Context, params *ListEmployeesParams) (*ListEmplo
 		return nil, err
 	}
 
+	if params == nil {
+		params = &ListEmployeesParams{}
+	}
+
 	if err := requireRole(ad, authhandler.RoleSA, authhandler.RoleADM, authhandler.RoleHR); err != nil {
 		return nil, err
 	}
@@ -225,19 +247,49 @@ func ListEmployees(ctx context.Context, params *ListEmployeesParams) (*ListEmplo
 		clientFilter = ad.CompanyID
 	}
 
-	limit, offset := normalizePagination(params.Limit, params.Offset)
+	limit := params.Limit
+	if limit <= 0 {
+		limit = 20
+	}
+	if limit > 100 {
+		limit = 100
+	}
 
-	emps, total, err := queryActiveEmployeesPaginated(ctx, strings.TrimSpace(params.Search), dzoFilter, clientFilter, limit, offset)
+	// Support both pagination styles:
+	//   - page-based (params.Page): 1-indexed
+	//   - offset-based (params.Offset): 0-indexed, used for lazy-load scroll
+	// If only offset is provided, derive the corresponding page.
+	page := params.Page
+	if page <= 0 && params.Offset > 0 {
+		page = params.Offset/limit + 1
+	}
+	if page <= 0 {
+		page = 1
+	}
+	offset := (page - 1) * limit
+
+	emps, total, err := queryActiveEmployees(
+		ctx,
+		strings.TrimSpace(params.Search),
+		dzoFilter,
+		page,
+		limit,
+		clientFilter,
+	)
 	if err != nil {
 		return nil, err
 	}
 
+	totalPages := int(math.Ceil(float64(total) / float64(limit)))
+
 	return &ListEmployeesResponse{
-		Employees: emps,
-		Total:     total,
-		Limit:     limit,
-		Offset:    offset,
-		HasMore:   offset+len(emps) < total,
+		Employees:  emps,
+		Total:      total,
+		Limit:      limit,
+		Offset:     offset,
+		HasMore:    offset+len(emps) < total,
+		Page:       page,
+		TotalPages: totalPages,
 	}, nil
 }
 
@@ -259,11 +311,16 @@ func GetEmployee(ctx context.Context, id string) (*GetEmployeeResponse, error) {
 	if err != nil {
 		return nil, err
 	}
-
-	if ad.Role == authhandler.RoleHR && emp.DzoID != ad.DzoID {
-		return nil, errs.B().Code(errs.NotFound).Msg("employee not found").Err()
+	if emp.UserID == nil {
+		return nil, errs.B().Code(errs.NotFound).Msg("employee user not found").Err()
 	}
-	if ad.Role == authhandler.RoleADM && emp.ClientID != ad.CompanyID {
+	u, err := queryUserByID(ctx, *emp.UserID)
+	if err != nil {
+		return nil, err
+	}
+	emp.Role = authhandler.UserRole(u.Role)
+
+	if (ad.Role == authhandler.RoleADM && emp.ClientID != ad.CompanyID) || (ad.Role == authhandler.RoleHR && emp.DzoID != ad.DzoID) {
 		return nil, errs.B().Code(errs.NotFound).Msg("employee not found").Err()
 	}
 
@@ -297,13 +354,20 @@ func PatchEmployee(ctx context.Context, id string, req *UpdateEmployeeRequest) (
 			return nil, err
 		}
 	}
+
 	if req.DzoID != nil {
 		dzoUID, err := uuid.Parse(*req.DzoID)
 		if err != nil {
 			return nil, errs.B().Code(errs.InvalidArgument).Msg("invalid dzo_id format").Err()
 		}
-		if err := checkDzoExists(ctx, dzoUID); err != nil {
-			return nil, err
+		if ad.Role == authhandler.RoleADM {
+			if err := checkDzoExistsForClient(ctx, dzoUID, ad.CompanyID); err != nil {
+				return nil, err
+			}
+		} else {
+			if err := checkDzoExists(ctx, dzoUID); err != nil {
+				return nil, err
+			}
 		}
 	}
 
@@ -344,6 +408,80 @@ func DeleteEmployee(ctx context.Context, id string) (*DeleteEmployeeResponse, er
 	}
 
 	return &DeleteEmployeeResponse{Message: "employee deleted successfully"}, nil
+}
+
+//encore:api auth method=POST path=/employees/bulk-delete
+func BulkDeleteEmployees(ctx context.Context, req *BulkDeleteRequest) (*BulkDeleteResponse, error) {
+	ad, err := getAuthData()
+	if err != nil {
+		return nil, err
+	}
+	if err := requireRole(ad, authhandler.RoleSA, authhandler.RoleADM); err != nil {
+		return nil, err
+	}
+
+	deletedCount := 0
+	var errors []string
+
+	// 1. Удаление конкретных сотрудников по ID
+	for _, id := range req.IDs {
+		if ad.Role == authhandler.RoleADM {
+			emp, err := queryEmployeeByID(ctx, id)
+			if err != nil {
+				errors = append(errors, fmt.Sprintf("employee %s: %v", id, err))
+				continue
+			}
+			if emp.ClientID != ad.CompanyID {
+				errors = append(errors, fmt.Sprintf("employee %s: not in your client", id))
+				continue
+			}
+		}
+		if err := softDeleteEmployee(ctx, id); err != nil {
+			errors = append(errors, fmt.Sprintf("employee %s: %v", id, err))
+			continue
+		}
+		deletedCount++
+	}
+
+	// 2. Удаление всех сотрудников из выбранных ДЗО
+	for _, dzoID := range req.AllDzoIDs {
+		dzoUID, err := uuid.Parse(dzoID)
+		if err != nil {
+			errors = append(errors, fmt.Sprintf("dzo %s: invalid id", dzoID))
+			continue
+		}
+		if ad.Role == authhandler.RoleADM {
+			if err := checkDzoExistsForClient(ctx, dzoUID, ad.CompanyID); err != nil {
+				errors = append(errors, fmt.Sprintf("dzo %s: not found or not in your client", dzoID))
+				continue
+			}
+		}
+		employees, err := Client.Employee.
+			Query().
+			Where(
+				employee.DzoIDEQ(dzoUID),
+				employee.IsDeletedEQ(false),
+			).
+			All(ctx)
+		if err != nil {
+			errors = append(errors, fmt.Sprintf("dzo %s: failed to load employees", dzoID))
+			continue
+		}
+
+		for _, emp := range employees {
+			if err := softDeleteEmployee(ctx, emp.ID.String()); err != nil {
+				errors = append(errors, fmt.Sprintf("employee %s: %v", emp.ID.String(), err))
+				continue
+			}
+			deletedCount++
+		}
+	}
+
+	return &BulkDeleteResponse{
+		Message:      "employees deleted",
+		DeletedCount: deletedCount,
+		Errors:       errors,
+	}, nil
 }
 
 // UploadEmployees validates uploaded employees .xlsx file before import.
@@ -476,54 +614,126 @@ func ImportCountedRows(ctx context.Context, rowsToImport []parsedEmployeeRow, im
 		return 0, nil, errs.B().Code(errs.Internal).Msg("failed to load dzo map").Cause(err).Err()
 	}
 
-	builders := make([]*ent.EmployeeCreate, 0, len(rowsToImport))
+	type preparedRow struct {
+		row      parsedEmployeeRow
+		dzoID    uuid.UUID
+		kcUserID string
+	}
+
+	prepared := make([]preparedRow, 0, len(rowsToImport))
+	createdKCUserIDs := make([]string, 0, len(rowsToImport))
+
 	for _, row := range rowsToImport {
-		dzoId, ok := dzoMap[normalizeHeader(row.DzoName)]
+		dzoID, ok := dzoMap[normalizeHeader(row.DzoName)]
 		if !ok {
 			continue
 		}
-		builder := Client.Employee.
-			Create().
-			SetClientID(clientUID).
-			SetDzoID(dzoId).
-			SetFullName(row.FullName).
-			SetEmail(row.Email)
 
-		if row.Position != nil {
-			builder = builder.SetPosition(*row.Position)
-		}
-		if row.ShortName != nil {
-			builder = builder.SetShortName(*row.ShortName)
-		}
-		if row.Department != nil {
-			builder = builder.SetDepartment(*row.Department)
-		}
-		if row.Direction != nil {
-			builder = builder.SetDirection(*row.Direction)
-		}
-		if row.InternalPhone != nil {
-			builder = builder.SetInternalPhone(*row.InternalPhone)
-		}
-		if row.BirthDate != nil {
-			builder = builder.SetBirthDate(*row.BirthDate)
-		}
-		if row.UserID != nil {
-			builder = builder.SetUserID(*row.UserID)
+		kcUserID, err := kcAdmin.createKeycloakUser(ctx, strings.TrimSpace(row.Email), row.FullName, clientUID.String(), dzoID.String())
+		if err != nil {
+			for _, id := range createdKCUserIDs {
+				deleteKeycloakUser(ctx, id)
+			}
+			return 0, nil, errs.B().Code(errs.Internal).Msg("failed to create keycloak user").Cause(err).Err()
 		}
 
-		builders = append(builders, builder)
+		if err := kcAdmin.assignRealmRoleToUser(ctx, kcUserID, string(authhandler.RoleEMP)); err != nil {
+			deleteKeycloakUser(ctx, kcUserID)
+			for _, id := range createdKCUserIDs {
+				deleteKeycloakUser(ctx, id)
+			}
+			return 0, nil, errs.B().Code(errs.Internal).Msg("failed to assign keycloak role").Cause(err).Err()
+		}
+
+		createdKCUserIDs = append(createdKCUserIDs, kcUserID)
+		prepared = append(prepared, preparedRow{
+			row:      row,
+			dzoID:    dzoID,
+			kcUserID: kcUserID,
+		})
 	}
 
-	if len(builders) == 0 {
+	if len(prepared) == 0 {
 		return importedCount, nil, nil
 	}
 
-	created, err := Client.Employee.CreateBulk(builders...).Save(ctx)
+	tx, err := Client.Tx(ctx)
 	if err != nil {
-		return 0, nil, errs.B().Code(errs.Internal).Msg("failed to import employees").Cause(err).Err()
+		for _, id := range createdKCUserIDs {
+			deleteKeycloakUser(ctx, id)
+		}
+		return 0, nil, errs.B().Code(errs.Internal).Msg("failed to begin transaction").Cause(err).Err()
 	}
 
-	importedCount += len(created)
+	defer func() {
+		if err != nil {
+			_ = tx.Rollback()
+		}
+	}()
+
+	createdCount := 0
+
+	for _, item := range prepared {
+		userRow, err := tx.User.
+			Create().
+			SetKeycloakUserID(item.kcUserID).
+			SetEmail(strings.TrimSpace(item.row.Email)).
+			SetRole(string(authhandler.RoleEMP)).
+			SetDzoID(item.dzoID).
+			SetClientID(clientUID).
+			Save(ctx)
+		if err != nil {
+			for _, id := range createdKCUserIDs {
+				deleteKeycloakUser(ctx, id)
+			}
+			return 0, nil, errs.B().Code(errs.Internal).Msg("failed to create user").Cause(err).Err()
+		}
+
+		empBuilder := tx.Employee.
+			Create().
+			SetClientID(clientUID).
+			SetDzoID(item.dzoID).
+			SetFullName(item.row.FullName).
+			SetEmail(strings.TrimSpace(item.row.Email)).
+			SetUserID(userRow.ID)
+
+		if item.row.Position != nil {
+			empBuilder = empBuilder.SetPosition(*item.row.Position)
+		}
+		if item.row.ShortName != nil {
+			empBuilder = empBuilder.SetShortName(*item.row.ShortName)
+		}
+		if item.row.Department != nil {
+			empBuilder = empBuilder.SetDepartment(*item.row.Department)
+		}
+		if item.row.Direction != nil {
+			empBuilder = empBuilder.SetDirection(*item.row.Direction)
+		}
+		if item.row.InternalPhone != nil {
+			empBuilder = empBuilder.SetInternalPhone(*item.row.InternalPhone)
+		}
+		if item.row.BirthDate != nil {
+			empBuilder = empBuilder.SetBirthDate(*item.row.BirthDate)
+		}
+
+		if _, err := empBuilder.Save(ctx); err != nil {
+			for _, id := range createdKCUserIDs {
+				deleteKeycloakUser(ctx, id)
+			}
+			return 0, nil, errs.B().Code(errs.Internal).Msg("failed to create employee").Cause(err).Err()
+		}
+
+		createdCount++
+	}
+
+	if err = tx.Commit(); err != nil {
+		for _, id := range createdKCUserIDs {
+			deleteKeycloakUser(ctx, id)
+		}
+		return 0, nil, errs.B().Code(errs.Internal).Msg("failed to commit transaction").Cause(err).Err()
+	}
+
+	importedCount += createdCount
 	return importedCount, nil, nil
 }
 
@@ -573,7 +783,7 @@ func insertEmployee(ctx context.Context, clientID, dzoID uuid.UUID, req *CreateE
 	return entToEmployee(row), nil
 }
 
-func queryActiveEmployees(ctx context.Context, search string, dzoID string, clientID string) ([]Employee, error) {
+func queryActiveEmployees(ctx context.Context, search string, dzoID string, page int, limit int, clientID string) ([]Employee, int, error) {
 	q := Client.Employee.
 		Query().
 		WithDzo().
@@ -589,54 +799,15 @@ func queryActiveEmployees(ctx context.Context, search string, dzoID string, clie
 
 	if dzoID != "" {
 		uid, err := uuid.Parse(dzoID)
-		if err == nil {
-			q = q.Where(employee.DzoIDEQ(uid))
+		if err != nil {
+			return nil, 0, errs.B().Code(errs.InvalidArgument).Msg("invalid dzo_id").Err()
 		}
-	}
 
+		q = q.Where(employee.DzoIDEQ(uid))
+	}
 	if clientID != "" {
 		uid, err := uuid.Parse(clientID)
 		if err == nil {
-			q = q.Where(employee.ClientIDEQ(uid))
-		}
-	}
-
-	rows, err := q.Order(ent.Asc(employee.FieldFullName)).All(ctx)
-	if err != nil {
-		return nil, errs.B().Code(errs.Internal).Msg("failed to list employees").Cause(err).Err()
-	}
-
-	emps := make([]Employee, 0, len(rows))
-	for _, row := range rows {
-		emps = append(emps, *entToEmployee(row))
-	}
-
-	return emps, nil
-}
-
-// queryActiveEmployeesPaginated returns a bounded page of employees plus the
-// total matching count. Used by GET /employees for lazy-load scroll.
-func queryActiveEmployeesPaginated(ctx context.Context, search, dzoID, clientID string, limit, offset int) ([]Employee, int, error) {
-	q := Client.Employee.
-		Query().
-		Where(employee.IsDeletedEQ(false))
-
-	if search != "" {
-		q = q.Where(employee.Or(
-			employee.FullNameContainsFold(search),
-			employee.EmailContainsFold(search),
-			employee.DepartmentContainsFold(search),
-		))
-	}
-
-	if dzoID != "" {
-		if uid, err := uuid.Parse(dzoID); err == nil {
-			q = q.Where(employee.DzoIDEQ(uid))
-		}
-	}
-
-	if clientID != "" {
-		if uid, err := uuid.Parse(clientID); err == nil {
 			q = q.Where(employee.ClientIDEQ(uid))
 		}
 	}
@@ -646,8 +817,9 @@ func queryActiveEmployeesPaginated(ctx context.Context, search, dzoID, clientID 
 		return nil, 0, errs.B().Code(errs.Internal).Msg("failed to count employees").Cause(err).Err()
 	}
 
-	rows, err := q.Clone().
-		WithDzo().
+	offset := (page - 1) * limit
+
+	rows, err := q.
 		Order(ent.Asc(employee.FieldFullName)).
 		Limit(limit).
 		Offset(offset).
@@ -662,25 +834,6 @@ func queryActiveEmployeesPaginated(ctx context.Context, search, dzoID, clientID 
 	}
 
 	return emps, total, nil
-}
-
-// normalizePagination applies defaults and caps for list pagination.
-// Default page size is 20; hard cap is 50 to avoid heavy responses.
-func normalizePagination(limit, offset int) (int, int) {
-	const (
-		defaultLimit = 20
-		maxLimit     = 50
-	)
-	if limit <= 0 {
-		limit = defaultLimit
-	}
-	if limit > maxLimit {
-		limit = maxLimit
-	}
-	if offset < 0 {
-		offset = 0
-	}
-	return limit, offset
 }
 
 func queryEmployeeByID(ctx context.Context, id string) (*Employee, error) {
@@ -709,22 +862,36 @@ func patchEmployee(ctx context.Context, id string, req *UpdateEmployeeRequest) (
 	if err != nil {
 		return nil, errs.B().Code(errs.InvalidArgument).Msg("invalid id format").Err()
 	}
+	tx, err := Client.Tx(ctx)
+	if err != nil {
+		return nil, errs.B().Code(errs.Internal).Cause(err).Err()
+	}
 
-	builder := Client.Employee.UpdateOneID(uid)
+	defer func() {
+		if err != nil {
+			_ = tx.Rollback()
+		}
+	}()
+
+	builder := tx.Employee.UpdateOneID(uid)
 
 	if req.FullName != nil {
 		builder = builder.SetFullName(*req.FullName)
 	}
+	newEmail := ""
 	if req.Email != nil {
-		trimmedEmail := strings.TrimSpace(*req.Email)
+		newEmail = strings.TrimSpace(*req.Email)
 		empUID := uid
-		if err := checkEmailUnique(ctx, trimmedEmail, &empUID); err != nil {
+		if err = checkEmailUnique(ctx, newEmail, &empUID); err != nil {
 			return nil, err
 		}
-		builder = builder.SetEmail(trimmedEmail)
+		builder = builder.SetEmail(newEmail)
 	}
 	if req.DzoID != nil {
-		dzoUID, _ := uuid.Parse(*req.DzoID)
+		dzoUID, parseErr := uuid.Parse(*req.DzoID)
+		if parseErr != nil {
+			return nil, errs.B().Code(errs.InvalidArgument).Msg("invalid dzo_id format").Err()
+		}
 		builder = builder.SetDzoID(dzoUID)
 	}
 	if req.Position != nil {
@@ -752,20 +919,136 @@ func patchEmployee(ctx context.Context, id string, req *UpdateEmployeeRequest) (
 	if req.IsActive != nil {
 		builder = builder.SetIsActive(*req.IsActive)
 	}
-	if req.UserID != nil {
-		uid2, err := uuid.Parse(*req.UserID)
-		if err != nil {
-			return nil, errs.B().Code(errs.InvalidArgument).Msg("invalid user_id format").Err()
+	var pastRole string
+	var kcUserID string
+	roleChanged := false
+	emp, err := tx.Employee.Get(ctx, uid)
+	if err != nil {
+		return nil, errs.B().Code(errs.Internal).Msg("failed to get employee").Err()
+	}
+	if emp.UserID == nil {
+		return nil, errs.B().Code(errs.NotFound).Msg("employee doesn't have connected u").Err()
+	}
+	u, err := tx.User.Get(ctx, *emp.UserID)
+	if err != nil {
+		return nil, errs.B().Code(errs.Internal).Msg("failed to get u").Cause(err).Err()
+	}
+	kcUserID = u.KeycloakUserID
+	if req.Role != nil {
+		pastRole = u.Role
+		if pastRole != string(*req.Role) {
+			err = kcAdmin.replaceBusinessRealmRoleForUser(ctx, u.KeycloakUserID, string(*req.Role))
+			if err != nil {
+				return nil, errs.B().Code(errs.Internal).Msg("failed to update u role").Cause(err).Err()
+			}
+			roleChanged = true
+			_, err = tx.User.UpdateOneID(*emp.UserID).SetRole(string(*req.Role)).Save(ctx)
+			if err != nil {
+				_ = kcAdmin.replaceBusinessRealmRoleForUser(ctx, u.KeycloakUserID, pastRole)
+				return nil, errs.B().Code(errs.Internal).Msg("failed to update u").Cause(err).Err()
+			}
 		}
-		builder = builder.SetUserID(uid2)
+	}
+	var profileChanged bool
+	pastEmail := u.Email
+	pastFullName := emp.FullName
+	pastDzoID := emp.DzoID.String()
+	pastIsActive := emp.IsActive
+	rollbackProfile := func() {
+		if !profileChanged || kcUserID == "" {
+			return
+		}
+
+		email := pastEmail
+		fullName := pastFullName
+		dzoID := pastDzoID
+		isActive := pastIsActive
+
+		_ = kcAdmin.updateUserProfile(
+			ctx,
+			kcUserID,
+			&email, &dzoID, &fullName, &isActive,
+		)
+	}
+	profileNeedsSync := false
+	if req.Email != nil && newEmail != pastEmail {
+		profileNeedsSync = true
+	}
+	if req.DzoID != nil && *req.DzoID != pastDzoID {
+		profileNeedsSync = true
+	}
+	if req.FullName != nil && *req.FullName != pastFullName {
+		profileNeedsSync = true
+	}
+	if req.IsActive != nil && *req.IsActive != pastIsActive {
+		profileNeedsSync = true
 	}
 
+	if profileNeedsSync {
+		err = kcAdmin.updateUserProfile(ctx, kcUserID, req.Email, req.DzoID, req.FullName, req.IsActive)
+		if err != nil {
+			return nil, errs.B().Code(errs.Internal).Msg("failed to update u").Cause(err).Err()
+		}
+		profileChanged = true
+	}
+	userBuilder := tx.User.UpdateOneID(*emp.UserID)
+
+	userNeedsSave := false
+
+	if req.Email != nil {
+		userBuilder = userBuilder.SetEmail(strings.TrimSpace(*req.Email))
+		userNeedsSave = true
+	}
+	if req.DzoID != nil {
+		dzoUID, _ := uuid.Parse(*req.DzoID)
+		userBuilder = userBuilder.SetDzoID(dzoUID)
+		userNeedsSave = true
+	}
+	if req.IsActive != nil && *req.IsActive != pastIsActive {
+		userBuilder = userBuilder.SetIsActive(*req.IsActive)
+		userNeedsSave = true
+	}
+
+	if userNeedsSave {
+		_, err = userBuilder.Save(ctx)
+		if err != nil {
+			if roleChanged {
+				_ = kcAdmin.replaceBusinessRealmRoleForUser(ctx, kcUserID, pastRole)
+			}
+			if profileChanged {
+				rollbackProfile()
+			}
+			return nil, errs.B().Code(errs.Internal).Msg("failed to update u").Cause(err).Err()
+		}
+	}
 	row, err := builder.Save(ctx)
 	if err != nil {
 		if ent.IsNotFound(err) {
+			if roleChanged {
+				_ = kcAdmin.replaceBusinessRealmRoleForUser(ctx, kcUserID, pastRole)
+			}
+			if profileChanged {
+				rollbackProfile()
+			}
 			return nil, errs.B().Code(errs.NotFound).Msg("employee not found").Err()
 		}
+		if roleChanged {
+			_ = kcAdmin.replaceBusinessRealmRoleForUser(ctx, kcUserID, pastRole)
+		}
+		if profileChanged {
+			rollbackProfile()
+		}
 		return nil, errs.B().Code(errs.Internal).Msg("failed to update employee").Cause(err).Err()
+	}
+	err = tx.Commit()
+	if err != nil {
+		if roleChanged {
+			_ = kcAdmin.replaceBusinessRealmRoleForUser(ctx, kcUserID, pastRole)
+		}
+		if profileChanged {
+			rollbackProfile()
+		}
+		return nil, errs.B().Code(errs.Internal).Msg("failed to commit transaction").Cause(err).Err()
 	}
 
 	return entToEmployee(row), nil
@@ -777,21 +1060,51 @@ func softDeleteEmployee(ctx context.Context, id string) error {
 		return errs.B().Code(errs.InvalidArgument).Msg("invalid id format").Err()
 	}
 
-	exists, err := Client.Employee.
+	tx, err := Client.Tx(ctx)
+	if err != nil {
+		return errs.B().Code(errs.Internal).Msg("failed to delete employee").Cause(err).Err()
+	}
+
+	defer func() {
+		if err != nil {
+			_ = tx.Rollback()
+		}
+	}()
+
+	emp, err := tx.Employee.
 		Query().
 		Where(
 			employee.IDEQ(uid),
 			employee.IsDeletedEQ(false),
 		).
-		Exist(ctx)
+		Only(ctx)
 	if err != nil {
+		if ent.IsNotFound(err) {
+			return errs.B().Code(errs.NotFound).Msg("employee not found").Err()
+		}
 		return errs.B().Code(errs.Internal).Msg("failed to delete employee").Cause(err).Err()
 	}
-	if !exists {
-		return errs.B().Code(errs.NotFound).Msg("employee not found").Err()
+
+	var kcUserID string
+	if emp.UserID != nil {
+		userRow, err := tx.User.Get(ctx, *emp.UserID)
+		if err != nil {
+			return errs.B().Code(errs.Internal).Msg("failed to get user").Cause(err).Err()
+		}
+		if userRow.KeycloakUserID == "" {
+			return errs.B().Code(errs.Internal).Msg("user has no keycloak id").Err()
+		}
+		kcUserID = userRow.KeycloakUserID
+		err = tx.User.
+			UpdateOneID(userRow.ID).
+			SetIsActive(false).
+			Exec(ctx)
+		if err != nil {
+			return errs.B().Code(errs.Internal).Msg("failed to delete user").Cause(err).Err()
+		}
 	}
 
-	err = Client.Employee.
+	err = tx.Employee.
 		UpdateOneID(uid).
 		SetIsDeleted(true).
 		Exec(ctx)
@@ -799,21 +1112,63 @@ func softDeleteEmployee(ctx context.Context, id string) error {
 		return errs.B().Code(errs.Internal).Msg("failed to delete employee").Cause(err).Err()
 	}
 
+	err = tx.Commit()
+	if err != nil {
+		return errs.B().Code(errs.Internal).Msg("failed to commit transaction").Cause(err).Err()
+	}
+	deleteKeycloakUser(ctx, kcUserID)
+
 	return nil
 }
 
 func validateEmail(email string) error {
 	email = strings.TrimSpace(email)
+
 	if email == "" {
 		return errs.B().Code(errs.InvalidArgument).Msg("email is required").Err()
 	}
-	if strings.Count(email, "@") != 1 {
+
+	if len(email) > 254 {
+		return errs.B().Code(errs.InvalidArgument).Msg("email is too long").Err()
+	}
+
+	addr, err := mail.ParseAddress(email)
+	if err != nil || addr.Address != email {
 		return errs.B().Code(errs.InvalidArgument).Msg("invalid email format").Err()
 	}
+
 	parts := strings.Split(email, "@")
-	if len(parts[0]) == 0 || len(parts[1]) == 0 || !strings.Contains(parts[1], ".") {
+	if len(parts) != 2 {
 		return errs.B().Code(errs.InvalidArgument).Msg("invalid email format").Err()
 	}
+
+	localPart := parts[0]
+	domain := parts[1]
+
+	if localPart == "" || domain == "" {
+		return errs.B().Code(errs.InvalidArgument).Msg("invalid email format").Err()
+	}
+
+	if len(localPart) > 64 {
+		return errs.B().Code(errs.InvalidArgument).Msg("email local part is too long").Err()
+	}
+
+	if strings.HasPrefix(localPart, ".") ||
+		strings.HasSuffix(localPart, ".") ||
+		strings.Contains(localPart, "..") {
+		return errs.B().Code(errs.InvalidArgument).Msg("invalid email format").Err()
+	}
+
+	if strings.HasPrefix(domain, ".") ||
+		strings.HasSuffix(domain, ".") ||
+		strings.Contains(domain, "..") {
+		return errs.B().Code(errs.InvalidArgument).Msg("invalid email format").Err()
+	}
+
+	if !strings.Contains(domain, ".") {
+		return errs.B().Code(errs.InvalidArgument).Msg("invalid email format").Err()
+	}
+
 	return nil
 }
 
@@ -1023,14 +1378,9 @@ func applyUploadBusinessRules(ctx context.Context, parsedRows []parsedEmployeeRo
 		invalidRows[rowNumber] = struct{}{}
 	}
 
-	employees, err := queryActiveEmployees(ctx, "", "", "")
+	existingEmails, err := getExistingEmployeeEmails(ctx)
 	if err != nil {
 		return nil, nil, nil, err
-	}
-
-	existingEmails := make(map[string]bool)
-	for _, e := range employees {
-		existingEmails[e.Email] = true
 	}
 
 	// Duplicate emails in one uploaded file are invalid for all duplicate rows.
@@ -1049,9 +1399,11 @@ func applyUploadBusinessRules(ctx context.Context, parsedRows []parsedEmployeeRo
 			}
 			continue
 		}
+
 		if len(rowNumbers) < 2 {
 			continue
 		}
+
 		for _, rowNumber := range rowNumbers {
 			appendRowError(rowNumber, fmt.Sprintf("row %d: duplicate email in file", rowNumber))
 		}
@@ -1080,6 +1432,31 @@ func applyUploadBusinessRules(ctx context.Context, parsedRows []parsedEmployeeRo
 	}
 
 	return filteredRows, previewRows, validationErrors, nil
+}
+
+func getExistingEmployeeEmails(ctx context.Context) (map[string]bool, error) {
+	rows, err := Client.Employee.
+		Query().
+		Where(employee.IsDeletedEQ(false)).
+		Select(employee.FieldEmail).
+		All(ctx)
+	if err != nil {
+		return nil, errs.B().
+			Code(errs.Internal).
+			Msg("failed to load existing employee emails").
+			Cause(err).
+			Err()
+	}
+
+	emails := make(map[string]bool, len(rows))
+	for _, row := range rows {
+		email := strings.ToLower(strings.TrimSpace(row.Email))
+		if email != "" {
+			emails[email] = true
+		}
+	}
+
+	return emails, nil
 }
 
 func buildEmployeeHeaderIndex(headerRow []string) (map[string]int, error) {
@@ -1236,6 +1613,24 @@ func strPtr(v string) *string {
 		return nil
 	}
 	return &v
+}
+func queryUserByID(ctx context.Context, id string) (*ent.User, error) {
+	uid, err := uuid.Parse(id)
+	if err != nil {
+		return nil, errs.B().Code(errs.InvalidArgument).Msg("invalid id format").Err()
+	}
+
+	row, err := Client.User.
+		Query().
+		Where(user.IDEQ(uid)).
+		Only(ctx)
+	if err != nil {
+		if ent.IsNotFound(err) {
+			return nil, errs.B().Code(errs.NotFound).Msg("user not found").Err()
+		}
+		return nil, errs.B().Code(errs.Internal).Msg("failed to get user").Cause(err).Err()
+	}
+	return row, nil
 }
 
 // ════ HELPERS ════
