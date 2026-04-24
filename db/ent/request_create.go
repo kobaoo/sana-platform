@@ -28,6 +28,20 @@ func (_c *RequestCreate) SetInitiatorID(v uuid.UUID) *RequestCreate {
 	return _c
 }
 
+// SetParentRequestID sets the "parent_request_id" field.
+func (_c *RequestCreate) SetParentRequestID(v uuid.UUID) *RequestCreate {
+	_c.mutation.SetParentRequestID(v)
+	return _c
+}
+
+// SetNillableParentRequestID sets the "parent_request_id" field if the given value is not nil.
+func (_c *RequestCreate) SetNillableParentRequestID(v *uuid.UUID) *RequestCreate {
+	if v != nil {
+		_c.SetParentRequestID(*v)
+	}
+	return _c
+}
+
 // SetEntityID sets the "entity_id" field.
 func (_c *RequestCreate) SetEntityID(v uuid.UUID) *RequestCreate {
 	_c.mutation.SetEntityID(v)
@@ -37,6 +51,160 @@ func (_c *RequestCreate) SetEntityID(v uuid.UUID) *RequestCreate {
 // SetEntityType sets the "entity_type" field.
 func (_c *RequestCreate) SetEntityType(v string) *RequestCreate {
 	_c.mutation.SetEntityType(v)
+	return _c
+}
+
+// SetNillableEntityType sets the "entity_type" field if the given value is not nil.
+func (_c *RequestCreate) SetNillableEntityType(v *string) *RequestCreate {
+	if v != nil {
+		_c.SetEntityType(*v)
+	}
+	return _c
+}
+
+// SetRequestType sets the "request_type" field.
+func (_c *RequestCreate) SetRequestType(v string) *RequestCreate {
+	_c.mutation.SetRequestType(v)
+	return _c
+}
+
+// SetNillableRequestType sets the "request_type" field if the given value is not nil.
+func (_c *RequestCreate) SetNillableRequestType(v *string) *RequestCreate {
+	if v != nil {
+		_c.SetRequestType(*v)
+	}
+	return _c
+}
+
+// SetAssignedHrID sets the "assigned_hr_id" field.
+func (_c *RequestCreate) SetAssignedHrID(v uuid.UUID) *RequestCreate {
+	_c.mutation.SetAssignedHrID(v)
+	return _c
+}
+
+// SetNillableAssignedHrID sets the "assigned_hr_id" field if the given value is not nil.
+func (_c *RequestCreate) SetNillableAssignedHrID(v *uuid.UUID) *RequestCreate {
+	if v != nil {
+		_c.SetAssignedHrID(*v)
+	}
+	return _c
+}
+
+// SetTargetDzoID sets the "target_dzo_id" field.
+func (_c *RequestCreate) SetTargetDzoID(v uuid.UUID) *RequestCreate {
+	_c.mutation.SetTargetDzoID(v)
+	return _c
+}
+
+// SetNillableTargetDzoID sets the "target_dzo_id" field if the given value is not nil.
+func (_c *RequestCreate) SetNillableTargetDzoID(v *uuid.UUID) *RequestCreate {
+	if v != nil {
+		_c.SetTargetDzoID(*v)
+	}
+	return _c
+}
+
+// SetTitle sets the "title" field.
+func (_c *RequestCreate) SetTitle(v string) *RequestCreate {
+	_c.mutation.SetTitle(v)
+	return _c
+}
+
+// SetCategory sets the "category" field.
+func (_c *RequestCreate) SetCategory(v string) *RequestCreate {
+	_c.mutation.SetCategory(v)
+	return _c
+}
+
+// SetNillableCategory sets the "category" field if the given value is not nil.
+func (_c *RequestCreate) SetNillableCategory(v *string) *RequestCreate {
+	if v != nil {
+		_c.SetCategory(*v)
+	}
+	return _c
+}
+
+// SetFormat sets the "format" field.
+func (_c *RequestCreate) SetFormat(v string) *RequestCreate {
+	_c.mutation.SetFormat(v)
+	return _c
+}
+
+// SetNillableFormat sets the "format" field if the given value is not nil.
+func (_c *RequestCreate) SetNillableFormat(v *string) *RequestCreate {
+	if v != nil {
+		_c.SetFormat(*v)
+	}
+	return _c
+}
+
+// SetResponsibleAdminID sets the "responsible_admin_id" field.
+func (_c *RequestCreate) SetResponsibleAdminID(v uuid.UUID) *RequestCreate {
+	_c.mutation.SetResponsibleAdminID(v)
+	return _c
+}
+
+// SetNillableResponsibleAdminID sets the "responsible_admin_id" field if the given value is not nil.
+func (_c *RequestCreate) SetNillableResponsibleAdminID(v *uuid.UUID) *RequestCreate {
+	if v != nil {
+		_c.SetResponsibleAdminID(*v)
+	}
+	return _c
+}
+
+// SetTrainingDate sets the "training_date" field.
+func (_c *RequestCreate) SetTrainingDate(v time.Time) *RequestCreate {
+	_c.mutation.SetTrainingDate(v)
+	return _c
+}
+
+// SetNillableTrainingDate sets the "training_date" field if the given value is not nil.
+func (_c *RequestCreate) SetNillableTrainingDate(v *time.Time) *RequestCreate {
+	if v != nil {
+		_c.SetTrainingDate(*v)
+	}
+	return _c
+}
+
+// SetDeadlineAt sets the "deadline_at" field.
+func (_c *RequestCreate) SetDeadlineAt(v time.Time) *RequestCreate {
+	_c.mutation.SetDeadlineAt(v)
+	return _c
+}
+
+// SetNillableDeadlineAt sets the "deadline_at" field if the given value is not nil.
+func (_c *RequestCreate) SetNillableDeadlineAt(v *time.Time) *RequestCreate {
+	if v != nil {
+		_c.SetDeadlineAt(*v)
+	}
+	return _c
+}
+
+// SetCostAmount sets the "cost_amount" field.
+func (_c *RequestCreate) SetCostAmount(v float64) *RequestCreate {
+	_c.mutation.SetCostAmount(v)
+	return _c
+}
+
+// SetNillableCostAmount sets the "cost_amount" field if the given value is not nil.
+func (_c *RequestCreate) SetNillableCostAmount(v *float64) *RequestCreate {
+	if v != nil {
+		_c.SetCostAmount(*v)
+	}
+	return _c
+}
+
+// SetCostMode sets the "cost_mode" field.
+func (_c *RequestCreate) SetCostMode(v string) *RequestCreate {
+	_c.mutation.SetCostMode(v)
+	return _c
+}
+
+// SetNillableCostMode sets the "cost_mode" field if the given value is not nil.
+func (_c *RequestCreate) SetNillableCostMode(v *string) *RequestCreate {
+	if v != nil {
+		_c.SetCostMode(*v)
+	}
 	return _c
 }
 
@@ -64,6 +232,20 @@ func (_c *RequestCreate) SetCreatedAt(v time.Time) *RequestCreate {
 func (_c *RequestCreate) SetNillableCreatedAt(v *time.Time) *RequestCreate {
 	if v != nil {
 		_c.SetCreatedAt(*v)
+	}
+	return _c
+}
+
+// SetUpdatedAt sets the "updated_at" field.
+func (_c *RequestCreate) SetUpdatedAt(v time.Time) *RequestCreate {
+	_c.mutation.SetUpdatedAt(v)
+	return _c
+}
+
+// SetNillableUpdatedAt sets the "updated_at" field if the given value is not nil.
+func (_c *RequestCreate) SetNillableUpdatedAt(v *time.Time) *RequestCreate {
+	if v != nil {
+		_c.SetUpdatedAt(*v)
 	}
 	return _c
 }
@@ -101,6 +283,40 @@ func (_c *RequestCreate) SetInitiator(v *User) *RequestCreate {
 	return _c.SetInitiatorID(v.ID)
 }
 
+// SetParentID sets the "parent" edge to the Request entity by ID.
+func (_c *RequestCreate) SetParentID(id uuid.UUID) *RequestCreate {
+	_c.mutation.SetParentID(id)
+	return _c
+}
+
+// SetNillableParentID sets the "parent" edge to the Request entity by ID if the given value is not nil.
+func (_c *RequestCreate) SetNillableParentID(id *uuid.UUID) *RequestCreate {
+	if id != nil {
+		_c = _c.SetParentID(*id)
+	}
+	return _c
+}
+
+// SetParent sets the "parent" edge to the Request entity.
+func (_c *RequestCreate) SetParent(v *Request) *RequestCreate {
+	return _c.SetParentID(v.ID)
+}
+
+// AddChildIDs adds the "children" edge to the Request entity by IDs.
+func (_c *RequestCreate) AddChildIDs(ids ...uuid.UUID) *RequestCreate {
+	_c.mutation.AddChildIDs(ids...)
+	return _c
+}
+
+// AddChildren adds the "children" edges to the Request entity.
+func (_c *RequestCreate) AddChildren(v ...*Request) *RequestCreate {
+	ids := make([]uuid.UUID, len(v))
+	for i := range v {
+		ids[i] = v[i].ID
+	}
+	return _c.AddChildIDs(ids...)
+}
+
 // Mutation returns the RequestMutation object of the builder.
 func (_c *RequestCreate) Mutation() *RequestMutation {
 	return _c.mutation
@@ -136,6 +352,14 @@ func (_c *RequestCreate) ExecX(ctx context.Context) {
 
 // defaults sets the default values of the builder before save.
 func (_c *RequestCreate) defaults() {
+	if _, ok := _c.mutation.EntityType(); !ok {
+		v := request.DefaultEntityType
+		_c.mutation.SetEntityType(v)
+	}
+	if _, ok := _c.mutation.RequestType(); !ok {
+		v := request.DefaultRequestType
+		_c.mutation.SetRequestType(v)
+	}
 	if _, ok := _c.mutation.Step(); !ok {
 		v := request.DefaultStep
 		_c.mutation.SetStep(v)
@@ -143,6 +367,10 @@ func (_c *RequestCreate) defaults() {
 	if _, ok := _c.mutation.CreatedAt(); !ok {
 		v := request.DefaultCreatedAt()
 		_c.mutation.SetCreatedAt(v)
+	}
+	if _, ok := _c.mutation.UpdatedAt(); !ok {
+		v := request.DefaultUpdatedAt()
+		_c.mutation.SetUpdatedAt(v)
 	}
 	if _, ok := _c.mutation.Status(); !ok {
 		v := request.DefaultStatus
@@ -170,11 +398,45 @@ func (_c *RequestCreate) check() error {
 			return &ValidationError{Name: "entity_type", err: fmt.Errorf(`ent: validator failed for field "Request.entity_type": %w`, err)}
 		}
 	}
+	if _, ok := _c.mutation.RequestType(); !ok {
+		return &ValidationError{Name: "request_type", err: errors.New(`ent: missing required field "Request.request_type"`)}
+	}
+	if v, ok := _c.mutation.RequestType(); ok {
+		if err := request.RequestTypeValidator(v); err != nil {
+			return &ValidationError{Name: "request_type", err: fmt.Errorf(`ent: validator failed for field "Request.request_type": %w`, err)}
+		}
+	}
+	if _, ok := _c.mutation.Title(); !ok {
+		return &ValidationError{Name: "title", err: errors.New(`ent: missing required field "Request.title"`)}
+	}
+	if v, ok := _c.mutation.Title(); ok {
+		if err := request.TitleValidator(v); err != nil {
+			return &ValidationError{Name: "title", err: fmt.Errorf(`ent: validator failed for field "Request.title": %w`, err)}
+		}
+	}
+	if v, ok := _c.mutation.Category(); ok {
+		if err := request.CategoryValidator(v); err != nil {
+			return &ValidationError{Name: "category", err: fmt.Errorf(`ent: validator failed for field "Request.category": %w`, err)}
+		}
+	}
+	if v, ok := _c.mutation.Format(); ok {
+		if err := request.FormatValidator(v); err != nil {
+			return &ValidationError{Name: "format", err: fmt.Errorf(`ent: validator failed for field "Request.format": %w`, err)}
+		}
+	}
+	if v, ok := _c.mutation.CostMode(); ok {
+		if err := request.CostModeValidator(v); err != nil {
+			return &ValidationError{Name: "cost_mode", err: fmt.Errorf(`ent: validator failed for field "Request.cost_mode": %w`, err)}
+		}
+	}
 	if _, ok := _c.mutation.Step(); !ok {
 		return &ValidationError{Name: "step", err: errors.New(`ent: missing required field "Request.step"`)}
 	}
 	if _, ok := _c.mutation.CreatedAt(); !ok {
 		return &ValidationError{Name: "created_at", err: errors.New(`ent: missing required field "Request.created_at"`)}
+	}
+	if _, ok := _c.mutation.UpdatedAt(); !ok {
+		return &ValidationError{Name: "updated_at", err: errors.New(`ent: missing required field "Request.updated_at"`)}
 	}
 	if _, ok := _c.mutation.Status(); !ok {
 		return &ValidationError{Name: "status", err: errors.New(`ent: missing required field "Request.status"`)}
@@ -230,6 +492,50 @@ func (_c *RequestCreate) createSpec() (*Request, *sqlgraph.CreateSpec) {
 		_spec.SetField(request.FieldEntityType, field.TypeString, value)
 		_node.EntityType = value
 	}
+	if value, ok := _c.mutation.RequestType(); ok {
+		_spec.SetField(request.FieldRequestType, field.TypeString, value)
+		_node.RequestType = value
+	}
+	if value, ok := _c.mutation.AssignedHrID(); ok {
+		_spec.SetField(request.FieldAssignedHrID, field.TypeUUID, value)
+		_node.AssignedHrID = &value
+	}
+	if value, ok := _c.mutation.TargetDzoID(); ok {
+		_spec.SetField(request.FieldTargetDzoID, field.TypeUUID, value)
+		_node.TargetDzoID = &value
+	}
+	if value, ok := _c.mutation.Title(); ok {
+		_spec.SetField(request.FieldTitle, field.TypeString, value)
+		_node.Title = value
+	}
+	if value, ok := _c.mutation.Category(); ok {
+		_spec.SetField(request.FieldCategory, field.TypeString, value)
+		_node.Category = &value
+	}
+	if value, ok := _c.mutation.Format(); ok {
+		_spec.SetField(request.FieldFormat, field.TypeString, value)
+		_node.Format = &value
+	}
+	if value, ok := _c.mutation.ResponsibleAdminID(); ok {
+		_spec.SetField(request.FieldResponsibleAdminID, field.TypeUUID, value)
+		_node.ResponsibleAdminID = &value
+	}
+	if value, ok := _c.mutation.TrainingDate(); ok {
+		_spec.SetField(request.FieldTrainingDate, field.TypeTime, value)
+		_node.TrainingDate = &value
+	}
+	if value, ok := _c.mutation.DeadlineAt(); ok {
+		_spec.SetField(request.FieldDeadlineAt, field.TypeTime, value)
+		_node.DeadlineAt = &value
+	}
+	if value, ok := _c.mutation.CostAmount(); ok {
+		_spec.SetField(request.FieldCostAmount, field.TypeFloat64, value)
+		_node.CostAmount = &value
+	}
+	if value, ok := _c.mutation.CostMode(); ok {
+		_spec.SetField(request.FieldCostMode, field.TypeString, value)
+		_node.CostMode = &value
+	}
 	if value, ok := _c.mutation.Step(); ok {
 		_spec.SetField(request.FieldStep, field.TypeInt, value)
 		_node.Step = value
@@ -237,6 +543,10 @@ func (_c *RequestCreate) createSpec() (*Request, *sqlgraph.CreateSpec) {
 	if value, ok := _c.mutation.CreatedAt(); ok {
 		_spec.SetField(request.FieldCreatedAt, field.TypeTime, value)
 		_node.CreatedAt = value
+	}
+	if value, ok := _c.mutation.UpdatedAt(); ok {
+		_spec.SetField(request.FieldUpdatedAt, field.TypeTime, value)
+		_node.UpdatedAt = value
 	}
 	if value, ok := _c.mutation.Status(); ok {
 		_spec.SetField(request.FieldStatus, field.TypeString, value)
@@ -257,6 +567,39 @@ func (_c *RequestCreate) createSpec() (*Request, *sqlgraph.CreateSpec) {
 			edge.Target.Nodes = append(edge.Target.Nodes, k)
 		}
 		_node.InitiatorID = nodes[0]
+		_spec.Edges = append(_spec.Edges, edge)
+	}
+	if nodes := _c.mutation.ParentIDs(); len(nodes) > 0 {
+		edge := &sqlgraph.EdgeSpec{
+			Rel:     sqlgraph.M2O,
+			Inverse: true,
+			Table:   request.ParentTable,
+			Columns: []string{request.ParentColumn},
+			Bidi:    false,
+			Target: &sqlgraph.EdgeTarget{
+				IDSpec: sqlgraph.NewFieldSpec(request.FieldID, field.TypeUUID),
+			},
+		}
+		for _, k := range nodes {
+			edge.Target.Nodes = append(edge.Target.Nodes, k)
+		}
+		_node.ParentRequestID = &nodes[0]
+		_spec.Edges = append(_spec.Edges, edge)
+	}
+	if nodes := _c.mutation.ChildrenIDs(); len(nodes) > 0 {
+		edge := &sqlgraph.EdgeSpec{
+			Rel:     sqlgraph.O2M,
+			Inverse: false,
+			Table:   request.ChildrenTable,
+			Columns: []string{request.ChildrenColumn},
+			Bidi:    false,
+			Target: &sqlgraph.EdgeTarget{
+				IDSpec: sqlgraph.NewFieldSpec(request.FieldID, field.TypeUUID),
+			},
+		}
+		for _, k := range nodes {
+			edge.Target.Nodes = append(edge.Target.Nodes, k)
+		}
 		_spec.Edges = append(_spec.Edges, edge)
 	}
 	return _node, _spec

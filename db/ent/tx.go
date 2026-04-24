@@ -22,6 +22,10 @@ type Tx struct {
 	Organization *OrganizationClient
 	// Request is the client for interacting with the Request builders.
 	Request *RequestClient
+	// RequestParticipant is the client for interacting with the RequestParticipant builders.
+	RequestParticipant *RequestParticipantClient
+	// RequestTargetDzo is the client for interacting with the RequestTargetDzo builders.
+	RequestTargetDzo *RequestTargetDzoClient
 	// TrainingEvent is the client for interacting with the TrainingEvent builders.
 	TrainingEvent *TrainingEventClient
 	// TrainingParticipant is the client for interacting with the TrainingParticipant builders.
@@ -164,6 +168,8 @@ func (tx *Tx) init() {
 	tx.Employee = NewEmployeeClient(tx.config)
 	tx.Organization = NewOrganizationClient(tx.config)
 	tx.Request = NewRequestClient(tx.config)
+	tx.RequestParticipant = NewRequestParticipantClient(tx.config)
+	tx.RequestTargetDzo = NewRequestTargetDzoClient(tx.config)
 	tx.TrainingEvent = NewTrainingEventClient(tx.config)
 	tx.TrainingParticipant = NewTrainingParticipantClient(tx.config)
 	tx.User = NewUserClient(tx.config)
