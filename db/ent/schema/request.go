@@ -35,6 +35,10 @@ func (Request) Fields() []ent.Field {
 			MaxLen(30).
 			NotEmpty().
 			Default("MAIN"),
+		field.String("kind").
+			MaxLen(30).
+			NotEmpty().
+			Default("REGULAR"),
 		field.UUID("assigned_hr_id", uuid.UUID{}).
 			Optional().
 			Nillable(),
@@ -88,6 +92,12 @@ func (Request) Fields() []ent.Field {
 			SchemaType(map[string]string{
 				dialect.Postgres: "timestamptz",
 			}),
+		field.Time("completed_at").
+			Optional().
+			Nillable().
+			SchemaType(map[string]string{
+				dialect.Postgres: "timestamptz",
+			}),
 		field.String("status").
 			MaxLen(50).
 			NotEmpty().
@@ -119,6 +129,7 @@ func (Request) Indexes() []ent.Index {
 		index.Fields("step"),
 		index.Fields("parent_request_id"),
 		index.Fields("request_type"),
+		index.Fields("kind"),
 		index.Fields("assigned_hr_id"),
 		index.Fields("target_dzo_id"),
 	}

@@ -106,6 +106,20 @@ func (_u *RequestUpdate) SetNillableRequestType(v *string) *RequestUpdate {
 	return _u
 }
 
+// SetKind sets the "kind" field.
+func (_u *RequestUpdate) SetKind(v string) *RequestUpdate {
+	_u.mutation.SetKind(v)
+	return _u
+}
+
+// SetNillableKind sets the "kind" field if the given value is not nil.
+func (_u *RequestUpdate) SetNillableKind(v *string) *RequestUpdate {
+	if v != nil {
+		_u.SetKind(*v)
+	}
+	return _u
+}
+
 // SetAssignedHrID sets the "assigned_hr_id" field.
 func (_u *RequestUpdate) SetAssignedHrID(v uuid.UUID) *RequestUpdate {
 	_u.mutation.SetAssignedHrID(v)
@@ -334,6 +348,26 @@ func (_u *RequestUpdate) SetUpdatedAt(v time.Time) *RequestUpdate {
 	return _u
 }
 
+// SetCompletedAt sets the "completed_at" field.
+func (_u *RequestUpdate) SetCompletedAt(v time.Time) *RequestUpdate {
+	_u.mutation.SetCompletedAt(v)
+	return _u
+}
+
+// SetNillableCompletedAt sets the "completed_at" field if the given value is not nil.
+func (_u *RequestUpdate) SetNillableCompletedAt(v *time.Time) *RequestUpdate {
+	if v != nil {
+		_u.SetCompletedAt(*v)
+	}
+	return _u
+}
+
+// ClearCompletedAt clears the value of the "completed_at" field.
+func (_u *RequestUpdate) ClearCompletedAt() *RequestUpdate {
+	_u.mutation.ClearCompletedAt()
+	return _u
+}
+
 // SetStatus sets the "status" field.
 func (_u *RequestUpdate) SetStatus(v string) *RequestUpdate {
 	_u.mutation.SetStatus(v)
@@ -473,6 +507,11 @@ func (_u *RequestUpdate) check() error {
 			return &ValidationError{Name: "request_type", err: fmt.Errorf(`ent: validator failed for field "Request.request_type": %w`, err)}
 		}
 	}
+	if v, ok := _u.mutation.Kind(); ok {
+		if err := request.KindValidator(v); err != nil {
+			return &ValidationError{Name: "kind", err: fmt.Errorf(`ent: validator failed for field "Request.kind": %w`, err)}
+		}
+	}
 	if v, ok := _u.mutation.Title(); ok {
 		if err := request.TitleValidator(v); err != nil {
 			return &ValidationError{Name: "title", err: fmt.Errorf(`ent: validator failed for field "Request.title": %w`, err)}
@@ -524,6 +563,9 @@ func (_u *RequestUpdate) sqlSave(ctx context.Context) (_node int, err error) {
 	}
 	if value, ok := _u.mutation.RequestType(); ok {
 		_spec.SetField(request.FieldRequestType, field.TypeString, value)
+	}
+	if value, ok := _u.mutation.Kind(); ok {
+		_spec.SetField(request.FieldKind, field.TypeString, value)
 	}
 	if value, ok := _u.mutation.AssignedHrID(); ok {
 		_spec.SetField(request.FieldAssignedHrID, field.TypeUUID, value)
@@ -593,6 +635,12 @@ func (_u *RequestUpdate) sqlSave(ctx context.Context) (_node int, err error) {
 	}
 	if value, ok := _u.mutation.UpdatedAt(); ok {
 		_spec.SetField(request.FieldUpdatedAt, field.TypeTime, value)
+	}
+	if value, ok := _u.mutation.CompletedAt(); ok {
+		_spec.SetField(request.FieldCompletedAt, field.TypeTime, value)
+	}
+	if _u.mutation.CompletedAtCleared() {
+		_spec.ClearField(request.FieldCompletedAt, field.TypeTime)
 	}
 	if value, ok := _u.mutation.Status(); ok {
 		_spec.SetField(request.FieldStatus, field.TypeString, value)
@@ -792,6 +840,20 @@ func (_u *RequestUpdateOne) SetRequestType(v string) *RequestUpdateOne {
 func (_u *RequestUpdateOne) SetNillableRequestType(v *string) *RequestUpdateOne {
 	if v != nil {
 		_u.SetRequestType(*v)
+	}
+	return _u
+}
+
+// SetKind sets the "kind" field.
+func (_u *RequestUpdateOne) SetKind(v string) *RequestUpdateOne {
+	_u.mutation.SetKind(v)
+	return _u
+}
+
+// SetNillableKind sets the "kind" field if the given value is not nil.
+func (_u *RequestUpdateOne) SetNillableKind(v *string) *RequestUpdateOne {
+	if v != nil {
+		_u.SetKind(*v)
 	}
 	return _u
 }
@@ -1024,6 +1086,26 @@ func (_u *RequestUpdateOne) SetUpdatedAt(v time.Time) *RequestUpdateOne {
 	return _u
 }
 
+// SetCompletedAt sets the "completed_at" field.
+func (_u *RequestUpdateOne) SetCompletedAt(v time.Time) *RequestUpdateOne {
+	_u.mutation.SetCompletedAt(v)
+	return _u
+}
+
+// SetNillableCompletedAt sets the "completed_at" field if the given value is not nil.
+func (_u *RequestUpdateOne) SetNillableCompletedAt(v *time.Time) *RequestUpdateOne {
+	if v != nil {
+		_u.SetCompletedAt(*v)
+	}
+	return _u
+}
+
+// ClearCompletedAt clears the value of the "completed_at" field.
+func (_u *RequestUpdateOne) ClearCompletedAt() *RequestUpdateOne {
+	_u.mutation.ClearCompletedAt()
+	return _u
+}
+
 // SetStatus sets the "status" field.
 func (_u *RequestUpdateOne) SetStatus(v string) *RequestUpdateOne {
 	_u.mutation.SetStatus(v)
@@ -1176,6 +1258,11 @@ func (_u *RequestUpdateOne) check() error {
 			return &ValidationError{Name: "request_type", err: fmt.Errorf(`ent: validator failed for field "Request.request_type": %w`, err)}
 		}
 	}
+	if v, ok := _u.mutation.Kind(); ok {
+		if err := request.KindValidator(v); err != nil {
+			return &ValidationError{Name: "kind", err: fmt.Errorf(`ent: validator failed for field "Request.kind": %w`, err)}
+		}
+	}
 	if v, ok := _u.mutation.Title(); ok {
 		if err := request.TitleValidator(v); err != nil {
 			return &ValidationError{Name: "title", err: fmt.Errorf(`ent: validator failed for field "Request.title": %w`, err)}
@@ -1245,6 +1332,9 @@ func (_u *RequestUpdateOne) sqlSave(ctx context.Context) (_node *Request, err er
 	if value, ok := _u.mutation.RequestType(); ok {
 		_spec.SetField(request.FieldRequestType, field.TypeString, value)
 	}
+	if value, ok := _u.mutation.Kind(); ok {
+		_spec.SetField(request.FieldKind, field.TypeString, value)
+	}
 	if value, ok := _u.mutation.AssignedHrID(); ok {
 		_spec.SetField(request.FieldAssignedHrID, field.TypeUUID, value)
 	}
@@ -1313,6 +1403,12 @@ func (_u *RequestUpdateOne) sqlSave(ctx context.Context) (_node *Request, err er
 	}
 	if value, ok := _u.mutation.UpdatedAt(); ok {
 		_spec.SetField(request.FieldUpdatedAt, field.TypeTime, value)
+	}
+	if value, ok := _u.mutation.CompletedAt(); ok {
+		_spec.SetField(request.FieldCompletedAt, field.TypeTime, value)
+	}
+	if _u.mutation.CompletedAtCleared() {
+		_spec.ClearField(request.FieldCompletedAt, field.TypeTime)
 	}
 	if value, ok := _u.mutation.Status(); ok {
 		_spec.SetField(request.FieldStatus, field.TypeString, value)

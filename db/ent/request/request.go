@@ -25,6 +25,8 @@ const (
 	FieldEntityType = "entity_type"
 	// FieldRequestType holds the string denoting the request_type field in the database.
 	FieldRequestType = "request_type"
+	// FieldKind holds the string denoting the kind field in the database.
+	FieldKind = "kind"
 	// FieldAssignedHrID holds the string denoting the assigned_hr_id field in the database.
 	FieldAssignedHrID = "assigned_hr_id"
 	// FieldTargetDzoID holds the string denoting the target_dzo_id field in the database.
@@ -51,6 +53,8 @@ const (
 	FieldCreatedAt = "created_at"
 	// FieldUpdatedAt holds the string denoting the updated_at field in the database.
 	FieldUpdatedAt = "updated_at"
+	// FieldCompletedAt holds the string denoting the completed_at field in the database.
+	FieldCompletedAt = "completed_at"
 	// FieldStatus holds the string denoting the status field in the database.
 	FieldStatus = "status"
 	// EdgeInitiator holds the string denoting the initiator edge name in mutations.
@@ -86,6 +90,7 @@ var Columns = []string{
 	FieldEntityID,
 	FieldEntityType,
 	FieldRequestType,
+	FieldKind,
 	FieldAssignedHrID,
 	FieldTargetDzoID,
 	FieldTitle,
@@ -99,6 +104,7 @@ var Columns = []string{
 	FieldStep,
 	FieldCreatedAt,
 	FieldUpdatedAt,
+	FieldCompletedAt,
 	FieldStatus,
 }
 
@@ -121,6 +127,10 @@ var (
 	DefaultRequestType string
 	// RequestTypeValidator is a validator for the "request_type" field. It is called by the builders before save.
 	RequestTypeValidator func(string) error
+	// DefaultKind holds the default value on creation for the "kind" field.
+	DefaultKind string
+	// KindValidator is a validator for the "kind" field. It is called by the builders before save.
+	KindValidator func(string) error
 	// TitleValidator is a validator for the "title" field. It is called by the builders before save.
 	TitleValidator func(string) error
 	// CategoryValidator is a validator for the "category" field. It is called by the builders before save.
@@ -176,6 +186,11 @@ func ByEntityType(opts ...sql.OrderTermOption) OrderOption {
 // ByRequestType orders the results by the request_type field.
 func ByRequestType(opts ...sql.OrderTermOption) OrderOption {
 	return sql.OrderByField(FieldRequestType, opts...).ToFunc()
+}
+
+// ByKind orders the results by the kind field.
+func ByKind(opts ...sql.OrderTermOption) OrderOption {
+	return sql.OrderByField(FieldKind, opts...).ToFunc()
 }
 
 // ByAssignedHrID orders the results by the assigned_hr_id field.
@@ -241,6 +256,11 @@ func ByCreatedAt(opts ...sql.OrderTermOption) OrderOption {
 // ByUpdatedAt orders the results by the updated_at field.
 func ByUpdatedAt(opts ...sql.OrderTermOption) OrderOption {
 	return sql.OrderByField(FieldUpdatedAt, opts...).ToFunc()
+}
+
+// ByCompletedAt orders the results by the completed_at field.
+func ByCompletedAt(opts ...sql.OrderTermOption) OrderOption {
+	return sql.OrderByField(FieldCompletedAt, opts...).ToFunc()
 }
 
 // ByStatus orders the results by the status field.

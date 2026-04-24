@@ -14,6 +14,7 @@ import (
 	"encore.app/db/ent/employee"
 	"encore.app/db/ent/organization"
 	"encore.app/db/ent/request"
+	"encore.app/db/ent/requestdzocontract"
 	"encore.app/db/ent/requestparticipant"
 	"encore.app/db/ent/requesttargetdzo"
 	"encore.app/db/ent/trainingevent"
@@ -87,6 +88,7 @@ func checkColumn(t, c string) error {
 			employee.Table:            employee.ValidColumn,
 			organization.Table:        organization.ValidColumn,
 			request.Table:             request.ValidColumn,
+			requestdzocontract.Table:  requestdzocontract.ValidColumn,
 			requestparticipant.Table:  requestparticipant.ValidColumn,
 			requesttargetdzo.Table:    requesttargetdzo.ValidColumn,
 			trainingevent.Table:       trainingevent.ValidColumn,

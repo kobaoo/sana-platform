@@ -208,6 +208,29 @@ func submitDraftRequest(t *testing.T, fx *requestTestFixture, detail *RequestDet
 	return &resp.Detail
 }
 
+func createArchiveRequestForTest(t *testing.T, fx *requestTestFixture, kind RequestKind, employeeIDs []uuid.UUID, contracts []ArchiveRequestContractInput) *RequestDetail {
+	t.Helper()
+
+	rawEmployeeIDs := make([]string, 0, len(employeeIDs))
+	for _, id := range employeeIDs {
+		rawEmployeeIDs = append(rawEmployeeIDs, id.String())
+	}
+
+	title := "Archive request"
+	resp, err := CreateArchiveRequest(authCtxFor(fx.adminKC, authhandler.RoleADM, nil), &CreateArchiveRequestRequest{
+		Kind:        kind,
+		Title:       &title,
+		Category:    "archive_expense",
+		EmployeeIDs: rawEmployeeIDs,
+		Contracts:   contracts,
+	})
+	if err != nil {
+		t.Fatalf("create archive request: %v", err)
+	}
+
+	return &resp.Detail
+}
+
 func TestCreateAdminRequest_Success(t *testing.T) {
 	fx := newFixture(t)
 
@@ -405,5 +428,90 @@ func TestGetHRRequest_HidesForeignSubrequest(t *testing.T) {
 	}
 	if errs.Code(err) != errs.NotFound {
 		t.Fatalf("expected NotFound, got %v", errs.Code(err))
+	}
+}
+
+func TestCreateArchiveRequest_Success(t *testing.T) {
+	fx := newFixture(t)
+
+	detail := createArchiveRequestForTest(t, fx, RequestKindArchived, []uuid.UUID{fx.empOneID, fx.empTwoID}, []ArchiveRequestContractInput{
+		{DzoID: fx.dzoOneID.String(), FileName: "dzo-one.pdf", FileURL: "s3://contracts/dzo-one.pdf"},
+		{DzoID: fx.dzoTwoID.String(), FileName: "dzo-two.pdf", FileURL: "s3://contracts/dzo-two.pdf"},
+	})
+
+	if detail.Request.RequestType != RequestTypeMain {
+		t.Fatalf("expected MAIN request, got %s", detail.Request.RequestType)
+	}
+	if detail.Request.Kind != RequestKindArchived {
+		t.Fatalf("expected ARCHIVED kind, got %s", detail.Request.Kind)
+	}
+	if detail.Request.Status != RequestStatusCompleted {
+		t.Fatalf("expected COMPLETED status, got %s", detail.Request.Status)
+	}
+	if detail.Request.CompletedAt == nil {
+		t.Fatal("expected completed_at to be set")
+	}
+	if detail.Request.EmployeesCount != 2 {
+		t.Fatalf("expected 2 employees, got %d", detail.Request.EmployeesCount)
+	}
+	if len(detail.DZOContracts) != 2 {
+		t.Fatalf("expected 2 contracts, got %d", len(detail.DZOContracts))
+	}
+	if len(detail.ChildRequests) != 0 {
+		t.Fatalf("expected 0 child requests, got %d", len(detail.ChildRequests))
+	}
+}
+
+func TestCreateArchiveRequest_RequiresAdmin(t *testing.T) {
+	fx := newFixture(t)
+
+	_, err := CreateArchiveRequest(authCtxFor(fx.hrOneKC, authhandler.RoleHR, &fx.dzoOneID), &CreateArchiveRequestRequest{
+		Kind:        RequestKindClosed,
+		Category:    "archive_expense",
+		EmployeeIDs: []string{fx.empOneID.String()},
+		Contracts: []ArchiveRequestContractInput{
+			{DzoID: fx.dzoOneID.String(), FileName: "dzo-one.pdf", FileURL: "s3://contracts/dzo-one.pdf"},
+		},
+	})
+	if err == nil {
+		t.Fatal("expected permission error")
+	}
+	if errs.Code(err) != errs.PermissionDenied {
+		t.Fatalf("expected PermissionDenied, got %v", errs.Code(err))
+	}
+}
+
+func TestCreateArchiveRequest_RequiresContractForEachDZO(t *testing.T) {
+	fx := newFixture(t)
+
+	_, err := CreateArchiveRequest(authCtxFor(fx.adminKC, authhandler.RoleADM, nil), &CreateArchiveRequestRequest{
+		Kind:        RequestKindClosed,
+		Category:    "archive_expense",
+		EmployeeIDs: []string{fx.empOneID.String(), fx.empTwoID.String()},
+		Contracts: []ArchiveRequestContractInput{
+			{DzoID: fx.dzoOneID.String(), FileName: "dzo-one.pdf", FileURL: "s3://contracts/dzo-one.pdf"},
+		},
+	})
+	if err == nil {
+		t.Fatal("expected InvalidArgument error")
+	}
+	if errs.Code(err) != errs.InvalidArgument {
+		t.Fatalf("expected InvalidArgument, got %v", errs.Code(err))
+	}
+}
+
+func TestSubmitArchiveRequest_Fails(t *testing.T) {
+	fx := newFixture(t)
+
+	detail := createArchiveRequestForTest(t, fx, RequestKindClosed, []uuid.UUID{fx.empOneID}, []ArchiveRequestContractInput{
+		{DzoID: fx.dzoOneID.String(), FileName: "dzo-one.pdf", FileURL: "s3://contracts/dzo-one.pdf"},
+	})
+
+	_, err := SubmitRequest(authCtxFor(fx.adminKC, authhandler.RoleADM, nil), toEncoreUUID(uuid.MustParse(detail.Request.ID)))
+	if err == nil {
+		t.Fatal("expected invalid argument when submitting archive request")
+	}
+	if errs.Code(err) != errs.InvalidArgument {
+		t.Fatalf("expected InvalidArgument, got %v", errs.Code(err))
 	}
 }

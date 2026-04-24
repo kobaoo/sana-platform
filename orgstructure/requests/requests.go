@@ -4,6 +4,7 @@ import (
 	"context"
 	"database/sql"
 	"errors"
+	"fmt"
 	"strings"
 	"time"
 
@@ -54,6 +55,38 @@ func CreateAdminRequest(ctx context.Context, req *CreateAdminRequestRequest) (*G
 	return &GetRequestResponse{Detail: *detail}, nil
 }
 
+// CreateArchiveRequest creates a closed/archive request that is completed immediately.
+//
+//encore:api auth method=POST path=/requests/archive
+func CreateArchiveRequest(ctx context.Context, req *CreateArchiveRequestRequest) (*GetRequestResponse, error) {
+	actor, err := resolveCurrentActor(ctx)
+	if err != nil {
+		return nil, err
+	}
+	if !canManageAdminRequests(actor.Role) {
+		return nil, errs.B().Code(errs.PermissionDenied).Msg("insufficient permissions").Err()
+	}
+	if !req.Kind.IsValid() || req.Kind == RequestKindRegular {
+		return nil, errs.B().Code(errs.InvalidArgument).Msg("kind must be CLOSED or ARCHIVED").Err()
+	}
+	if strings.TrimSpace(req.Category) == "" {
+		return nil, errs.B().Code(errs.InvalidArgument).Msg("category is required").Err()
+	}
+	if len(req.EmployeeIDs) == 0 {
+		return nil, errs.B().Code(errs.InvalidArgument).Msg("employee_ids is required").Err()
+	}
+	if len(req.Contracts) == 0 {
+		return nil, errs.B().Code(errs.InvalidArgument).Msg("contracts is required").Err()
+	}
+
+	detail, err := createArchiveRequest(ctx, actor, req)
+	if err != nil {
+		return nil, err
+	}
+
+	return &GetRequestResponse{Detail: *detail}, nil
+}
+
 // ListRequests returns main requests visible to admins.
 //
 //encore:api auth method=GET path=/requests
@@ -68,9 +101,9 @@ func ListRequests(ctx context.Context) (*ListRequestsResponse, error) {
 
 	items, err := queryRequestSummaries(ctx, `
 		SELECT
-			r.id, r.initiator_id, r.parent_request_id, r.entity_id, r.entity_type, r.request_type,
+			r.id, r.initiator_id, r.parent_request_id, r.entity_id, r.entity_type, r.request_type, r.kind,
 			r.assigned_hr_id, r.target_dzo_id, r.title, r.category, r.format, r.responsible_admin_id,
-			r.training_date, r.deadline_at, r.cost_amount, r.cost_mode, r.status, r.created_at, r.updated_at,
+			r.training_date, r.deadline_at, r.cost_amount, r.cost_mode, r.status, r.created_at, r.updated_at, r.completed_at,
 			COALESCE((SELECT COUNT(*) FROM request_participants rp WHERE rp.request_id = r.id), 0) AS employees_count,
 			COALESCE((SELECT COUNT(*) FROM requests c WHERE c.parent_request_id = r.id AND c.status = 'APPROVED'), 0) AS approved_children,
 			COALESCE((SELECT COUNT(*) FROM requests c WHERE c.parent_request_id = r.id), 0) AS total_children
@@ -139,9 +172,9 @@ func ListHRRequests(ctx context.Context) (*ListRequestsResponse, error) {
 
 	items, err := queryRequestSummaries(ctx, `
 		SELECT
-			r.id, r.initiator_id, r.parent_request_id, r.entity_id, r.entity_type, r.request_type,
+			r.id, r.initiator_id, r.parent_request_id, r.entity_id, r.entity_type, r.request_type, r.kind,
 			r.assigned_hr_id, r.target_dzo_id, r.title, r.category, r.format, r.responsible_admin_id,
-			r.training_date, r.deadline_at, r.cost_amount, r.cost_mode, r.status, r.created_at, r.updated_at,
+			r.training_date, r.deadline_at, r.cost_amount, r.cost_mode, r.status, r.created_at, r.updated_at, r.completed_at,
 			COALESCE((SELECT COUNT(*) FROM request_participants rp WHERE rp.request_id = r.id), 0) AS employees_count,
 			0 AS approved_children,
 			0 AS total_children
@@ -270,6 +303,12 @@ type employeeRecord struct {
 	DzoName  string
 }
 
+type archiveContractRecord struct {
+	DzoID    uuid.UUID
+	FileName string
+	FileURL  string
+}
+
 func getAuthData() (*authhandler.AuthData, error) {
 	ad, ok := auth.Data().(*authhandler.AuthData)
 	if !ok {
@@ -320,6 +359,72 @@ func canManageAdminRequests(role authhandler.UserRole) bool {
 	return role == authhandler.RoleSA || role == authhandler.RoleADM
 }
 
+func createArchiveRequest(ctx context.Context, actor *actor, req *CreateArchiveRequestRequest) (*RequestDetail, error) {
+	participants, participantIDs, err := resolveSelectedEmployees(ctx, req.EmployeeIDs)
+	if err != nil {
+		return nil, err
+	}
+
+	targetDZOIDs := collectAffectedDZOs(participants, nil)
+	if len(targetDZOIDs) == 0 {
+		return nil, errs.B().Code(errs.InvalidArgument).Msg("archive request must include employees").Err()
+	}
+
+	contractsByDZO, err := normalizeArchiveContracts(req.Contracts)
+	if err != nil {
+		return nil, err
+	}
+	if err := ensureContractsCoverDZOs(targetDZOIDs, contractsByDZO); err != nil {
+		return nil, err
+	}
+
+	title := strings.TrimSpace(kindDisplayName(req.Kind)) + " request"
+	if req.Title != nil && strings.TrimSpace(*req.Title) != "" {
+		title = strings.TrimSpace(*req.Title)
+	}
+
+	tx, err := db.Begin(ctx)
+	if err != nil {
+		return nil, errs.B().Code(errs.Internal).Msg("failed to begin transaction").Cause(err).Err()
+	}
+	defer tx.Rollback()
+
+	requestID := uuid.New()
+	if _, err := tx.Exec(ctx, `
+		INSERT INTO requests (
+			id, initiator_id, entity_id, entity_type, request_type, kind, title, category,
+			responsible_admin_id, step, status, created_at, updated_at, completed_at
+		)
+		VALUES ($1, $2, $3, 'ARCHIVE_REQUEST', 'MAIN', $4, $5, $6, $7, 0, 'COMPLETED', NOW(), NOW(), NOW())
+	`,
+		requestID,
+		actor.ID,
+		requestID,
+		string(req.Kind),
+		title,
+		strings.TrimSpace(req.Category),
+		actor.ID,
+	); err != nil {
+		return nil, errs.B().Code(errs.Internal).Msg("failed to create archive request").Cause(err).Err()
+	}
+
+	if err := replaceRequestParticipantsTx(ctx, tx, requestID, participantIDs); err != nil {
+		return nil, err
+	}
+	if err := replaceRequestTargetDZOsTx(ctx, tx, requestID, targetDZOIDs); err != nil {
+		return nil, err
+	}
+	if err := replaceRequestDzoContractsTx(ctx, tx, requestID, contractsByDZO); err != nil {
+		return nil, err
+	}
+
+	if err := tx.Commit(); err != nil {
+		return nil, errs.B().Code(errs.Internal).Msg("failed to commit archive request").Cause(err).Err()
+	}
+
+	return buildRequestDetail(ctx, requestID)
+}
+
 func createAdminRequest(ctx context.Context, actor *actor, req *CreateAdminRequestRequest) (*RequestDetail, error) {
 	trainingEvent, err := loadTrainingEvent(ctx, req.TrainingEventID)
 	if err != nil {
@@ -368,11 +473,11 @@ func createAdminRequest(ctx context.Context, actor *actor, req *CreateAdminReque
 	requestID := uuid.New()
 	if _, err := tx.Exec(ctx, `
 		INSERT INTO requests (
-			id, initiator_id, entity_id, entity_type, request_type, title, category, format,
+			id, initiator_id, entity_id, entity_type, request_type, kind, title, category, format,
 			responsible_admin_id, training_date, deadline_at, cost_amount, cost_mode,
 			step, status, created_at, updated_at
 		)
-		VALUES ($1, $2, $3, 'TRAINING_EVENT', 'MAIN', $4, $5, $6, $7, $8, $9, $10, $11, 0, 'DRAFT', NOW(), NOW())
+		VALUES ($1, $2, $3, 'TRAINING_EVENT', 'MAIN', 'REGULAR', $4, $5, $6, $7, $8, $9, $10, $11, 0, 'DRAFT', NOW(), NOW())
 	`,
 		requestID,
 		actor.ID,
@@ -407,6 +512,9 @@ func submitRequest(ctx context.Context, actor *actor, requestID uuid.UUID) (*Req
 	mainRequest, err := queryRequestSummaryByID(ctx, requestID)
 	if err != nil {
 		return nil, err
+	}
+	if mainRequest.Kind != RequestKindRegular {
+		return nil, errs.B().Code(errs.InvalidArgument).Msg("archive requests cannot be submitted").Err()
 	}
 	if mainRequest.RequestType != RequestTypeMain {
 		return nil, errs.B().Code(errs.InvalidArgument).Msg("only main requests can be submitted").Err()
@@ -460,11 +568,11 @@ func submitRequest(ctx context.Context, actor *actor, requestID uuid.UUID) (*Req
 		childID := uuid.New()
 		if _, err := tx.Exec(ctx, `
 			INSERT INTO requests (
-				id, initiator_id, parent_request_id, entity_id, entity_type, request_type, assigned_hr_id,
+				id, initiator_id, parent_request_id, entity_id, entity_type, request_type, kind, assigned_hr_id,
 				target_dzo_id, title, category, format, responsible_admin_id, training_date,
 				deadline_at, cost_amount, cost_mode, step, status, created_at, updated_at
 			)
-			VALUES ($1, $2, $3, $4, $5, 'SUBREQUEST', $6, $7, $8, $9, $10, $11, $12, $13, $14, $15, 0, 'PENDING', NOW(), NOW())
+			VALUES ($1, $2, $3, $4, $5, 'SUBREQUEST', 'REGULAR', $6, $7, $8, $9, $10, $11, $12, $13, $14, $15, 0, 'PENDING', NOW(), NOW())
 		`,
 			childID,
 			actor.ID,
@@ -512,6 +620,9 @@ func updateHRRequestEmployees(ctx context.Context, actor *actor, requestID uuid.
 	}
 	if requestSummary.RequestType != RequestTypeSubrequest || requestSummary.AssignedHRID == nil || *requestSummary.AssignedHRID != actor.ID.String() {
 		return nil, errs.B().Code(errs.NotFound).Msg("request not found").Err()
+	}
+	if requestSummary.Kind != RequestKindRegular {
+		return nil, errs.B().Code(errs.InvalidArgument).Msg("archive requests cannot be edited by HR").Err()
 	}
 	if requestSummary.Status != RequestStatusPending {
 		return nil, errs.B().Code(errs.InvalidArgument).Msg("request is already finalized").Err()
@@ -564,6 +675,9 @@ func finalizeHRRequest(ctx context.Context, actor *actor, requestID uuid.UUID, s
 	}
 	if requestSummary.RequestType != RequestTypeSubrequest || requestSummary.AssignedHRID == nil || *requestSummary.AssignedHRID != actor.ID.String() {
 		return nil, errs.B().Code(errs.NotFound).Msg("request not found").Err()
+	}
+	if requestSummary.Kind != RequestKindRegular {
+		return nil, errs.B().Code(errs.InvalidArgument).Msg("archive requests cannot be finalized by HR").Err()
 	}
 	if requestSummary.Status != RequestStatusPending {
 		return nil, errs.B().Code(errs.InvalidArgument).Msg("request is already finalized").Err()
@@ -623,14 +737,18 @@ func buildRequestDetail(ctx context.Context, requestID uuid.UUID) (*RequestDetai
 	if err != nil {
 		return nil, err
 	}
+	contracts, err := queryRequestDzoContracts(ctx, requestID)
+	if err != nil {
+		return nil, err
+	}
 
 	children := []RequestSummary{}
 	if summary.RequestType == RequestTypeMain {
 		children, err = queryRequestSummaries(ctx, `
 			SELECT
-				r.id, r.initiator_id, r.parent_request_id, r.entity_id, r.entity_type, r.request_type,
+				r.id, r.initiator_id, r.parent_request_id, r.entity_id, r.entity_type, r.request_type, r.kind,
 				r.assigned_hr_id, r.target_dzo_id, r.title, r.category, r.format, r.responsible_admin_id,
-				r.training_date, r.deadline_at, r.cost_amount, r.cost_mode, r.status, r.created_at, r.updated_at,
+				r.training_date, r.deadline_at, r.cost_amount, r.cost_mode, r.status, r.created_at, r.updated_at, r.completed_at,
 				COALESCE((SELECT COUNT(*) FROM request_participants rp WHERE rp.request_id = r.id), 0) AS employees_count,
 				0 AS approved_children,
 				0 AS total_children
@@ -647,6 +765,7 @@ func buildRequestDetail(ctx context.Context, requestID uuid.UUID) (*RequestDetai
 		Request:       *summary,
 		Employees:     employees,
 		TargetDZOs:    targetDZOs,
+		DZOContracts:  contracts,
 		ChildRequests: children,
 	}, nil
 }
@@ -654,9 +773,9 @@ func buildRequestDetail(ctx context.Context, requestID uuid.UUID) (*RequestDetai
 func queryRequestSummaryByID(ctx context.Context, requestID uuid.UUID) (*RequestSummary, error) {
 	row := db.QueryRow(ctx, `
 		SELECT
-			r.id, r.initiator_id, r.parent_request_id, r.entity_id, r.entity_type, r.request_type,
+			r.id, r.initiator_id, r.parent_request_id, r.entity_id, r.entity_type, r.request_type, r.kind,
 			r.assigned_hr_id, r.target_dzo_id, r.title, r.category, r.format, r.responsible_admin_id,
-			r.training_date, r.deadline_at, r.cost_amount, r.cost_mode, r.status, r.created_at, r.updated_at,
+			r.training_date, r.deadline_at, r.cost_amount, r.cost_mode, r.status, r.created_at, r.updated_at, r.completed_at,
 			COALESCE((SELECT COUNT(*) FROM request_participants rp WHERE rp.request_id = r.id), 0) AS employees_count,
 			COALESCE((SELECT COUNT(*) FROM requests c WHERE c.parent_request_id = r.id AND c.status = 'APPROVED'), 0) AS approved_children,
 			COALESCE((SELECT COUNT(*) FROM requests c WHERE c.parent_request_id = r.id), 0) AS total_children
@@ -760,6 +879,40 @@ func queryRequestTargetDZOs(ctx context.Context, requestID uuid.UUID) ([]Request
 	}
 
 	return items, nil
+}
+
+func queryRequestDzoContracts(ctx context.Context, requestID uuid.UUID) ([]RequestDzoContract, error) {
+	rows, err := db.Query(ctx, `
+		SELECT dzo_id, file_name, file_url
+		FROM request_dzo_contracts
+		WHERE request_id = $1
+		ORDER BY created_at ASC
+	`, requestID)
+	if err != nil {
+		return nil, errs.B().Code(errs.Internal).Msg("failed to load request dzo contracts").Cause(err).Err()
+	}
+	defer rows.Close()
+
+	contracts := []RequestDzoContract{}
+	for rows.Next() {
+		var (
+			dzoID    uuid.UUID
+			fileName string
+			fileURL  string
+		)
+		if err := rows.Scan(&dzoID, &fileName, &fileURL); err != nil {
+			return nil, errs.B().Code(errs.Internal).Msg("failed to scan request dzo contract").Cause(err).Err()
+		}
+		contracts = append(contracts, RequestDzoContract{
+			DzoID:    dzoID.String(),
+			FileName: fileName,
+			FileURL:  fileURL,
+		})
+	}
+	if err := rows.Err(); err != nil {
+		return nil, errs.B().Code(errs.Internal).Msg("failed to load request dzo contracts").Cause(err).Err()
+	}
+	return contracts, nil
 }
 
 func queryRequestTargetDZOIDs(ctx context.Context, requestID uuid.UUID) ([]uuid.UUID, error) {
@@ -943,6 +1096,27 @@ func replaceRequestTargetDZOsTx(ctx context.Context, tx *sqldb.Tx, requestID uui
 	return nil
 }
 
+func replaceRequestDzoContractsTx(ctx context.Context, tx *sqldb.Tx, requestID uuid.UUID, contractsByDZO map[uuid.UUID]archiveContractRecord) error {
+	if _, err := tx.Exec(ctx, `
+		DELETE FROM request_dzo_contracts
+		WHERE request_id = $1
+	`, requestID); err != nil {
+		return errs.B().Code(errs.Internal).Msg("failed to replace request dzo contracts").Cause(err).Err()
+	}
+
+	for _, dzoID := range mapsKeys(contractsByDZO) {
+		contract := contractsByDZO[dzoID]
+		if _, err := tx.Exec(ctx, `
+			INSERT INTO request_dzo_contracts (id, request_id, dzo_id, file_name, file_url, created_at)
+			VALUES ($1, $2, $3, $4, $5, NOW())
+		`, uuid.New(), requestID, dzoID, contract.FileName, contract.FileURL); err != nil {
+			return errs.B().Code(errs.Internal).Msg("failed to save request dzo contract").Cause(err).Err()
+		}
+	}
+
+	return nil
+}
+
 func syncParentRequestStatusTx(ctx context.Context, tx *sqldb.Tx, parentID uuid.UUID) error {
 	row := tx.QueryRow(ctx, `
 		SELECT
@@ -1001,6 +1175,7 @@ func scanRequestSummary(s rowScanner) (*RequestSummary, error) {
 		entityID           uuid.UUID
 		entityType         string
 		requestType        string
+		kind               string
 		assignedHRID       sql.NullString
 		targetDzoID        sql.NullString
 		title              string
@@ -1014,6 +1189,7 @@ func scanRequestSummary(s rowScanner) (*RequestSummary, error) {
 		status             string
 		createdAt          time.Time
 		updatedAt          time.Time
+		completedAt        sql.NullTime
 		employeesCount     int
 		approvedChildren   int
 		totalChildren      int
@@ -1026,6 +1202,7 @@ func scanRequestSummary(s rowScanner) (*RequestSummary, error) {
 		&entityID,
 		&entityType,
 		&requestType,
+		&kind,
 		&assignedHRID,
 		&targetDzoID,
 		&title,
@@ -1039,6 +1216,7 @@ func scanRequestSummary(s rowScanner) (*RequestSummary, error) {
 		&status,
 		&createdAt,
 		&updatedAt,
+		&completedAt,
 		&employeesCount,
 		&approvedChildren,
 		&totalChildren,
@@ -1056,6 +1234,7 @@ func scanRequestSummary(s rowScanner) (*RequestSummary, error) {
 		TrainingEventID:    entityID.String(),
 		EntityType:         entityType,
 		RequestType:        RequestType(requestType),
+		Kind:               RequestKind(kind),
 		Status:             RequestStatus(status),
 		AssignedHRID:       nullableStringValue(assignedHRID),
 		TargetDzoID:        nullableStringValue(targetDzoID),
@@ -1072,6 +1251,7 @@ func scanRequestSummary(s rowScanner) (*RequestSummary, error) {
 		TotalChildren:      totalChildren,
 		CreatedAt:          createdAt,
 		UpdatedAt:          updatedAt,
+		CompletedAt:        nullableTimeValue(completedAt),
 	}, nil
 }
 
@@ -1169,6 +1349,68 @@ func nullableCostModeValue(v sql.NullString) *CostMode {
 	}
 	value := CostMode(v.String)
 	return &value
+}
+
+func normalizeArchiveContracts(raw []ArchiveRequestContractInput) (map[uuid.UUID]archiveContractRecord, error) {
+	contracts := make(map[uuid.UUID]archiveContractRecord, len(raw))
+	for _, item := range raw {
+		dzoID, err := uuid.Parse(strings.TrimSpace(item.DzoID))
+		if err != nil {
+			return nil, errs.B().Code(errs.InvalidArgument).Msg("invalid contract dzo_id format").Err()
+		}
+		fileName := strings.TrimSpace(item.FileName)
+		if fileName == "" {
+			return nil, errs.B().Code(errs.InvalidArgument).Msg("contract file_name is required").Err()
+		}
+		fileURL := strings.TrimSpace(item.FileURL)
+		if fileURL == "" {
+			return nil, errs.B().Code(errs.InvalidArgument).Msg("contract file_url is required").Err()
+		}
+		if _, exists := contracts[dzoID]; exists {
+			return nil, errs.B().Code(errs.InvalidArgument).Msg("duplicate contract for one dzo").Err()
+		}
+		contracts[dzoID] = archiveContractRecord{
+			DzoID:    dzoID,
+			FileName: fileName,
+			FileURL:  fileURL,
+		}
+	}
+	return contracts, nil
+}
+
+func ensureContractsCoverDZOs(required []uuid.UUID, contractsByDZO map[uuid.UUID]archiveContractRecord) error {
+	for _, dzoID := range required {
+		if _, ok := contractsByDZO[dzoID]; !ok {
+			return errs.B().Code(errs.InvalidArgument).Msg(fmt.Sprintf("contract is required for dzo %s", dzoID)).Err()
+		}
+	}
+	for dzoID := range contractsByDZO {
+		if containsUUID(required, dzoID) {
+			continue
+		}
+		return errs.B().Code(errs.InvalidArgument).Msg(fmt.Sprintf("contract dzo %s is not related to selected employees", dzoID)).Err()
+	}
+	return nil
+}
+
+func containsUUID(ids []uuid.UUID, target uuid.UUID) bool {
+	for _, id := range ids {
+		if id == target {
+			return true
+		}
+	}
+	return false
+}
+
+func kindDisplayName(kind RequestKind) string {
+	switch kind {
+	case RequestKindClosed:
+		return "Closed"
+	case RequestKindArchived:
+		return "Archived"
+	default:
+		return "Regular"
+	}
 }
 
 func parseUUIDOrNil(raw string) uuid.UUID {

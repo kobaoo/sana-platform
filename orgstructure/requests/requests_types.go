@@ -18,6 +18,23 @@ func (t RequestType) IsValid() bool {
 	}
 }
 
+type RequestKind string
+
+const (
+	RequestKindRegular  RequestKind = "REGULAR"
+	RequestKindClosed   RequestKind = "CLOSED"
+	RequestKindArchived RequestKind = "ARCHIVED"
+)
+
+func (k RequestKind) IsValid() bool {
+	switch k {
+	case RequestKindRegular, RequestKindClosed, RequestKindArchived:
+		return true
+	default:
+		return false
+	}
+}
+
 type RequestStatus string
 
 const (
@@ -26,11 +43,12 @@ const (
 	RequestStatusPending    RequestStatus = "PENDING"
 	RequestStatusApproved   RequestStatus = "APPROVED"
 	RequestStatusRejected   RequestStatus = "REJECTED"
+	RequestStatusCompleted  RequestStatus = "COMPLETED"
 )
 
 func (s RequestStatus) IsValid() bool {
 	switch s {
-	case RequestStatusDraft, RequestStatusInProgress, RequestStatusPending, RequestStatusApproved, RequestStatusRejected:
+	case RequestStatusDraft, RequestStatusInProgress, RequestStatusPending, RequestStatusApproved, RequestStatusRejected, RequestStatusCompleted:
 		return true
 	default:
 		return false
@@ -65,6 +83,20 @@ type CreateAdminRequestRequest struct {
 	DeadlineAt      *string   `json:"deadline_at,omitempty"`
 }
 
+type ArchiveRequestContractInput struct {
+	DzoID    string `json:"dzo_id"`
+	FileName string `json:"file_name"`
+	FileURL  string `json:"file_url"`
+}
+
+type CreateArchiveRequestRequest struct {
+	Kind        RequestKind                   `json:"kind"`
+	Title       *string                       `json:"title,omitempty"`
+	Category    string                        `json:"category"`
+	EmployeeIDs []string                      `json:"employee_ids"`
+	Contracts   []ArchiveRequestContractInput `json:"contracts"`
+}
+
 type UpdateHRRequestEmployeesRequest struct {
 	EmployeeIDs []string `json:"employee_ids"`
 }
@@ -81,6 +113,12 @@ type RequestTargetDZO struct {
 	Name string `json:"name"`
 }
 
+type RequestDzoContract struct {
+	DzoID    string `json:"dzo_id"`
+	FileName string `json:"file_name"`
+	FileURL  string `json:"file_url"`
+}
+
 type RequestSummary struct {
 	ID                 string        `json:"id"`
 	InitiatorID        string        `json:"initiator_id"`
@@ -88,6 +126,7 @@ type RequestSummary struct {
 	TrainingEventID    string        `json:"training_event_id"`
 	EntityType         string        `json:"entity_type"`
 	RequestType        RequestType   `json:"request_type"`
+	Kind               RequestKind   `json:"kind"`
 	Status             RequestStatus `json:"status"`
 	AssignedHRID       *string       `json:"assigned_hr_id,omitempty"`
 	TargetDzoID        *string       `json:"target_dzo_id,omitempty"`
@@ -104,13 +143,15 @@ type RequestSummary struct {
 	TotalChildren      int           `json:"total_children"`
 	CreatedAt          time.Time     `json:"created_at"`
 	UpdatedAt          time.Time     `json:"updated_at"`
+	CompletedAt        *time.Time    `json:"completed_at,omitempty"`
 }
 
 type RequestDetail struct {
-	Request       RequestSummary     `json:"request"`
-	Employees     []RequestEmployee  `json:"employees"`
-	TargetDZOs    []RequestTargetDZO `json:"target_dzos"`
-	ChildRequests []RequestSummary   `json:"child_requests"`
+	Request       RequestSummary       `json:"request"`
+	Employees     []RequestEmployee    `json:"employees"`
+	TargetDZOs    []RequestTargetDZO   `json:"target_dzos"`
+	DZOContracts  []RequestDzoContract `json:"dzo_contracts"`
+	ChildRequests []RequestSummary     `json:"child_requests"`
 }
 
 type GetRequestResponse struct {
