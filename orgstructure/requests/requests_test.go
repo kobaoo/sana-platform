@@ -47,6 +47,9 @@ type requestTestFixture struct {
 	empOneID        uuid.UUID
 	empTwoID        uuid.UUID
 	trainingEventID uuid.UUID
+	categoryID      uuid.UUID
+	supplierID      uuid.UUID
+	contractID      uuid.UUID
 }
 
 func newFixture(t *testing.T) *requestTestFixture {
@@ -68,19 +71,25 @@ func newFixture(t *testing.T) *requestTestFixture {
 		empOneID:        uuid.New(),
 		empTwoID:        uuid.New(),
 		trainingEventID: uuid.New(),
+		categoryID:      uuid.New(),
+		supplierID:      uuid.New(),
+		contractID:      uuid.New(),
 	}
 
 	ensureClient(t, fx.clientID)
 	ensureDZO(t, fx.dzoOneID, fx.clientID, "DZO One")
 	ensureDZO(t, fx.dzoTwoID, fx.clientID, "DZO Two")
 	ensureDZO(t, fx.dzoThreeID, fx.clientID, "DZO Three")
+	ensureCategory(t, fx.categoryID)
+	ensureSupplier(t, fx.supplierID, fx.clientID)
+	ensureContractSupplier(t, fx.contractID, fx.supplierID, 100000)
 	ensureUser(t, fx.adminID, fx.adminKC, "admin@test.local", "ADM", fx.clientID, nil)
 	ensureUser(t, fx.hrOneID, fx.hrOneKC, "hr1@test.local", "HR", fx.clientID, &fx.dzoOneID)
 	ensureUser(t, fx.hrTwoID, fx.hrTwoKC, "hr2@test.local", "HR", fx.clientID, &fx.dzoTwoID)
 	ensureUser(t, fx.hrThreeID, fx.hrThreeKC, "hr3@test.local", "HR", fx.clientID, &fx.dzoThreeID)
 	ensureEmployee(t, fx.empOneID, fx.clientID, fx.dzoOneID, "Employee One", "emp1@test.local")
 	ensureEmployee(t, fx.empTwoID, fx.clientID, fx.dzoTwoID, "Employee Two", "emp2@test.local")
-	ensureTrainingEvent(t, fx.trainingEventID, fx.dzoOneID, "External Learning")
+	ensureTrainingEvent(t, fx.trainingEventID, fx.dzoOneID, fx.categoryID, fx.supplierID, fx.contractID, "External Learning")
 
 	return fx
 }
@@ -137,19 +146,117 @@ func ensureEmployee(t *testing.T, employeeID uuid.UUID, clientID string, dzoID u
 	}
 }
 
-func ensureTrainingEvent(t *testing.T, eventID, dzoID uuid.UUID, title string) {
+func ensureTrainingEvent(t *testing.T, eventID, dzoID, categoryID, supplierID, contractID uuid.UUID, title string) {
 	t.Helper()
 
 	_, err := db.Exec(ctx(), `
 		INSERT INTO training_events (
-			id, title, start_date, end_date, location_type, category_id, dzo_id, participants_count
+			id, title, start_date, end_date, location_type, location_city,
+			category_id, dzo_id, participants_count, cost_per_person_vat,
+			supplier_id, supplier_contract_id
 		)
-		VALUES ($1, $2, NOW(), NOW(), 'offline', $3, $4, 0)
+		VALUES ($1, $2, NOW(), NOW() + INTERVAL '1 day', 'OFFLINE', 'Astana',
+			$3, $4, 0, 5000, $5, $6)
 		ON CONFLICT (id) DO NOTHING
-	`, eventID, title, uuid.New(), dzoID)
+	`, eventID, title, categoryID, dzoID, supplierID, contractID)
 	if err != nil {
 		t.Fatalf("insert training event: %v", err)
 	}
+}
+
+func ensureCategory(t *testing.T, categoryID uuid.UUID) {
+	t.Helper()
+
+	_, err := db.Exec(ctx(), `
+		INSERT INTO categories (id, name, description)
+		VALUES ($1, $2, $3)
+		ON CONFLICT (id) DO NOTHING
+	`, categoryID, "Test Category", "Test category for budget tests")
+	if err != nil {
+		t.Fatalf("insert category: %v", err)
+	}
+}
+
+func ensureSupplier(t *testing.T, supplierID uuid.UUID, clientID string) {
+	t.Helper()
+
+	bin := uuid.New().String()[:12] // ← УНИКАЛЬНЫЙ
+
+	_, err := db.Exec(ctx(), `
+		INSERT INTO suppliers (
+			id, client_id, type, name, bin_or_iin, local_content_pct, is_active
+		)
+		VALUES ($1, $2, 'LEGAL', $3, $4, 75.0, TRUE)
+		ON CONFLICT (id) DO NOTHING
+	`, supplierID, mustUUID(t, clientID), "Test Supplier", bin)
+	if err != nil {
+		t.Fatalf("insert supplier: %v", err)
+	}
+}
+
+func ensureContractSupplier(t *testing.T, contractID, supplierID uuid.UUID, remainingAmount float64) {
+	t.Helper()
+
+	_, err := db.Exec(ctx(), `
+		INSERT INTO contract_suppliers (
+			id, supplier_id, contract_number, vat_flag,
+			signed_date, amount, amount_currency, currency,
+			balance_at_year_end, amendment_amount,
+			total_with_amendment, remaining_amount,
+			is_active, created_at, updated_at, end_date
+		)
+		VALUES (
+			$1, $2, $3, TRUE,
+			CURRENT_DATE, 100000, 100000, 'KZT',
+			0, 0,
+			100000, $4,
+			TRUE, NOW(), NOW(), CURRENT_DATE + INTERVAL '1 year'
+		)
+		ON CONFLICT (id) DO NOTHING
+	`, contractID, supplierID, "CTR-"+contractID.String()[:8], remainingAmount)
+	if err != nil {
+		t.Fatalf("insert contract supplier: %v", err)
+	}
+}
+
+func contractRemainingAmount(t *testing.T, contractID uuid.UUID) float64 {
+	t.Helper()
+
+	var amount float64
+	if err := db.QueryRow(ctx(), `
+		SELECT remaining_amount
+		FROM contract_suppliers
+		WHERE id = $1
+	`, contractID).Scan(&amount); err != nil {
+		t.Fatalf("select remaining amount: %v", err)
+	}
+	return amount
+}
+
+func budgetOperationCount(t *testing.T, requestID uuid.UUID, operationType string) int {
+	t.Helper()
+
+	var count int
+	if err := db.QueryRow(ctx(), `
+		SELECT COUNT(*)
+		FROM request_budget_transactions
+		WHERE request_id = $1 AND operation_type = $2
+	`, requestID, operationType).Scan(&count); err != nil {
+		t.Fatalf("count budget operation %s: %v", operationType, err)
+	}
+	return count
+}
+
+func firstChildByDZO(t *testing.T, detail *RequestDetail, dzoID uuid.UUID) uuid.UUID {
+	t.Helper()
+
+	for _, child := range detail.ChildRequests {
+		if child.TargetDzoID != nil && *child.TargetDzoID == dzoID.String() {
+			return uuid.MustParse(child.ID)
+		}
+	}
+	t.Fatalf("child request for dzo %s not found", dzoID)
+	return uuid.Nil
 }
 
 func mustUUID(t *testing.T, raw string) uuid.UUID {
@@ -405,5 +512,166 @@ func TestGetHRRequest_HidesForeignSubrequest(t *testing.T) {
 	}
 	if errs.Code(err) != errs.NotFound {
 		t.Fatalf("expected NotFound, got %v", errs.Code(err))
+	}
+}
+
+// budget test
+func TestBudgetReserveOnSubmit(t *testing.T) {
+	fx := newFixture(t)
+
+	before := contractRemainingAmount(t, fx.contractID)
+
+	detail := makeDraftRequest(t, fx, []uuid.UUID{fx.empOneID}, nil)
+	requestID := uuid.MustParse(detail.Request.ID)
+
+	_ = submitDraftRequest(t, fx, detail)
+
+	after := contractRemainingAmount(t, fx.contractID)
+
+	if after != before-5000 {
+		t.Fatalf("expected remaining amount %.2f, got %.2f", before-5000, after)
+	}
+
+	if got := budgetOperationCount(t, requestID, "RESERVE"); got != 1 {
+		t.Fatalf("expected 1 RESERVE transaction, got %d", got)
+	}
+}
+
+func TestBudgetWriteOffOnFinalApprove(t *testing.T) {
+	fx := newFixture(t)
+
+	detail := makeDraftRequest(t, fx, []uuid.UUID{fx.empOneID}, nil)
+	submitted := submitDraftRequest(t, fx, detail)
+
+	requestID := uuid.MustParse(detail.Request.ID)
+	childID := firstChildByDZO(t, submitted, fx.dzoOneID)
+
+	if _, err := ApproveHRRequest(
+		authCtxFor(fx.hrOneKC, authhandler.RoleHR, &fx.dzoOneID),
+		toEncoreUUID(childID),
+	); err != nil {
+		t.Fatalf("approve hr request: %v", err)
+	}
+
+	if got := budgetOperationCount(t, requestID, "WRITE_OFF"); got != 1 {
+		t.Fatalf("expected 1 WRITE_OFF transaction, got %d", got)
+	}
+
+	history, err := GetRequestBudgetHistory(
+		authCtxFor(fx.adminKC, authhandler.RoleADM, nil),
+		toEncoreUUID(requestID),
+	)
+	if err != nil {
+		t.Fatalf("get budget history: %v", err)
+	}
+	if len(history.Items) != 2 {
+		t.Fatalf("expected 2 budget history items, got %d", len(history.Items))
+	}
+	if history.Items[0].OperationType != "RESERVE" || history.Items[1].OperationType != "WRITE_OFF" {
+		t.Fatalf("unexpected budget history operations: %+v", history.Items)
+	}
+}
+
+func TestBudgetReleaseOnCancelBeforeWriteOff(t *testing.T) {
+	fx := newFixture(t)
+
+	before := contractRemainingAmount(t, fx.contractID)
+
+	detail := makeDraftRequest(t, fx, []uuid.UUID{fx.empOneID}, nil)
+	submitted := submitDraftRequest(t, fx, detail)
+
+	requestID := uuid.MustParse(submitted.Request.ID)
+
+	afterReserve := contractRemainingAmount(t, fx.contractID)
+	if afterReserve != before-5000 {
+		t.Fatalf("expected remaining amount after reserve %.2f, got %.2f", before-5000, afterReserve)
+	}
+
+	if _, err := CancelAdminRequest(
+		authCtxFor(fx.adminKC, authhandler.RoleADM, nil),
+		toEncoreUUID(requestID),
+	); err != nil {
+		t.Fatalf("cancel admin request: %v", err)
+	}
+
+	afterCancel := contractRemainingAmount(t, fx.contractID)
+	if afterCancel != before {
+		t.Fatalf("expected remaining amount to be released back to %.2f, got %.2f", before, afterCancel)
+	}
+
+	if got := budgetOperationCount(t, requestID, "RELEASE"); got != 1 {
+		t.Fatalf("expected 1 RELEASE transaction, got %d", got)
+	}
+	if got := budgetOperationCount(t, requestID, "REFUND"); got != 0 {
+		t.Fatalf("expected 0 REFUND transactions before write-off, got %d", got)
+	}
+}
+
+func TestBudgetRefundOnCancelAfterWriteOff(t *testing.T) {
+	fx := newFixture(t)
+
+	before := contractRemainingAmount(t, fx.contractID)
+
+	detail := makeDraftRequest(t, fx, []uuid.UUID{fx.empOneID}, nil)
+	submitted := submitDraftRequest(t, fx, detail)
+
+	requestID := uuid.MustParse(submitted.Request.ID)
+	childID := firstChildByDZO(t, submitted, fx.dzoOneID)
+
+	if _, err := ApproveHRRequest(
+		authCtxFor(fx.hrOneKC, authhandler.RoleHR, &fx.dzoOneID),
+		toEncoreUUID(childID),
+	); err != nil {
+		t.Fatalf("approve hr request: %v", err)
+	}
+
+	afterWriteOff := contractRemainingAmount(t, fx.contractID)
+	if afterWriteOff != before-5000 {
+		t.Fatalf("expected remaining after write-off to stay %.2f, got %.2f", before-5000, afterWriteOff)
+	}
+
+	if _, err := CancelAdminRequest(
+		authCtxFor(fx.adminKC, authhandler.RoleADM, nil),
+		toEncoreUUID(requestID),
+	); err != nil {
+		t.Fatalf("cancel admin request after write-off: %v", err)
+	}
+
+	afterRefund := contractRemainingAmount(t, fx.contractID)
+	if afterRefund != before {
+		t.Fatalf("expected remaining amount after refund %.2f, got %.2f", before, afterRefund)
+	}
+
+	if got := budgetOperationCount(t, requestID, "REFUND"); got != 1 {
+		t.Fatalf("expected 1 REFUND transaction, got %d", got)
+	}
+}
+
+func TestBudgetSubmitFailsWhenNotEnoughBudget(t *testing.T) {
+	fx := newFixture(t)
+
+	if _, err := db.Exec(ctx(), `
+		UPDATE contract_suppliers
+		SET remaining_amount = 100
+		WHERE id = $1
+	`, fx.contractID); err != nil {
+		t.Fatalf("set low remaining amount: %v", err)
+	}
+
+	detail := makeDraftRequest(t, fx, []uuid.UUID{fx.empOneID}, nil)
+
+	_, err := SubmitRequest(
+		authCtxFor(fx.adminKC, authhandler.RoleADM, nil),
+		toEncoreUUID(uuid.MustParse(detail.Request.ID)),
+	)
+	if err == nil {
+		t.Fatal("expected submit to fail when budget is insufficient")
+	}
+	if errs.Code(err) != errs.InvalidArgument {
+		t.Fatalf("expected InvalidArgument, got %v", errs.Code(err))
+	}
+
+	if got := budgetOperationCount(t, uuid.MustParse(detail.Request.ID), "RESERVE"); got != 0 {
+		t.Fatalf("expected 0 RESERVE transactions after failed submit, got %d", got)
 	}
 }

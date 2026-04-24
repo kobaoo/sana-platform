@@ -120,3 +120,15 @@ type GetRequestResponse struct {
 type ListRequestsResponse struct {
 	Items []RequestSummary `json:"items"`
 }
+
+type BudgetHistoryItem struct {
+	OperationType string    `json:"operation_type"`
+	Amount        float64   `json:"amount"`
+	CreatedBy     string    `json:"created_by"`
+	Reason        *string   `json:"reason"`
+	CreatedAt     time.Time `json:"created_at"`
+}
+
+type GetRequestBudgetHistoryResponse struct {
+	Items []BudgetHistoryItem `json:"items"`
+}

@@ -21,6 +21,8 @@ import (
 	"encore.app/db/ent/externaltrainingevent"
 	"encore.app/db/ent/organization"
 	"encore.app/db/ent/request"
+	"encore.app/db/ent/requestparticipant"
+	"encore.app/db/ent/requesttargetdzo"
 	"encore.app/db/ent/supplier"
 	"encore.app/db/ent/trainingevent"
 	"encore.app/db/ent/trainingparticipant"
@@ -54,6 +56,10 @@ type Client struct {
 	Organization *OrganizationClient
 	// Request is the client for interacting with the Request builders.
 	Request *RequestClient
+	// RequestParticipant is the client for interacting with the RequestParticipant builders.
+	RequestParticipant *RequestParticipantClient
+	// RequestTargetDzo is the client for interacting with the RequestTargetDzo builders.
+	RequestTargetDzo *RequestTargetDzoClient
 	// Supplier is the client for interacting with the Supplier builders.
 	Supplier *SupplierClient
 	// TrainingEvent is the client for interacting with the TrainingEvent builders.
@@ -82,6 +88,8 @@ func (c *Client) init() {
 	c.ExternalTrainingEvent = NewExternalTrainingEventClient(c.config)
 	c.Organization = NewOrganizationClient(c.config)
 	c.Request = NewRequestClient(c.config)
+	c.RequestParticipant = NewRequestParticipantClient(c.config)
+	c.RequestTargetDzo = NewRequestTargetDzoClient(c.config)
 	c.Supplier = NewSupplierClient(c.config)
 	c.TrainingEvent = NewTrainingEventClient(c.config)
 	c.TrainingParticipant = NewTrainingParticipantClient(c.config)
@@ -187,6 +195,8 @@ func (c *Client) Tx(ctx context.Context) (*Tx, error) {
 		ExternalTrainingEvent:   NewExternalTrainingEventClient(cfg),
 		Organization:            NewOrganizationClient(cfg),
 		Request:                 NewRequestClient(cfg),
+		RequestParticipant:      NewRequestParticipantClient(cfg),
+		RequestTargetDzo:        NewRequestTargetDzoClient(cfg),
 		Supplier:                NewSupplierClient(cfg),
 		TrainingEvent:           NewTrainingEventClient(cfg),
 		TrainingParticipant:     NewTrainingParticipantClient(cfg),
@@ -219,6 +229,8 @@ func (c *Client) BeginTx(ctx context.Context, opts *sql.TxOptions) (*Tx, error) 
 		ExternalTrainingEvent:   NewExternalTrainingEventClient(cfg),
 		Organization:            NewOrganizationClient(cfg),
 		Request:                 NewRequestClient(cfg),
+		RequestParticipant:      NewRequestParticipantClient(cfg),
+		RequestTargetDzo:        NewRequestTargetDzoClient(cfg),
 		Supplier:                NewSupplierClient(cfg),
 		TrainingEvent:           NewTrainingEventClient(cfg),
 		TrainingParticipant:     NewTrainingParticipantClient(cfg),
@@ -254,7 +266,8 @@ func (c *Client) Use(hooks ...Hook) {
 	for _, n := range []interface{ Use(...Hook) }{
 		c.Category, c.Company, c.ContractSupplier, c.ContractSupplierHistory,
 		c.DzoOrganization, c.Employee, c.ExternalTrainingEvent, c.Organization,
-		c.Request, c.Supplier, c.TrainingEvent, c.TrainingParticipant, c.User,
+		c.Request, c.RequestParticipant, c.RequestTargetDzo, c.Supplier,
+		c.TrainingEvent, c.TrainingParticipant, c.User,
 	} {
 		n.Use(hooks...)
 	}
@@ -266,7 +279,8 @@ func (c *Client) Intercept(interceptors ...Interceptor) {
 	for _, n := range []interface{ Intercept(...Interceptor) }{
 		c.Category, c.Company, c.ContractSupplier, c.ContractSupplierHistory,
 		c.DzoOrganization, c.Employee, c.ExternalTrainingEvent, c.Organization,
-		c.Request, c.Supplier, c.TrainingEvent, c.TrainingParticipant, c.User,
+		c.Request, c.RequestParticipant, c.RequestTargetDzo, c.Supplier,
+		c.TrainingEvent, c.TrainingParticipant, c.User,
 	} {
 		n.Intercept(interceptors...)
 	}
@@ -293,6 +307,10 @@ func (c *Client) Mutate(ctx context.Context, m Mutation) (Value, error) {
 		return c.Organization.mutate(ctx, m)
 	case *RequestMutation:
 		return c.Request.mutate(ctx, m)
+	case *RequestParticipantMutation:
+		return c.RequestParticipant.mutate(ctx, m)
+	case *RequestTargetDzoMutation:
+		return c.RequestTargetDzo.mutate(ctx, m)
 	case *SupplierMutation:
 		return c.Supplier.mutate(ctx, m)
 	case *TrainingEventMutation:
@@ -1670,6 +1688,38 @@ func (c *RequestClient) QueryInitiator(_m *Request) *UserQuery {
 	return query
 }
 
+// QueryParent queries the parent edge of a Request.
+func (c *RequestClient) QueryParent(_m *Request) *RequestQuery {
+	query := (&RequestClient{config: c.config}).Query()
+	query.path = func(context.Context) (fromV *sql.Selector, _ error) {
+		id := _m.ID
+		step := sqlgraph.NewStep(
+			sqlgraph.From(request.Table, request.FieldID, id),
+			sqlgraph.To(request.Table, request.FieldID),
+			sqlgraph.Edge(sqlgraph.M2O, true, request.ParentTable, request.ParentColumn),
+		)
+		fromV = sqlgraph.Neighbors(_m.driver.Dialect(), step)
+		return fromV, nil
+	}
+	return query
+}
+
+// QueryChildren queries the children edge of a Request.
+func (c *RequestClient) QueryChildren(_m *Request) *RequestQuery {
+	query := (&RequestClient{config: c.config}).Query()
+	query.path = func(context.Context) (fromV *sql.Selector, _ error) {
+		id := _m.ID
+		step := sqlgraph.NewStep(
+			sqlgraph.From(request.Table, request.FieldID, id),
+			sqlgraph.To(request.Table, request.FieldID),
+			sqlgraph.Edge(sqlgraph.O2M, false, request.ChildrenTable, request.ChildrenColumn),
+		)
+		fromV = sqlgraph.Neighbors(_m.driver.Dialect(), step)
+		return fromV, nil
+	}
+	return query
+}
+
 // Hooks returns the client hooks.
 func (c *RequestClient) Hooks() []Hook {
 	return c.hooks.Request
@@ -1692,6 +1742,272 @@ func (c *RequestClient) mutate(ctx context.Context, m *RequestMutation) (Value, 
 		return (&RequestDelete{config: c.config, hooks: c.Hooks(), mutation: m}).Exec(ctx)
 	default:
 		return nil, fmt.Errorf("ent: unknown Request mutation op: %q", m.Op())
+	}
+}
+
+// RequestParticipantClient is a client for the RequestParticipant schema.
+type RequestParticipantClient struct {
+	config
+}
+
+// NewRequestParticipantClient returns a client for the RequestParticipant from the given config.
+func NewRequestParticipantClient(c config) *RequestParticipantClient {
+	return &RequestParticipantClient{config: c}
+}
+
+// Use adds a list of mutation hooks to the hooks stack.
+// A call to `Use(f, g, h)` equals to `requestparticipant.Hooks(f(g(h())))`.
+func (c *RequestParticipantClient) Use(hooks ...Hook) {
+	c.hooks.RequestParticipant = append(c.hooks.RequestParticipant, hooks...)
+}
+
+// Intercept adds a list of query interceptors to the interceptors stack.
+// A call to `Intercept(f, g, h)` equals to `requestparticipant.Intercept(f(g(h())))`.
+func (c *RequestParticipantClient) Intercept(interceptors ...Interceptor) {
+	c.inters.RequestParticipant = append(c.inters.RequestParticipant, interceptors...)
+}
+
+// Create returns a builder for creating a RequestParticipant entity.
+func (c *RequestParticipantClient) Create() *RequestParticipantCreate {
+	mutation := newRequestParticipantMutation(c.config, OpCreate)
+	return &RequestParticipantCreate{config: c.config, hooks: c.Hooks(), mutation: mutation}
+}
+
+// CreateBulk returns a builder for creating a bulk of RequestParticipant entities.
+func (c *RequestParticipantClient) CreateBulk(builders ...*RequestParticipantCreate) *RequestParticipantCreateBulk {
+	return &RequestParticipantCreateBulk{config: c.config, builders: builders}
+}
+
+// MapCreateBulk creates a bulk creation builder from the given slice. For each item in the slice, the function creates
+// a builder and applies setFunc on it.
+func (c *RequestParticipantClient) MapCreateBulk(slice any, setFunc func(*RequestParticipantCreate, int)) *RequestParticipantCreateBulk {
+	rv := reflect.ValueOf(slice)
+	if rv.Kind() != reflect.Slice {
+		return &RequestParticipantCreateBulk{err: fmt.Errorf("calling to RequestParticipantClient.MapCreateBulk with wrong type %T, need slice", slice)}
+	}
+	builders := make([]*RequestParticipantCreate, rv.Len())
+	for i := 0; i < rv.Len(); i++ {
+		builders[i] = c.Create()
+		setFunc(builders[i], i)
+	}
+	return &RequestParticipantCreateBulk{config: c.config, builders: builders}
+}
+
+// Update returns an update builder for RequestParticipant.
+func (c *RequestParticipantClient) Update() *RequestParticipantUpdate {
+	mutation := newRequestParticipantMutation(c.config, OpUpdate)
+	return &RequestParticipantUpdate{config: c.config, hooks: c.Hooks(), mutation: mutation}
+}
+
+// UpdateOne returns an update builder for the given entity.
+func (c *RequestParticipantClient) UpdateOne(_m *RequestParticipant) *RequestParticipantUpdateOne {
+	mutation := newRequestParticipantMutation(c.config, OpUpdateOne, withRequestParticipant(_m))
+	return &RequestParticipantUpdateOne{config: c.config, hooks: c.Hooks(), mutation: mutation}
+}
+
+// UpdateOneID returns an update builder for the given id.
+func (c *RequestParticipantClient) UpdateOneID(id uuid.UUID) *RequestParticipantUpdateOne {
+	mutation := newRequestParticipantMutation(c.config, OpUpdateOne, withRequestParticipantID(id))
+	return &RequestParticipantUpdateOne{config: c.config, hooks: c.Hooks(), mutation: mutation}
+}
+
+// Delete returns a delete builder for RequestParticipant.
+func (c *RequestParticipantClient) Delete() *RequestParticipantDelete {
+	mutation := newRequestParticipantMutation(c.config, OpDelete)
+	return &RequestParticipantDelete{config: c.config, hooks: c.Hooks(), mutation: mutation}
+}
+
+// DeleteOne returns a builder for deleting the given entity.
+func (c *RequestParticipantClient) DeleteOne(_m *RequestParticipant) *RequestParticipantDeleteOne {
+	return c.DeleteOneID(_m.ID)
+}
+
+// DeleteOneID returns a builder for deleting the given entity by its id.
+func (c *RequestParticipantClient) DeleteOneID(id uuid.UUID) *RequestParticipantDeleteOne {
+	builder := c.Delete().Where(requestparticipant.ID(id))
+	builder.mutation.id = &id
+	builder.mutation.op = OpDeleteOne
+	return &RequestParticipantDeleteOne{builder}
+}
+
+// Query returns a query builder for RequestParticipant.
+func (c *RequestParticipantClient) Query() *RequestParticipantQuery {
+	return &RequestParticipantQuery{
+		config: c.config,
+		ctx:    &QueryContext{Type: TypeRequestParticipant},
+		inters: c.Interceptors(),
+	}
+}
+
+// Get returns a RequestParticipant entity by its id.
+func (c *RequestParticipantClient) Get(ctx context.Context, id uuid.UUID) (*RequestParticipant, error) {
+	return c.Query().Where(requestparticipant.ID(id)).Only(ctx)
+}
+
+// GetX is like Get, but panics if an error occurs.
+func (c *RequestParticipantClient) GetX(ctx context.Context, id uuid.UUID) *RequestParticipant {
+	obj, err := c.Get(ctx, id)
+	if err != nil {
+		panic(err)
+	}
+	return obj
+}
+
+// Hooks returns the client hooks.
+func (c *RequestParticipantClient) Hooks() []Hook {
+	return c.hooks.RequestParticipant
+}
+
+// Interceptors returns the client interceptors.
+func (c *RequestParticipantClient) Interceptors() []Interceptor {
+	return c.inters.RequestParticipant
+}
+
+func (c *RequestParticipantClient) mutate(ctx context.Context, m *RequestParticipantMutation) (Value, error) {
+	switch m.Op() {
+	case OpCreate:
+		return (&RequestParticipantCreate{config: c.config, hooks: c.Hooks(), mutation: m}).Save(ctx)
+	case OpUpdate:
+		return (&RequestParticipantUpdate{config: c.config, hooks: c.Hooks(), mutation: m}).Save(ctx)
+	case OpUpdateOne:
+		return (&RequestParticipantUpdateOne{config: c.config, hooks: c.Hooks(), mutation: m}).Save(ctx)
+	case OpDelete, OpDeleteOne:
+		return (&RequestParticipantDelete{config: c.config, hooks: c.Hooks(), mutation: m}).Exec(ctx)
+	default:
+		return nil, fmt.Errorf("ent: unknown RequestParticipant mutation op: %q", m.Op())
+	}
+}
+
+// RequestTargetDzoClient is a client for the RequestTargetDzo schema.
+type RequestTargetDzoClient struct {
+	config
+}
+
+// NewRequestTargetDzoClient returns a client for the RequestTargetDzo from the given config.
+func NewRequestTargetDzoClient(c config) *RequestTargetDzoClient {
+	return &RequestTargetDzoClient{config: c}
+}
+
+// Use adds a list of mutation hooks to the hooks stack.
+// A call to `Use(f, g, h)` equals to `requesttargetdzo.Hooks(f(g(h())))`.
+func (c *RequestTargetDzoClient) Use(hooks ...Hook) {
+	c.hooks.RequestTargetDzo = append(c.hooks.RequestTargetDzo, hooks...)
+}
+
+// Intercept adds a list of query interceptors to the interceptors stack.
+// A call to `Intercept(f, g, h)` equals to `requesttargetdzo.Intercept(f(g(h())))`.
+func (c *RequestTargetDzoClient) Intercept(interceptors ...Interceptor) {
+	c.inters.RequestTargetDzo = append(c.inters.RequestTargetDzo, interceptors...)
+}
+
+// Create returns a builder for creating a RequestTargetDzo entity.
+func (c *RequestTargetDzoClient) Create() *RequestTargetDzoCreate {
+	mutation := newRequestTargetDzoMutation(c.config, OpCreate)
+	return &RequestTargetDzoCreate{config: c.config, hooks: c.Hooks(), mutation: mutation}
+}
+
+// CreateBulk returns a builder for creating a bulk of RequestTargetDzo entities.
+func (c *RequestTargetDzoClient) CreateBulk(builders ...*RequestTargetDzoCreate) *RequestTargetDzoCreateBulk {
+	return &RequestTargetDzoCreateBulk{config: c.config, builders: builders}
+}
+
+// MapCreateBulk creates a bulk creation builder from the given slice. For each item in the slice, the function creates
+// a builder and applies setFunc on it.
+func (c *RequestTargetDzoClient) MapCreateBulk(slice any, setFunc func(*RequestTargetDzoCreate, int)) *RequestTargetDzoCreateBulk {
+	rv := reflect.ValueOf(slice)
+	if rv.Kind() != reflect.Slice {
+		return &RequestTargetDzoCreateBulk{err: fmt.Errorf("calling to RequestTargetDzoClient.MapCreateBulk with wrong type %T, need slice", slice)}
+	}
+	builders := make([]*RequestTargetDzoCreate, rv.Len())
+	for i := 0; i < rv.Len(); i++ {
+		builders[i] = c.Create()
+		setFunc(builders[i], i)
+	}
+	return &RequestTargetDzoCreateBulk{config: c.config, builders: builders}
+}
+
+// Update returns an update builder for RequestTargetDzo.
+func (c *RequestTargetDzoClient) Update() *RequestTargetDzoUpdate {
+	mutation := newRequestTargetDzoMutation(c.config, OpUpdate)
+	return &RequestTargetDzoUpdate{config: c.config, hooks: c.Hooks(), mutation: mutation}
+}
+
+// UpdateOne returns an update builder for the given entity.
+func (c *RequestTargetDzoClient) UpdateOne(_m *RequestTargetDzo) *RequestTargetDzoUpdateOne {
+	mutation := newRequestTargetDzoMutation(c.config, OpUpdateOne, withRequestTargetDzo(_m))
+	return &RequestTargetDzoUpdateOne{config: c.config, hooks: c.Hooks(), mutation: mutation}
+}
+
+// UpdateOneID returns an update builder for the given id.
+func (c *RequestTargetDzoClient) UpdateOneID(id uuid.UUID) *RequestTargetDzoUpdateOne {
+	mutation := newRequestTargetDzoMutation(c.config, OpUpdateOne, withRequestTargetDzoID(id))
+	return &RequestTargetDzoUpdateOne{config: c.config, hooks: c.Hooks(), mutation: mutation}
+}
+
+// Delete returns a delete builder for RequestTargetDzo.
+func (c *RequestTargetDzoClient) Delete() *RequestTargetDzoDelete {
+	mutation := newRequestTargetDzoMutation(c.config, OpDelete)
+	return &RequestTargetDzoDelete{config: c.config, hooks: c.Hooks(), mutation: mutation}
+}
+
+// DeleteOne returns a builder for deleting the given entity.
+func (c *RequestTargetDzoClient) DeleteOne(_m *RequestTargetDzo) *RequestTargetDzoDeleteOne {
+	return c.DeleteOneID(_m.ID)
+}
+
+// DeleteOneID returns a builder for deleting the given entity by its id.
+func (c *RequestTargetDzoClient) DeleteOneID(id uuid.UUID) *RequestTargetDzoDeleteOne {
+	builder := c.Delete().Where(requesttargetdzo.ID(id))
+	builder.mutation.id = &id
+	builder.mutation.op = OpDeleteOne
+	return &RequestTargetDzoDeleteOne{builder}
+}
+
+// Query returns a query builder for RequestTargetDzo.
+func (c *RequestTargetDzoClient) Query() *RequestTargetDzoQuery {
+	return &RequestTargetDzoQuery{
+		config: c.config,
+		ctx:    &QueryContext{Type: TypeRequestTargetDzo},
+		inters: c.Interceptors(),
+	}
+}
+
+// Get returns a RequestTargetDzo entity by its id.
+func (c *RequestTargetDzoClient) Get(ctx context.Context, id uuid.UUID) (*RequestTargetDzo, error) {
+	return c.Query().Where(requesttargetdzo.ID(id)).Only(ctx)
+}
+
+// GetX is like Get, but panics if an error occurs.
+func (c *RequestTargetDzoClient) GetX(ctx context.Context, id uuid.UUID) *RequestTargetDzo {
+	obj, err := c.Get(ctx, id)
+	if err != nil {
+		panic(err)
+	}
+	return obj
+}
+
+// Hooks returns the client hooks.
+func (c *RequestTargetDzoClient) Hooks() []Hook {
+	return c.hooks.RequestTargetDzo
+}
+
+// Interceptors returns the client interceptors.
+func (c *RequestTargetDzoClient) Interceptors() []Interceptor {
+	return c.inters.RequestTargetDzo
+}
+
+func (c *RequestTargetDzoClient) mutate(ctx context.Context, m *RequestTargetDzoMutation) (Value, error) {
+	switch m.Op() {
+	case OpCreate:
+		return (&RequestTargetDzoCreate{config: c.config, hooks: c.Hooks(), mutation: m}).Save(ctx)
+	case OpUpdate:
+		return (&RequestTargetDzoUpdate{config: c.config, hooks: c.Hooks(), mutation: m}).Save(ctx)
+	case OpUpdateOne:
+		return (&RequestTargetDzoUpdateOne{config: c.config, hooks: c.Hooks(), mutation: m}).Save(ctx)
+	case OpDelete, OpDeleteOne:
+		return (&RequestTargetDzoDelete{config: c.config, hooks: c.Hooks(), mutation: m}).Exec(ctx)
+	default:
+		return nil, fmt.Errorf("ent: unknown RequestTargetDzo mutation op: %q", m.Op())
 	}
 }
 
@@ -2295,12 +2611,13 @@ func (c *UserClient) mutate(ctx context.Context, m *UserMutation) (Value, error)
 type (
 	hooks struct {
 		Category, Company, ContractSupplier, ContractSupplierHistory, DzoOrganization,
-		Employee, ExternalTrainingEvent, Organization, Request, Supplier,
-		TrainingEvent, TrainingParticipant, User []ent.Hook
+		Employee, ExternalTrainingEvent, Organization, Request, RequestParticipant,
+		RequestTargetDzo, Supplier, TrainingEvent, TrainingParticipant, User []ent.Hook
 	}
 	inters struct {
 		Category, Company, ContractSupplier, ContractSupplierHistory, DzoOrganization,
-		Employee, ExternalTrainingEvent, Organization, Request, Supplier,
-		TrainingEvent, TrainingParticipant, User []ent.Interceptor
+		Employee, ExternalTrainingEvent, Organization, Request, RequestParticipant,
+		RequestTargetDzo, Supplier, TrainingEvent, TrainingParticipant,
+		User []ent.Interceptor
 	}
 )

@@ -213,16 +213,27 @@ INSERT INTO public.training_participants (
 -- REQUEST
 ---------------------------------------------------
 INSERT INTO public.requests (
-  id, entity_id, entity_type,
-  step, created_at, status, initiator_id
+  id,
+  initiator_id,
+  entity_id,
+  entity_type,
+  request_type,
+  title,
+  step,
+  created_at,
+  updated_at,
+  status
 ) VALUES (
   'cccccccc-cccc-cccc-cccc-cccccccccccc',
+  '55555555-5555-5555-5555-555555555555',
   '99999999-9999-9999-9999-999999999999',
   'EXTERNAL_TRAINING',
+  'MAIN',
+  'Demo External Training Request',
   0,
   now(),
-  'PENDING',
-  '55555555-5555-5555-5555-555555555555'
+  now(),
+  'PENDING'
 );
 
 ---------------------------------------------------
