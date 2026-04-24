@@ -52,6 +52,11 @@ func CreateDZO(ctx context.Context, req *CreateDZORequest) (*GetDZOResponse, err
 		return nil, errs.B().Code(errs.InvalidArgument).Msg("client_id is required").Err()
 	}
 
+	// ADM can only create DZO within their own client.
+	if ad.Role == authhandler.RoleADM && req.ClientID != ad.CompanyID {
+		return nil, errs.B().Code(errs.PermissionDenied).Msg("admin can only create DZO within their own client").Err()
+	}
+
 	dzo, err := createDZO(ctx, req)
 	if err != nil {
 		return nil, err
@@ -60,7 +65,7 @@ func CreateDZO(ctx context.Context, req *CreateDZORequest) (*GetDZOResponse, err
 	return &GetDZOResponse{DZO: *dzo}, nil
 }
 
-// ListDZO returns all active DZO.
+// ListDZO returns all active DZO. SA sees all; ADM sees only their client's DZOs.
 //
 //encore:api auth method=GET path=/dzo
 func ListDZO(ctx context.Context) (*ListDZOResponse, error) {
@@ -73,7 +78,17 @@ func ListDZO(ctx context.Context) (*ListDZOResponse, error) {
 		return nil, err
 	}
 
-	dzos, err := queryAllDZO(ctx)
+	var dzos []DZO
+	if ad.Role == authhandler.RoleSA {
+		dzos, err = queryActiveDZO(ctx)
+	} else {
+		// ADM: scoped to their client
+		if ad.CompanyID == "" {
+			dzos = []DZO{}
+		} else {
+			dzos, err = queryActiveDZOByClient(ctx, ad.CompanyID)
+		}
+	}
 	if err != nil {
 		return nil, err
 	}
@@ -84,11 +99,10 @@ func ListDZO(ctx context.Context) (*ListDZOResponse, error) {
 	}, nil
 }
 
-// GetDZO returns DZO by ID.
+// GetDZO returns DZO by ID. ADM is scoped to their client.
 //
 //encore:api auth method=GET path=/dzo/:id
 func GetDZO(ctx context.Context, id string) (*GetDZOResponse, error) {
-
 	ad, err := getAuthData()
 	if err != nil {
 		return nil, err
@@ -103,10 +117,14 @@ func GetDZO(ctx context.Context, id string) (*GetDZOResponse, error) {
 		return nil, err
 	}
 
+	if ad.Role == authhandler.RoleADM && dzo.ClientID != ad.CompanyID {
+		return nil, errs.B().Code(errs.NotFound).Err()
+	}
+
 	return &GetDZOResponse{DZO: *dzo}, nil
 }
 
-// UpdateDZO updates DZO.
+// UpdateDZO updates DZO. ADM is scoped to their client.
 //
 //encore:api auth method=PATCH path=/dzo/:id
 func UpdateDZO(ctx context.Context, id string, req *UpdateDZORequest) (*GetDZOResponse, error) {
@@ -119,6 +137,17 @@ func UpdateDZO(ctx context.Context, id string, req *UpdateDZORequest) (*GetDZORe
 		return nil, err
 	}
 
+	// For ADM, verify the DZO belongs to their client before updating.
+	if ad.Role == authhandler.RoleADM {
+		existing, err := queryDZOByID(ctx, id)
+		if err != nil {
+			return nil, err
+		}
+		if existing.ClientID != ad.CompanyID {
+			return nil, errs.B().Code(errs.NotFound).Err()
+		}
+	}
+
 	dzo, err := updateDZO(ctx, id, req)
 	if err != nil {
 		return nil, err
@@ -127,7 +156,7 @@ func UpdateDZO(ctx context.Context, id string, req *UpdateDZORequest) (*GetDZORe
 	return &GetDZOResponse{DZO: *dzo}, nil
 }
 
-// DeleteDZO soft deletes DZO.
+// DeleteDZO soft deletes DZO. ADM is scoped to their client.
 //
 //encore:api auth method=DELETE path=/dzo/:id
 func DeleteDZO(ctx context.Context, id string) (*DeleteDZOResponse, error) {
@@ -138,6 +167,17 @@ func DeleteDZO(ctx context.Context, id string) (*DeleteDZOResponse, error) {
 
 	if err := requireRole(ad, authhandler.RoleSA, authhandler.RoleADM); err != nil {
 		return nil, err
+	}
+
+	// For ADM, verify the DZO belongs to their client before deleting.
+	if ad.Role == authhandler.RoleADM {
+		existing, err := queryDZOByID(ctx, id)
+		if err != nil {
+			return nil, err
+		}
+		if existing.ClientID != ad.CompanyID {
+			return nil, errs.B().Code(errs.NotFound).Err()
+		}
 	}
 
 	count, err := deleteDZO(ctx, id)
@@ -212,12 +252,18 @@ func queryActiveDZO(ctx context.Context) ([]DZO, error) {
 	return res, nil
 }
 
-func queryAllDZO(ctx context.Context) ([]DZO, error) {
+func queryActiveDZOByClient(ctx context.Context, clientID string) ([]DZO, error) {
+	clientUUID, err := uuid.Parse(clientID)
+	if err != nil {
+		return nil, errs.B().Code(errs.InvalidArgument).Msg("invalid client_id format").Err()
+	}
+
 	rows, err := Client.DzoOrganization.
 		Query().
-		WithEmployees(func(q *ent.EmployeeQuery) {
-			q.Where(employee.IsDeletedEQ(false))
-		}).
+		Where(
+			dzoorganization.IsActiveEQ(true),
+			dzoorganization.ClientIDEQ(clientUUID),
+		).
 		All(ctx)
 
 	if err != nil {
@@ -226,8 +272,7 @@ func queryAllDZO(ctx context.Context) ([]DZO, error) {
 
 	res := make([]DZO, 0, len(rows))
 	for _, r := range rows {
-		employeesCount := len(r.Edges.Employees)
-		res = append(res, *entToDZO(r, employeesCount))
+		res = append(res, *entToDZO(r, 0))
 	}
 
 	return res, nil

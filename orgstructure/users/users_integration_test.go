@@ -1,4 +1,3 @@
-//go:build integration
 package users
 
 import (
@@ -44,13 +43,30 @@ func makeUser(t *testing.T, role authhandler.UserRole, dzoID *string) *User {
 	return resp
 }
 
-func makePendingAdmin(t *testing.T, dzoID string) *User {
+// makeTestClientID creates a real Company row in the DB and returns its UUID string.
+// Tests that set user.client_id need a valid FK row, so random UUIDs won't work.
+func makeTestClientID(t *testing.T) string {
+	t.Helper()
+	c, err := Client.Company.
+		Create().
+		SetName("test-client-" + uuid.NewString()[:8]).
+		Save(ctx())
+	if err != nil {
+		t.Fatalf("makeTestClientID: %v", err)
+	}
+	return c.ID.String()
+}
+
+// makePendingAdmin inserts a pending ADM record directly into the DB.
+// ADM is scoped to a client, not a DZO.
+func makePendingAdmin(t *testing.T) *User {
 	t.Helper()
 
-	resp, err := insertPendingAdmin(ctx(), &RegisterAdminRequest{
-		KeycloakUserID: newID(),
-		Email:          newEmail(),
-		DzoID:          &dzoID,
+	resp, err := insertPendingAdmin(ctx(), newID(), &RegisterAdminRequest{
+		Email:     newEmail(),
+		FirstName: "Test",
+		LastName:  "Admin",
+		ClientID:  makeTestClientID(t),
 	})
 	if err != nil {
 		t.Fatalf("makePendingAdmin: %v", err)
@@ -143,12 +159,13 @@ func TestInsertUser_DuplicateKeycloakUserID(t *testing.T) {
 }
 
 func TestInsertPendingAdmin_Success(t *testing.T) {
-	dzoID := validDzoID()
+	clientID := makeTestClientID(t)
 
-	u, err := insertPendingAdmin(ctx(), &RegisterAdminRequest{
-		KeycloakUserID: newID(),
-		Email:          newEmail(),
-		DzoID:          &dzoID,
+	u, err := insertPendingAdmin(ctx(), newID(), &RegisterAdminRequest{
+		Email:     newEmail(),
+		FirstName: "Test",
+		LastName:  "Admin",
+		ClientID:  clientID,
 	})
 	if err != nil {
 		t.Fatalf("unexpected error: %v", err)
@@ -162,18 +179,21 @@ func TestInsertPendingAdmin_Success(t *testing.T) {
 	if u.IsOnboarded {
 		t.Error("expected pending admin to be non-onboarded")
 	}
-	if u.DzoID == nil || *u.DzoID != dzoID {
-		t.Errorf("expected dzo_id %q, got %v", dzoID, u.DzoID)
+	// ADM is scoped to a client — dzo_id must be nil.
+	if u.DzoID != nil {
+		t.Errorf("expected dzo_id to be nil for ADM, got %v", u.DzoID)
+	}
+	if u.ClientID == nil || *u.ClientID != clientID {
+		t.Errorf("expected client_id %q, got %v", clientID, u.ClientID)
 	}
 }
 
-func TestInsertPendingAdmin_InvalidDzoFormat(t *testing.T) {
-	badDzoID := "not-a-uuid"
-
-	_, err := insertPendingAdmin(ctx(), &RegisterAdminRequest{
-		KeycloakUserID: newID(),
-		Email:          newEmail(),
-		DzoID:          &badDzoID,
+func TestInsertPendingAdmin_InvalidClientIDFormat(t *testing.T) {
+	_, err := insertPendingAdmin(ctx(), newID(), &RegisterAdminRequest{
+		Email:     newEmail(),
+		FirstName: "Test",
+		LastName:  "Admin",
+		ClientID:  "not-a-uuid",
 	})
 	if err == nil {
 		t.Fatal("expected error, got nil")
@@ -185,25 +205,25 @@ func TestInsertPendingAdmin_InvalidDzoFormat(t *testing.T) {
 
 func TestInsertPendingAdmin_DuplicateKeycloakUserID(t *testing.T) {
 	kcID := newID()
-	dzo1 := validDzoID()
-	dzo2 := validDzoID()
 
-	_, err := insertPendingAdmin(ctx(), &RegisterAdminRequest{
-		KeycloakUserID: kcID,
-		Email:          newEmail(),
-		DzoID:          &dzo1,
+	_, err := insertPendingAdmin(ctx(), kcID, &RegisterAdminRequest{
+		Email:     newEmail(),
+		FirstName: "Test",
+		LastName:  "Admin",
+		ClientID:  makeTestClientID(t),
 	})
 	if err != nil {
 		t.Fatalf("unexpected setup error: %v", err)
 	}
 
-	_, err = insertPendingAdmin(ctx(), &RegisterAdminRequest{
-		KeycloakUserID: kcID,
-		Email:          newEmail(),
-		DzoID:          &dzo2,
+	_, err = insertPendingAdmin(ctx(), kcID, &RegisterAdminRequest{
+		Email:     newEmail(),
+		FirstName: "Test2",
+		LastName:  "Admin2",
+		ClientID:  makeTestClientID(t),
 	})
 	if err == nil {
-		t.Fatal("expected error, got nil")
+		t.Fatal("expected error for duplicate keycloak_user_id, got nil")
 	}
 	if errs.Code(err) != errs.AlreadyExists {
 		t.Errorf("expected AlreadyExists, got %v", errs.Code(err))
@@ -450,8 +470,7 @@ func TestUpdateUserActive_NotFound(t *testing.T) {
 // ════ ONBOARDING / RESOLUTION ════
 
 func TestActivateOnboarding_Success(t *testing.T) {
-	dzoID := validDzoID()
-	pending := makePendingAdmin(t, dzoID)
+	pending := makePendingAdmin(t)
 
 	activated, err := activateOnboarding(ctx(), pending.ID)
 	if err != nil {
@@ -521,22 +540,25 @@ func TestResolveCurrentUser_AutoProvisionsSA(t *testing.T) {
 }
 
 func TestResolveCurrentUser_ActivatesPendingAdmin(t *testing.T) {
-	dzoID := validDzoID()
+	clientID := makeTestClientID(t)
+	kcUserID := newID()
 
-	pending, err := insertPendingAdmin(ctx(), &RegisterAdminRequest{
-		KeycloakUserID: newID(),
-		Email:          newEmail(),
-		DzoID:          &dzoID,
+	pending, err := insertPendingAdmin(ctx(), kcUserID, &RegisterAdminRequest{
+		Email:     newEmail(),
+		FirstName: "Test",
+		LastName:  "Admin",
+		ClientID:  clientID,
 	})
 	if err != nil {
 		t.Fatalf("unexpected setup error: %v", err)
 	}
 
+	// Simulate first login: ADM presents their JWT, backend finds pending record and activates it.
 	ad := &authhandler.AuthData{
 		KeycloakUserID: pending.KeycloakUserID,
 		Email:          pending.Email,
 		Role:           authhandler.RoleADM,
-		DzoID:          dzoID,
+		CompanyID:      clientID,
 	}
 
 	u, err := resolveCurrentUser(ctx(), ad)
@@ -548,6 +570,146 @@ func TestResolveCurrentUser_ActivatesPendingAdmin(t *testing.T) {
 	}
 	if !u.IsOnboarded {
 		t.Error("expected pending admin to become onboarded on first login")
+	}
+	if u.DzoID != nil {
+		t.Error("expected dzo_id to remain nil for ADM after activation")
+	}
+}
+
+// ════ QUERY BY CLIENT ════
+
+func TestQueryActiveUsersByClient_ReturnsOnlyClientUsers(t *testing.T) {
+	clientA := makeTestClientID(t)
+	clientB := makeTestClientID(t)
+
+	a1, err := insertUser(ctx(), &CreateUserRequest{
+		KeycloakUserID: newID(),
+		Email:          newEmail(),
+		Role:           authhandler.RoleEMP,
+		ClientID:       &clientA,
+	})
+	if err != nil {
+		t.Fatalf("insertUser clientA: %v", err)
+	}
+
+	b1, err := insertUser(ctx(), &CreateUserRequest{
+		KeycloakUserID: newID(),
+		Email:          newEmail(),
+		Role:           authhandler.RoleEMP,
+		ClientID:       &clientB,
+	})
+	if err != nil {
+		t.Fatalf("insertUser clientB: %v", err)
+	}
+
+	users, err := queryActiveUsersByClient(ctx(), clientA)
+	if err != nil {
+		t.Fatalf("queryActiveUsersByClient: %v", err)
+	}
+
+	foundA1 := false
+	for _, u := range users {
+		if u.ID == b1.ID {
+			t.Error("user from clientB must not appear in clientA results")
+		}
+		if u.ID == a1.ID {
+			foundA1 = true
+		}
+	}
+	if !foundA1 {
+		t.Error("expected user from clientA to appear in results")
+	}
+}
+
+func TestQueryActiveUsersByClient_ExcludesInactiveUsers(t *testing.T) {
+	clientID := makeTestClientID(t)
+
+	active, err := insertUser(ctx(), &CreateUserRequest{
+		KeycloakUserID: newID(),
+		Email:          newEmail(),
+		Role:           authhandler.RoleEMP,
+		ClientID:       &clientID,
+	})
+	if err != nil {
+		t.Fatalf("insertUser active: %v", err)
+	}
+
+	inactive, err := insertUser(ctx(), &CreateUserRequest{
+		KeycloakUserID: newID(),
+		Email:          newEmail(),
+		Role:           authhandler.RoleEMP,
+		ClientID:       &clientID,
+	})
+	if err != nil {
+		t.Fatalf("insertUser inactive: %v", err)
+	}
+	if err := updateUserActive(ctx(), inactive.ID, false); err != nil {
+		t.Fatalf("updateUserActive: %v", err)
+	}
+
+	users, err := queryActiveUsersByClient(ctx(), clientID)
+	if err != nil {
+		t.Fatalf("queryActiveUsersByClient: %v", err)
+	}
+
+	foundActive := false
+	for _, u := range users {
+		if u.ID == inactive.ID {
+			t.Error("inactive user must not appear in active-only list")
+		}
+		if u.ID == active.ID {
+			foundActive = true
+		}
+	}
+	if !foundActive {
+		t.Error("expected active user to appear in results")
+	}
+}
+
+func TestQueryActiveUsersByClient_InvalidFormat(t *testing.T) {
+	_, err := queryActiveUsersByClient(ctx(), "not-a-uuid")
+	if err == nil {
+		t.Fatal("expected error, got nil")
+	}
+	if errs.Code(err) != errs.InvalidArgument {
+		t.Errorf("expected InvalidArgument, got %v", errs.Code(err))
+	}
+}
+
+// ════ BLOCK / UNBLOCK ════
+
+func TestCanUnblockUser_RoleCheck(t *testing.T) {
+	cases := []struct {
+		role authhandler.UserRole
+		want bool
+	}{
+		{authhandler.RoleSA, true},
+		{authhandler.RoleADM, true},
+		{authhandler.RoleHR, false},
+		{authhandler.RoleEMP, false},
+	}
+	for _, tc := range cases {
+		got := CanUnblockUser(tc.role)
+		if got != tc.want {
+			t.Errorf("CanUnblockUser(%q) = %v, want %v", tc.role, got, tc.want)
+		}
+	}
+}
+
+// ADM cannot access a user from a different client.
+func TestCanAccessUser_CrossClientDenied(t *testing.T) {
+	clientA := uuid.NewString()
+	clientB := uuid.NewString()
+	if CanAccessUser(authhandler.RoleADM, &clientA, &clientB) {
+		t.Error("ADM must not access user in a different client")
+	}
+}
+
+// ADM can access a user within the same client.
+func TestCanAccessUser_SameClientAllowed(t *testing.T) {
+	clientID := uuid.NewString()
+	if !CanAccessUser(authhandler.RoleADM, &clientID, &clientID) {
+		t.Error("ADM must be able to access user in the same client")
 	}
 }
 
