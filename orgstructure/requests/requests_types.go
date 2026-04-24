@@ -132,3 +132,11 @@ type BudgetHistoryItem struct {
 type GetRequestBudgetHistoryResponse struct {
 	Items []BudgetHistoryItem `json:"items"`
 }
+
+// CreateHRRequest creates a main request from HR to Admin.
+type CreateHRRequestRequest struct {
+	Title                  string   `json:"title"`
+	EmployeeIDs            []string `json:"employee_ids,omitempty"`
+	AllowInactiveEmployees bool     `json:"allow_inactive_employees,omitempty"`
+	DeadlineAt             *string  `json:"deadline_at,omitempty"`
+}

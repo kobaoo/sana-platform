@@ -428,8 +428,8 @@ func TestApproveAndCancelSubrequests_UpdateParentProgress(t *testing.T) {
 	if err != nil {
 		t.Fatalf("get parent request: %v", err)
 	}
-	if parent.Detail.Request.Status != RequestStatusApproved {
-		t.Fatalf("expected parent status APPROVED after mixed result, got %s", parent.Detail.Request.Status)
+	if parent.Detail.Request.Status != RequestStatusInProgress {
+		t.Fatalf("expected parent status IN_PROGRESS after HR decisions, got %s", parent.Detail.Request.Status)
 	}
 	if parent.Detail.Request.ApprovedChildren != 1 || parent.Detail.Request.TotalChildren != 2 {
 		t.Fatalf("expected progress 1/2, got %d/%d", parent.Detail.Request.ApprovedChildren, parent.Detail.Request.TotalChildren)
@@ -552,6 +552,13 @@ func TestBudgetWriteOffOnFinalApprove(t *testing.T) {
 	); err != nil {
 		t.Fatalf("approve hr request: %v", err)
 	}
+	//admin finalize
+	if _, err := FinalizeAdminRequest(
+		authCtxFor(fx.adminKC, authhandler.RoleADM, nil),
+		toEncoreUUID(requestID),
+	); err != nil {
+		t.Fatalf("finalize admin request: %v", err)
+	}
 
 	if got := budgetOperationCount(t, requestID, "WRITE_OFF"); got != 1 {
 		t.Fatalf("expected 1 WRITE_OFF transaction, got %d", got)
@@ -624,6 +631,12 @@ func TestBudgetRefundOnCancelAfterWriteOff(t *testing.T) {
 	); err != nil {
 		t.Fatalf("approve hr request: %v", err)
 	}
+	if _, err := FinalizeAdminRequest(
+		authCtxFor(fx.adminKC, authhandler.RoleADM, nil),
+		toEncoreUUID(requestID),
+	); err != nil {
+		t.Fatalf("finalize admin request: %v", err)
+	}
 
 	afterWriteOff := contractRemainingAmount(t, fx.contractID)
 	if afterWriteOff != before-5000 {
@@ -673,5 +686,141 @@ func TestBudgetSubmitFailsWhenNotEnoughBudget(t *testing.T) {
 
 	if got := budgetOperationCount(t, uuid.MustParse(detail.Request.ID), "RESERVE"); got != 0 {
 		t.Fatalf("expected 0 RESERVE transactions after failed submit, got %d", got)
+	}
+}
+
+// CreateHRRequest creates a main request from HR to Admin.
+func TestCreateHRRequest_Success(t *testing.T) {
+	fx := newFixture(t)
+
+	deadline := time.Now().Add(48 * time.Hour).UTC().Format(time.RFC3339)
+
+	resp, err := CreateHRRequest(
+		authCtxFor(fx.hrOneKC, authhandler.RoleHR, &fx.dzoOneID),
+		&CreateHRRequestRequest{
+			Title:       "HR requested training",
+			EmployeeIDs: []string{fx.empOneID.String()},
+			DeadlineAt:  &deadline,
+		},
+	)
+	if err != nil {
+		t.Fatalf("create hr request: %v", err)
+	}
+
+	detail := resp.Detail
+
+	if detail.Request.RequestType != RequestTypeMain {
+		t.Fatalf("expected MAIN request, got %s", detail.Request.RequestType)
+	}
+	if detail.Request.Status != RequestStatusPending {
+		t.Fatalf("expected PENDING status, got %s", detail.Request.Status)
+	}
+	if detail.Request.EntityType != "HR_REQUEST" {
+		t.Fatalf("expected HR_REQUEST entity type, got %s", detail.Request.EntityType)
+	}
+	if detail.Request.Title != "HR requested training" {
+		t.Fatalf("unexpected title: %s", detail.Request.Title)
+	}
+	if detail.Request.EmployeesCount != 1 {
+		t.Fatalf("expected 1 employee, got %d", detail.Request.EmployeesCount)
+	}
+	if len(detail.TargetDZOs) != 1 || detail.TargetDZOs[0].ID != fx.dzoOneID.String() {
+		t.Fatalf("expected HR DZO as target")
+	}
+}
+
+func TestCreateHRRequest_RejectsEmployeeFromAnotherDZO(t *testing.T) {
+	fx := newFixture(t)
+
+	_, err := CreateHRRequest(
+		authCtxFor(fx.hrOneKC, authhandler.RoleHR, &fx.dzoOneID),
+		&CreateHRRequestRequest{
+			Title:       "Wrong DZO employee",
+			EmployeeIDs: []string{fx.empTwoID.String()},
+		},
+	)
+
+	if err == nil {
+		t.Fatal("expected error when HR selects employee from another DZO")
+	}
+	if errs.Code(err) != errs.InvalidArgument {
+		t.Fatalf("expected InvalidArgument, got %v", errs.Code(err))
+	}
+}
+
+func TestCreateHRRequest_RejectsInactiveEmployeeByDefault(t *testing.T) {
+	fx := newFixture(t)
+
+	if _, err := db.Exec(ctx(), `
+		UPDATE employees
+		SET is_active = FALSE
+		WHERE id = $1
+	`, fx.empOneID); err != nil {
+		t.Fatalf("deactivate employee: %v", err)
+	}
+
+	_, err := CreateHRRequest(
+		authCtxFor(fx.hrOneKC, authhandler.RoleHR, &fx.dzoOneID),
+		&CreateHRRequestRequest{
+			Title:       "Inactive employee",
+			EmployeeIDs: []string{fx.empOneID.String()},
+		},
+	)
+
+	if err == nil {
+		t.Fatal("expected error for inactive employee")
+	}
+	if errs.Code(err) != errs.InvalidArgument {
+		t.Fatalf("expected InvalidArgument, got %v", errs.Code(err))
+	}
+}
+
+func TestCreateHRRequest_AllowsInactiveEmployeeWhenConfirmed(t *testing.T) {
+	fx := newFixture(t)
+
+	if _, err := db.Exec(ctx(), `
+		UPDATE employees
+		SET is_active = FALSE
+		WHERE id = $1
+	`, fx.empOneID); err != nil {
+		t.Fatalf("deactivate employee: %v", err)
+	}
+
+	resp, err := CreateHRRequest(
+		authCtxFor(fx.hrOneKC, authhandler.RoleHR, &fx.dzoOneID),
+		&CreateHRRequestRequest{
+			Title:                  "Inactive employee confirmed",
+			EmployeeIDs:            []string{fx.empOneID.String()},
+			AllowInactiveEmployees: true,
+		},
+	)
+	if err != nil {
+		t.Fatalf("create hr request with inactive employee allowed: %v", err)
+	}
+
+	if resp.Detail.Request.Status != RequestStatusPending {
+		t.Fatalf("expected PENDING status, got %s", resp.Detail.Request.Status)
+	}
+	if resp.Detail.Request.EmployeesCount != 1 {
+		t.Fatalf("expected 1 employee, got %d", resp.Detail.Request.EmployeesCount)
+	}
+}
+
+func TestCreateHRRequest_OnlyHRCanCreate(t *testing.T) {
+	fx := newFixture(t)
+
+	_, err := CreateHRRequest(
+		authCtxFor(fx.adminKC, authhandler.RoleADM, nil),
+		&CreateHRRequestRequest{
+			Title:       "Admin should not use HR endpoint",
+			EmployeeIDs: []string{fx.empOneID.String()},
+		},
+	)
+
+	if err == nil {
+		t.Fatal("expected permission denied")
+	}
+	if errs.Code(err) != errs.PermissionDenied {
+		t.Fatalf("expected PermissionDenied, got %v", errs.Code(err))
 	}
 }
