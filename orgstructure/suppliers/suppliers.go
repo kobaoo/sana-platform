@@ -710,7 +710,7 @@ func applySupplierBusinessRules(
 			Where(
 				supplier.ClientIDEQ(clientID),
 				supplier.BinOrIinIn(bins...),
-				supplier.IsActiveEQ(true),
+				// supplier.IsActiveEQ(true),
 			).
 			All(ctx)
 		if err != nil {
