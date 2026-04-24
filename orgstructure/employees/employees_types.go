@@ -3,60 +3,66 @@ package employees
 import (
 	"time"
 
+	"encore.app/auth/authhandler"
 	"github.com/google/uuid"
 )
 
 // Employee is the domain model representing a row in the employees table.
 type Employee struct {
-	ID            string  `json:"id"`
-	ClientID      string  `json:"client_id"`
-	DzoID         string  `json:"dzo_id"`
-	DzoName       string  `json:"dzo_name"`
-	Position      *string `json:"position,omitempty"`
-	FullName      string  `json:"full_name"`
-	ShortName     *string `json:"short_name,omitempty"`
-	Department    *string `json:"department,omitempty"`
-	Direction     *string `json:"direction,omitempty"`
-	Email         string  `json:"email"`
-	InternalPhone *string `json:"internal_phone,omitempty"`
-	BirthDate     *string `json:"birth_date,omitempty"`
-	IsActive      bool    `json:"is_active"`
-	UserID        *string `json:"user_id,omitempty"`
+	ID            string               `json:"id"`
+	ClientID      string               `json:"client_id"`
+	DzoID         string               `json:"dzo_id"`
+	DzoName       string               `json:"dzo_name"`
+	Role          authhandler.UserRole `json:"role"`
+	Position      *string              `json:"position,omitempty"`
+	FullName      string               `json:"full_name"`
+	ShortName     *string              `json:"short_name,omitempty"`
+	Department    *string              `json:"department,omitempty"`
+	Direction     *string              `json:"direction,omitempty"`
+	Email         string               `json:"email"`
+	InternalPhone *string              `json:"internal_phone,omitempty"`
+	BirthDate     *string              `json:"birth_date,omitempty"`
+	IsActive      bool                 `json:"is_active"`
+	UserID        *string              `json:"user_id,omitempty"`
 }
 
 // CreateEmployeeRequest is the request body for creating a new employee.
 type CreateEmployeeRequest struct {
-	DzoID         string  `json:"dzo_id"`
-	FullName      string  `json:"full_name"`
-	Email         string  `json:"email"`
-	Position      *string `json:"position,omitempty"`
-	ShortName     *string `json:"short_name,omitempty"`
-	Department    *string `json:"department,omitempty"`
-	Direction     *string `json:"direction,omitempty"`
-	InternalPhone *string `json:"internal_phone,omitempty"`
-	BirthDate     *string `json:"birth_date,omitempty"`
-	UserID        *string `json:"user_id,omitempty"`
+	DzoID         string               `json:"dzo_id"`
+	FullName      string               `json:"full_name"`
+	Email         string               `json:"email"`
+	Role          authhandler.UserRole `json:"role"`
+	Position      *string              `json:"position,omitempty"`
+	ShortName     *string              `json:"short_name,omitempty"`
+	Department    *string              `json:"department,omitempty"`
+	Direction     *string              `json:"direction,omitempty"`
+	InternalPhone *string              `json:"internal_phone,omitempty"`
+	BirthDate     *string              `json:"birth_date,omitempty"`
+	UserID        *string              `json:"user_id,omitempty"`
 }
 
 // UpdateEmployeeRequest is the request body for partially updating an employee.
 type UpdateEmployeeRequest struct {
-	DzoID         *string `json:"dzo_id,omitempty"`
-	FullName      *string `json:"full_name,omitempty"`
-	Email         *string `json:"email,omitempty"`
-	Position      *string `json:"position,omitempty"`
-	ShortName     *string `json:"short_name,omitempty"`
-	Department    *string `json:"department,omitempty"`
-	Direction     *string `json:"direction,omitempty"`
-	InternalPhone *string `json:"internal_phone,omitempty"`
-	BirthDate     *string `json:"birth_date,omitempty"`
-	IsActive      *bool   `json:"is_active,omitempty"`
-	UserID        *string `json:"user_id,omitempty"`
+	DzoID         *string               `json:"dzo_id,omitempty"`
+	FullName      *string               `json:"full_name,omitempty"`
+	Email         *string               `json:"email,omitempty"`
+	Role          *authhandler.UserRole `json:"role,omitempty"`
+	Position      *string               `json:"position,omitempty"`
+	ShortName     *string               `json:"short_name,omitempty"`
+	Department    *string               `json:"department,omitempty"`
+	Direction     *string               `json:"direction,omitempty"`
+	InternalPhone *string               `json:"internal_phone,omitempty"`
+	BirthDate     *string               `json:"birth_date,omitempty"`
+	IsActive      *bool                 `json:"is_active,omitempty"`
+	UserID        *string               `json:"user_id,omitempty"`
 }
 
 // ListEmployeesParams holds optional query parameters for listing employees.
 type ListEmployeesParams struct {
 	Search string `json:"search,omitempty"`
 	DzoID  string `json:"dzo_id,omitempty"`
+	Page   int    `json:"page,omitempty"`
+	Limit  int    `json:"limit,omitempty"`
 }
 
 // GetEmployeeResponse is the response for fetching a single employee.
@@ -66,8 +72,10 @@ type GetEmployeeResponse struct {
 
 // ListEmployeesResponse is the response for listing employees.
 type ListEmployeesResponse struct {
-	Employees []Employee `json:"employees"`
-	Total     int        `json:"total"`
+	Employees  []Employee `json:"employees"`
+	Total      int        `json:"total"`
+	Page       int        `json:"page"`
+	TotalPages int        `json:"total_pages"`
 }
 
 // DeleteEmployeeResponse is the response for deleting an employee.
@@ -123,6 +131,7 @@ type ImportResponse struct {
 }
 
 type parsedEmployeeRow struct {
+	DzoID         *uuid.UUID
 	RowNumber     int
 	DzoName       string
 	FullName      string
@@ -134,6 +143,21 @@ type parsedEmployeeRow struct {
 	InternalPhone *string
 	BirthDate     *time.Time
 	UserID        *uuid.UUID
+}
+type BulkDeleteRequest struct {
+	IDs       []string `json:"ids,omitempty"`
+	AllDzoIDs []string `json:"all_dzo_ids,omitempty"`
+}
+
+type BulkDeleteResponse struct {
+	Message      string   `json:"message"`
+	DeletedCount int      `json:"deleted_count"`
+	Errors       []string `json:"errors,omitempty"`
+}
+
+type preparedImportRow struct {
+	row   parsedEmployeeRow
+	dzoID uuid.UUID
 }
 
 var employeeExcelRequiredHeaders = []string{"dzo_name", "full_name", "email"}
