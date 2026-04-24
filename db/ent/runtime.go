@@ -6,6 +6,8 @@ import (
 	"time"
 
 	"encore.app/db/ent/company"
+	"encore.app/db/ent/contractsupplier"
+	"encore.app/db/ent/contractsupplierhistory"
 	"encore.app/db/ent/dzoorganization"
 	"encore.app/db/ent/employee"
 	"encore.app/db/ent/event"
@@ -13,6 +15,7 @@ import (
 	"encore.app/db/ent/organization"
 	"encore.app/db/ent/request"
 	"encore.app/db/ent/schema"
+	"encore.app/db/ent/supplier"
 	"encore.app/db/ent/trainingevent"
 	"encore.app/db/ent/trainingparticipant"
 	"encore.app/db/ent/user"
@@ -63,6 +66,96 @@ func init() {
 	companyDescID := companyFields[0].Descriptor()
 	// company.DefaultID holds the default value on creation for the id field.
 	company.DefaultID = companyDescID.Default.(func() uuid.UUID)
+	contractsupplierFields := schema.ContractSupplier{}.Fields()
+	_ = contractsupplierFields
+	// contractsupplierDescContractNumber is the schema descriptor for contract_number field.
+	contractsupplierDescContractNumber := contractsupplierFields[2].Descriptor()
+	// contractsupplier.ContractNumberValidator is a validator for the "contract_number" field. It is called by the builders before save.
+	contractsupplier.ContractNumberValidator = func() func(string) error {
+		validators := contractsupplierDescContractNumber.Validators
+		fns := [...]func(string) error{
+			validators[0].(func(string) error),
+			validators[1].(func(string) error),
+		}
+		return func(contract_number string) error {
+			for _, fn := range fns {
+				if err := fn(contract_number); err != nil {
+					return err
+				}
+			}
+			return nil
+		}
+	}()
+	// contractsupplierDescVatFlag is the schema descriptor for vat_flag field.
+	contractsupplierDescVatFlag := contractsupplierFields[3].Descriptor()
+	// contractsupplier.DefaultVatFlag holds the default value on creation for the vat_flag field.
+	contractsupplier.DefaultVatFlag = contractsupplierDescVatFlag.Default.(bool)
+	// contractsupplierDescCurrency is the schema descriptor for currency field.
+	contractsupplierDescCurrency := contractsupplierFields[8].Descriptor()
+	// contractsupplier.CurrencyValidator is a validator for the "currency" field. It is called by the builders before save.
+	contractsupplier.CurrencyValidator = contractsupplierDescCurrency.Validators[0].(func(string) error)
+	// contractsupplierDescAmendmentNumber is the schema descriptor for amendment_number field.
+	contractsupplierDescAmendmentNumber := contractsupplierFields[10].Descriptor()
+	// contractsupplier.AmendmentNumberValidator is a validator for the "amendment_number" field. It is called by the builders before save.
+	contractsupplier.AmendmentNumberValidator = contractsupplierDescAmendmentNumber.Validators[0].(func(string) error)
+	// contractsupplierDescFileKey is the schema descriptor for file_key field.
+	contractsupplierDescFileKey := contractsupplierFields[15].Descriptor()
+	// contractsupplier.FileKeyValidator is a validator for the "file_key" field. It is called by the builders before save.
+	contractsupplier.FileKeyValidator = contractsupplierDescFileKey.Validators[0].(func(string) error)
+	// contractsupplierDescFileName is the schema descriptor for file_name field.
+	contractsupplierDescFileName := contractsupplierFields[16].Descriptor()
+	// contractsupplier.FileNameValidator is a validator for the "file_name" field. It is called by the builders before save.
+	contractsupplier.FileNameValidator = contractsupplierDescFileName.Validators[0].(func(string) error)
+	// contractsupplierDescFileMimeType is the schema descriptor for file_mime_type field.
+	contractsupplierDescFileMimeType := contractsupplierFields[18].Descriptor()
+	// contractsupplier.FileMimeTypeValidator is a validator for the "file_mime_type" field. It is called by the builders before save.
+	contractsupplier.FileMimeTypeValidator = contractsupplierDescFileMimeType.Validators[0].(func(string) error)
+	// contractsupplierDescIsActive is the schema descriptor for is_active field.
+	contractsupplierDescIsActive := contractsupplierFields[19].Descriptor()
+	// contractsupplier.DefaultIsActive holds the default value on creation for the is_active field.
+	contractsupplier.DefaultIsActive = contractsupplierDescIsActive.Default.(bool)
+	// contractsupplierDescCreatedAt is the schema descriptor for created_at field.
+	contractsupplierDescCreatedAt := contractsupplierFields[20].Descriptor()
+	// contractsupplier.DefaultCreatedAt holds the default value on creation for the created_at field.
+	contractsupplier.DefaultCreatedAt = contractsupplierDescCreatedAt.Default.(func() time.Time)
+	// contractsupplierDescUpdatedAt is the schema descriptor for updated_at field.
+	contractsupplierDescUpdatedAt := contractsupplierFields[21].Descriptor()
+	// contractsupplier.DefaultUpdatedAt holds the default value on creation for the updated_at field.
+	contractsupplier.DefaultUpdatedAt = contractsupplierDescUpdatedAt.Default.(func() time.Time)
+	// contractsupplier.UpdateDefaultUpdatedAt holds the default value on update for the updated_at field.
+	contractsupplier.UpdateDefaultUpdatedAt = contractsupplierDescUpdatedAt.UpdateDefault.(func() time.Time)
+	// contractsupplierDescID is the schema descriptor for id field.
+	contractsupplierDescID := contractsupplierFields[0].Descriptor()
+	// contractsupplier.DefaultID holds the default value on creation for the id field.
+	contractsupplier.DefaultID = contractsupplierDescID.Default.(func() uuid.UUID)
+	contractsupplierhistoryFields := schema.ContractSupplierHistory{}.Fields()
+	_ = contractsupplierhistoryFields
+	// contractsupplierhistoryDescHistoryID is the schema descriptor for history_id field.
+	contractsupplierhistoryDescHistoryID := contractsupplierhistoryFields[0].Descriptor()
+	// contractsupplierhistory.DefaultHistoryID holds the default value on creation for the history_id field.
+	contractsupplierhistory.DefaultHistoryID = contractsupplierhistoryDescHistoryID.Default.(func() uuid.UUID)
+	// contractsupplierhistoryDescOperationType is the schema descriptor for operation_type field.
+	contractsupplierhistoryDescOperationType := contractsupplierhistoryFields[2].Descriptor()
+	// contractsupplierhistory.OperationTypeValidator is a validator for the "operation_type" field. It is called by the builders before save.
+	contractsupplierhistory.OperationTypeValidator = func() func(string) error {
+		validators := contractsupplierhistoryDescOperationType.Validators
+		fns := [...]func(string) error{
+			validators[0].(func(string) error),
+			validators[1].(func(string) error),
+		}
+		return func(operation_type string) error {
+			for _, fn := range fns {
+				if err := fn(operation_type); err != nil {
+					return err
+				}
+			}
+			return nil
+		}
+	}()
+	// contractsupplierhistoryDescChangedAt is the schema descriptor for changed_at field.
+	contractsupplierhistoryDescChangedAt := contractsupplierhistoryFields[3].Descriptor()
+	// contractsupplierhistory.DefaultChangedAt holds the default value on creation for the changed_at field.
+	contractsupplierhistory.DefaultChangedAt = contractsupplierhistoryDescChangedAt.Default.(func() time.Time)
 	dzoorganizationFields := schema.DzoOrganization{}.Fields()
 	_ = dzoorganizationFields
 	// dzoorganizationDescName is the schema descriptor for name field.
@@ -343,6 +436,38 @@ func init() {
 	requestDescID := requestFields[0].Descriptor()
 	// request.DefaultID holds the default value on creation for the id field.
 	request.DefaultID = requestDescID.Default.(func() uuid.UUID)
+	supplierFields := schema.Supplier{}.Fields()
+	_ = supplierFields
+	// supplierDescName is the schema descriptor for name field.
+	supplierDescName := supplierFields[3].Descriptor()
+	// supplier.NameValidator is a validator for the "name" field. It is called by the builders before save.
+	supplier.NameValidator = func() func(string) error {
+		validators := supplierDescName.Validators
+		fns := [...]func(string) error{
+			validators[0].(func(string) error),
+			validators[1].(func(string) error),
+		}
+		return func(name string) error {
+			for _, fn := range fns {
+				if err := fn(name); err != nil {
+					return err
+				}
+			}
+			return nil
+		}
+	}()
+	// supplierDescBinOrIin is the schema descriptor for bin_or_iin field.
+	supplierDescBinOrIin := supplierFields[4].Descriptor()
+	// supplier.BinOrIinValidator is a validator for the "bin_or_iin" field. It is called by the builders before save.
+	supplier.BinOrIinValidator = supplierDescBinOrIin.Validators[0].(func(string) error)
+	// supplierDescIsActive is the schema descriptor for is_active field.
+	supplierDescIsActive := supplierFields[6].Descriptor()
+	// supplier.DefaultIsActive holds the default value on creation for the is_active field.
+	supplier.DefaultIsActive = supplierDescIsActive.Default.(bool)
+	// supplierDescID is the schema descriptor for id field.
+	supplierDescID := supplierFields[0].Descriptor()
+	// supplier.DefaultID holds the default value on creation for the id field.
+	supplier.DefaultID = supplierDescID.Default.(func() uuid.UUID)
 	trainingeventFields := schema.TrainingEvent{}.Fields()
 	_ = trainingeventFields
 	// trainingeventDescID is the schema descriptor for id field.
