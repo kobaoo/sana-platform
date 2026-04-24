@@ -11,11 +11,14 @@ import (
 
 	"encore.app/db/ent/certificate"
 	"encore.app/db/ent/company"
+	"encore.app/db/ent/contractsupplier"
+	"encore.app/db/ent/contractsupplierhistory"
 	"encore.app/db/ent/dzoorganization"
 	"encore.app/db/ent/employee"
 	"encore.app/db/ent/notification"
 	"encore.app/db/ent/organization"
 	"encore.app/db/ent/request"
+	"encore.app/db/ent/supplier"
 	"encore.app/db/ent/trainingevent"
 	"encore.app/db/ent/trainingparticipant"
 	"encore.app/db/ent/user"
@@ -82,16 +85,19 @@ var (
 func checkColumn(t, c string) error {
 	initCheck.Do(func() {
 		columnCheck = sql.NewColumnCheck(map[string]func(string) bool{
-			certificate.Table:         certificate.ValidColumn,
-			company.Table:             company.ValidColumn,
-			dzoorganization.Table:     dzoorganization.ValidColumn,
-			employee.Table:            employee.ValidColumn,
-			notification.Table:        notification.ValidColumn,
-			organization.Table:        organization.ValidColumn,
-			request.Table:             request.ValidColumn,
-			trainingevent.Table:       trainingevent.ValidColumn,
-			trainingparticipant.Table: trainingparticipant.ValidColumn,
-			user.Table:                user.ValidColumn,
+			certificate.Table:             certificate.ValidColumn,
+			company.Table:                 company.ValidColumn,
+			contractsupplier.Table:        contractsupplier.ValidColumn,
+			contractsupplierhistory.Table: contractsupplierhistory.ValidColumn,
+			dzoorganization.Table:         dzoorganization.ValidColumn,
+			employee.Table:                employee.ValidColumn,
+			notification.Table:            notification.ValidColumn,
+			organization.Table:            organization.ValidColumn,
+			request.Table:                 request.ValidColumn,
+			supplier.Table:                supplier.ValidColumn,
+			trainingevent.Table:           trainingevent.ValidColumn,
+			trainingparticipant.Table:     trainingparticipant.ValidColumn,
+			user.Table:                    user.ValidColumn,
 		})
 	})
 	return columnCheck(t, c)

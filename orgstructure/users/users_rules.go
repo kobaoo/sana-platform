@@ -29,18 +29,24 @@ func CanAssignRole(callerRole, targetRole authhandler.UserRole) bool {
 }
 
 // CanAccessUser returns true if the caller may read or modify the target.
-// SA has unrestricted access; ADM is scoped to their own DZO.
-func CanAccessUser(callerRole authhandler.UserRole, callerDzoID, targetDzoID *string) bool {
+// SA has unrestricted access; ADM is scoped to their own client (company).
+func CanAccessUser(callerRole authhandler.UserRole, callerClientID, targetClientID *string) bool {
 	if callerRole == authhandler.RoleSA {
 		return true
 	}
 	if callerRole == authhandler.RoleADM {
-		if callerDzoID == nil || targetDzoID == nil {
+		if callerClientID == nil || targetClientID == nil {
 			return false
 		}
-		return *callerDzoID == *targetDzoID
+		return *callerClientID == *targetClientID
 	}
 	return false
+}
+
+// CanUnblockUser returns true if the role may unblock a user.
+// Both SA and ADM can unblock; ADM is further scoped by their client at the call site.
+func CanUnblockUser(role authhandler.UserRole) bool {
+	return role == authhandler.RoleSA || role == authhandler.RoleADM
 }
 
 // AutoProvisionRole returns RoleEMP. Trusting JWT claims for provisioning would

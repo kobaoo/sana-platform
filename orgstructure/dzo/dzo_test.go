@@ -9,21 +9,26 @@ import (
 	"encore.dev/beta/errs"
 )
 
+// testClientID is the client UUID shared across DZO tests.
+// The ADM's CompanyID must match this value so the client-scope checks pass.
+const testClientID = "11111111-1111-1111-1111-111111111111"
+
 func ctx() context.Context {
 	return auth.WithContext(
 		context.Background(),
 		auth.UID("test-user"),
 		&authhandler.AuthData{
 			Role:      authhandler.RoleADM,
-			CompanyID: "00000000-0000-0000-0000-000000000001",
+			CompanyID: testClientID,
 		},
 	)
 }
+
 func makeDZO(t *testing.T, name string) *DZO {
 	t.Helper()
 
 	resp, err := CreateDZO(ctx(), &CreateDZORequest{
-		ClientID: "11111111-1111-1111-1111-111111111111",
+		ClientID: testClientID,
 		Name:     name,
 	})
 	if err != nil {
@@ -37,7 +42,7 @@ func makeDZO(t *testing.T, name string) *DZO {
 
 func TestCreateDZO_Success(t *testing.T) {
 	resp, err := CreateDZO(ctx(), &CreateDZORequest{
-		ClientID: "11111111-1111-1111-1111-111111111111",
+		ClientID: testClientID,
 		Name:     "Test",
 	})
 
@@ -52,7 +57,7 @@ func TestCreateDZO_Success(t *testing.T) {
 
 func TestCreateDZO_EmptyName(t *testing.T) {
 	_, err := CreateDZO(ctx(), &CreateDZORequest{
-		ClientID: "11111111-1111-1111-1111-111111111111",
+		ClientID: testClientID,
 		Name:     "",
 	})
 
@@ -62,6 +67,19 @@ func TestCreateDZO_EmptyName(t *testing.T) {
 
 	if errs.Code(err) != errs.InvalidArgument {
 		t.Errorf("expected InvalidArgument")
+	}
+}
+
+func TestCreateDZO_ADM_CannotCreateInOtherClient(t *testing.T) {
+	_, err := CreateDZO(ctx(), &CreateDZORequest{
+		ClientID: "22222222-2222-2222-2222-222222222222",
+		Name:     "Foreign DZO",
+	})
+	if err == nil {
+		t.Fatal("expected error when ADM creates DZO in another client")
+	}
+	if errs.Code(err) != errs.PermissionDenied {
+		t.Errorf("expected PermissionDenied, got %v", errs.Code(err))
 	}
 }
 

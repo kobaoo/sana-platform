@@ -102,51 +102,79 @@ func TestCanAssignRole_EMP_CannotAssignAny(t *testing.T) {
 
 func ptrStr(s string) *string { return &s }
 
+// CanAccessUser — ADM is now scoped by CLIENT, not DZO.
+
 func TestCanAccessUser_SA_AccessesAnyone(t *testing.T) {
-	if !CanAccessUser(authhandler.RoleSA, ptrStr("dzo-1"), ptrStr("dzo-other")) {
-		t.Error("SA should access any user regardless of DZO")
+	if !CanAccessUser(authhandler.RoleSA, ptrStr("client-1"), ptrStr("client-other")) {
+		t.Error("SA should access any user regardless of client")
 	}
 }
 
-func TestCanAccessUser_SA_AccessesUserWithoutDzo(t *testing.T) {
+func TestCanAccessUser_SA_AccessesUserWithoutClient(t *testing.T) {
 	if !CanAccessUser(authhandler.RoleSA, nil, nil) {
-		t.Error("SA should access user even without DZO")
+		t.Error("SA should access user even without client")
 	}
 }
 
-func TestCanAccessUser_ADM_SameDzo(t *testing.T) {
-	if !CanAccessUser(authhandler.RoleADM, ptrStr("dzo-1"), ptrStr("dzo-1")) {
-		t.Error("ADM should access user in same DZO")
+func TestCanAccessUser_ADM_SameClient(t *testing.T) {
+	if !CanAccessUser(authhandler.RoleADM, ptrStr("client-1"), ptrStr("client-1")) {
+		t.Error("ADM should access user in same client")
 	}
 }
 
-func TestCanAccessUser_ADM_DifferentDzo(t *testing.T) {
-	if CanAccessUser(authhandler.RoleADM, ptrStr("dzo-1"), ptrStr("dzo-other")) {
-		t.Error("ADM should NOT access user in different DZO")
+func TestCanAccessUser_ADM_DifferentClient(t *testing.T) {
+	if CanAccessUser(authhandler.RoleADM, ptrStr("client-1"), ptrStr("client-2")) {
+		t.Error("ADM should NOT access user in different client")
 	}
 }
 
-func TestCanAccessUser_ADM_TargetNoDzo(t *testing.T) {
-	if CanAccessUser(authhandler.RoleADM, ptrStr("dzo-1"), nil) {
-		t.Error("ADM should NOT access user without DZO")
+func TestCanAccessUser_ADM_TargetNoClient(t *testing.T) {
+	if CanAccessUser(authhandler.RoleADM, ptrStr("client-1"), nil) {
+		t.Error("ADM should NOT access user without client")
 	}
 }
 
-func TestCanAccessUser_ADM_CallerNoDzo(t *testing.T) {
-	if CanAccessUser(authhandler.RoleADM, nil, ptrStr("dzo-1")) {
-		t.Error("ADM without DZO should NOT access any user")
+func TestCanAccessUser_ADM_CallerNoClient(t *testing.T) {
+	if CanAccessUser(authhandler.RoleADM, nil, ptrStr("client-1")) {
+		t.Error("ADM without client should NOT access any user")
 	}
 }
 
 func TestCanAccessUser_HR_Denied(t *testing.T) {
-	if CanAccessUser(authhandler.RoleHR, ptrStr("dzo-1"), ptrStr("dzo-1")) {
-		t.Error("HR should NOT access other users")
+	if CanAccessUser(authhandler.RoleHR, ptrStr("client-1"), ptrStr("client-1")) {
+		t.Error("HR should NOT access other users via CanAccessUser")
 	}
 }
 
 func TestCanAccessUser_EMP_Denied(t *testing.T) {
-	if CanAccessUser(authhandler.RoleEMP, ptrStr("dzo-1"), ptrStr("dzo-1")) {
+	if CanAccessUser(authhandler.RoleEMP, ptrStr("client-1"), ptrStr("client-1")) {
 		t.Error("EMP should NOT access other users")
+	}
+}
+
+// CanUnblockUser tests.
+
+func TestCanUnblockUser_SA(t *testing.T) {
+	if !CanUnblockUser(authhandler.RoleSA) {
+		t.Error("SA should be able to unblock users")
+	}
+}
+
+func TestCanUnblockUser_ADM(t *testing.T) {
+	if !CanUnblockUser(authhandler.RoleADM) {
+		t.Error("ADM should be able to unblock users")
+	}
+}
+
+func TestCanUnblockUser_HR(t *testing.T) {
+	if CanUnblockUser(authhandler.RoleHR) {
+		t.Error("HR should NOT be able to unblock users")
+	}
+}
+
+func TestCanUnblockUser_EMP(t *testing.T) {
+	if CanUnblockUser(authhandler.RoleEMP) {
+		t.Error("EMP should NOT be able to unblock users")
 	}
 }
 
