@@ -58,16 +58,23 @@ func (_u *ContractSupplierUpdate) SetNillableContractNumber(v *string) *Contract
 }
 
 // SetVatFlag sets the "vat_flag" field.
-func (_u *ContractSupplierUpdate) SetVatFlag(v bool) *ContractSupplierUpdate {
+func (_u *ContractSupplierUpdate) SetVatFlag(v int) *ContractSupplierUpdate {
+	_u.mutation.ResetVatFlag()
 	_u.mutation.SetVatFlag(v)
 	return _u
 }
 
 // SetNillableVatFlag sets the "vat_flag" field if the given value is not nil.
-func (_u *ContractSupplierUpdate) SetNillableVatFlag(v *bool) *ContractSupplierUpdate {
+func (_u *ContractSupplierUpdate) SetNillableVatFlag(v *int) *ContractSupplierUpdate {
 	if v != nil {
 		_u.SetVatFlag(*v)
 	}
+	return _u
+}
+
+// AddVatFlag adds value to the "vat_flag" field.
+func (_u *ContractSupplierUpdate) AddVatFlag(v int) *ContractSupplierUpdate {
+	_u.mutation.AddVatFlag(v)
 	return _u
 }
 
@@ -464,6 +471,11 @@ func (_u *ContractSupplierUpdate) check() error {
 			return &ValidationError{Name: "contract_number", err: fmt.Errorf(`ent: validator failed for field "ContractSupplier.contract_number": %w`, err)}
 		}
 	}
+	if v, ok := _u.mutation.VatFlag(); ok {
+		if err := contractsupplier.VatFlagValidator(v); err != nil {
+			return &ValidationError{Name: "vat_flag", err: fmt.Errorf(`ent: validator failed for field "ContractSupplier.vat_flag": %w`, err)}
+		}
+	}
 	if v, ok := _u.mutation.Currency(); ok {
 		if err := contractsupplier.CurrencyValidator(v); err != nil {
 			return &ValidationError{Name: "currency", err: fmt.Errorf(`ent: validator failed for field "ContractSupplier.currency": %w`, err)}
@@ -511,7 +523,10 @@ func (_u *ContractSupplierUpdate) sqlSave(ctx context.Context) (_node int, err e
 		_spec.SetField(contractsupplier.FieldContractNumber, field.TypeString, value)
 	}
 	if value, ok := _u.mutation.VatFlag(); ok {
-		_spec.SetField(contractsupplier.FieldVatFlag, field.TypeBool, value)
+		_spec.SetField(contractsupplier.FieldVatFlag, field.TypeInt, value)
+	}
+	if value, ok := _u.mutation.AddedVatFlag(); ok {
+		_spec.AddField(contractsupplier.FieldVatFlag, field.TypeInt, value)
 	}
 	if value, ok := _u.mutation.SignedDate(); ok {
 		_spec.SetField(contractsupplier.FieldSignedDate, field.TypeTime, value)
@@ -667,16 +682,23 @@ func (_u *ContractSupplierUpdateOne) SetNillableContractNumber(v *string) *Contr
 }
 
 // SetVatFlag sets the "vat_flag" field.
-func (_u *ContractSupplierUpdateOne) SetVatFlag(v bool) *ContractSupplierUpdateOne {
+func (_u *ContractSupplierUpdateOne) SetVatFlag(v int) *ContractSupplierUpdateOne {
+	_u.mutation.ResetVatFlag()
 	_u.mutation.SetVatFlag(v)
 	return _u
 }
 
 // SetNillableVatFlag sets the "vat_flag" field if the given value is not nil.
-func (_u *ContractSupplierUpdateOne) SetNillableVatFlag(v *bool) *ContractSupplierUpdateOne {
+func (_u *ContractSupplierUpdateOne) SetNillableVatFlag(v *int) *ContractSupplierUpdateOne {
 	if v != nil {
 		_u.SetVatFlag(*v)
 	}
+	return _u
+}
+
+// AddVatFlag adds value to the "vat_flag" field.
+func (_u *ContractSupplierUpdateOne) AddVatFlag(v int) *ContractSupplierUpdateOne {
+	_u.mutation.AddVatFlag(v)
 	return _u
 }
 
@@ -1086,6 +1108,11 @@ func (_u *ContractSupplierUpdateOne) check() error {
 			return &ValidationError{Name: "contract_number", err: fmt.Errorf(`ent: validator failed for field "ContractSupplier.contract_number": %w`, err)}
 		}
 	}
+	if v, ok := _u.mutation.VatFlag(); ok {
+		if err := contractsupplier.VatFlagValidator(v); err != nil {
+			return &ValidationError{Name: "vat_flag", err: fmt.Errorf(`ent: validator failed for field "ContractSupplier.vat_flag": %w`, err)}
+		}
+	}
 	if v, ok := _u.mutation.Currency(); ok {
 		if err := contractsupplier.CurrencyValidator(v); err != nil {
 			return &ValidationError{Name: "currency", err: fmt.Errorf(`ent: validator failed for field "ContractSupplier.currency": %w`, err)}
@@ -1150,7 +1177,10 @@ func (_u *ContractSupplierUpdateOne) sqlSave(ctx context.Context) (_node *Contra
 		_spec.SetField(contractsupplier.FieldContractNumber, field.TypeString, value)
 	}
 	if value, ok := _u.mutation.VatFlag(); ok {
-		_spec.SetField(contractsupplier.FieldVatFlag, field.TypeBool, value)
+		_spec.SetField(contractsupplier.FieldVatFlag, field.TypeInt, value)
+	}
+	if value, ok := _u.mutation.AddedVatFlag(); ok {
+		_spec.AddField(contractsupplier.FieldVatFlag, field.TypeInt, value)
 	}
 	if value, ok := _u.mutation.SignedDate(); ok {
 		_spec.SetField(contractsupplier.FieldSignedDate, field.TypeTime, value)

@@ -444,6 +444,9 @@ func validateUpdateRequest(req *UpdateContractRequest) error {
 	if req.EndDate != nil && req.EndDate.IsZero() {
 		return errs.B().Code(errs.InvalidArgument).Msg("end_date cannot be zero").Err()
 	}
+	if req.VatFlag != nil && (*req.VatFlag < 0 || *req.VatFlag > 100) {
+		return errs.B().Code(errs.InvalidArgument).Msg("vat_flag must be between 0 and 100").Err()
+	}
 	return nil
 }
 
@@ -612,6 +615,9 @@ func validateCreateRequest(req *CreateContractRequest) error {
 	}
 	if req.Amount < 0 {
 		return errs.B().Code(errs.InvalidArgument).Msg("amount must be >= 0").Err()
+	}
+	if req.VatFlag < 0 || req.VatFlag > 100 {
+		return errs.B().Code(errs.InvalidArgument).Msg("vat_flag must be between 0 and 100").Err()
 	}
 	if req.SignedDate.IsZero() {
 		return errs.B().Code(errs.InvalidArgument).Msg("signed_date is required").Err()

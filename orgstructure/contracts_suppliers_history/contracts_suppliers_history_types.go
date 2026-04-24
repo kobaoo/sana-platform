@@ -27,7 +27,7 @@ type ContractSupplier struct {
 	ID                 string     `json:"id"`
 	SupplierID         string     `json:"supplier_id"`
 	ContractNumber     string     `json:"contract_number"`
-	VatFlag            bool       `json:"vat_flag"`
+	VatFlag            int        `json:"vat_flag"`
 	SignedDate         time.Time  `json:"signed_date"`
 	Amount             float64    `json:"amount"`
 	AmountCurrency     *float64   `json:"amount_currency,omitempty"`
