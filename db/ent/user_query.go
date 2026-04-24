@@ -4,11 +4,13 @@ package ent
 
 import (
 	"context"
+	"database/sql/driver"
 	"fmt"
 	"math"
 
 	"encore.app/db/ent/company"
 	"encore.app/db/ent/predicate"
+	"encore.app/db/ent/request"
 	"encore.app/db/ent/user"
 	"entgo.io/ent"
 	"entgo.io/ent/dialect/sql"
@@ -20,11 +22,12 @@ import (
 // UserQuery is the builder for querying User entities.
 type UserQuery struct {
 	config
-	ctx        *QueryContext
-	order      []user.OrderOption
-	inters     []Interceptor
-	predicates []predicate.User
-	withClient *CompanyQuery
+	ctx          *QueryContext
+	order        []user.OrderOption
+	inters       []Interceptor
+	predicates   []predicate.User
+	withClient   *CompanyQuery
+	withRequests *RequestQuery
 	// intermediate query (i.e. traversal path).
 	sql  *sql.Selector
 	path func(context.Context) (*sql.Selector, error)
@@ -76,6 +79,28 @@ func (_q *UserQuery) QueryClient() *CompanyQuery {
 			sqlgraph.From(user.Table, user.FieldID, selector),
 			sqlgraph.To(company.Table, company.FieldID),
 			sqlgraph.Edge(sqlgraph.M2O, true, user.ClientTable, user.ClientColumn),
+		)
+		fromU = sqlgraph.SetNeighbors(_q.driver.Dialect(), step)
+		return fromU, nil
+	}
+	return query
+}
+
+// QueryRequests chains the current query on the "requests" edge.
+func (_q *UserQuery) QueryRequests() *RequestQuery {
+	query := (&RequestClient{config: _q.config}).Query()
+	query.path = func(ctx context.Context) (fromU *sql.Selector, err error) {
+		if err := _q.prepareQuery(ctx); err != nil {
+			return nil, err
+		}
+		selector := _q.sqlQuery(ctx)
+		if err := selector.Err(); err != nil {
+			return nil, err
+		}
+		step := sqlgraph.NewStep(
+			sqlgraph.From(user.Table, user.FieldID, selector),
+			sqlgraph.To(request.Table, request.FieldID),
+			sqlgraph.Edge(sqlgraph.O2M, false, user.RequestsTable, user.RequestsColumn),
 		)
 		fromU = sqlgraph.SetNeighbors(_q.driver.Dialect(), step)
 		return fromU, nil
@@ -270,12 +295,13 @@ func (_q *UserQuery) Clone() *UserQuery {
 		return nil
 	}
 	return &UserQuery{
-		config:     _q.config,
-		ctx:        _q.ctx.Clone(),
-		order:      append([]user.OrderOption{}, _q.order...),
-		inters:     append([]Interceptor{}, _q.inters...),
-		predicates: append([]predicate.User{}, _q.predicates...),
-		withClient: _q.withClient.Clone(),
+		config:       _q.config,
+		ctx:          _q.ctx.Clone(),
+		order:        append([]user.OrderOption{}, _q.order...),
+		inters:       append([]Interceptor{}, _q.inters...),
+		predicates:   append([]predicate.User{}, _q.predicates...),
+		withClient:   _q.withClient.Clone(),
+		withRequests: _q.withRequests.Clone(),
 		// clone intermediate query.
 		sql:  _q.sql.Clone(),
 		path: _q.path,
@@ -290,6 +316,17 @@ func (_q *UserQuery) WithClient(opts ...func(*CompanyQuery)) *UserQuery {
 		opt(query)
 	}
 	_q.withClient = query
+	return _q
+}
+
+// WithRequests tells the query-builder to eager-load the nodes that are connected to
+// the "requests" edge. The optional arguments are used to configure the query builder of the edge.
+func (_q *UserQuery) WithRequests(opts ...func(*RequestQuery)) *UserQuery {
+	query := (&RequestClient{config: _q.config}).Query()
+	for _, opt := range opts {
+		opt(query)
+	}
+	_q.withRequests = query
 	return _q
 }
 
@@ -371,8 +408,9 @@ func (_q *UserQuery) sqlAll(ctx context.Context, hooks ...queryHook) ([]*User, e
 	var (
 		nodes       = []*User{}
 		_spec       = _q.querySpec()
-		loadedTypes = [1]bool{
+		loadedTypes = [2]bool{
 			_q.withClient != nil,
+			_q.withRequests != nil,
 		}
 	)
 	_spec.ScanValues = func(columns []string) ([]any, error) {
@@ -396,6 +434,13 @@ func (_q *UserQuery) sqlAll(ctx context.Context, hooks ...queryHook) ([]*User, e
 	if query := _q.withClient; query != nil {
 		if err := _q.loadClient(ctx, query, nodes, nil,
 			func(n *User, e *Company) { n.Edges.Client = e }); err != nil {
+			return nil, err
+		}
+	}
+	if query := _q.withRequests; query != nil {
+		if err := _q.loadRequests(ctx, query, nodes,
+			func(n *User) { n.Edges.Requests = []*Request{} },
+			func(n *User, e *Request) { n.Edges.Requests = append(n.Edges.Requests, e) }); err != nil {
 			return nil, err
 		}
 	}
@@ -428,6 +473,36 @@ func (_q *UserQuery) loadClient(ctx context.Context, query *CompanyQuery, nodes 
 		for i := range nodes {
 			assign(nodes[i], n)
 		}
+	}
+	return nil
+}
+func (_q *UserQuery) loadRequests(ctx context.Context, query *RequestQuery, nodes []*User, init func(*User), assign func(*User, *Request)) error {
+	fks := make([]driver.Value, 0, len(nodes))
+	nodeids := make(map[uuid.UUID]*User)
+	for i := range nodes {
+		fks = append(fks, nodes[i].ID)
+		nodeids[nodes[i].ID] = nodes[i]
+		if init != nil {
+			init(nodes[i])
+		}
+	}
+	if len(query.ctx.Fields) > 0 {
+		query.ctx.AppendFieldOnce(request.FieldInitiatorID)
+	}
+	query.Where(predicate.Request(func(s *sql.Selector) {
+		s.Where(sql.InValues(s.C(user.RequestsColumn), fks...))
+	}))
+	neighbors, err := query.All(ctx)
+	if err != nil {
+		return err
+	}
+	for _, n := range neighbors {
+		fk := n.InitiatorID
+		node, ok := nodeids[fk]
+		if !ok {
+			return fmt.Errorf(`unexpected referenced foreign-key "initiator_id" returned %v for node %v`, fk, n.ID)
+		}
+		assign(node, n)
 	}
 	return nil
 }
