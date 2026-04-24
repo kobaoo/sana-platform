@@ -21,38 +21,71 @@ func (s EventStatus) IsValid() bool {
 
 // Event is the domain model representing a row in the events table.
 type Event struct {
-	ID           string      `json:"id"`
-	ClientID     string      `json:"client_id"`
-	HostID       string      `json:"host_id"`
-	Title        string      `json:"title"`
-	Description  *string     `json:"description"`
-	ZoomLink     *string     `json:"zoom_link"`
-	EventDate    time.Time   `json:"event_date"`
-	MaterialsURL *string     `json:"materials_url"`
-	Status       EventStatus `json:"status"`
-	CreatedAt    time.Time   `json:"created_at"`
-	UpdatedAt    time.Time   `json:"updated_at"`
+	ID              string      `json:"id"`
+	ClientID        string      `json:"client_id"`
+	HostID          string      `json:"host_id"`
+	Title           string      `json:"title"`
+	Description     *string     `json:"description"`
+	ZoomLink        string      `json:"zoom_link"`
+	EventDate       time.Time   `json:"event_date"`
+	MaxParticipants int         `json:"max_participants"`
+	MaterialsURL    *string     `json:"materials_url"`
+	Status          EventStatus `json:"status"`
+	CreatedAt       time.Time   `json:"created_at"`
+	UpdatedAt       time.Time   `json:"updated_at"`
+
+	// Aggregated/expanded fields populated on detail and list responses.
+	ParticipantsCount int           `json:"participants_count"`
+	AvailableSlots    int           `json:"available_slots"`
+	Participants      []Participant `json:"participants,omitempty"`
+}
+
+// Participant is an employee enrolled into an event.
+type Participant struct {
+	ID               string    `json:"id"`
+	EmployeeID       string    `json:"employee_id"`
+	FullName         string    `json:"full_name"`
+	Email            string    `json:"email"`
+	Department       *string   `json:"department,omitempty"`
+	Position         *string   `json:"position,omitempty"`
+	AttendanceStatus string    `json:"attendance_status"`
+	JoinedAt         time.Time `json:"joined_at"`
 }
 
 // CreateEventRequest is the request body for creating a new event.
 // Newly created events are always saved with status=ACTIVE
 // (immediately visible to employees of the same company).
+// EmployeeIDs is an optional list of employees the admin pre-enrolls into the event.
+// Remaining seats can be taken by other employees via self-enrollment.
 type CreateEventRequest struct {
-	Title       string    `json:"title"`
-	EventDate   time.Time `json:"event_date"`
-	HostID      string    `json:"host_id"`
-	ZoomLink    *string   `json:"zoom_link,omitempty"`
-	Description *string   `json:"description,omitempty"`
+	Title           string    `json:"title"`
+	EventDate       time.Time `json:"event_date"`
+	HostID          string    `json:"host_id"`
+	ZoomLink        string    `json:"zoom_link"`
+	MaxParticipants int       `json:"max_participants"`
+	Description     *string   `json:"description,omitempty"`
+	EmployeeIDs     []string  `json:"employee_ids,omitempty"`
 }
 
-// UpdateEventRequest is the request body for partially updating an event.
+// UpdateEventRequest is the request body for updating an event.
+// All fields are optional — fields left unset are not changed.
 type UpdateEventRequest struct {
-	Title       *string      `json:"title,omitempty"`
-	EventDate   *time.Time   `json:"event_date,omitempty"`
-	HostID      *string      `json:"host_id,omitempty"`
-	ZoomLink    *string      `json:"zoom_link,omitempty"`
-	Description *string      `json:"description,omitempty"`
-	Status      *EventStatus `json:"status,omitempty"`
+	Title           *string      `json:"title,omitempty"`
+	EventDate       *time.Time   `json:"event_date,omitempty"`
+	HostID          *string      `json:"host_id,omitempty"`
+	ZoomLink        *string      `json:"zoom_link,omitempty"`
+	MaxParticipants *int         `json:"max_participants,omitempty"`
+	Description     *string      `json:"description,omitempty"`
+	Status          *EventStatus `json:"status,omitempty"`
+	EmployeeIDs     *[]string    `json:"employee_ids,omitempty"`
+}
+
+// ListEventsParams are the filters available on GET /events.
+// From/To are inclusive date boundaries in RFC3339 or YYYY-MM-DD format.
+type ListEventsParams struct {
+	From   string `query:"from"`
+	To     string `query:"to"`
+	Status string `query:"status"`
 }
 
 // SetMaterialsRequest is the request body for attaching a materials link
@@ -75,4 +108,28 @@ type ListEventsResponse struct {
 // DeleteEventResponse is the response for deleting an event.
 type DeleteEventResponse struct {
 	Message string `json:"message"`
+}
+
+// Host is a potential event host (SA/ADM/HR user).
+type Host struct {
+	ID       string `json:"id"`
+	Email    string `json:"email"`
+	Role     string `json:"role"`
+	FullName string `json:"full_name,omitempty"`
+}
+
+// ListHostsParams are the query params for GET /events/hosts (lazy-load search).
+type ListHostsParams struct {
+	Search string `query:"search"`
+	Limit  int    `query:"limit"`
+	Offset int    `query:"offset"`
+}
+
+// ListHostsResponse is the response for GET /events/hosts.
+type ListHostsResponse struct {
+	Hosts   []Host `json:"hosts"`
+	Total   int    `json:"total"`
+	Limit   int    `json:"limit"`
+	Offset  int    `json:"offset"`
+	HasMore bool   `json:"has_more"`
 }

@@ -5554,6 +5554,8 @@ type EventMutation struct {
 	description         *string
 	zoom_link           *string
 	event_date          *time.Time
+	max_participants    *int
+	addmax_participants *int
 	materials_url       *string
 	status              *event.Status
 	created_at          *time.Time
@@ -5849,7 +5851,7 @@ func (m *EventMutation) ZoomLink() (r string, exists bool) {
 // OldZoomLink returns the old "zoom_link" field's value of the Event entity.
 // If the Event object wasn't provided to the builder, the object is fetched from the database.
 // An error is returned if the mutation operation is not UpdateOne, or the database query fails.
-func (m *EventMutation) OldZoomLink(ctx context.Context) (v *string, err error) {
+func (m *EventMutation) OldZoomLink(ctx context.Context) (v string, err error) {
 	if !m.op.Is(OpUpdateOne) {
 		return v, errors.New("OldZoomLink is only allowed on UpdateOne operations")
 	}
@@ -5863,22 +5865,9 @@ func (m *EventMutation) OldZoomLink(ctx context.Context) (v *string, err error) 
 	return oldValue.ZoomLink, nil
 }
 
-// ClearZoomLink clears the value of the "zoom_link" field.
-func (m *EventMutation) ClearZoomLink() {
-	m.zoom_link = nil
-	m.clearedFields[event.FieldZoomLink] = struct{}{}
-}
-
-// ZoomLinkCleared returns if the "zoom_link" field was cleared in this mutation.
-func (m *EventMutation) ZoomLinkCleared() bool {
-	_, ok := m.clearedFields[event.FieldZoomLink]
-	return ok
-}
-
 // ResetZoomLink resets all changes to the "zoom_link" field.
 func (m *EventMutation) ResetZoomLink() {
 	m.zoom_link = nil
-	delete(m.clearedFields, event.FieldZoomLink)
 }
 
 // SetEventDate sets the "event_date" field.
@@ -5915,6 +5904,62 @@ func (m *EventMutation) OldEventDate(ctx context.Context) (v time.Time, err erro
 // ResetEventDate resets all changes to the "event_date" field.
 func (m *EventMutation) ResetEventDate() {
 	m.event_date = nil
+}
+
+// SetMaxParticipants sets the "max_participants" field.
+func (m *EventMutation) SetMaxParticipants(i int) {
+	m.max_participants = &i
+	m.addmax_participants = nil
+}
+
+// MaxParticipants returns the value of the "max_participants" field in the mutation.
+func (m *EventMutation) MaxParticipants() (r int, exists bool) {
+	v := m.max_participants
+	if v == nil {
+		return
+	}
+	return *v, true
+}
+
+// OldMaxParticipants returns the old "max_participants" field's value of the Event entity.
+// If the Event object wasn't provided to the builder, the object is fetched from the database.
+// An error is returned if the mutation operation is not UpdateOne, or the database query fails.
+func (m *EventMutation) OldMaxParticipants(ctx context.Context) (v int, err error) {
+	if !m.op.Is(OpUpdateOne) {
+		return v, errors.New("OldMaxParticipants is only allowed on UpdateOne operations")
+	}
+	if m.id == nil || m.oldValue == nil {
+		return v, errors.New("OldMaxParticipants requires an ID field in the mutation")
+	}
+	oldValue, err := m.oldValue(ctx)
+	if err != nil {
+		return v, fmt.Errorf("querying old value for OldMaxParticipants: %w", err)
+	}
+	return oldValue.MaxParticipants, nil
+}
+
+// AddMaxParticipants adds i to the "max_participants" field.
+func (m *EventMutation) AddMaxParticipants(i int) {
+	if m.addmax_participants != nil {
+		*m.addmax_participants += i
+	} else {
+		m.addmax_participants = &i
+	}
+}
+
+// AddedMaxParticipants returns the value that was added to the "max_participants" field in this mutation.
+func (m *EventMutation) AddedMaxParticipants() (r int, exists bool) {
+	v := m.addmax_participants
+	if v == nil {
+		return
+	}
+	return *v, true
+}
+
+// ResetMaxParticipants resets all changes to the "max_participants" field.
+func (m *EventMutation) ResetMaxParticipants() {
+	m.max_participants = nil
+	m.addmax_participants = nil
 }
 
 // SetMaterialsURL sets the "materials_url" field.
@@ -6229,7 +6274,7 @@ func (m *EventMutation) Type() string {
 // order to get all numeric fields that were incremented/decremented, call
 // AddedFields().
 func (m *EventMutation) Fields() []string {
-	fields := make([]string, 0, 10)
+	fields := make([]string, 0, 11)
 	if m.clients != nil {
 		fields = append(fields, event.FieldClientID)
 	}
@@ -6247,6 +6292,9 @@ func (m *EventMutation) Fields() []string {
 	}
 	if m.event_date != nil {
 		fields = append(fields, event.FieldEventDate)
+	}
+	if m.max_participants != nil {
+		fields = append(fields, event.FieldMaxParticipants)
 	}
 	if m.materials_url != nil {
 		fields = append(fields, event.FieldMaterialsURL)
@@ -6280,6 +6328,8 @@ func (m *EventMutation) Field(name string) (ent.Value, bool) {
 		return m.ZoomLink()
 	case event.FieldEventDate:
 		return m.EventDate()
+	case event.FieldMaxParticipants:
+		return m.MaxParticipants()
 	case event.FieldMaterialsURL:
 		return m.MaterialsURL()
 	case event.FieldStatus:
@@ -6309,6 +6359,8 @@ func (m *EventMutation) OldField(ctx context.Context, name string) (ent.Value, e
 		return m.OldZoomLink(ctx)
 	case event.FieldEventDate:
 		return m.OldEventDate(ctx)
+	case event.FieldMaxParticipants:
+		return m.OldMaxParticipants(ctx)
 	case event.FieldMaterialsURL:
 		return m.OldMaterialsURL(ctx)
 	case event.FieldStatus:
@@ -6368,6 +6420,13 @@ func (m *EventMutation) SetField(name string, value ent.Value) error {
 		}
 		m.SetEventDate(v)
 		return nil
+	case event.FieldMaxParticipants:
+		v, ok := value.(int)
+		if !ok {
+			return fmt.Errorf("unexpected type %T for field %s", value, name)
+		}
+		m.SetMaxParticipants(v)
+		return nil
 	case event.FieldMaterialsURL:
 		v, ok := value.(string)
 		if !ok {
@@ -6403,13 +6462,21 @@ func (m *EventMutation) SetField(name string, value ent.Value) error {
 // AddedFields returns all numeric fields that were incremented/decremented during
 // this mutation.
 func (m *EventMutation) AddedFields() []string {
-	return nil
+	var fields []string
+	if m.addmax_participants != nil {
+		fields = append(fields, event.FieldMaxParticipants)
+	}
+	return fields
 }
 
 // AddedField returns the numeric value that was incremented/decremented on a field
 // with the given name. The second boolean return value indicates that this field
 // was not set, or was not defined in the schema.
 func (m *EventMutation) AddedField(name string) (ent.Value, bool) {
+	switch name {
+	case event.FieldMaxParticipants:
+		return m.AddedMaxParticipants()
+	}
 	return nil, false
 }
 
@@ -6418,6 +6485,13 @@ func (m *EventMutation) AddedField(name string) (ent.Value, bool) {
 // type.
 func (m *EventMutation) AddField(name string, value ent.Value) error {
 	switch name {
+	case event.FieldMaxParticipants:
+		v, ok := value.(int)
+		if !ok {
+			return fmt.Errorf("unexpected type %T for field %s", value, name)
+		}
+		m.AddMaxParticipants(v)
+		return nil
 	}
 	return fmt.Errorf("unknown Event numeric field %s", name)
 }
@@ -6428,9 +6502,6 @@ func (m *EventMutation) ClearedFields() []string {
 	var fields []string
 	if m.FieldCleared(event.FieldDescription) {
 		fields = append(fields, event.FieldDescription)
-	}
-	if m.FieldCleared(event.FieldZoomLink) {
-		fields = append(fields, event.FieldZoomLink)
 	}
 	if m.FieldCleared(event.FieldMaterialsURL) {
 		fields = append(fields, event.FieldMaterialsURL)
@@ -6451,9 +6522,6 @@ func (m *EventMutation) ClearField(name string) error {
 	switch name {
 	case event.FieldDescription:
 		m.ClearDescription()
-		return nil
-	case event.FieldZoomLink:
-		m.ClearZoomLink()
 		return nil
 	case event.FieldMaterialsURL:
 		m.ClearMaterialsURL()
@@ -6483,6 +6551,9 @@ func (m *EventMutation) ResetField(name string) error {
 		return nil
 	case event.FieldEventDate:
 		m.ResetEventDate()
+		return nil
+	case event.FieldMaxParticipants:
+		m.ResetMaxParticipants()
 		return nil
 	case event.FieldMaterialsURL:
 		m.ResetMaterialsURL()

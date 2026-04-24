@@ -86,6 +86,11 @@ func EventDate(v time.Time) predicate.Event {
 	return predicate.Event(sql.FieldEQ(FieldEventDate, v))
 }
 
+// MaxParticipants applies equality check predicate on the "max_participants" field. It's identical to MaxParticipantsEQ.
+func MaxParticipants(v int) predicate.Event {
+	return predicate.Event(sql.FieldEQ(FieldMaxParticipants, v))
+}
+
 // MaterialsURL applies equality check predicate on the "materials_url" field. It's identical to MaterialsURLEQ.
 func MaterialsURL(v string) predicate.Event {
 	return predicate.Event(sql.FieldEQ(FieldMaterialsURL, v))
@@ -336,16 +341,6 @@ func ZoomLinkHasSuffix(v string) predicate.Event {
 	return predicate.Event(sql.FieldHasSuffix(FieldZoomLink, v))
 }
 
-// ZoomLinkIsNil applies the IsNil predicate on the "zoom_link" field.
-func ZoomLinkIsNil() predicate.Event {
-	return predicate.Event(sql.FieldIsNull(FieldZoomLink))
-}
-
-// ZoomLinkNotNil applies the NotNil predicate on the "zoom_link" field.
-func ZoomLinkNotNil() predicate.Event {
-	return predicate.Event(sql.FieldNotNull(FieldZoomLink))
-}
-
 // ZoomLinkEqualFold applies the EqualFold predicate on the "zoom_link" field.
 func ZoomLinkEqualFold(v string) predicate.Event {
 	return predicate.Event(sql.FieldEqualFold(FieldZoomLink, v))
@@ -394,6 +389,46 @@ func EventDateLT(v time.Time) predicate.Event {
 // EventDateLTE applies the LTE predicate on the "event_date" field.
 func EventDateLTE(v time.Time) predicate.Event {
 	return predicate.Event(sql.FieldLTE(FieldEventDate, v))
+}
+
+// MaxParticipantsEQ applies the EQ predicate on the "max_participants" field.
+func MaxParticipantsEQ(v int) predicate.Event {
+	return predicate.Event(sql.FieldEQ(FieldMaxParticipants, v))
+}
+
+// MaxParticipantsNEQ applies the NEQ predicate on the "max_participants" field.
+func MaxParticipantsNEQ(v int) predicate.Event {
+	return predicate.Event(sql.FieldNEQ(FieldMaxParticipants, v))
+}
+
+// MaxParticipantsIn applies the In predicate on the "max_participants" field.
+func MaxParticipantsIn(vs ...int) predicate.Event {
+	return predicate.Event(sql.FieldIn(FieldMaxParticipants, vs...))
+}
+
+// MaxParticipantsNotIn applies the NotIn predicate on the "max_participants" field.
+func MaxParticipantsNotIn(vs ...int) predicate.Event {
+	return predicate.Event(sql.FieldNotIn(FieldMaxParticipants, vs...))
+}
+
+// MaxParticipantsGT applies the GT predicate on the "max_participants" field.
+func MaxParticipantsGT(v int) predicate.Event {
+	return predicate.Event(sql.FieldGT(FieldMaxParticipants, v))
+}
+
+// MaxParticipantsGTE applies the GTE predicate on the "max_participants" field.
+func MaxParticipantsGTE(v int) predicate.Event {
+	return predicate.Event(sql.FieldGTE(FieldMaxParticipants, v))
+}
+
+// MaxParticipantsLT applies the LT predicate on the "max_participants" field.
+func MaxParticipantsLT(v int) predicate.Event {
+	return predicate.Event(sql.FieldLT(FieldMaxParticipants, v))
+}
+
+// MaxParticipantsLTE applies the LTE predicate on the "max_participants" field.
+func MaxParticipantsLTE(v int) predicate.Event {
+	return predicate.Event(sql.FieldLTE(FieldMaxParticipants, v))
 }
 
 // MaterialsURLEQ applies the EQ predicate on the "materials_url" field.

@@ -62,17 +62,15 @@ func (_c *EventCreate) SetZoomLink(v string) *EventCreate {
 	return _c
 }
 
-// SetNillableZoomLink sets the "zoom_link" field if the given value is not nil.
-func (_c *EventCreate) SetNillableZoomLink(v *string) *EventCreate {
-	if v != nil {
-		_c.SetZoomLink(*v)
-	}
-	return _c
-}
-
 // SetEventDate sets the "event_date" field.
 func (_c *EventCreate) SetEventDate(v time.Time) *EventCreate {
 	_c.mutation.SetEventDate(v)
+	return _c
+}
+
+// SetMaxParticipants sets the "max_participants" field.
+func (_c *EventCreate) SetMaxParticipants(v int) *EventCreate {
+	_c.mutation.SetMaxParticipants(v)
 	return _c
 }
 
@@ -246,8 +244,24 @@ func (_c *EventCreate) check() error {
 			return &ValidationError{Name: "title", err: fmt.Errorf(`ent: validator failed for field "Event.title": %w`, err)}
 		}
 	}
+	if _, ok := _c.mutation.ZoomLink(); !ok {
+		return &ValidationError{Name: "zoom_link", err: errors.New(`ent: missing required field "Event.zoom_link"`)}
+	}
+	if v, ok := _c.mutation.ZoomLink(); ok {
+		if err := event.ZoomLinkValidator(v); err != nil {
+			return &ValidationError{Name: "zoom_link", err: fmt.Errorf(`ent: validator failed for field "Event.zoom_link": %w`, err)}
+		}
+	}
 	if _, ok := _c.mutation.EventDate(); !ok {
 		return &ValidationError{Name: "event_date", err: errors.New(`ent: missing required field "Event.event_date"`)}
+	}
+	if _, ok := _c.mutation.MaxParticipants(); !ok {
+		return &ValidationError{Name: "max_participants", err: errors.New(`ent: missing required field "Event.max_participants"`)}
+	}
+	if v, ok := _c.mutation.MaxParticipants(); ok {
+		if err := event.MaxParticipantsValidator(v); err != nil {
+			return &ValidationError{Name: "max_participants", err: fmt.Errorf(`ent: validator failed for field "Event.max_participants": %w`, err)}
+		}
 	}
 	if _, ok := _c.mutation.Status(); !ok {
 		return &ValidationError{Name: "status", err: errors.New(`ent: missing required field "Event.status"`)}
@@ -314,11 +328,15 @@ func (_c *EventCreate) createSpec() (*Event, *sqlgraph.CreateSpec) {
 	}
 	if value, ok := _c.mutation.ZoomLink(); ok {
 		_spec.SetField(event.FieldZoomLink, field.TypeString, value)
-		_node.ZoomLink = &value
+		_node.ZoomLink = value
 	}
 	if value, ok := _c.mutation.EventDate(); ok {
 		_spec.SetField(event.FieldEventDate, field.TypeTime, value)
 		_node.EventDate = value
+	}
+	if value, ok := _c.mutation.MaxParticipants(); ok {
+		_spec.SetField(event.FieldMaxParticipants, field.TypeInt, value)
+		_node.MaxParticipants = value
 	}
 	if value, ok := _c.mutation.MaterialsURL(); ok {
 		_spec.SetField(event.FieldMaterialsURL, field.TypeString, value)

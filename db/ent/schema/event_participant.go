@@ -7,6 +7,7 @@ import (
 	"entgo.io/ent/dialect"
 	"entgo.io/ent/schema/edge"
 	"entgo.io/ent/schema/field"
+	"entgo.io/ent/schema/index"
 	"github.com/google/uuid"
 )
 
@@ -67,5 +68,11 @@ func (EventParticipant) Edges() []ent.Edge {
 			Field("reviewed_by").
 			Ref("reviewed_participations").
 			Unique(),
+	}
+}
+
+func (EventParticipant) Indexes() []ent.Index {
+	return []ent.Index{
+		index.Fields("event_id", "employee_id").Unique(),
 	}
 }

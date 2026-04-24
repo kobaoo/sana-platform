@@ -54,9 +54,12 @@ type UpdateEmployeeRequest struct {
 }
 
 // ListEmployeesParams holds optional query parameters for listing employees.
+// Limit/Offset are used for lazy-load (infinite scroll) — Limit defaults to 20 (max 50).
 type ListEmployeesParams struct {
-	Search string `json:"search,omitempty"`
-	DzoID  string `json:"dzo_id,omitempty"`
+	Search string `query:"search"`
+	DzoID  string `query:"dzo_id"`
+	Limit  int    `query:"limit"`
+	Offset int    `query:"offset"`
 }
 
 // GetEmployeeResponse is the response for fetching a single employee.
@@ -65,9 +68,14 @@ type GetEmployeeResponse struct {
 }
 
 // ListEmployeesResponse is the response for listing employees.
+// Total is the number of employees matching the filters across all pages (unbounded by Limit/Offset).
+// HasMore is true when Offset+len(Employees) < Total.
 type ListEmployeesResponse struct {
 	Employees []Employee `json:"employees"`
 	Total     int        `json:"total"`
+	Limit     int        `json:"limit"`
+	Offset    int        `json:"offset"`
+	HasMore   bool       `json:"has_more"`
 }
 
 // DeleteEmployeeResponse is the response for deleting an employee.

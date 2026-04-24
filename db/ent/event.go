@@ -29,9 +29,11 @@ type Event struct {
 	// Description holds the value of the "description" field.
 	Description *string `json:"description,omitempty"`
 	// ZoomLink holds the value of the "zoom_link" field.
-	ZoomLink *string `json:"zoom_link,omitempty"`
+	ZoomLink string `json:"zoom_link,omitempty"`
 	// EventDate holds the value of the "event_date" field.
 	EventDate time.Time `json:"event_date,omitempty"`
+	// MaxParticipants holds the value of the "max_participants" field.
+	MaxParticipants int `json:"max_participants,omitempty"`
 	// MaterialsURL holds the value of the "materials_url" field.
 	MaterialsURL *string `json:"materials_url,omitempty"`
 	// Status holds the value of the "status" field.
@@ -95,6 +97,8 @@ func (*Event) scanValues(columns []string) ([]any, error) {
 	values := make([]any, len(columns))
 	for i := range columns {
 		switch columns[i] {
+		case event.FieldMaxParticipants:
+			values[i] = new(sql.NullInt64)
 		case event.FieldTitle, event.FieldDescription, event.FieldZoomLink, event.FieldMaterialsURL, event.FieldStatus:
 			values[i] = new(sql.NullString)
 		case event.FieldEventDate, event.FieldCreatedAt, event.FieldUpdatedAt:
@@ -151,14 +155,19 @@ func (_m *Event) assignValues(columns []string, values []any) error {
 			if value, ok := values[i].(*sql.NullString); !ok {
 				return fmt.Errorf("unexpected type %T for field zoom_link", values[i])
 			} else if value.Valid {
-				_m.ZoomLink = new(string)
-				*_m.ZoomLink = value.String
+				_m.ZoomLink = value.String
 			}
 		case event.FieldEventDate:
 			if value, ok := values[i].(*sql.NullTime); !ok {
 				return fmt.Errorf("unexpected type %T for field event_date", values[i])
 			} else if value.Valid {
 				_m.EventDate = value.Time
+			}
+		case event.FieldMaxParticipants:
+			if value, ok := values[i].(*sql.NullInt64); !ok {
+				return fmt.Errorf("unexpected type %T for field max_participants", values[i])
+			} else if value.Valid {
+				_m.MaxParticipants = int(value.Int64)
 			}
 		case event.FieldMaterialsURL:
 			if value, ok := values[i].(*sql.NullString); !ok {
@@ -250,13 +259,14 @@ func (_m *Event) String() string {
 		builder.WriteString(*v)
 	}
 	builder.WriteString(", ")
-	if v := _m.ZoomLink; v != nil {
-		builder.WriteString("zoom_link=")
-		builder.WriteString(*v)
-	}
+	builder.WriteString("zoom_link=")
+	builder.WriteString(_m.ZoomLink)
 	builder.WriteString(", ")
 	builder.WriteString("event_date=")
 	builder.WriteString(_m.EventDate.Format(time.ANSIC))
+	builder.WriteString(", ")
+	builder.WriteString("max_participants=")
+	builder.WriteString(fmt.Sprintf("%v", _m.MaxParticipants))
 	builder.WriteString(", ")
 	if v := _m.MaterialsURL; v != nil {
 		builder.WriteString("materials_url=")

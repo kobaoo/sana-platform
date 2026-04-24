@@ -108,12 +108,6 @@ func (_u *EventUpdate) SetNillableZoomLink(v *string) *EventUpdate {
 	return _u
 }
 
-// ClearZoomLink clears the value of the "zoom_link" field.
-func (_u *EventUpdate) ClearZoomLink() *EventUpdate {
-	_u.mutation.ClearZoomLink()
-	return _u
-}
-
 // SetEventDate sets the "event_date" field.
 func (_u *EventUpdate) SetEventDate(v time.Time) *EventUpdate {
 	_u.mutation.SetEventDate(v)
@@ -125,6 +119,27 @@ func (_u *EventUpdate) SetNillableEventDate(v *time.Time) *EventUpdate {
 	if v != nil {
 		_u.SetEventDate(*v)
 	}
+	return _u
+}
+
+// SetMaxParticipants sets the "max_participants" field.
+func (_u *EventUpdate) SetMaxParticipants(v int) *EventUpdate {
+	_u.mutation.ResetMaxParticipants()
+	_u.mutation.SetMaxParticipants(v)
+	return _u
+}
+
+// SetNillableMaxParticipants sets the "max_participants" field if the given value is not nil.
+func (_u *EventUpdate) SetNillableMaxParticipants(v *int) *EventUpdate {
+	if v != nil {
+		_u.SetMaxParticipants(*v)
+	}
+	return _u
+}
+
+// AddMaxParticipants adds value to the "max_participants" field.
+func (_u *EventUpdate) AddMaxParticipants(v int) *EventUpdate {
+	_u.mutation.AddMaxParticipants(v)
 	return _u
 }
 
@@ -280,6 +295,16 @@ func (_u *EventUpdate) check() error {
 			return &ValidationError{Name: "title", err: fmt.Errorf(`ent: validator failed for field "Event.title": %w`, err)}
 		}
 	}
+	if v, ok := _u.mutation.ZoomLink(); ok {
+		if err := event.ZoomLinkValidator(v); err != nil {
+			return &ValidationError{Name: "zoom_link", err: fmt.Errorf(`ent: validator failed for field "Event.zoom_link": %w`, err)}
+		}
+	}
+	if v, ok := _u.mutation.MaxParticipants(); ok {
+		if err := event.MaxParticipantsValidator(v); err != nil {
+			return &ValidationError{Name: "max_participants", err: fmt.Errorf(`ent: validator failed for field "Event.max_participants": %w`, err)}
+		}
+	}
 	if v, ok := _u.mutation.Status(); ok {
 		if err := event.StatusValidator(v); err != nil {
 			return &ValidationError{Name: "status", err: fmt.Errorf(`ent: validator failed for field "Event.status": %w`, err)}
@@ -318,11 +343,14 @@ func (_u *EventUpdate) sqlSave(ctx context.Context) (_node int, err error) {
 	if value, ok := _u.mutation.ZoomLink(); ok {
 		_spec.SetField(event.FieldZoomLink, field.TypeString, value)
 	}
-	if _u.mutation.ZoomLinkCleared() {
-		_spec.ClearField(event.FieldZoomLink, field.TypeString)
-	}
 	if value, ok := _u.mutation.EventDate(); ok {
 		_spec.SetField(event.FieldEventDate, field.TypeTime, value)
+	}
+	if value, ok := _u.mutation.MaxParticipants(); ok {
+		_spec.SetField(event.FieldMaxParticipants, field.TypeInt, value)
+	}
+	if value, ok := _u.mutation.AddedMaxParticipants(); ok {
+		_spec.AddField(event.FieldMaxParticipants, field.TypeInt, value)
 	}
 	if value, ok := _u.mutation.MaterialsURL(); ok {
 		_spec.SetField(event.FieldMaterialsURL, field.TypeString, value)
@@ -535,12 +563,6 @@ func (_u *EventUpdateOne) SetNillableZoomLink(v *string) *EventUpdateOne {
 	return _u
 }
 
-// ClearZoomLink clears the value of the "zoom_link" field.
-func (_u *EventUpdateOne) ClearZoomLink() *EventUpdateOne {
-	_u.mutation.ClearZoomLink()
-	return _u
-}
-
 // SetEventDate sets the "event_date" field.
 func (_u *EventUpdateOne) SetEventDate(v time.Time) *EventUpdateOne {
 	_u.mutation.SetEventDate(v)
@@ -552,6 +574,27 @@ func (_u *EventUpdateOne) SetNillableEventDate(v *time.Time) *EventUpdateOne {
 	if v != nil {
 		_u.SetEventDate(*v)
 	}
+	return _u
+}
+
+// SetMaxParticipants sets the "max_participants" field.
+func (_u *EventUpdateOne) SetMaxParticipants(v int) *EventUpdateOne {
+	_u.mutation.ResetMaxParticipants()
+	_u.mutation.SetMaxParticipants(v)
+	return _u
+}
+
+// SetNillableMaxParticipants sets the "max_participants" field if the given value is not nil.
+func (_u *EventUpdateOne) SetNillableMaxParticipants(v *int) *EventUpdateOne {
+	if v != nil {
+		_u.SetMaxParticipants(*v)
+	}
+	return _u
+}
+
+// AddMaxParticipants adds value to the "max_participants" field.
+func (_u *EventUpdateOne) AddMaxParticipants(v int) *EventUpdateOne {
+	_u.mutation.AddMaxParticipants(v)
 	return _u
 }
 
@@ -720,6 +763,16 @@ func (_u *EventUpdateOne) check() error {
 			return &ValidationError{Name: "title", err: fmt.Errorf(`ent: validator failed for field "Event.title": %w`, err)}
 		}
 	}
+	if v, ok := _u.mutation.ZoomLink(); ok {
+		if err := event.ZoomLinkValidator(v); err != nil {
+			return &ValidationError{Name: "zoom_link", err: fmt.Errorf(`ent: validator failed for field "Event.zoom_link": %w`, err)}
+		}
+	}
+	if v, ok := _u.mutation.MaxParticipants(); ok {
+		if err := event.MaxParticipantsValidator(v); err != nil {
+			return &ValidationError{Name: "max_participants", err: fmt.Errorf(`ent: validator failed for field "Event.max_participants": %w`, err)}
+		}
+	}
 	if v, ok := _u.mutation.Status(); ok {
 		if err := event.StatusValidator(v); err != nil {
 			return &ValidationError{Name: "status", err: fmt.Errorf(`ent: validator failed for field "Event.status": %w`, err)}
@@ -775,11 +828,14 @@ func (_u *EventUpdateOne) sqlSave(ctx context.Context) (_node *Event, err error)
 	if value, ok := _u.mutation.ZoomLink(); ok {
 		_spec.SetField(event.FieldZoomLink, field.TypeString, value)
 	}
-	if _u.mutation.ZoomLinkCleared() {
-		_spec.ClearField(event.FieldZoomLink, field.TypeString)
-	}
 	if value, ok := _u.mutation.EventDate(); ok {
 		_spec.SetField(event.FieldEventDate, field.TypeTime, value)
+	}
+	if value, ok := _u.mutation.MaxParticipants(); ok {
+		_spec.SetField(event.FieldMaxParticipants, field.TypeInt, value)
+	}
+	if value, ok := _u.mutation.AddedMaxParticipants(); ok {
+		_spec.AddField(event.FieldMaxParticipants, field.TypeInt, value)
 	}
 	if value, ok := _u.mutation.MaterialsURL(); ok {
 		_spec.SetField(event.FieldMaterialsURL, field.TypeString, value)

@@ -28,6 +28,8 @@ const (
 	FieldZoomLink = "zoom_link"
 	// FieldEventDate holds the string denoting the event_date field in the database.
 	FieldEventDate = "event_date"
+	// FieldMaxParticipants holds the string denoting the max_participants field in the database.
+	FieldMaxParticipants = "max_participants"
 	// FieldMaterialsURL holds the string denoting the materials_url field in the database.
 	FieldMaterialsURL = "materials_url"
 	// FieldStatus holds the string denoting the status field in the database.
@@ -76,6 +78,7 @@ var Columns = []string{
 	FieldDescription,
 	FieldZoomLink,
 	FieldEventDate,
+	FieldMaxParticipants,
 	FieldMaterialsURL,
 	FieldStatus,
 	FieldCreatedAt,
@@ -95,6 +98,10 @@ func ValidColumn(column string) bool {
 var (
 	// TitleValidator is a validator for the "title" field. It is called by the builders before save.
 	TitleValidator func(string) error
+	// ZoomLinkValidator is a validator for the "zoom_link" field. It is called by the builders before save.
+	ZoomLinkValidator func(string) error
+	// MaxParticipantsValidator is a validator for the "max_participants" field. It is called by the builders before save.
+	MaxParticipantsValidator func(int) error
 	// DefaultCreatedAt holds the default value on creation for the "created_at" field.
 	DefaultCreatedAt func() time.Time
 	// DefaultUpdatedAt holds the default value on creation for the "updated_at" field.
@@ -108,12 +115,11 @@ var (
 // Status defines the type for the "status" enum field.
 type Status string
 
-// StatusDRAFT is the default value of the Status enum.
-const DefaultStatus = StatusDRAFT
+// StatusACTIVE is the default value of the Status enum.
+const DefaultStatus = StatusACTIVE
 
 // Status values.
 const (
-	StatusDRAFT     Status = "DRAFT"
 	StatusACTIVE    Status = "ACTIVE"
 	StatusCOMPLETED Status = "COMPLETED"
 	StatusCANCELLED Status = "CANCELLED"
@@ -126,7 +132,7 @@ func (s Status) String() string {
 // StatusValidator is a validator for the "status" field enum values. It is called by the builders before save.
 func StatusValidator(s Status) error {
 	switch s {
-	case StatusDRAFT, StatusACTIVE, StatusCOMPLETED, StatusCANCELLED:
+	case StatusACTIVE, StatusCOMPLETED, StatusCANCELLED:
 		return nil
 	default:
 		return fmt.Errorf("event: invalid enum value for status field: %q", s)
@@ -169,6 +175,11 @@ func ByZoomLink(opts ...sql.OrderTermOption) OrderOption {
 // ByEventDate orders the results by the event_date field.
 func ByEventDate(opts ...sql.OrderTermOption) OrderOption {
 	return sql.OrderByField(FieldEventDate, opts...).ToFunc()
+}
+
+// ByMaxParticipants orders the results by the max_participants field.
+func ByMaxParticipants(opts ...sql.OrderTermOption) OrderOption {
+	return sql.OrderByField(FieldMaxParticipants, opts...).ToFunc()
 }
 
 // ByMaterialsURL orders the results by the materials_url field.

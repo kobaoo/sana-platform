@@ -278,12 +278,20 @@ func init() {
 	eventDescTitle := eventFields[3].Descriptor()
 	// event.TitleValidator is a validator for the "title" field. It is called by the builders before save.
 	event.TitleValidator = eventDescTitle.Validators[0].(func(string) error)
+	// eventDescZoomLink is the schema descriptor for zoom_link field.
+	eventDescZoomLink := eventFields[5].Descriptor()
+	// event.ZoomLinkValidator is a validator for the "zoom_link" field. It is called by the builders before save.
+	event.ZoomLinkValidator = eventDescZoomLink.Validators[0].(func(string) error)
+	// eventDescMaxParticipants is the schema descriptor for max_participants field.
+	eventDescMaxParticipants := eventFields[7].Descriptor()
+	// event.MaxParticipantsValidator is a validator for the "max_participants" field. It is called by the builders before save.
+	event.MaxParticipantsValidator = eventDescMaxParticipants.Validators[0].(func(int) error)
 	// eventDescCreatedAt is the schema descriptor for created_at field.
-	eventDescCreatedAt := eventFields[9].Descriptor()
+	eventDescCreatedAt := eventFields[10].Descriptor()
 	// event.DefaultCreatedAt holds the default value on creation for the created_at field.
 	event.DefaultCreatedAt = eventDescCreatedAt.Default.(func() time.Time)
 	// eventDescUpdatedAt is the schema descriptor for updated_at field.
-	eventDescUpdatedAt := eventFields[10].Descriptor()
+	eventDescUpdatedAt := eventFields[11].Descriptor()
 	// event.DefaultUpdatedAt holds the default value on creation for the updated_at field.
 	event.DefaultUpdatedAt = eventDescUpdatedAt.Default.(func() time.Time)
 	// event.UpdateDefaultUpdatedAt holds the default value on update for the updated_at field.

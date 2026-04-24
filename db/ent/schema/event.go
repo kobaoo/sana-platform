@@ -28,18 +28,19 @@ func (Event) Fields() []ent.Field {
 			Optional().
 			Nillable(),
 		field.String("zoom_link").
-			Optional().
-			Nillable(),
+			NotEmpty(),
 		field.Time("event_date").
 			SchemaType(map[string]string{
 				dialect.Postgres: "timestamptz",
 			}),
+		field.Int("max_participants").
+			Positive(),
 		field.String("materials_url").
 			Optional().
 			Nillable(),
 		field.Enum("status").
-			Values("DRAFT", "ACTIVE", "COMPLETED", "CANCELLED").
-			Default("DRAFT"),
+			Values("ACTIVE", "COMPLETED", "CANCELLED").
+			Default("ACTIVE"),
 		field.Time("created_at").
 			Default(time.Now).
 			Immutable(),

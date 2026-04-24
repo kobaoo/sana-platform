@@ -225,14 +225,19 @@ func ListEmployees(ctx context.Context, params *ListEmployeesParams) (*ListEmplo
 		clientFilter = ad.CompanyID
 	}
 
-	emps, err := queryActiveEmployees(ctx, strings.TrimSpace(params.Search), dzoFilter, clientFilter)
+	limit, offset := normalizePagination(params.Limit, params.Offset)
+
+	emps, total, err := queryActiveEmployeesPaginated(ctx, strings.TrimSpace(params.Search), dzoFilter, clientFilter, limit, offset)
 	if err != nil {
 		return nil, err
 	}
 
 	return &ListEmployeesResponse{
 		Employees: emps,
-		Total:     len(emps),
+		Total:     total,
+		Limit:     limit,
+		Offset:    offset,
+		HasMore:   offset+len(emps) < total,
 	}, nil
 }
 
@@ -607,6 +612,75 @@ func queryActiveEmployees(ctx context.Context, search string, dzoID string, clie
 	}
 
 	return emps, nil
+}
+
+// queryActiveEmployeesPaginated returns a bounded page of employees plus the
+// total matching count. Used by GET /employees for lazy-load scroll.
+func queryActiveEmployeesPaginated(ctx context.Context, search, dzoID, clientID string, limit, offset int) ([]Employee, int, error) {
+	q := Client.Employee.
+		Query().
+		Where(employee.IsDeletedEQ(false))
+
+	if search != "" {
+		q = q.Where(employee.Or(
+			employee.FullNameContainsFold(search),
+			employee.EmailContainsFold(search),
+			employee.DepartmentContainsFold(search),
+		))
+	}
+
+	if dzoID != "" {
+		if uid, err := uuid.Parse(dzoID); err == nil {
+			q = q.Where(employee.DzoIDEQ(uid))
+		}
+	}
+
+	if clientID != "" {
+		if uid, err := uuid.Parse(clientID); err == nil {
+			q = q.Where(employee.ClientIDEQ(uid))
+		}
+	}
+
+	total, err := q.Count(ctx)
+	if err != nil {
+		return nil, 0, errs.B().Code(errs.Internal).Msg("failed to count employees").Cause(err).Err()
+	}
+
+	rows, err := q.Clone().
+		WithDzo().
+		Order(ent.Asc(employee.FieldFullName)).
+		Limit(limit).
+		Offset(offset).
+		All(ctx)
+	if err != nil {
+		return nil, 0, errs.B().Code(errs.Internal).Msg("failed to list employees").Cause(err).Err()
+	}
+
+	emps := make([]Employee, 0, len(rows))
+	for _, row := range rows {
+		emps = append(emps, *entToEmployee(row))
+	}
+
+	return emps, total, nil
+}
+
+// normalizePagination applies defaults and caps for list pagination.
+// Default page size is 20; hard cap is 50 to avoid heavy responses.
+func normalizePagination(limit, offset int) (int, int) {
+	const (
+		defaultLimit = 20
+		maxLimit     = 50
+	)
+	if limit <= 0 {
+		limit = defaultLimit
+	}
+	if limit > maxLimit {
+		limit = maxLimit
+	}
+	if offset < 0 {
+		offset = 0
+	}
+	return limit, offset
 }
 
 func queryEmployeeByID(ctx context.Context, id string) (*Employee, error) {

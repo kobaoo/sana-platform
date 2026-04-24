@@ -150,10 +150,11 @@ var (
 		{Name: "id", Type: field.TypeUUID, Unique: true},
 		{Name: "title", Type: field.TypeString},
 		{Name: "description", Type: field.TypeString, Nullable: true},
-		{Name: "zoom_link", Type: field.TypeString, Nullable: true},
+		{Name: "zoom_link", Type: field.TypeString},
 		{Name: "event_date", Type: field.TypeTime, SchemaType: map[string]string{"postgres": "timestamptz"}},
+		{Name: "max_participants", Type: field.TypeInt},
 		{Name: "materials_url", Type: field.TypeString, Nullable: true},
-		{Name: "status", Type: field.TypeEnum, Enums: []string{"DRAFT", "ACTIVE", "COMPLETED", "CANCELLED"}, Default: "DRAFT"},
+		{Name: "status", Type: field.TypeEnum, Enums: []string{"ACTIVE", "COMPLETED", "CANCELLED"}, Default: "ACTIVE"},
 		{Name: "created_at", Type: field.TypeTime},
 		{Name: "updated_at", Type: field.TypeTime},
 		{Name: "client_id", Type: field.TypeUUID},
@@ -167,13 +168,13 @@ var (
 		ForeignKeys: []*schema.ForeignKey{
 			{
 				Symbol:     "events_clients_events",
-				Columns:    []*schema.Column{EventsColumns[9]},
+				Columns:    []*schema.Column{EventsColumns[10]},
 				RefColumns: []*schema.Column{ClientsColumns[0]},
 				OnDelete:   schema.NoAction,
 			},
 			{
 				Symbol:     "events_users_hosted_events",
-				Columns:    []*schema.Column{EventsColumns[10]},
+				Columns:    []*schema.Column{EventsColumns[11]},
 				RefColumns: []*schema.Column{UsersColumns[0]},
 				OnDelete:   schema.NoAction,
 			},
@@ -214,6 +215,13 @@ var (
 				Columns:    []*schema.Column{EventParticipantsColumns[8]},
 				RefColumns: []*schema.Column{UsersColumns[0]},
 				OnDelete:   schema.SetNull,
+			},
+		},
+		Indexes: []*schema.Index{
+			{
+				Name:    "eventparticipant_event_id_employee_id",
+				Unique:  true,
+				Columns: []*schema.Column{EventParticipantsColumns[7], EventParticipantsColumns[6]},
 			},
 		},
 	}
