@@ -21,19 +21,25 @@ func (Request) Fields() []ent.Field {
 			Default(uuid.New).
 			Unique().
 			Immutable(),
+
 		field.UUID("initiator_id", uuid.UUID{}),
+
 		field.UUID("entity_id", uuid.UUID{}),
+
 		field.String("entity_type").
 			MaxLen(50).
 			NotEmpty(),
+
 		field.Int("step").
 			Default(0),
+
 		field.Time("created_at").
 			Default(time.Now).
 			Immutable().
 			SchemaType(map[string]string{
 				dialect.Postgres: "timestamptz",
 			}),
+
 		field.String("status").
 			MaxLen(50).
 			NotEmpty().
