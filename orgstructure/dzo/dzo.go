@@ -6,6 +6,7 @@ import (
 	"time"
 
 	"encore.app/auth/authhandler"
+	"encore.app/db/ent/company"
 	"encore.dev/beta/auth"
 	"encore.dev/beta/errs"
 	"encore.dev/storage/sqldb"
@@ -50,6 +51,9 @@ func CreateDZO(ctx context.Context, req *CreateDZORequest) (*GetDZOResponse, err
 	}
 	if strings.TrimSpace(req.ClientID) == "" {
 		return nil, errs.B().Code(errs.InvalidArgument).Msg("client_id is required").Err()
+	} // ADM can only create DZO within their own client.
+	if ad.Role == authhandler.RoleADM && req.ClientID != ad.CompanyID {
+		return nil, errs.B().Code(errs.PermissionDenied).Msg("admin can only create DZO within their own client").Err()
 	}
 
 	// ADM can only create DZO within their own client.
@@ -99,6 +103,20 @@ func ListDZO(ctx context.Context) (*ListDZOResponse, error) {
 	}
 	if err != nil {
 		return nil, err
+	}
+
+	if ad.Role == authhandler.RoleHR {
+		filtered := make([]DZO, 0)
+		for _, d := range dzos {
+			if d.ID == ad.DzoID {
+				filtered = append(filtered, d)
+				break
+			}
+		}
+		return &ListDZOResponse{
+			DZOs:  filtered,
+			Total: len(filtered),
+		}, nil
 	}
 
 	return &ListDZOResponse{
@@ -206,6 +224,11 @@ func createDZO(ctx context.Context, req *CreateDZORequest) (*DZO, error) {
 	if err != nil {
 		return nil, errs.B().Code(errs.InvalidArgument).Msg("invalid client_id").Err()
 	}
+	//client exist check
+	err = clientExists(ctx, clientID)
+	if err != nil {
+		return nil, err
+	}
 
 	normalizedName := strings.TrimSpace(req.Name)
 	if normalizedName == "" {
@@ -240,6 +263,17 @@ func createDZO(ctx context.Context, req *CreateDZORequest) (*DZO, error) {
 	}
 
 	return entToDZO(row, 0), nil
+}
+
+func clientExists(ctx context.Context, clientID uuid.UUID) error {
+	exists, err := Client.Company.Query().Where(company.ID(clientID)).Exist(ctx)
+	if err != nil {
+		return errs.B().Code(errs.Internal).Err()
+	}
+	if !exists {
+		return errs.B().Code(errs.NotFound).Msg("client doesn't exist").Err()
+	}
+	return nil
 }
 
 func queryActiveDZO(ctx context.Context) ([]DZO, error) {
