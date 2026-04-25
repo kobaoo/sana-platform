@@ -273,4 +273,3 @@ func TestListCertificateRenewals_FiltersByInitiatorID(t *testing.T) {
 		}
 	}
 }
-
