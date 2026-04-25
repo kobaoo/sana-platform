@@ -43,6 +43,7 @@ func makeClient(t *testing.T) uuid.UUID {
 	return id
 }
 
+
 func makeDZO(t *testing.T, name string) *DZO {
 	id := makeClient(t)
 	t.Helper()
