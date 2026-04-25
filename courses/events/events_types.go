@@ -38,6 +38,10 @@ type Event struct {
 	ParticipantsCount int           `json:"participants_count"`
 	AvailableSlots    int           `json:"available_slots"`
 	Participants      []Participant `json:"participants,omitempty"`
+
+	// Per-caller fields. Populated for EMP role only — for SA/ADM/HR the
+	// concept of self-enrollment doesn't apply and these stay zero/empty.
+	IsRegistered bool `json:"is_registered,omitempty"`
 }
 
 // Participant is an employee enrolled into an event.

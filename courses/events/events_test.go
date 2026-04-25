@@ -707,6 +707,189 @@ func makeAdmin(t *testing.T, clientID uuid.UUID, isActive, isOnboarded bool) uui
 	return id
 }
 
+// makeEmployeeUser inserts a User + Employee linked together, returns
+// (employeeID, authCtx) where authCtx carries the user's keycloak_user_id.
+// The auth context resolves through lookupEmployeeID → empID.
+func makeEmployeeUser(t *testing.T, clientID, dzoID uuid.UUID) (uuid.UUID, context.Context) {
+	t.Helper()
+	suffix := uuid.New().String()[:8]
+	kcID := "emp-" + suffix
+
+	userID := uuid.New()
+	if _, err := Client.User.
+		Create().
+		SetID(userID).
+		SetRole(string(authhandler.RoleEMP)).
+		SetEmail(kcID + "@test.com").
+		SetKeycloakUserID(kcID).
+		SetClientID(clientID).
+		SetIsActive(true).
+		SetIsOnboarded(true).
+		Save(context.Background()); err != nil {
+		t.Fatalf("makeEmployeeUser: user: %v", err)
+	}
+
+	row, err := Client.Employee.
+		Create().
+		SetClientID(clientID).
+		SetDzoID(dzoID).
+		SetFullName("Emp " + suffix).
+		SetEmail(kcID + "@test.com").
+		SetIsActive(true).
+		SetUserID(userID).
+		Save(context.Background())
+	if err != nil {
+		t.Fatalf("makeEmployeeUser: employee: %v", err)
+	}
+
+	c := auth.WithContext(context.Background(), auth.UID(kcID), &authhandler.AuthData{
+		KeycloakUserID: kcID,
+		Role:           authhandler.RoleEMP,
+		CompanyID:      clientID.String(),
+	})
+	return row.ID, c
+}
+
+// ════ EMPLOYEE REGISTRATION FLOW ════
+
+func TestRegisterForEvent_Success(t *testing.T) {
+	f := setup(t)
+	ev := makeEvent(t, f)
+	_, empCtx := makeEmployeeUser(t, f.ClientID, f.DzoID)
+
+	resp, err := RegisterForEvent(empCtx, ev.ID)
+	if err != nil {
+		t.Fatalf("RegisterForEvent: %v", err)
+	}
+	if !resp.Event.IsRegistered {
+		t.Errorf("expected is_registered=true")
+	}
+	if resp.Event.ZoomLink == "" {
+		t.Errorf("expected zoom_link to be visible after registration")
+	}
+	if resp.Event.AvailableSlots != ev.MaxParticipants-1 {
+		t.Errorf("expected available_slots=%d, got %d",
+			ev.MaxParticipants-1, resp.Event.AvailableSlots)
+	}
+}
+
+func TestRegisterForEvent_AlreadyRegistered(t *testing.T) {
+	f := setup(t)
+	ev := makeEvent(t, f)
+	_, empCtx := makeEmployeeUser(t, f.ClientID, f.DzoID)
+
+	if _, err := RegisterForEvent(empCtx, ev.ID); err != nil {
+		t.Fatalf("first register: %v", err)
+	}
+	_, err := RegisterForEvent(empCtx, ev.ID)
+	if errs.Code(err) != errs.AlreadyExists {
+		t.Errorf("expected AlreadyExists, got %v", errs.Code(err))
+	}
+}
+
+func TestRegisterForEvent_NoSlots(t *testing.T) {
+	f := setup(t)
+
+	resp, err := CreateEvent(f.AdminCtx, &CreateEventRequest{
+		Title:           "Tiny Webinar " + uuid.New().String()[:6],
+		EventDate:       time.Now().Add(48 * time.Hour),
+		HostID:          f.HostID.String(),
+		ZoomLink:        "https://zoom.us/j/9",
+		MaxParticipants: 1,
+	})
+	if err != nil {
+		t.Fatalf("CreateEvent: %v", err)
+	}
+	ev := resp.Event
+
+	_, firstCtx := makeEmployeeUser(t, f.ClientID, f.DzoID)
+	_, secondCtx := makeEmployeeUser(t, f.ClientID, f.DzoID)
+
+	if _, err := RegisterForEvent(firstCtx, ev.ID); err != nil {
+		t.Fatalf("first register: %v", err)
+	}
+	_, err = RegisterForEvent(secondCtx, ev.ID)
+	if errs.Code(err) != errs.FailedPrecondition {
+		t.Errorf("expected FailedPrecondition (no slots), got %v", errs.Code(err))
+	}
+}
+
+func TestUnregisterFromEvent_Success(t *testing.T) {
+	f := setup(t)
+	ev := makeEvent(t, f)
+	_, empCtx := makeEmployeeUser(t, f.ClientID, f.DzoID)
+
+	if _, err := RegisterForEvent(empCtx, ev.ID); err != nil {
+		t.Fatalf("register: %v", err)
+	}
+	resp, err := UnregisterFromEvent(empCtx, ev.ID)
+	if err != nil {
+		t.Fatalf("UnregisterFromEvent: %v", err)
+	}
+	if resp.Event.IsRegistered {
+		t.Errorf("expected is_registered=false after unregister")
+	}
+	if resp.Event.ZoomLink != "" {
+		t.Errorf("expected zoom_link redacted after unregister")
+	}
+	if resp.Event.AvailableSlots != ev.MaxParticipants {
+		t.Errorf("expected available_slots restored to %d, got %d",
+			ev.MaxParticipants, resp.Event.AvailableSlots)
+	}
+}
+
+func TestUnregisterFromEvent_NotRegistered(t *testing.T) {
+	f := setup(t)
+	ev := makeEvent(t, f)
+	_, empCtx := makeEmployeeUser(t, f.ClientID, f.DzoID)
+
+	_, err := UnregisterFromEvent(empCtx, ev.ID)
+	if errs.Code(err) != errs.NotFound {
+		t.Errorf("expected NotFound, got %v", errs.Code(err))
+	}
+}
+
+func TestGetEvent_EMPSeesIsRegisteredAndHidesZoomUntilEnrolled(t *testing.T) {
+	f := setup(t)
+	ev := makeEvent(t, f)
+	_, empCtx := makeEmployeeUser(t, f.ClientID, f.DzoID)
+
+	before, err := GetEvent(empCtx, ev.ID)
+	if err != nil {
+		t.Fatalf("GetEvent before: %v", err)
+	}
+	if before.Event.IsRegistered {
+		t.Errorf("expected is_registered=false before enroll")
+	}
+	if before.Event.ZoomLink != "" {
+		t.Errorf("expected zoom_link hidden for non-registered EMP")
+	}
+
+	if _, err := RegisterForEvent(empCtx, ev.ID); err != nil {
+		t.Fatalf("register: %v", err)
+	}
+	after, err := GetEvent(empCtx, ev.ID)
+	if err != nil {
+		t.Fatalf("GetEvent after: %v", err)
+	}
+	if !after.Event.IsRegistered {
+		t.Errorf("expected is_registered=true after enroll")
+	}
+	if after.Event.ZoomLink == "" {
+		t.Errorf("expected zoom_link visible to registered EMP")
+	}
+}
+
+func TestRegisterForEvent_PermissionDenied(t *testing.T) {
+	f := setup(t)
+	ev := makeEvent(t, f)
+
+	_, err := RegisterForEvent(f.AdminCtx, ev.ID)
+	if errs.Code(err) != errs.PermissionDenied {
+		t.Errorf("expected PermissionDenied for ADM, got %v", errs.Code(err))
+	}
+}
+
 // Pending admins (registered via RegisterAdmin, not yet logged in:
 // is_active=false, is_onboarded=false) must appear in the host picker
 // so SA can pre-assign them as event hosts.

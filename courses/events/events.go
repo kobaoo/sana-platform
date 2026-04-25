@@ -120,11 +120,28 @@ func ListEvents(ctx context.Context, params *ListEventsParams) (*ListEventsRespo
 		return nil, err
 	}
 
+	if ad.Role == authhandler.RoleEMP {
+		empID, lookupErr := lookupEmployeeID(ctx, ad)
+		switch {
+		case lookupErr == nil:
+			if err := annotateRegistrations(ctx, rows, empID); err != nil {
+				return nil, err
+			}
+		case errs.Code(lookupErr) == errs.FailedPrecondition:
+			// caller has no employee profile — leave is_registered=false
+		default:
+			return nil, lookupErr
+		}
+		redactZoomForUnregistered(rows)
+	}
+
 	return &ListEventsResponse{Events: rows, Total: len(rows)}, nil
 }
 
 // GetEvent returns a single event together with its participants.
 // Employees can only see ACTIVE events; SA/ADM/HR see any status.
+// For EMP, the response carries `is_registered` and the zoom_link is
+// hidden until the caller is enrolled.
 //
 //encore:api auth method=GET path=/events/:id
 func GetEvent(ctx context.Context, id string) (*GetEventResponse, error) {
@@ -142,9 +159,26 @@ func GetEvent(ctx context.Context, id string) (*GetEventResponse, error) {
 		return nil, errs.B().Code(errs.NotFound).Msg("event not found").Err()
 	}
 
-	// Hide participant details from regular employees.
 	if ad.Role == authhandler.RoleEMP {
+		// Hide participant details from regular employees.
 		ev.Participants = nil
+
+		empID, lookupErr := lookupEmployeeID(ctx, ad)
+		switch {
+		case lookupErr == nil:
+			registered, err := isRegistered(ctx, uuid.MustParse(ev.ID), empID)
+			if err != nil {
+				return nil, err
+			}
+			ev.IsRegistered = registered
+		case errs.Code(lookupErr) == errs.FailedPrecondition:
+			// caller has no employee profile — treat as not registered
+		default:
+			return nil, lookupErr
+		}
+		if !ev.IsRegistered {
+			ev.ZoomLink = ""
+		}
 	}
 
 	return &GetEventResponse{Event: *ev}, nil
@@ -211,6 +245,113 @@ func DeleteEvent(ctx context.Context, id string) (*DeleteEventResponse, error) {
 	}
 
 	return &DeleteEventResponse{Message: "event cancelled"}, nil
+}
+
+// RegisterForEvent enrolls the calling employee into an event.
+// Capacity is enforced inside a transaction: if the event is at max
+// after the insert, the transaction is rolled back and FailedPrecondition
+// is returned. Idempotent on the unique (event_id, employee_id) constraint —
+// second register by the same employee returns AlreadyExists.
+// Allowed role: EMP.
+//
+//encore:api auth method=POST path=/events/:id/register
+func RegisterForEvent(ctx context.Context, id string) (*GetEventResponse, error) {
+	ad, err := getAuthData()
+	if err != nil {
+		return nil, err
+	}
+	if err := requireRole(ad, authhandler.RoleEMP); err != nil {
+		return nil, err
+	}
+
+	eventID, err := uuid.Parse(id)
+	if err != nil {
+		return nil, errs.B().Code(errs.InvalidArgument).Msg("invalid event id").Err()
+	}
+
+	empID, err := lookupEmployeeID(ctx, ad)
+	if err != nil {
+		return nil, err
+	}
+
+	ev, err := queryEventByID(ctx, id, false)
+	if err != nil {
+		return nil, err
+	}
+	if !canSeeEvent(ad, ev) {
+		return nil, errs.B().Code(errs.NotFound).Msg("event not found").Err()
+	}
+	if ev.Status != StatusActive {
+		return nil, errs.B().Code(errs.FailedPrecondition).Msg("event is not active").Err()
+	}
+
+	if err := enrollEmployee(ctx, eventID, empID); err != nil {
+		return nil, err
+	}
+
+	out, err := loadEventByID(ctx, eventID, true)
+	if err != nil {
+		return nil, err
+	}
+	out.Participants = nil
+	out.IsRegistered = true
+	return &GetEventResponse{Event: *out}, nil
+}
+
+// UnregisterFromEvent removes the calling employee's enrollment.
+// Idempotent in spirit but returns NotFound if no enrollment exists.
+// Allowed role: EMP.
+//
+//encore:api auth method=DELETE path=/events/:id/register
+func UnregisterFromEvent(ctx context.Context, id string) (*GetEventResponse, error) {
+	ad, err := getAuthData()
+	if err != nil {
+		return nil, err
+	}
+	if err := requireRole(ad, authhandler.RoleEMP); err != nil {
+		return nil, err
+	}
+
+	eventID, err := uuid.Parse(id)
+	if err != nil {
+		return nil, errs.B().Code(errs.InvalidArgument).Msg("invalid event id").Err()
+	}
+
+	empID, err := lookupEmployeeID(ctx, ad)
+	if err != nil {
+		return nil, err
+	}
+
+	ev, err := queryEventByID(ctx, id, false)
+	if err != nil {
+		return nil, err
+	}
+	if !canSeeEvent(ad, ev) {
+		return nil, errs.B().Code(errs.NotFound).Msg("event not found").Err()
+	}
+
+	deleted, err := Client.EventParticipant.
+		Delete().
+		Where(
+			eventparticipant.EventIDEQ(eventID),
+			eventparticipant.EmployeeIDEQ(empID),
+		).
+		Exec(ctx)
+	if err != nil {
+		return nil, errs.B().Code(errs.Internal).Msg("failed to unregister").Cause(err).Err()
+	}
+	if deleted == 0 {
+		return nil, errs.B().Code(errs.NotFound).Msg("you are not registered for this event").Err()
+	}
+
+	out, err := loadEventByID(ctx, eventID, true)
+	if err != nil {
+		return nil, err
+	}
+	out.Participants = nil
+	out.IsRegistered = false
+	out.ZoomLink = ""
+	return &GetEventResponse{Event: *out}, nil
 }
 
 // ListHosts returns potential hosts (SA/ADM/HR users) scoped to the caller's
@@ -830,6 +971,174 @@ func parseStatus(raw string) (*entevent.Status, error) {
 }
 
 // ════ HELPERS ════
+
+// lookupEmployeeID resolves the calling user to their employee record via
+// keycloak_user_id → user.id → employee.user_id. Returns FailedPrecondition
+// when the caller has no employee record (e.g. an admin with no employee row).
+func lookupEmployeeID(ctx context.Context, ad *authhandler.AuthData) (uuid.UUID, error) {
+	if ad.KeycloakUserID == "" {
+		return uuid.Nil, errs.B().Code(errs.Unauthenticated).Msg("missing user identity").Err()
+	}
+	u, err := Client.User.
+		Query().
+		Where(user.KeycloakUserIDEQ(ad.KeycloakUserID)).
+		Only(ctx)
+	if err != nil {
+		if ent.IsNotFound(err) {
+			return uuid.Nil, errs.B().Code(errs.FailedPrecondition).Msg("caller has no user record").Err()
+		}
+		return uuid.Nil, errs.B().Code(errs.Internal).Msg("failed to resolve user").Cause(err).Err()
+	}
+	emp, err := Client.Employee.
+		Query().
+		Where(employee.UserIDEQ(u.ID), employee.IsDeletedEQ(false)).
+		Only(ctx)
+	if err != nil {
+		if ent.IsNotFound(err) {
+			return uuid.Nil, errs.B().Code(errs.FailedPrecondition).Msg("caller has no employee profile").Err()
+		}
+		return uuid.Nil, errs.B().Code(errs.Internal).Msg("failed to resolve employee").Cause(err).Err()
+	}
+	return emp.ID, nil
+}
+
+// isRegistered checks whether the given employee has an active enrollment
+// in the given event.
+func isRegistered(ctx context.Context, eventID, empID uuid.UUID) (bool, error) {
+	exists, err := Client.EventParticipant.
+		Query().
+		Where(
+			eventparticipant.EventIDEQ(eventID),
+			eventparticipant.EmployeeIDEQ(empID),
+		).
+		Exist(ctx)
+	if err != nil {
+		return false, errs.B().Code(errs.Internal).Msg("failed to check enrollment").Cause(err).Err()
+	}
+	return exists, nil
+}
+
+// annotateRegistrations populates IsRegistered for each event in the slice
+// using a single batched query keyed by event id.
+func annotateRegistrations(ctx context.Context, evs []Event, empID uuid.UUID) error {
+	if len(evs) == 0 {
+		return nil
+	}
+	eventIDs := make([]uuid.UUID, 0, len(evs))
+	for i := range evs {
+		uid, err := uuid.Parse(evs[i].ID)
+		if err != nil {
+			continue
+		}
+		eventIDs = append(eventIDs, uid)
+	}
+	rows, err := Client.EventParticipant.
+		Query().
+		Where(
+			eventparticipant.EmployeeIDEQ(empID),
+			eventparticipant.EventIDIn(eventIDs...),
+		).
+		Select(eventparticipant.FieldEventID).
+		All(ctx)
+	if err != nil {
+		return errs.B().Code(errs.Internal).Msg("failed to load registrations").Cause(err).Err()
+	}
+	registered := make(map[string]struct{}, len(rows))
+	for _, r := range rows {
+		registered[r.EventID.String()] = struct{}{}
+	}
+	for i := range evs {
+		if _, ok := registered[evs[i].ID]; ok {
+			evs[i].IsRegistered = true
+		}
+	}
+	return nil
+}
+
+// redactZoomForUnregistered hides zoom_link from EMP responses when the
+// caller is not registered. Keeps the field intact for registered ones.
+func redactZoomForUnregistered(evs []Event) {
+	for i := range evs {
+		if !evs[i].IsRegistered {
+			evs[i].ZoomLink = ""
+		}
+	}
+}
+
+// enrollEmployee inserts a participant row inside a transaction with a
+// post-insert capacity check. Two concurrent registrations that both observe
+// free capacity will both insert, then both re-count and the loser rolls
+// back with FailedPrecondition. The unique (event_id, employee_id) constraint
+// makes a duplicate register by the same employee return AlreadyExists.
+func enrollEmployee(ctx context.Context, eventID, empID uuid.UUID) error {
+	tx, err := Client.Tx(ctx)
+	if err != nil {
+		return errs.B().Code(errs.Internal).Msg("failed to begin transaction").Cause(err).Err()
+	}
+	defer func() {
+		if err != nil {
+			_ = tx.Rollback()
+		}
+	}()
+
+	ev, err := tx.Event.Get(ctx, eventID)
+	if err != nil {
+		if ent.IsNotFound(err) {
+			err = errs.B().Code(errs.NotFound).Msg("event not found").Err()
+			return err
+		}
+		err = errs.B().Code(errs.Internal).Msg("failed to load event").Cause(err).Err()
+		return err
+	}
+
+	preCount, err := tx.EventParticipant.
+		Query().
+		Where(eventparticipant.EventIDEQ(eventID)).
+		Count(ctx)
+	if err != nil {
+		err = errs.B().Code(errs.Internal).Msg("failed to count participants").Cause(err).Err()
+		return err
+	}
+	if preCount >= ev.MaxParticipants {
+		err = errs.B().Code(errs.FailedPrecondition).Msg("no slots available").Err()
+		return err
+	}
+
+	now := time.Now()
+	_, err = tx.EventParticipant.
+		Create().
+		SetEventID(eventID).
+		SetEmployeeID(empID).
+		SetJoinedAt(now).
+		Save(ctx)
+	if err != nil {
+		if ent.IsConstraintError(err) {
+			err = errs.B().Code(errs.AlreadyExists).Msg("you are already registered for this event").Err()
+			return err
+		}
+		err = errs.B().Code(errs.Internal).Msg("failed to register").Cause(err).Err()
+		return err
+	}
+
+	postCount, err := tx.EventParticipant.
+		Query().
+		Where(eventparticipant.EventIDEQ(eventID)).
+		Count(ctx)
+	if err != nil {
+		err = errs.B().Code(errs.Internal).Msg("failed to verify capacity").Cause(err).Err()
+		return err
+	}
+	if postCount > ev.MaxParticipants {
+		err = errs.B().Code(errs.FailedPrecondition).Msg("no slots available").Err()
+		return err
+	}
+
+	if err = tx.Commit(); err != nil {
+		err = errs.B().Code(errs.Internal).Msg("failed to commit registration").Cause(err).Err()
+		return err
+	}
+	return nil
+}
 
 func getAuthData() (*authhandler.AuthData, error) {
 	ad, ok := auth.Data().(*authhandler.AuthData)
