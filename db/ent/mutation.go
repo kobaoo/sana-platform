@@ -848,7 +848,8 @@ type ContractSupplierMutation struct {
 	id                      *uuid.UUID
 	supplier_id             *uuid.UUID
 	contract_number         *string
-	vat_flag                *bool
+	vat_flag                *int
+	addvat_flag             *int
 	signed_date             *time.Time
 	end_date                *time.Time
 	amount                  *float64
@@ -1057,12 +1058,13 @@ func (m *ContractSupplierMutation) ResetContractNumber() {
 }
 
 // SetVatFlag sets the "vat_flag" field.
-func (m *ContractSupplierMutation) SetVatFlag(b bool) {
-	m.vat_flag = &b
+func (m *ContractSupplierMutation) SetVatFlag(i int) {
+	m.vat_flag = &i
+	m.addvat_flag = nil
 }
 
 // VatFlag returns the value of the "vat_flag" field in the mutation.
-func (m *ContractSupplierMutation) VatFlag() (r bool, exists bool) {
+func (m *ContractSupplierMutation) VatFlag() (r int, exists bool) {
 	v := m.vat_flag
 	if v == nil {
 		return
@@ -1073,7 +1075,7 @@ func (m *ContractSupplierMutation) VatFlag() (r bool, exists bool) {
 // OldVatFlag returns the old "vat_flag" field's value of the ContractSupplier entity.
 // If the ContractSupplier object wasn't provided to the builder, the object is fetched from the database.
 // An error is returned if the mutation operation is not UpdateOne, or the database query fails.
-func (m *ContractSupplierMutation) OldVatFlag(ctx context.Context) (v bool, err error) {
+func (m *ContractSupplierMutation) OldVatFlag(ctx context.Context) (v int, err error) {
 	if !m.op.Is(OpUpdateOne) {
 		return v, errors.New("OldVatFlag is only allowed on UpdateOne operations")
 	}
@@ -1087,9 +1089,28 @@ func (m *ContractSupplierMutation) OldVatFlag(ctx context.Context) (v bool, err 
 	return oldValue.VatFlag, nil
 }
 
+// AddVatFlag adds i to the "vat_flag" field.
+func (m *ContractSupplierMutation) AddVatFlag(i int) {
+	if m.addvat_flag != nil {
+		*m.addvat_flag += i
+	} else {
+		m.addvat_flag = &i
+	}
+}
+
+// AddedVatFlag returns the value that was added to the "vat_flag" field in this mutation.
+func (m *ContractSupplierMutation) AddedVatFlag() (r int, exists bool) {
+	v := m.addvat_flag
+	if v == nil {
+		return
+	}
+	return *v, true
+}
+
 // ResetVatFlag resets all changes to the "vat_flag" field.
 func (m *ContractSupplierMutation) ResetVatFlag() {
 	m.vat_flag = nil
+	m.addvat_flag = nil
 }
 
 // SetSignedDate sets the "signed_date" field.
@@ -2250,7 +2271,7 @@ func (m *ContractSupplierMutation) SetField(name string, value ent.Value) error 
 		m.SetContractNumber(v)
 		return nil
 	case contractsupplier.FieldVatFlag:
-		v, ok := value.(bool)
+		v, ok := value.(int)
 		if !ok {
 			return fmt.Errorf("unexpected type %T for field %s", value, name)
 		}
@@ -2390,6 +2411,9 @@ func (m *ContractSupplierMutation) SetField(name string, value ent.Value) error 
 // this mutation.
 func (m *ContractSupplierMutation) AddedFields() []string {
 	var fields []string
+	if m.addvat_flag != nil {
+		fields = append(fields, contractsupplier.FieldVatFlag)
+	}
 	if m.addamount != nil {
 		fields = append(fields, contractsupplier.FieldAmount)
 	}
@@ -2419,6 +2443,8 @@ func (m *ContractSupplierMutation) AddedFields() []string {
 // was not set, or was not defined in the schema.
 func (m *ContractSupplierMutation) AddedField(name string) (ent.Value, bool) {
 	switch name {
+	case contractsupplier.FieldVatFlag:
+		return m.AddedVatFlag()
 	case contractsupplier.FieldAmount:
 		return m.AddedAmount()
 	case contractsupplier.FieldAmountCurrency:
@@ -2442,6 +2468,13 @@ func (m *ContractSupplierMutation) AddedField(name string) (ent.Value, bool) {
 // type.
 func (m *ContractSupplierMutation) AddField(name string, value ent.Value) error {
 	switch name {
+	case contractsupplier.FieldVatFlag:
+		v, ok := value.(int)
+		if !ok {
+			return fmt.Errorf("unexpected type %T for field %s", value, name)
+		}
+		m.AddVatFlag(v)
+		return nil
 	case contractsupplier.FieldAmount:
 		v, ok := value.(float64)
 		if !ok {

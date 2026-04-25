@@ -100,7 +100,9 @@ var (
 	// ContractNumberValidator is a validator for the "contract_number" field. It is called by the builders before save.
 	ContractNumberValidator func(string) error
 	// DefaultVatFlag holds the default value on creation for the "vat_flag" field.
-	DefaultVatFlag bool
+	DefaultVatFlag int
+	// VatFlagValidator is a validator for the "vat_flag" field. It is called by the builders before save.
+	VatFlagValidator func(int) error
 	// CurrencyValidator is a validator for the "currency" field. It is called by the builders before save.
 	CurrencyValidator func(string) error
 	// AmendmentNumberValidator is a validator for the "amendment_number" field. It is called by the builders before save.

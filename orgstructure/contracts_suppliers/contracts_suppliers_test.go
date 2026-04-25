@@ -124,7 +124,7 @@ func TestQueryContractByID_InvalidUUID(t *testing.T) {
 
 func TestValidateUpdateRequest(t *testing.T) {
 	str := func(s string) *string { return &s }
-	boolP := func(b bool) *bool { return &b }
+	intP := func(i int) *int { return &i }
 	timeP := func(t time.Time) *time.Time { return &t }
 	validDate := time.Date(2025, 1, 15, 0, 0, 0, 0, time.UTC)
 
@@ -133,7 +133,7 @@ func TestValidateUpdateRequest(t *testing.T) {
 		req     *UpdateContractRequest
 		wantErr bool
 	}{
-		{"valid single field", &UpdateContractRequest{VatFlag: boolP(true)}, false},
+		{"valid single field", &UpdateContractRequest{VatFlag: intP(12)}, false},
 		{"valid multiple fields", &UpdateContractRequest{ContractNumber: str("№123"), SignedDate: timeP(validDate)}, false},
 		{"nil request", nil, true},
 		{"no fields", &UpdateContractRequest{}, true},

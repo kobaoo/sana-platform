@@ -30,7 +30,7 @@ var (
 		{Name: "id", Type: field.TypeUUID, Unique: true},
 		{Name: "supplier_id", Type: field.TypeUUID},
 		{Name: "contract_number", Type: field.TypeString, Size: 100},
-		{Name: "vat_flag", Type: field.TypeBool, Default: false},
+		{Name: "vat_flag", Type: field.TypeInt, Default: 0},
 		{Name: "signed_date", Type: field.TypeTime, SchemaType: map[string]string{"postgres": "date"}},
 		{Name: "end_date", Type: field.TypeTime, Nullable: true, SchemaType: map[string]string{"postgres": "date"}},
 		{Name: "amount", Type: field.TypeFloat64, SchemaType: map[string]string{"postgres": "decimal(14,2)"}},

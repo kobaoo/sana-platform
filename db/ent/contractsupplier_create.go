@@ -34,13 +34,13 @@ func (_c *ContractSupplierCreate) SetContractNumber(v string) *ContractSupplierC
 }
 
 // SetVatFlag sets the "vat_flag" field.
-func (_c *ContractSupplierCreate) SetVatFlag(v bool) *ContractSupplierCreate {
+func (_c *ContractSupplierCreate) SetVatFlag(v int) *ContractSupplierCreate {
 	_c.mutation.SetVatFlag(v)
 	return _c
 }
 
 // SetNillableVatFlag sets the "vat_flag" field if the given value is not nil.
-func (_c *ContractSupplierCreate) SetNillableVatFlag(v *bool) *ContractSupplierCreate {
+func (_c *ContractSupplierCreate) SetNillableVatFlag(v *int) *ContractSupplierCreate {
 	if v != nil {
 		_c.SetVatFlag(*v)
 	}
@@ -354,6 +354,11 @@ func (_c *ContractSupplierCreate) check() error {
 	if _, ok := _c.mutation.VatFlag(); !ok {
 		return &ValidationError{Name: "vat_flag", err: errors.New(`ent: missing required field "ContractSupplier.vat_flag"`)}
 	}
+	if v, ok := _c.mutation.VatFlag(); ok {
+		if err := contractsupplier.VatFlagValidator(v); err != nil {
+			return &ValidationError{Name: "vat_flag", err: fmt.Errorf(`ent: validator failed for field "ContractSupplier.vat_flag": %w`, err)}
+		}
+	}
 	if _, ok := _c.mutation.SignedDate(); !ok {
 		return &ValidationError{Name: "signed_date", err: errors.New(`ent: missing required field "ContractSupplier.signed_date"`)}
 	}
@@ -444,7 +449,7 @@ func (_c *ContractSupplierCreate) createSpec() (*ContractSupplier, *sqlgraph.Cre
 		_node.ContractNumber = value
 	}
 	if value, ok := _c.mutation.VatFlag(); ok {
-		_spec.SetField(contractsupplier.FieldVatFlag, field.TypeBool, value)
+		_spec.SetField(contractsupplier.FieldVatFlag, field.TypeInt, value)
 		_node.VatFlag = value
 	}
 	if value, ok := _c.mutation.SignedDate(); ok {
