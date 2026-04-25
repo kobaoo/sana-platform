@@ -22,6 +22,7 @@ import (
 	"encore.app/db/ent"
 	"encore.app/db/ent/dzoorganization"
 	"encore.app/db/ent/employee"
+	"encore.app/db/ent/user"
 )
 
 // ════ DATABASE ════
@@ -362,6 +363,23 @@ func PatchEmployee(ctx context.Context, id string, req *UpdateEmployeeRequest) (
 	}
 
 	emp, err = patchEmployee(ctx, id, req)
+	if err != nil {
+		return nil, err
+	}
+
+	return &GetEmployeeResponse{Employee: *emp}, nil
+}
+
+// GetMyEmployee returns the employee record for the currently authenticated user.
+//
+//encore:api auth method=GET path=/my-employee
+func GetMyEmployee(ctx context.Context) (*GetEmployeeResponse, error) {
+	ad, err := getAuthData()
+	if err != nil {
+		return nil, err
+	}
+
+	emp, err := queryEmployeeByKeycloakUserID(ctx, ad.KeycloakUserID)
 	if err != nil {
 		return nil, err
 	}
@@ -827,6 +845,33 @@ func queryActiveEmployees(ctx context.Context, search string, dzoID string, page
 
 	return emps, total, nil
 }
+
+func queryEmployeeByKeycloakUserID(ctx context.Context, kcUserID string) (*Employee, error) {
+	userRow, err := Client.User.Query().
+		Where(user.KeycloakUserIDEQ(kcUserID)).
+		Only(ctx)
+	if err != nil {
+		if ent.IsNotFound(err) {
+			return nil, errs.B().Code(errs.NotFound).Msg("employee not found").Err()
+		}
+		return nil, errs.B().Code(errs.Internal).Msg("failed to resolve user").Cause(err).Err()
+	}
+
+	empRow, err := Client.Employee.Query().
+		Where(employee.UserIDEQ(userRow.ID), employee.IsDeletedEQ(false)).
+		WithDzo().
+		Only(ctx)
+	if err != nil {
+		if ent.IsNotFound(err) {
+			return nil, errs.B().Code(errs.NotFound).Msg("employee not found").Err()
+		}
+		return nil, errs.B().Code(errs.Internal).Msg("failed to get employee").Cause(err).Err()
+	}
+
+	return entToEmployee(empRow), nil
+}
+
+
 func queryEmployeeByID(ctx context.Context, id string) (*Employee, error) {
 	uid, err := uuid.Parse(id)
 	if err != nil {

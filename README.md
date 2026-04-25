@@ -1,93 +1,107 @@
-# sana_platform
+# Sana Platform — Backend
 
+Encore-приложение. Go + PostgreSQL + Keycloak.
 
+## Быстрый старт
 
-## Getting started
+### 1. Зависимости
 
-To make it easy for you to get started with GitLab, here's a list of recommended next steps.
+- [Encore](https://encore.dev/docs/install) `encore version`
+- Go 1.22+
+- Docker (для Keycloak и PostgreSQL)
 
-Already a pro? Just edit this README.md and make it your own. Want to make it easy? [Use the template at the bottom](#editing-this-readme)!
+### 2. Локальные секреты
 
-## Add your files
+Скопируй шаблон и заполни своими значениями:
 
-* [Create](https://docs.gitlab.com/user/project/repository/web_editor/#create-a-file) or [upload](https://docs.gitlab.com/user/project/repository/web_editor/#upload-a-file) files
-* [Add files using the command line](https://docs.gitlab.com/topics/git/add_files/#add-files-to-a-git-repository) or push an existing Git repository with the following command:
-
-```
-cd existing_repo
-git remote add origin https://85.198.89.217/sana/sana_platform.git
-git branch -M main
-git push -uf origin main
+```bash
+cp .secrets.local.cue.example .secrets.local.cue
 ```
 
-## Integrate with your tools
+Файл `.secrets.local.cue` уже в `.gitignore` — не коммитить.
 
-* [Set up project integrations](https://85.198.89.217/sana/sana_platform/-/settings/integrations)
+Содержимое шаблона:
 
-## Collaborate with your team
+```cue
+KeycloakIssuerURL:     "http://localhost:8080/realms/sana-lms"
+KeycloakAudience:      "account"
+KeycloakAdminUser:     "admin"
+KeycloakAdminPassword: "admin"
 
-* [Invite team members and collaborators](https://docs.gitlab.com/user/project/members/)
-* [Create a new merge request](https://docs.gitlab.com/user/project/merge_requests/creating_merge_requests/)
-* [Automatically close issues from merge requests](https://docs.gitlab.com/user/project/issues/managing_issues/#closing-issues-automatically)
-* [Enable merge request approvals](https://docs.gitlab.com/user/project/merge_requests/approvals/)
-* [Set auto-merge](https://docs.gitlab.com/user/project/merge_requests/auto_merge/)
+// SMTP — email notifications (cron)
+MailServer:   "smtp.gmail.com"
+MailPort:     "587"
+MailUsername: "your-email@gmail.com"
+MailPassword: "your-app-password"
+MailFrom:     "your-email@gmail.com"
+AppURL:       "http://localhost:3000"
+```
 
-## Test and Deploy
+> Gmail: используй App Password (не обычный пароль).  
+> Создать: Google Account → Security → 2-Step Verification → App passwords.
 
-Use the built-in continuous integration in GitLab.
+### 3. Запуск
 
-* [Get started with GitLab CI/CD](https://docs.gitlab.com/ci/quick_start/)
-* [Analyze your code for known vulnerabilities with Static Application Security Testing (SAST)](https://docs.gitlab.com/user/application_security/sast/)
-* [Deploy to Kubernetes, Amazon EC2, or Amazon ECS using Auto Deploy](https://docs.gitlab.com/topics/autodevops/requirements/)
-* [Use pull-based deployments for improved Kubernetes management](https://docs.gitlab.com/user/clusters/agent/)
-* [Set up protected environments](https://docs.gitlab.com/ci/environments/protected_environments/)
+```bash
+encore run
+```
 
-***
+Dashboard: http://localhost:9400
 
-# Editing this README
+---
 
-When you're ready to make this README your own, just edit this file and use the handy template below (or feel free to structure it however you want - this is just a starting point!). Thanks to [makeareadme.com](https://www.makeareadme.com/) for this template.
+## Структура проекта
 
-## Suggestions for a good README
+```
+auth/           — аутентификация (Keycloak)
+learning/
+  certificates/ — управление сертификатами + cron-уведомления
+notifications/  — система уведомлений
+requests/       — заявки
+db/
+  ent/          — ORM-схемы и сгенерированный код
+  migrations/   — SQL-миграции
+```
 
-Every project is different, so consider which of these sections apply to yours. The sections used in the template are suggestions for most open source projects. Also keep in mind that while a README can be too long and detailed, too long is better than too short. If you think your README is too long, consider utilizing another form of documentation rather than cutting out information.
+---
 
-## Name
-Choose a self-explaining name for your project.
+## Cron: проверка истекающих сертификатов
 
-## Description
-Let people know what your project can do specifically. Provide context and add a link to any reference visitors might be unfamiliar with. A list of Features or a Background subsection can also be added here. If there are alternatives to your project, this is a good place to list differentiating factors.
+Запускается каждый **понедельник в 10:00 Астана (05:00 UTC)**.
 
-## Badges
-On some READMEs, you may see small images that convey metadata, such as whether or not all the tests are passing for the project. You can use Shields to add some to your README. Many services also have instructions for adding a badge.
+Логика: выбирает сертификаты с `expiry_date` в диапазоне `сегодня < дата ≤ сегодня + 6 месяцев`, группирует по ДЗО, отправляет email HR каждого ДЗО.
 
-## Visuals
-Depending on what you are making, it can be a good idea to include screenshots or even a video (you'll frequently see GIFs rather than actual videos). Tools like ttygif can help, but check out Asciinema for a more sophisticated method.
+Ручной запуск через Dashboard: http://localhost:9400 → Cron Jobs → `check-expiring-certs` → Trigger.
 
-## Installation
-Within a particular ecosystem, there may be a common way of installing things, such as using Yarn, NuGet, or Homebrew. However, consider the possibility that whoever is reading your README is a novice and would like more guidance. Listing specific steps helps remove ambiguity and gets people to using your project as quickly as possible. If it only runs in a specific context like a particular programming language version or operating system or has dependencies that have to be installed manually, also add a Requirements subsection.
+### Превью письма (для дизайнера/разработчика)
 
-## Usage
-Use examples liberally, and show the expected output if you can. It's helpful to have inline the smallest example of usage that you can demonstrate, while providing links to more sophisticated examples if they are too long to reasonably include in the README.
+```bash
+go run send_html_email.go -preview
+# создаёт ./tmp/certificates-preview.html и ./tmp/certificates-preview.eml
+```
 
-## Support
-Tell people where they can go to for help. It can be any combination of an issue tracker, a chat room, an email address, etc.
+---
 
-## Roadmap
-If you have ideas for releases in the future, it is a good idea to list them in the README.
+## Тесты
 
-## Contributing
-State if you are open to contributions and what your requirements are for accepting them.
+```bash
+encore test ./...
+```
 
-For people who want to make changes to your project, it's helpful to have some documentation on how to get started. Perhaps there is a script that they should run or some environment variables that they need to set. Make these steps explicit. These instructions could also be useful to your future self.
+Юнит-тесты без базы:
 
-You can also document commands to lint the code or run tests. These steps help to ensure high code quality and reduce the likelihood that the changes inadvertently break something. Having instructions for running tests is especially helpful if it requires external setup, such as starting a Selenium server for testing in a browser.
+```bash
+go test ./learning/certificates/certutil/...
+```
 
-## Authors and acknowledgment
-Show your appreciation to those who have contributed to the project.
+---
 
-## License
-For open source projects, say how it is licensed.
+## Prod-секреты (деплой)
 
-## Project status
-If you have run out of energy or time for your project, put a note at the top of the README saying that development has slowed down or stopped completely. Someone may choose to fork your project or volunteer to step in as a maintainer or owner, allowing your project to keep going. You can also make an explicit request for maintainers.
+Для стейджинга и прода используй Encore Secrets:
+
+```bash
+encore secret set --prod MailUsername
+encore secret set --prod MailPassword
+# и т.д.
+```
