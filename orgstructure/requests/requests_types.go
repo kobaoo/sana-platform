@@ -30,6 +30,15 @@ const (
 	RequestKindArchived RequestKind = "ARCHIVED"
 )
 
+func (k RequestKind) IsValid() bool {
+	switch k {
+	case RequestKindRegular, RequestKindClosed, RequestKindArchived:
+		return true
+	default:
+		return false
+	}
+}
+
 type RequestStatus string
 
 const (
@@ -80,6 +89,20 @@ type CreateAdminRequestRequest struct {
 	DeadlineAt      *string   `json:"deadline_at,omitempty"`
 }
 
+type ArchiveRequestContractInput struct {
+	DzoID    string `json:"dzo_id"`
+	FileName string `json:"file_name"`
+	FileURL  string `json:"file_url"`
+}
+
+type CreateArchiveRequestRequest struct {
+	Kind        RequestKind                   `json:"kind"`
+	Title       *string                       `json:"title,omitempty"`
+	Category    string                        `json:"category"`
+	EmployeeIDs []string                      `json:"employee_ids"`
+	Contracts   []ArchiveRequestContractInput `json:"contracts"`
+}
+
 type UpdateHRRequestEmployeesRequest struct {
 	EmployeeIDs []string `json:"employee_ids"`
 }
@@ -94,6 +117,12 @@ type RequestEmployee struct {
 type RequestTargetDZO struct {
 	ID   string `json:"id"`
 	Name string `json:"name"`
+}
+
+type RequestDzoContract struct {
+	DzoID    string `json:"dzo_id"`
+	FileName string `json:"file_name"`
+	FileURL  string `json:"file_url"`
 }
 
 type RequestSummary struct {
@@ -124,11 +153,11 @@ type RequestSummary struct {
 }
 
 type RequestDetail struct {
-	Request       RequestSummary            `json:"request"`
-	Employees     []RequestEmployee         `json:"employees"`
-	TargetDZOs    []RequestTargetDZO        `json:"target_dzos"`
-	Contracts     []RequestContractResponse `json:"contracts,omitempty"`
-	ChildRequests []RequestSummary          `json:"child_requests"`
+	Request       RequestSummary       `json:"request"`
+	Employees     []RequestEmployee    `json:"employees"`
+	TargetDZOs    []RequestTargetDZO   `json:"target_dzos"`
+	DZOContracts  []RequestDzoContract `json:"dzo_contracts"`
+	ChildRequests []RequestSummary     `json:"child_requests"`
 }
 
 type GetRequestResponse struct {
@@ -166,20 +195,6 @@ type CreateHRRequestRequest struct {
 type CreateRequestRequest struct {
 	EntityID   uuid.UUID `json:"entity_id"`
 	EntityType string    `json:"entity_type"`
-}
-
-type ArchiveRequestContractInput struct {
-	DzoID    uuid.UUID `json:"dzo_id"`
-	FileName string    `json:"file_name"`
-	FileURL  string    `json:"file_url"`
-}
-
-type CreateArchiveRequestRequest struct {
-	Kind        string                        `json:"kind"`
-	Title       *string                       `json:"title,omitempty"`
-	Category    string                        `json:"category"`
-	EmployeeIDs []uuid.UUID                   `json:"employee_ids"`
-	Contracts   []ArchiveRequestContractInput `json:"contracts"`
 }
 
 type UpdateRequestStepRequest struct {

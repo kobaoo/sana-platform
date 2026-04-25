@@ -323,12 +323,12 @@ var (
 				Columns: []*schema.Column{RequestsColumns[3]},
 			},
 			{
-				Name:    "request_assigned_hr_id",
+				Name:    "request_kind",
 				Unique:  false,
 				Columns: []*schema.Column{RequestsColumns[5]},
 			},
 			{
-				Name:    "request_target_dzo_id",
+				Name:    "request_assigned_hr_id",
 				Unique:  false,
 				Columns: []*schema.Column{RequestsColumns[6]},
 			},
@@ -358,6 +358,11 @@ var (
 				Name:    "requestdzocontract_dzo_id",
 				Unique:  false,
 				Columns: []*schema.Column{RequestDzoContractsColumns[2]},
+			},
+			{
+				Name:    "requestdzocontract_request_id_dzo_id",
+				Unique:  true,
+				Columns: []*schema.Column{RequestDzoContractsColumns[1], RequestDzoContractsColumns[2]},
 			},
 		},
 	}

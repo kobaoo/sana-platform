@@ -131,6 +131,7 @@ func (Request) Indexes() []ent.Index {
 		index.Fields("step"),
 		index.Fields("parent_request_id"),
 		index.Fields("request_type"),
+		index.Fields("kind"),
 		index.Fields("assigned_hr_id"),
 		index.Fields("target_dzo_id"),
 	}

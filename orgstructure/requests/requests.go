@@ -395,6 +395,12 @@ type employeeRecord struct {
 	DzoName  string
 }
 
+type archiveContractRecord struct {
+	DzoID    uuid.UUID
+	FileName string
+	FileURL  string
+}
+
 func getAuthData() (*authhandler.AuthData, error) {
 	ad, ok := auth.Data().(*authhandler.AuthData)
 	if !ok {
@@ -493,9 +499,8 @@ func createAdminRequest(ctx context.Context, actor *actor, req *CreateAdminReque
 	requestID := uuid.New()
 	if _, err := tx.Exec(ctx, `
 		INSERT INTO requests (
-			id, initiator_id, entity_id, entity_type, request_type, kind, title, category, format,
-			responsible_admin_id, training_date, deadline_at, cost_amount, cost_mode,
-			step, status, created_at, updated_at
+			id, initiator_id, entity_id, entity_type, request_type, kind, title, category,
+			responsible_admin_id, step, status, created_at, updated_at, completed_at
 		)
 		VALUES ($1, $2, $3, 'TRAINING_EVENT', 'MAIN', 'REGULAR', $4, $5, $6, $7, $8, $9, $10, $11, 0, 'DRAFT', NOW(), NOW())
 	`,
@@ -595,6 +600,9 @@ func submitRequest(ctx context.Context, actor *actor, requestID uuid.UUID) (*Req
 	mainRequest, err := queryRequestSummaryByID(ctx, requestID)
 	if err != nil {
 		return nil, err
+	}
+	if mainRequest.Kind != RequestKindRegular {
+		return nil, errs.B().Code(errs.InvalidArgument).Msg("archive requests cannot be submitted").Err()
 	}
 	if mainRequest.RequestType != RequestTypeMain {
 		return nil, errs.B().Code(errs.InvalidArgument).Msg("only main requests can be submitted").Err()
@@ -705,6 +713,9 @@ func updateHRRequestEmployees(ctx context.Context, actor *actor, requestID uuid.
 	if requestSummary.RequestType != RequestTypeSubrequest || requestSummary.AssignedHRID == nil || *requestSummary.AssignedHRID != actor.ID.String() {
 		return nil, errs.B().Code(errs.NotFound).Msg("request not found").Err()
 	}
+	if requestSummary.Kind != RequestKindRegular {
+		return nil, errs.B().Code(errs.InvalidArgument).Msg("archive requests cannot be edited by HR").Err()
+	}
 	if requestSummary.Status != RequestStatusPending {
 		return nil, errs.B().Code(errs.InvalidArgument).Msg("request is already finalized").Err()
 	}
@@ -756,6 +767,9 @@ func finalizeHRRequest(ctx context.Context, actor *actor, requestID uuid.UUID, s
 	}
 	if requestSummary.RequestType != RequestTypeSubrequest || requestSummary.AssignedHRID == nil || *requestSummary.AssignedHRID != actor.ID.String() {
 		return nil, errs.B().Code(errs.NotFound).Msg("request not found").Err()
+	}
+	if requestSummary.Kind != RequestKindRegular {
+		return nil, errs.B().Code(errs.InvalidArgument).Msg("archive requests cannot be finalized by HR").Err()
 	}
 	if requestSummary.Status != RequestStatusPending {
 		return nil, errs.B().Code(errs.InvalidArgument).Msg("request is already finalized").Err()
@@ -815,6 +829,10 @@ func buildRequestDetail(ctx context.Context, requestID uuid.UUID) (*RequestDetai
 	if err != nil {
 		return nil, err
 	}
+	contracts, err := queryRequestDzoContracts(ctx, requestID)
+	if err != nil {
+		return nil, err
+	}
 
 	children := []RequestSummary{}
 	if summary.RequestType == RequestTypeMain {
@@ -835,16 +853,11 @@ func buildRequestDetail(ctx context.Context, requestID uuid.UUID) (*RequestDetai
 		}
 	}
 
-	contracts, err := queryRequestDzoContracts(ctx, requestID)
-	if err != nil {
-		return nil, err
-	}
-
 	return &RequestDetail{
 		Request:       *summary,
 		Employees:     employees,
 		TargetDZOs:    targetDZOs,
-		Contracts:     contracts,
+		DZOContracts:  contracts,
 		ChildRequests: children,
 	}, nil
 }
@@ -960,7 +973,7 @@ func queryRequestTargetDZOs(ctx context.Context, requestID uuid.UUID) ([]Request
 	return items, nil
 }
 
-func queryRequestDzoContracts(ctx context.Context, requestID uuid.UUID) ([]RequestContractResponse, error) {
+func queryRequestDzoContracts(ctx context.Context, requestID uuid.UUID) ([]RequestDzoContract, error) {
 	rows, err := db.Query(ctx, `
 		SELECT dzo_id, file_name, file_url
 		FROM request_dzo_contracts
@@ -968,11 +981,11 @@ func queryRequestDzoContracts(ctx context.Context, requestID uuid.UUID) ([]Reque
 		ORDER BY created_at ASC
 	`, requestID)
 	if err != nil {
-		return nil, errs.B().Code(errs.Internal).Msg("failed to load request contracts").Cause(err).Err()
+		return nil, errs.B().Code(errs.Internal).Msg("failed to load request dzo contracts").Cause(err).Err()
 	}
 	defer rows.Close()
 
-	items := []RequestContractResponse{}
+	contracts := []RequestDzoContract{}
 	for rows.Next() {
 		var (
 			dzoID    uuid.UUID
@@ -980,19 +993,18 @@ func queryRequestDzoContracts(ctx context.Context, requestID uuid.UUID) ([]Reque
 			fileURL  string
 		)
 		if err := rows.Scan(&dzoID, &fileName, &fileURL); err != nil {
-			return nil, errs.B().Code(errs.Internal).Msg("failed to scan request contract").Cause(err).Err()
+			return nil, errs.B().Code(errs.Internal).Msg("failed to scan request dzo contract").Cause(err).Err()
 		}
-		items = append(items, RequestContractResponse{
-			DzoID:    dzoID,
+		contracts = append(contracts, RequestDzoContract{
+			DzoID:    dzoID.String(),
 			FileName: fileName,
 			FileURL:  fileURL,
 		})
 	}
 	if err := rows.Err(); err != nil {
-		return nil, errs.B().Code(errs.Internal).Msg("failed to load request contracts").Cause(err).Err()
+		return nil, errs.B().Code(errs.Internal).Msg("failed to load request dzo contracts").Cause(err).Err()
 	}
-
-	return items, nil
+	return contracts, nil
 }
 func queryRequestTargetDZOIDs(ctx context.Context, requestID uuid.UUID) ([]uuid.UUID, error) {
 	rows, err := db.Query(ctx, `
@@ -1214,6 +1226,27 @@ func replaceRequestTargetDZOsTx(ctx context.Context, tx *sqldb.Tx, requestID uui
 			VALUES ($1, $2, $3, NOW())
 		`, uuid.New(), requestID, dzoID); err != nil {
 			return errs.B().Code(errs.Internal).Msg("failed to save request target DZO").Cause(err).Err()
+		}
+	}
+
+	return nil
+}
+
+func replaceRequestDzoContractsTx(ctx context.Context, tx *sqldb.Tx, requestID uuid.UUID, contractsByDZO map[uuid.UUID]archiveContractRecord) error {
+	if _, err := tx.Exec(ctx, `
+		DELETE FROM request_dzo_contracts
+		WHERE request_id = $1
+	`, requestID); err != nil {
+		return errs.B().Code(errs.Internal).Msg("failed to replace request dzo contracts").Cause(err).Err()
+	}
+
+	for _, dzoID := range mapsKeys(contractsByDZO) {
+		contract := contractsByDZO[dzoID]
+		if _, err := tx.Exec(ctx, `
+			INSERT INTO request_dzo_contracts (id, request_id, dzo_id, file_name, file_url, created_at)
+			VALUES ($1, $2, $3, $4, $5, NOW())
+		`, uuid.New(), requestID, dzoID, contract.FileName, contract.FileURL); err != nil {
+			return errs.B().Code(errs.Internal).Msg("failed to save request dzo contract").Cause(err).Err()
 		}
 	}
 
@@ -1568,6 +1601,68 @@ func nullableCostModeValue(v sql.NullString) *CostMode {
 	return &value
 }
 
+func normalizeArchiveContracts(raw []ArchiveRequestContractInput) (map[uuid.UUID]archiveContractRecord, error) {
+	contracts := make(map[uuid.UUID]archiveContractRecord, len(raw))
+	for _, item := range raw {
+		dzoID, err := uuid.Parse(strings.TrimSpace(item.DzoID))
+		if err != nil {
+			return nil, errs.B().Code(errs.InvalidArgument).Msg("invalid contract dzo_id format").Err()
+		}
+		fileName := strings.TrimSpace(item.FileName)
+		if fileName == "" {
+			return nil, errs.B().Code(errs.InvalidArgument).Msg("contract file_name is required").Err()
+		}
+		fileURL := strings.TrimSpace(item.FileURL)
+		if fileURL == "" {
+			return nil, errs.B().Code(errs.InvalidArgument).Msg("contract file_url is required").Err()
+		}
+		if _, exists := contracts[dzoID]; exists {
+			return nil, errs.B().Code(errs.InvalidArgument).Msg("duplicate contract for one dzo").Err()
+		}
+		contracts[dzoID] = archiveContractRecord{
+			DzoID:    dzoID,
+			FileName: fileName,
+			FileURL:  fileURL,
+		}
+	}
+	return contracts, nil
+}
+
+func ensureContractsCoverDZOs(required []uuid.UUID, contractsByDZO map[uuid.UUID]archiveContractRecord) error {
+	for _, dzoID := range required {
+		if _, ok := contractsByDZO[dzoID]; !ok {
+			return errs.B().Code(errs.InvalidArgument).Msg(fmt.Sprintf("contract is required for dzo %s", dzoID)).Err()
+		}
+	}
+	for dzoID := range contractsByDZO {
+		if containsUUID(required, dzoID) {
+			continue
+		}
+		return errs.B().Code(errs.InvalidArgument).Msg(fmt.Sprintf("contract dzo %s is not related to selected employees", dzoID)).Err()
+	}
+	return nil
+}
+
+func containsUUID(ids []uuid.UUID, target uuid.UUID) bool {
+	for _, id := range ids {
+		if id == target {
+			return true
+		}
+	}
+	return false
+}
+
+func kindDisplayName(kind RequestKind) string {
+	switch kind {
+	case RequestKindClosed:
+		return "Closed"
+	case RequestKindArchived:
+		return "Archived"
+	default:
+		return "Regular"
+	}
+}
+
 func parseUUIDOrNil(raw string) uuid.UUID {
 	id, err := uuid.Parse(strings.TrimSpace(raw))
 	if err != nil {
@@ -1593,19 +1688,16 @@ func parseUUIDOrNilPtr(raw *string) interface{} {
 //
 //encore:api auth method=POST path=/requests/archive
 func CreateArchiveRequest(ctx context.Context, req *CreateArchiveRequestRequest) (*GetRequestResponse, error) {
-	if req == nil {
-		return nil, errs.B().Code(errs.InvalidArgument).Msg("request body is required").Err()
-	}
-
-	ad, err := getAuthData()
+	// Ensure consistent type usage and remove redundant checks
+	actor, err := resolveCurrentActor(ctx)
 	if err != nil {
 		return nil, err
 	}
-	if !isAdminRole(string(ad.Role)) {
+	if !isAdminRole(string(actor.Role)) {
 		return nil, errs.B().Code(errs.PermissionDenied).Msg("only admins can create archive requests").Err()
 	}
 
-	kind := normalizeRequestKind(req.Kind)
+	kind := normalizeRequestKind(string(req.Kind))
 	if kind != string(RequestKindClosed) && kind != string(RequestKindArchived) {
 		return nil, errs.B().Code(errs.InvalidArgument).Msg("kind must be CLOSED or ARCHIVED").Err()
 	}
@@ -1619,12 +1711,21 @@ func CreateArchiveRequest(ctx context.Context, req *CreateArchiveRequestRequest)
 		return nil, errs.B().Code(errs.InvalidArgument).Msg("contracts is required").Err()
 	}
 
+	employeeUUIDs := make([]uuid.UUID, 0, len(req.EmployeeIDs))
+	for _, s := range req.EmployeeIDs {
+		id, err := uuid.Parse(s)
+		if err != nil {
+			return nil, errs.B().Code(errs.InvalidArgument).Msg("invalid employee_id: " + s).Err()
+		}
+		employeeUUIDs = append(employeeUUIDs, id)
+	}
+
 	actorID, err := getCurrentActorID(ctx)
 	if err != nil {
 		return nil, err
 	}
 
-	employeesByID, dzoIDs, err := loadEmployeesForArchiveRequest(ctx, req.EmployeeIDs)
+	employeesByID, dzoIDs, err := loadEmployeesForArchiveRequest(ctx, employeeUUIDs)
 	if err != nil {
 		return nil, err
 	}
@@ -1664,7 +1765,7 @@ func CreateArchiveRequest(ctx context.Context, req *CreateArchiveRequestRequest)
 		return nil, errs.B().Code(errs.Internal).Msg("failed to create archive request").Cause(err).Err()
 	}
 
-	for _, employeeID := range uniqueUUIDs(req.EmployeeIDs) {
+	for _, employeeID := range uniqueUUIDs(employeeUUIDs) {
 		if _, ok := employeesByID[employeeID]; !ok {
 			_ = tx.Rollback()
 			return nil, errs.B().Code(errs.InvalidArgument).Msg("unknown employee in request").Err()
@@ -1736,45 +1837,6 @@ func loadEmployeesForArchiveRequest(ctx context.Context, ids []uuid.UUID) (map[u
 	})
 
 	return employeesByID, dzoIDs, nil
-}
-
-func normalizeArchiveContracts(in []ArchiveRequestContractInput) (map[uuid.UUID]ArchiveRequestContractInput, error) {
-	contractsByDZO := make(map[uuid.UUID]ArchiveRequestContractInput, len(in))
-	for _, contract := range in {
-		if contract.DzoID == uuid.Nil {
-			return nil, errs.B().Code(errs.InvalidArgument).Msg("contract dzo_id is required").Err()
-		}
-		if strings.TrimSpace(contract.FileName) == "" {
-			return nil, errs.B().Code(errs.InvalidArgument).Msg("contract file_name is required").Err()
-		}
-		if strings.TrimSpace(contract.FileURL) == "" {
-			return nil, errs.B().Code(errs.InvalidArgument).Msg("contract file_url is required").Err()
-		}
-		if _, exists := contractsByDZO[contract.DzoID]; exists {
-			return nil, errs.B().Code(errs.InvalidArgument).Msg("duplicate contract for one dzo").Err()
-		}
-
-		contract.FileName = strings.TrimSpace(contract.FileName)
-		contract.FileURL = strings.TrimSpace(contract.FileURL)
-		contractsByDZO[contract.DzoID] = contract
-	}
-	return contractsByDZO, nil
-}
-
-func ensureContractsCoverDZOs(required []uuid.UUID, contractsByDZO map[uuid.UUID]ArchiveRequestContractInput) error {
-	for _, dzoID := range required {
-		if _, ok := contractsByDZO[dzoID]; !ok {
-			return errs.B().Code(errs.InvalidArgument).Msg(fmt.Sprintf("contract is required for dzo %s", dzoID)).Err()
-		}
-	}
-
-	for dzoID := range contractsByDZO {
-		if slices.Contains(required, dzoID) {
-			continue
-		}
-		return errs.B().Code(errs.InvalidArgument).Msg(fmt.Sprintf("contract dzo %s is not related to selected employees", dzoID)).Err()
-	}
-	return nil
 }
 
 func uniqueUUIDs(ids []uuid.UUID) []uuid.UUID {

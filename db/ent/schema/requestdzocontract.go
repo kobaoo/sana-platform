@@ -37,9 +37,14 @@ func (RequestDzoContract) Fields() []ent.Field {
 	}
 }
 
+func (RequestDzoContract) Edges() []ent.Edge {
+	return nil
+}
+
 func (RequestDzoContract) Indexes() []ent.Index {
 	return []ent.Index{
 		index.Fields("request_id"),
 		index.Fields("dzo_id"),
+		index.Fields("request_id", "dzo_id").Unique(),
 	}
 }
