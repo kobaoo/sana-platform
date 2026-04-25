@@ -103,6 +103,13 @@ func (Request) Fields() []ent.Field {
 			MaxLen(50).
 			NotEmpty().
 			Default("DRAFT"),
+		field.UUID("replaced_by_request_id", uuid.UUID{}).
+			Optional().
+			Nillable().
+			Comment("ID новой заявки, которая заменила эту отклоненную"),
+		field.Bool("is_blocked").
+			Default(false).
+			Comment("Заблокирована ли заявка после пересоздания"),
 	}
 }
 
