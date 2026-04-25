@@ -93,6 +93,30 @@ func (f RequestFunc) Mutate(ctx context.Context, m ent.Mutation) (ent.Value, err
 	return nil, fmt.Errorf("unexpected mutation type %T. expect *ent.RequestMutation", m)
 }
 
+// The ScormCourseFunc type is an adapter to allow the use of ordinary
+// function as ScormCourse mutator.
+type ScormCourseFunc func(context.Context, *ent.ScormCourseMutation) (ent.Value, error)
+
+// Mutate calls f(ctx, m).
+func (f ScormCourseFunc) Mutate(ctx context.Context, m ent.Mutation) (ent.Value, error) {
+	if mv, ok := m.(*ent.ScormCourseMutation); ok {
+		return f(ctx, mv)
+	}
+	return nil, fmt.Errorf("unexpected mutation type %T. expect *ent.ScormCourseMutation", m)
+}
+
+// The ScormProgressFunc type is an adapter to allow the use of ordinary
+// function as ScormProgress mutator.
+type ScormProgressFunc func(context.Context, *ent.ScormProgressMutation) (ent.Value, error)
+
+// Mutate calls f(ctx, m).
+func (f ScormProgressFunc) Mutate(ctx context.Context, m ent.Mutation) (ent.Value, error) {
+	if mv, ok := m.(*ent.ScormProgressMutation); ok {
+		return f(ctx, mv)
+	}
+	return nil, fmt.Errorf("unexpected mutation type %T. expect *ent.ScormProgressMutation", m)
+}
+
 // The SupplierFunc type is an adapter to allow the use of ordinary
 // function as Supplier mutator.
 type SupplierFunc func(context.Context, *ent.SupplierMutation) (ent.Value, error)
