@@ -188,9 +188,10 @@ var (
 		{Name: "entity_id", Type: field.TypeUUID},
 		{Name: "entity_type", Type: field.TypeString, Size: 50, Default: "TRAINING_EVENT"},
 		{Name: "request_type", Type: field.TypeString, Size: 30, Default: "MAIN"},
+		{Name: "kind", Type: field.TypeString, Size: 30, Default: "REGULAR"},
 		{Name: "assigned_hr_id", Type: field.TypeUUID, Nullable: true},
 		{Name: "target_dzo_id", Type: field.TypeUUID, Nullable: true},
-		{Name: "title", Type: field.TypeString, Size: 255},
+		{Name: "title", Type: field.TypeString, Nullable: true, Size: 255},
 		{Name: "category", Type: field.TypeString, Nullable: true, Size: 100},
 		{Name: "format", Type: field.TypeString, Nullable: true, Size: 50},
 		{Name: "responsible_admin_id", Type: field.TypeUUID, Nullable: true},
@@ -201,6 +202,7 @@ var (
 		{Name: "step", Type: field.TypeInt, Default: 0},
 		{Name: "created_at", Type: field.TypeTime, SchemaType: map[string]string{"postgres": "timestamptz"}},
 		{Name: "updated_at", Type: field.TypeTime, SchemaType: map[string]string{"postgres": "timestamptz"}},
+		{Name: "completed_at", Type: field.TypeTime, Nullable: true, SchemaType: map[string]string{"postgres": "timestamptz"}},
 		{Name: "status", Type: field.TypeString, Size: 50, Default: "DRAFT"},
 		{Name: "parent_request_id", Type: field.TypeUUID, Nullable: true},
 		{Name: "initiator_id", Type: field.TypeUUID},
@@ -213,13 +215,13 @@ var (
 		ForeignKeys: []*schema.ForeignKey{
 			{
 				Symbol:     "requests_requests_children",
-				Columns:    []*schema.Column{RequestsColumns[18]},
+				Columns:    []*schema.Column{RequestsColumns[20]},
 				RefColumns: []*schema.Column{RequestsColumns[0]},
 				OnDelete:   schema.SetNull,
 			},
 			{
 				Symbol:     "requests_users_requests",
-				Columns:    []*schema.Column{RequestsColumns[19]},
+				Columns:    []*schema.Column{RequestsColumns[21]},
 				RefColumns: []*schema.Column{UsersColumns[0]},
 				OnDelete:   schema.NoAction,
 			},
@@ -228,7 +230,7 @@ var (
 			{
 				Name:    "request_initiator_id",
 				Unique:  false,
-				Columns: []*schema.Column{RequestsColumns[19]},
+				Columns: []*schema.Column{RequestsColumns[21]},
 			},
 			{
 				Name:    "request_entity_id",
@@ -236,19 +238,24 @@ var (
 				Columns: []*schema.Column{RequestsColumns[1]},
 			},
 			{
+				Name:    "request_kind",
+				Unique:  false,
+				Columns: []*schema.Column{RequestsColumns[4]},
+			},
+			{
 				Name:    "request_status",
 				Unique:  false,
-				Columns: []*schema.Column{RequestsColumns[17]},
+				Columns: []*schema.Column{RequestsColumns[19]},
 			},
 			{
 				Name:    "request_step",
 				Unique:  false,
-				Columns: []*schema.Column{RequestsColumns[14]},
+				Columns: []*schema.Column{RequestsColumns[15]},
 			},
 			{
 				Name:    "request_parent_request_id",
 				Unique:  false,
-				Columns: []*schema.Column{RequestsColumns[18]},
+				Columns: []*schema.Column{RequestsColumns[20]},
 			},
 			{
 				Name:    "request_request_type",
@@ -258,12 +265,39 @@ var (
 			{
 				Name:    "request_assigned_hr_id",
 				Unique:  false,
-				Columns: []*schema.Column{RequestsColumns[4]},
+				Columns: []*schema.Column{RequestsColumns[5]},
 			},
 			{
 				Name:    "request_target_dzo_id",
 				Unique:  false,
-				Columns: []*schema.Column{RequestsColumns[5]},
+				Columns: []*schema.Column{RequestsColumns[6]},
+			},
+		},
+	}
+	// RequestDzoContractsColumns holds the columns for the "request_dzo_contracts" table.
+	RequestDzoContractsColumns = []*schema.Column{
+		{Name: "id", Type: field.TypeUUID, Unique: true},
+		{Name: "request_id", Type: field.TypeUUID},
+		{Name: "dzo_id", Type: field.TypeUUID},
+		{Name: "file_name", Type: field.TypeString, Size: 255},
+		{Name: "file_url", Type: field.TypeString, Size: 1024},
+		{Name: "created_at", Type: field.TypeTime, SchemaType: map[string]string{"postgres": "timestamptz"}},
+	}
+	// RequestDzoContractsTable holds the schema information for the "request_dzo_contracts" table.
+	RequestDzoContractsTable = &schema.Table{
+		Name:       "request_dzo_contracts",
+		Columns:    RequestDzoContractsColumns,
+		PrimaryKey: []*schema.Column{RequestDzoContractsColumns[0]},
+		Indexes: []*schema.Index{
+			{
+				Name:    "requestdzocontract_request_id",
+				Unique:  false,
+				Columns: []*schema.Column{RequestDzoContractsColumns[1]},
+			},
+			{
+				Name:    "requestdzocontract_dzo_id",
+				Unique:  false,
+				Columns: []*schema.Column{RequestDzoContractsColumns[2]},
 			},
 		},
 	}
@@ -451,6 +485,7 @@ var (
 		EmployeesTable,
 		OrganizationsTable,
 		RequestsTable,
+		RequestDzoContractsTable,
 		RequestParticipantsTable,
 		RequestTargetDzosTable,
 		SuppliersTable,

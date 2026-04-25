@@ -407,3 +407,39 @@ func TestGetHRRequest_HidesForeignSubrequest(t *testing.T) {
 		t.Fatalf("expected NotFound, got %v", errs.Code(err))
 	}
 }
+func TestCreateArchiveRequest_Success(t *testing.T) {
+	fx := newFixture(t)
+
+	title := "Archive Test"
+	req := &CreateArchiveRequestRequest{
+		Kind:        string(RequestKindArchived),
+		Title:       &title,
+		Category:    "External",
+		EmployeeIDs: []uuid.UUID{fx.empOneID},
+		Contracts: []ArchiveRequestContractInput{
+			{
+				DzoID:    fx.dzoOneID,
+				FileName: "contract.pdf",
+				FileURL:  "http://example.com/contract.pdf",
+			},
+		},
+	}
+
+	resp, err := CreateArchiveRequest(authCtxFor(fx.adminKC, authhandler.RoleADM, nil), req)
+	if err != nil {
+		t.Fatalf("create archive request: %v", err)
+	}
+
+	if resp.Detail.Request.Kind != RequestKindArchived {
+		t.Fatalf("expected ARCHIVED kind, got %s", resp.Detail.Request.Kind)
+	}
+	if resp.Detail.Request.Status != RequestStatusCompleted {
+		t.Fatalf("expected COMPLETED status, got %s", resp.Detail.Request.Status)
+	}
+	if len(resp.Detail.Employees) != 1 || resp.Detail.Employees[0].ID != fx.empOneID.String() {
+		t.Fatalf("expected 1 employee %s", fx.empOneID)
+	}
+	if len(resp.Detail.Contracts) != 1 || resp.Detail.Contracts[0].FileName != "contract.pdf" {
+		t.Fatalf("expected 1 contract with filename contract.pdf")
+	}
+}

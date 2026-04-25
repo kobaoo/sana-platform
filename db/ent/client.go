@@ -19,6 +19,7 @@ import (
 	"encore.app/db/ent/employee"
 	"encore.app/db/ent/organization"
 	"encore.app/db/ent/request"
+	"encore.app/db/ent/requestdzocontract"
 	"encore.app/db/ent/requestparticipant"
 	"encore.app/db/ent/requesttargetdzo"
 	"encore.app/db/ent/supplier"
@@ -50,6 +51,8 @@ type Client struct {
 	Organization *OrganizationClient
 	// Request is the client for interacting with the Request builders.
 	Request *RequestClient
+	// RequestDzoContract is the client for interacting with the RequestDzoContract builders.
+	RequestDzoContract *RequestDzoContractClient
 	// RequestParticipant is the client for interacting with the RequestParticipant builders.
 	RequestParticipant *RequestParticipantClient
 	// RequestTargetDzo is the client for interacting with the RequestTargetDzo builders.
@@ -80,6 +83,7 @@ func (c *Client) init() {
 	c.Employee = NewEmployeeClient(c.config)
 	c.Organization = NewOrganizationClient(c.config)
 	c.Request = NewRequestClient(c.config)
+	c.RequestDzoContract = NewRequestDzoContractClient(c.config)
 	c.RequestParticipant = NewRequestParticipantClient(c.config)
 	c.RequestTargetDzo = NewRequestTargetDzoClient(c.config)
 	c.Supplier = NewSupplierClient(c.config)
@@ -185,6 +189,7 @@ func (c *Client) Tx(ctx context.Context) (*Tx, error) {
 		Employee:                NewEmployeeClient(cfg),
 		Organization:            NewOrganizationClient(cfg),
 		Request:                 NewRequestClient(cfg),
+		RequestDzoContract:      NewRequestDzoContractClient(cfg),
 		RequestParticipant:      NewRequestParticipantClient(cfg),
 		RequestTargetDzo:        NewRequestTargetDzoClient(cfg),
 		Supplier:                NewSupplierClient(cfg),
@@ -217,6 +222,7 @@ func (c *Client) BeginTx(ctx context.Context, opts *sql.TxOptions) (*Tx, error) 
 		Employee:                NewEmployeeClient(cfg),
 		Organization:            NewOrganizationClient(cfg),
 		Request:                 NewRequestClient(cfg),
+		RequestDzoContract:      NewRequestDzoContractClient(cfg),
 		RequestParticipant:      NewRequestParticipantClient(cfg),
 		RequestTargetDzo:        NewRequestTargetDzoClient(cfg),
 		Supplier:                NewSupplierClient(cfg),
@@ -253,8 +259,9 @@ func (c *Client) Close() error {
 func (c *Client) Use(hooks ...Hook) {
 	for _, n := range []interface{ Use(...Hook) }{
 		c.Company, c.ContractSupplier, c.ContractSupplierHistory, c.DzoOrganization,
-		c.Employee, c.Organization, c.Request, c.RequestParticipant,
-		c.RequestTargetDzo, c.Supplier, c.TrainingEvent, c.TrainingParticipant, c.User,
+		c.Employee, c.Organization, c.Request, c.RequestDzoContract,
+		c.RequestParticipant, c.RequestTargetDzo, c.Supplier, c.TrainingEvent,
+		c.TrainingParticipant, c.User,
 	} {
 		n.Use(hooks...)
 	}
@@ -265,8 +272,9 @@ func (c *Client) Use(hooks ...Hook) {
 func (c *Client) Intercept(interceptors ...Interceptor) {
 	for _, n := range []interface{ Intercept(...Interceptor) }{
 		c.Company, c.ContractSupplier, c.ContractSupplierHistory, c.DzoOrganization,
-		c.Employee, c.Organization, c.Request, c.RequestParticipant,
-		c.RequestTargetDzo, c.Supplier, c.TrainingEvent, c.TrainingParticipant, c.User,
+		c.Employee, c.Organization, c.Request, c.RequestDzoContract,
+		c.RequestParticipant, c.RequestTargetDzo, c.Supplier, c.TrainingEvent,
+		c.TrainingParticipant, c.User,
 	} {
 		n.Intercept(interceptors...)
 	}
@@ -289,6 +297,8 @@ func (c *Client) Mutate(ctx context.Context, m Mutation) (Value, error) {
 		return c.Organization.mutate(ctx, m)
 	case *RequestMutation:
 		return c.Request.mutate(ctx, m)
+	case *RequestDzoContractMutation:
+		return c.RequestDzoContract.mutate(ctx, m)
 	case *RequestParticipantMutation:
 		return c.RequestParticipant.mutate(ctx, m)
 	case *RequestTargetDzoMutation:
@@ -1365,6 +1375,139 @@ func (c *RequestClient) mutate(ctx context.Context, m *RequestMutation) (Value, 
 	}
 }
 
+// RequestDzoContractClient is a client for the RequestDzoContract schema.
+type RequestDzoContractClient struct {
+	config
+}
+
+// NewRequestDzoContractClient returns a client for the RequestDzoContract from the given config.
+func NewRequestDzoContractClient(c config) *RequestDzoContractClient {
+	return &RequestDzoContractClient{config: c}
+}
+
+// Use adds a list of mutation hooks to the hooks stack.
+// A call to `Use(f, g, h)` equals to `requestdzocontract.Hooks(f(g(h())))`.
+func (c *RequestDzoContractClient) Use(hooks ...Hook) {
+	c.hooks.RequestDzoContract = append(c.hooks.RequestDzoContract, hooks...)
+}
+
+// Intercept adds a list of query interceptors to the interceptors stack.
+// A call to `Intercept(f, g, h)` equals to `requestdzocontract.Intercept(f(g(h())))`.
+func (c *RequestDzoContractClient) Intercept(interceptors ...Interceptor) {
+	c.inters.RequestDzoContract = append(c.inters.RequestDzoContract, interceptors...)
+}
+
+// Create returns a builder for creating a RequestDzoContract entity.
+func (c *RequestDzoContractClient) Create() *RequestDzoContractCreate {
+	mutation := newRequestDzoContractMutation(c.config, OpCreate)
+	return &RequestDzoContractCreate{config: c.config, hooks: c.Hooks(), mutation: mutation}
+}
+
+// CreateBulk returns a builder for creating a bulk of RequestDzoContract entities.
+func (c *RequestDzoContractClient) CreateBulk(builders ...*RequestDzoContractCreate) *RequestDzoContractCreateBulk {
+	return &RequestDzoContractCreateBulk{config: c.config, builders: builders}
+}
+
+// MapCreateBulk creates a bulk creation builder from the given slice. For each item in the slice, the function creates
+// a builder and applies setFunc on it.
+func (c *RequestDzoContractClient) MapCreateBulk(slice any, setFunc func(*RequestDzoContractCreate, int)) *RequestDzoContractCreateBulk {
+	rv := reflect.ValueOf(slice)
+	if rv.Kind() != reflect.Slice {
+		return &RequestDzoContractCreateBulk{err: fmt.Errorf("calling to RequestDzoContractClient.MapCreateBulk with wrong type %T, need slice", slice)}
+	}
+	builders := make([]*RequestDzoContractCreate, rv.Len())
+	for i := 0; i < rv.Len(); i++ {
+		builders[i] = c.Create()
+		setFunc(builders[i], i)
+	}
+	return &RequestDzoContractCreateBulk{config: c.config, builders: builders}
+}
+
+// Update returns an update builder for RequestDzoContract.
+func (c *RequestDzoContractClient) Update() *RequestDzoContractUpdate {
+	mutation := newRequestDzoContractMutation(c.config, OpUpdate)
+	return &RequestDzoContractUpdate{config: c.config, hooks: c.Hooks(), mutation: mutation}
+}
+
+// UpdateOne returns an update builder for the given entity.
+func (c *RequestDzoContractClient) UpdateOne(_m *RequestDzoContract) *RequestDzoContractUpdateOne {
+	mutation := newRequestDzoContractMutation(c.config, OpUpdateOne, withRequestDzoContract(_m))
+	return &RequestDzoContractUpdateOne{config: c.config, hooks: c.Hooks(), mutation: mutation}
+}
+
+// UpdateOneID returns an update builder for the given id.
+func (c *RequestDzoContractClient) UpdateOneID(id uuid.UUID) *RequestDzoContractUpdateOne {
+	mutation := newRequestDzoContractMutation(c.config, OpUpdateOne, withRequestDzoContractID(id))
+	return &RequestDzoContractUpdateOne{config: c.config, hooks: c.Hooks(), mutation: mutation}
+}
+
+// Delete returns a delete builder for RequestDzoContract.
+func (c *RequestDzoContractClient) Delete() *RequestDzoContractDelete {
+	mutation := newRequestDzoContractMutation(c.config, OpDelete)
+	return &RequestDzoContractDelete{config: c.config, hooks: c.Hooks(), mutation: mutation}
+}
+
+// DeleteOne returns a builder for deleting the given entity.
+func (c *RequestDzoContractClient) DeleteOne(_m *RequestDzoContract) *RequestDzoContractDeleteOne {
+	return c.DeleteOneID(_m.ID)
+}
+
+// DeleteOneID returns a builder for deleting the given entity by its id.
+func (c *RequestDzoContractClient) DeleteOneID(id uuid.UUID) *RequestDzoContractDeleteOne {
+	builder := c.Delete().Where(requestdzocontract.ID(id))
+	builder.mutation.id = &id
+	builder.mutation.op = OpDeleteOne
+	return &RequestDzoContractDeleteOne{builder}
+}
+
+// Query returns a query builder for RequestDzoContract.
+func (c *RequestDzoContractClient) Query() *RequestDzoContractQuery {
+	return &RequestDzoContractQuery{
+		config: c.config,
+		ctx:    &QueryContext{Type: TypeRequestDzoContract},
+		inters: c.Interceptors(),
+	}
+}
+
+// Get returns a RequestDzoContract entity by its id.
+func (c *RequestDzoContractClient) Get(ctx context.Context, id uuid.UUID) (*RequestDzoContract, error) {
+	return c.Query().Where(requestdzocontract.ID(id)).Only(ctx)
+}
+
+// GetX is like Get, but panics if an error occurs.
+func (c *RequestDzoContractClient) GetX(ctx context.Context, id uuid.UUID) *RequestDzoContract {
+	obj, err := c.Get(ctx, id)
+	if err != nil {
+		panic(err)
+	}
+	return obj
+}
+
+// Hooks returns the client hooks.
+func (c *RequestDzoContractClient) Hooks() []Hook {
+	return c.hooks.RequestDzoContract
+}
+
+// Interceptors returns the client interceptors.
+func (c *RequestDzoContractClient) Interceptors() []Interceptor {
+	return c.inters.RequestDzoContract
+}
+
+func (c *RequestDzoContractClient) mutate(ctx context.Context, m *RequestDzoContractMutation) (Value, error) {
+	switch m.Op() {
+	case OpCreate:
+		return (&RequestDzoContractCreate{config: c.config, hooks: c.Hooks(), mutation: m}).Save(ctx)
+	case OpUpdate:
+		return (&RequestDzoContractUpdate{config: c.config, hooks: c.Hooks(), mutation: m}).Save(ctx)
+	case OpUpdateOne:
+		return (&RequestDzoContractUpdateOne{config: c.config, hooks: c.Hooks(), mutation: m}).Save(ctx)
+	case OpDelete, OpDeleteOne:
+		return (&RequestDzoContractDelete{config: c.config, hooks: c.Hooks(), mutation: m}).Exec(ctx)
+	default:
+		return nil, fmt.Errorf("ent: unknown RequestDzoContract mutation op: %q", m.Op())
+	}
+}
+
 // RequestParticipantClient is a client for the RequestParticipant schema.
 type RequestParticipantClient struct {
 	config
@@ -2199,12 +2342,13 @@ func (c *UserClient) mutate(ctx context.Context, m *UserMutation) (Value, error)
 type (
 	hooks struct {
 		Company, ContractSupplier, ContractSupplierHistory, DzoOrganization, Employee,
-		Organization, Request, RequestParticipant, RequestTargetDzo, Supplier,
-		TrainingEvent, TrainingParticipant, User []ent.Hook
+		Organization, Request, RequestDzoContract, RequestParticipant,
+		RequestTargetDzo, Supplier, TrainingEvent, TrainingParticipant, User []ent.Hook
 	}
 	inters struct {
 		Company, ContractSupplier, ContractSupplierHistory, DzoOrganization, Employee,
-		Organization, Request, RequestParticipant, RequestTargetDzo, Supplier,
-		TrainingEvent, TrainingParticipant, User []ent.Interceptor
+		Organization, Request, RequestDzoContract, RequestParticipant,
+		RequestTargetDzo, Supplier, TrainingEvent, TrainingParticipant,
+		User []ent.Interceptor
 	}
 )

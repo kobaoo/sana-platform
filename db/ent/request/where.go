@@ -81,6 +81,11 @@ func RequestType(v string) predicate.Request {
 	return predicate.Request(sql.FieldEQ(FieldRequestType, v))
 }
 
+// Kind applies equality check predicate on the "kind" field. It's identical to KindEQ.
+func Kind(v string) predicate.Request {
+	return predicate.Request(sql.FieldEQ(FieldKind, v))
+}
+
 // AssignedHrID applies equality check predicate on the "assigned_hr_id" field. It's identical to AssignedHrIDEQ.
 func AssignedHrID(v uuid.UUID) predicate.Request {
 	return predicate.Request(sql.FieldEQ(FieldAssignedHrID, v))
@@ -144,6 +149,11 @@ func CreatedAt(v time.Time) predicate.Request {
 // UpdatedAt applies equality check predicate on the "updated_at" field. It's identical to UpdatedAtEQ.
 func UpdatedAt(v time.Time) predicate.Request {
 	return predicate.Request(sql.FieldEQ(FieldUpdatedAt, v))
+}
+
+// CompletedAt applies equality check predicate on the "completed_at" field. It's identical to CompletedAtEQ.
+func CompletedAt(v time.Time) predicate.Request {
+	return predicate.Request(sql.FieldEQ(FieldCompletedAt, v))
 }
 
 // Status applies equality check predicate on the "status" field. It's identical to StatusEQ.
@@ -371,6 +381,71 @@ func RequestTypeContainsFold(v string) predicate.Request {
 	return predicate.Request(sql.FieldContainsFold(FieldRequestType, v))
 }
 
+// KindEQ applies the EQ predicate on the "kind" field.
+func KindEQ(v string) predicate.Request {
+	return predicate.Request(sql.FieldEQ(FieldKind, v))
+}
+
+// KindNEQ applies the NEQ predicate on the "kind" field.
+func KindNEQ(v string) predicate.Request {
+	return predicate.Request(sql.FieldNEQ(FieldKind, v))
+}
+
+// KindIn applies the In predicate on the "kind" field.
+func KindIn(vs ...string) predicate.Request {
+	return predicate.Request(sql.FieldIn(FieldKind, vs...))
+}
+
+// KindNotIn applies the NotIn predicate on the "kind" field.
+func KindNotIn(vs ...string) predicate.Request {
+	return predicate.Request(sql.FieldNotIn(FieldKind, vs...))
+}
+
+// KindGT applies the GT predicate on the "kind" field.
+func KindGT(v string) predicate.Request {
+	return predicate.Request(sql.FieldGT(FieldKind, v))
+}
+
+// KindGTE applies the GTE predicate on the "kind" field.
+func KindGTE(v string) predicate.Request {
+	return predicate.Request(sql.FieldGTE(FieldKind, v))
+}
+
+// KindLT applies the LT predicate on the "kind" field.
+func KindLT(v string) predicate.Request {
+	return predicate.Request(sql.FieldLT(FieldKind, v))
+}
+
+// KindLTE applies the LTE predicate on the "kind" field.
+func KindLTE(v string) predicate.Request {
+	return predicate.Request(sql.FieldLTE(FieldKind, v))
+}
+
+// KindContains applies the Contains predicate on the "kind" field.
+func KindContains(v string) predicate.Request {
+	return predicate.Request(sql.FieldContains(FieldKind, v))
+}
+
+// KindHasPrefix applies the HasPrefix predicate on the "kind" field.
+func KindHasPrefix(v string) predicate.Request {
+	return predicate.Request(sql.FieldHasPrefix(FieldKind, v))
+}
+
+// KindHasSuffix applies the HasSuffix predicate on the "kind" field.
+func KindHasSuffix(v string) predicate.Request {
+	return predicate.Request(sql.FieldHasSuffix(FieldKind, v))
+}
+
+// KindEqualFold applies the EqualFold predicate on the "kind" field.
+func KindEqualFold(v string) predicate.Request {
+	return predicate.Request(sql.FieldEqualFold(FieldKind, v))
+}
+
+// KindContainsFold applies the ContainsFold predicate on the "kind" field.
+func KindContainsFold(v string) predicate.Request {
+	return predicate.Request(sql.FieldContainsFold(FieldKind, v))
+}
+
 // AssignedHrIDEQ applies the EQ predicate on the "assigned_hr_id" field.
 func AssignedHrIDEQ(v uuid.UUID) predicate.Request {
 	return predicate.Request(sql.FieldEQ(FieldAssignedHrID, v))
@@ -524,6 +599,16 @@ func TitleHasPrefix(v string) predicate.Request {
 // TitleHasSuffix applies the HasSuffix predicate on the "title" field.
 func TitleHasSuffix(v string) predicate.Request {
 	return predicate.Request(sql.FieldHasSuffix(FieldTitle, v))
+}
+
+// TitleIsNil applies the IsNil predicate on the "title" field.
+func TitleIsNil() predicate.Request {
+	return predicate.Request(sql.FieldIsNull(FieldTitle))
+}
+
+// TitleNotNil applies the NotNil predicate on the "title" field.
+func TitleNotNil() predicate.Request {
+	return predicate.Request(sql.FieldNotNull(FieldTitle))
 }
 
 // TitleEqualFold applies the EqualFold predicate on the "title" field.
@@ -1079,6 +1164,56 @@ func UpdatedAtLT(v time.Time) predicate.Request {
 // UpdatedAtLTE applies the LTE predicate on the "updated_at" field.
 func UpdatedAtLTE(v time.Time) predicate.Request {
 	return predicate.Request(sql.FieldLTE(FieldUpdatedAt, v))
+}
+
+// CompletedAtEQ applies the EQ predicate on the "completed_at" field.
+func CompletedAtEQ(v time.Time) predicate.Request {
+	return predicate.Request(sql.FieldEQ(FieldCompletedAt, v))
+}
+
+// CompletedAtNEQ applies the NEQ predicate on the "completed_at" field.
+func CompletedAtNEQ(v time.Time) predicate.Request {
+	return predicate.Request(sql.FieldNEQ(FieldCompletedAt, v))
+}
+
+// CompletedAtIn applies the In predicate on the "completed_at" field.
+func CompletedAtIn(vs ...time.Time) predicate.Request {
+	return predicate.Request(sql.FieldIn(FieldCompletedAt, vs...))
+}
+
+// CompletedAtNotIn applies the NotIn predicate on the "completed_at" field.
+func CompletedAtNotIn(vs ...time.Time) predicate.Request {
+	return predicate.Request(sql.FieldNotIn(FieldCompletedAt, vs...))
+}
+
+// CompletedAtGT applies the GT predicate on the "completed_at" field.
+func CompletedAtGT(v time.Time) predicate.Request {
+	return predicate.Request(sql.FieldGT(FieldCompletedAt, v))
+}
+
+// CompletedAtGTE applies the GTE predicate on the "completed_at" field.
+func CompletedAtGTE(v time.Time) predicate.Request {
+	return predicate.Request(sql.FieldGTE(FieldCompletedAt, v))
+}
+
+// CompletedAtLT applies the LT predicate on the "completed_at" field.
+func CompletedAtLT(v time.Time) predicate.Request {
+	return predicate.Request(sql.FieldLT(FieldCompletedAt, v))
+}
+
+// CompletedAtLTE applies the LTE predicate on the "completed_at" field.
+func CompletedAtLTE(v time.Time) predicate.Request {
+	return predicate.Request(sql.FieldLTE(FieldCompletedAt, v))
+}
+
+// CompletedAtIsNil applies the IsNil predicate on the "completed_at" field.
+func CompletedAtIsNil() predicate.Request {
+	return predicate.Request(sql.FieldIsNull(FieldCompletedAt))
+}
+
+// CompletedAtNotNil applies the NotNil predicate on the "completed_at" field.
+func CompletedAtNotNil() predicate.Request {
+	return predicate.Request(sql.FieldNotNull(FieldCompletedAt))
 }
 
 // StatusEQ applies the EQ predicate on the "status" field.

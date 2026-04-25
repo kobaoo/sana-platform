@@ -93,6 +93,18 @@ func (f RequestFunc) Mutate(ctx context.Context, m ent.Mutation) (ent.Value, err
 	return nil, fmt.Errorf("unexpected mutation type %T. expect *ent.RequestMutation", m)
 }
 
+// The RequestDzoContractFunc type is an adapter to allow the use of ordinary
+// function as RequestDzoContract mutator.
+type RequestDzoContractFunc func(context.Context, *ent.RequestDzoContractMutation) (ent.Value, error)
+
+// Mutate calls f(ctx, m).
+func (f RequestDzoContractFunc) Mutate(ctx context.Context, m ent.Mutation) (ent.Value, error) {
+	if mv, ok := m.(*ent.RequestDzoContractMutation); ok {
+		return f(ctx, mv)
+	}
+	return nil, fmt.Errorf("unexpected mutation type %T. expect *ent.RequestDzoContractMutation", m)
+}
+
 // The RequestParticipantFunc type is an adapter to allow the use of ordinary
 // function as RequestParticipant mutator.
 type RequestParticipantFunc func(context.Context, *ent.RequestParticipantMutation) (ent.Value, error)

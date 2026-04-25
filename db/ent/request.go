@@ -29,12 +29,14 @@ type Request struct {
 	EntityType string `json:"entity_type,omitempty"`
 	// RequestType holds the value of the "request_type" field.
 	RequestType string `json:"request_type,omitempty"`
+	// Kind holds the value of the "kind" field.
+	Kind string `json:"kind,omitempty"`
 	// AssignedHrID holds the value of the "assigned_hr_id" field.
 	AssignedHrID *uuid.UUID `json:"assigned_hr_id,omitempty"`
 	// TargetDzoID holds the value of the "target_dzo_id" field.
 	TargetDzoID *uuid.UUID `json:"target_dzo_id,omitempty"`
 	// Title holds the value of the "title" field.
-	Title string `json:"title,omitempty"`
+	Title *string `json:"title,omitempty"`
 	// Category holds the value of the "category" field.
 	Category *string `json:"category,omitempty"`
 	// Format holds the value of the "format" field.
@@ -55,6 +57,8 @@ type Request struct {
 	CreatedAt time.Time `json:"created_at,omitempty"`
 	// UpdatedAt holds the value of the "updated_at" field.
 	UpdatedAt time.Time `json:"updated_at,omitempty"`
+	// CompletedAt holds the value of the "completed_at" field.
+	CompletedAt *time.Time `json:"completed_at,omitempty"`
 	// Status holds the value of the "status" field.
 	Status string `json:"status,omitempty"`
 	// Edges holds the relations/edges for other nodes in the graph.
@@ -118,9 +122,9 @@ func (*Request) scanValues(columns []string) ([]any, error) {
 			values[i] = new(sql.NullFloat64)
 		case request.FieldStep:
 			values[i] = new(sql.NullInt64)
-		case request.FieldEntityType, request.FieldRequestType, request.FieldTitle, request.FieldCategory, request.FieldFormat, request.FieldCostMode, request.FieldStatus:
+		case request.FieldEntityType, request.FieldRequestType, request.FieldKind, request.FieldTitle, request.FieldCategory, request.FieldFormat, request.FieldCostMode, request.FieldStatus:
 			values[i] = new(sql.NullString)
-		case request.FieldTrainingDate, request.FieldDeadlineAt, request.FieldCreatedAt, request.FieldUpdatedAt:
+		case request.FieldTrainingDate, request.FieldDeadlineAt, request.FieldCreatedAt, request.FieldUpdatedAt, request.FieldCompletedAt:
 			values[i] = new(sql.NullTime)
 		case request.FieldID, request.FieldInitiatorID, request.FieldEntityID:
 			values[i] = new(uuid.UUID)
@@ -176,6 +180,12 @@ func (_m *Request) assignValues(columns []string, values []any) error {
 			} else if value.Valid {
 				_m.RequestType = value.String
 			}
+		case request.FieldKind:
+			if value, ok := values[i].(*sql.NullString); !ok {
+				return fmt.Errorf("unexpected type %T for field kind", values[i])
+			} else if value.Valid {
+				_m.Kind = value.String
+			}
 		case request.FieldAssignedHrID:
 			if value, ok := values[i].(*sql.NullScanner); !ok {
 				return fmt.Errorf("unexpected type %T for field assigned_hr_id", values[i])
@@ -194,7 +204,8 @@ func (_m *Request) assignValues(columns []string, values []any) error {
 			if value, ok := values[i].(*sql.NullString); !ok {
 				return fmt.Errorf("unexpected type %T for field title", values[i])
 			} else if value.Valid {
-				_m.Title = value.String
+				_m.Title = new(string)
+				*_m.Title = value.String
 			}
 		case request.FieldCategory:
 			if value, ok := values[i].(*sql.NullString); !ok {
@@ -262,6 +273,13 @@ func (_m *Request) assignValues(columns []string, values []any) error {
 				return fmt.Errorf("unexpected type %T for field updated_at", values[i])
 			} else if value.Valid {
 				_m.UpdatedAt = value.Time
+			}
+		case request.FieldCompletedAt:
+			if value, ok := values[i].(*sql.NullTime); !ok {
+				return fmt.Errorf("unexpected type %T for field completed_at", values[i])
+			} else if value.Valid {
+				_m.CompletedAt = new(time.Time)
+				*_m.CompletedAt = value.Time
 			}
 		case request.FieldStatus:
 			if value, ok := values[i].(*sql.NullString); !ok {
@@ -337,6 +355,9 @@ func (_m *Request) String() string {
 	builder.WriteString("request_type=")
 	builder.WriteString(_m.RequestType)
 	builder.WriteString(", ")
+	builder.WriteString("kind=")
+	builder.WriteString(_m.Kind)
+	builder.WriteString(", ")
 	if v := _m.AssignedHrID; v != nil {
 		builder.WriteString("assigned_hr_id=")
 		builder.WriteString(fmt.Sprintf("%v", *v))
@@ -347,8 +368,10 @@ func (_m *Request) String() string {
 		builder.WriteString(fmt.Sprintf("%v", *v))
 	}
 	builder.WriteString(", ")
-	builder.WriteString("title=")
-	builder.WriteString(_m.Title)
+	if v := _m.Title; v != nil {
+		builder.WriteString("title=")
+		builder.WriteString(*v)
+	}
 	builder.WriteString(", ")
 	if v := _m.Category; v != nil {
 		builder.WriteString("category=")
@@ -393,6 +416,11 @@ func (_m *Request) String() string {
 	builder.WriteString(", ")
 	builder.WriteString("updated_at=")
 	builder.WriteString(_m.UpdatedAt.Format(time.ANSIC))
+	builder.WriteString(", ")
+	if v := _m.CompletedAt; v != nil {
+		builder.WriteString("completed_at=")
+		builder.WriteString(v.Format(time.ANSIC))
+	}
 	builder.WriteString(", ")
 	builder.WriteString("status=")
 	builder.WriteString(_m.Status)

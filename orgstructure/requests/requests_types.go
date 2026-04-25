@@ -1,6 +1,10 @@
 package requests
 
-import "time"
+import (
+	"time"
+
+	"github.com/google/uuid"
+)
 
 type RequestType string
 
@@ -18,6 +22,14 @@ func (t RequestType) IsValid() bool {
 	}
 }
 
+type RequestKind string
+
+const (
+	RequestKindRegular  RequestKind = "REGULAR"
+	RequestKindClosed   RequestKind = "CLOSED"
+	RequestKindArchived RequestKind = "ARCHIVED"
+)
+
 type RequestStatus string
 
 const (
@@ -26,11 +38,12 @@ const (
 	RequestStatusPending    RequestStatus = "PENDING"
 	RequestStatusApproved   RequestStatus = "APPROVED"
 	RequestStatusRejected   RequestStatus = "REJECTED"
+	RequestStatusCompleted  RequestStatus = "COMPLETED"
 )
 
 func (s RequestStatus) IsValid() bool {
 	switch s {
-	case RequestStatusDraft, RequestStatusInProgress, RequestStatusPending, RequestStatusApproved, RequestStatusRejected:
+	case RequestStatusDraft, RequestStatusInProgress, RequestStatusPending, RequestStatusApproved, RequestStatusRejected, RequestStatusCompleted:
 		return true
 	default:
 		return false
@@ -52,6 +65,8 @@ func (m CostMode) IsValid() bool {
 		return false
 	}
 }
+
+// ════ ADMIN FLOW TYPES ════
 
 type CreateAdminRequestRequest struct {
 	TrainingEventID string    `json:"training_event_id"`
@@ -88,6 +103,7 @@ type RequestSummary struct {
 	TrainingEventID    string        `json:"training_event_id"`
 	EntityType         string        `json:"entity_type"`
 	RequestType        RequestType   `json:"request_type"`
+	Kind               RequestKind   `json:"kind"`
 	Status             RequestStatus `json:"status"`
 	AssignedHRID       *string       `json:"assigned_hr_id,omitempty"`
 	TargetDzoID        *string       `json:"target_dzo_id,omitempty"`
@@ -104,13 +120,15 @@ type RequestSummary struct {
 	TotalChildren      int           `json:"total_children"`
 	CreatedAt          time.Time     `json:"created_at"`
 	UpdatedAt          time.Time     `json:"updated_at"`
+	CompletedAt        *time.Time    `json:"completed_at,omitempty"`
 }
 
 type RequestDetail struct {
-	Request       RequestSummary     `json:"request"`
-	Employees     []RequestEmployee  `json:"employees"`
-	TargetDZOs    []RequestTargetDZO `json:"target_dzos"`
-	ChildRequests []RequestSummary   `json:"child_requests"`
+	Request       RequestSummary            `json:"request"`
+	Employees     []RequestEmployee         `json:"employees"`
+	TargetDZOs    []RequestTargetDZO        `json:"target_dzos"`
+	Contracts     []RequestContractResponse `json:"contracts,omitempty"`
+	ChildRequests []RequestSummary          `json:"child_requests"`
 }
 
 type GetRequestResponse struct {
@@ -119,4 +137,56 @@ type GetRequestResponse struct {
 
 type ListRequestsResponse struct {
 	Items []RequestSummary `json:"items"`
+}
+
+// ════ ARCHIVE FLOW TYPES ════
+
+type CreateRequestRequest struct {
+	EntityID   uuid.UUID `json:"entity_id"`
+	EntityType string    `json:"entity_type"`
+}
+
+type ArchiveRequestContractInput struct {
+	DzoID    uuid.UUID `json:"dzo_id"`
+	FileName string    `json:"file_name"`
+	FileURL  string    `json:"file_url"`
+}
+
+type CreateArchiveRequestRequest struct {
+	Kind        string                        `json:"kind"`
+	Title       *string                       `json:"title,omitempty"`
+	Category    string                        `json:"category"`
+	EmployeeIDs []uuid.UUID                   `json:"employee_ids"`
+	Contracts   []ArchiveRequestContractInput `json:"contracts"`
+}
+
+type UpdateRequestStepRequest struct {
+	Step int `json:"step"`
+}
+
+type UpdateRequestStatusRequest struct {
+	Status string `json:"status"`
+}
+
+type RequestContractResponse struct {
+	DzoID    uuid.UUID `json:"dzo_id"`
+	FileName string    `json:"file_name"`
+	FileURL  string    `json:"file_url"`
+}
+
+type RequestResponse struct {
+	ID          uuid.UUID                 `json:"id"`
+	InitiatorID uuid.UUID                 `json:"initiator_id"`
+	EntityID    uuid.UUID                 `json:"entity_id"`
+	EntityType  string                    `json:"entity_type"`
+	Kind        string                    `json:"kind"`
+	Title       *string                   `json:"title,omitempty"`
+	Category    *string                   `json:"category,omitempty"`
+	Step        int                       `json:"step"`
+	Status      string                    `json:"status"`
+	CreatedAt   time.Time                 `json:"created_at"`
+	UpdatedAt   time.Time                 `json:"updated_at"`
+	CompletedAt *time.Time                `json:"completed_at,omitempty"`
+	EmployeeIDs []uuid.UUID               `json:"employee_ids,omitempty"`
+	Contracts   []RequestContractResponse `json:"contracts,omitempty"`
 }
