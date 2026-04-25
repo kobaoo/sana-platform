@@ -147,6 +147,8 @@ type RequestSummary struct {
 	EmployeesCount     int           `json:"employees_count"`
 	ApprovedChildren   int           `json:"approved_children"`
 	TotalChildren      int           `json:"total_children"`
+	IsBlocked          bool          `json:"is_blocked"`
+	ReplacedByRequestID *string      `json:"replaced_by_request_id,omitempty"`
 	CreatedAt          time.Time     `json:"created_at"`
 	UpdatedAt          time.Time     `json:"updated_at"`
 	CompletedAt        *time.Time    `json:"completed_at,omitempty"`

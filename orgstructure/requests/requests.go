@@ -140,6 +140,41 @@ func SubmitRequest(ctx context.Context, id encoreuuid.UUID) (*GetRequestResponse
 	return &GetRequestResponse{Detail: *detail}, nil
 }
 
+// RecreateRejectedRequest creates a new version of a rejected request.
+//
+//encore:api auth method=POST path=/requests/admin/:id/recreate
+func RecreateRejectedRequest(ctx context.Context, id encoreuuid.UUID, req *CreateAdminRequestRequest) (*GetRequestResponse, error) {
+	actor, err := resolveCurrentActor(ctx)
+	if err != nil {
+		return nil, err
+	}
+	if !canManageAdminRequests(actor.Role) {
+		return nil, errs.B().Code(errs.PermissionDenied).Msg("insufficient permissions").Err()
+	}
+
+	originalRequestID := uuid.UUID(id)
+
+	// Verify the original request exists and is rejected
+	originalRequest, err := queryRequestSummaryByID(ctx, originalRequestID)
+	if err != nil {
+		return nil, err
+	}
+	if originalRequest.Status != RequestStatusRejected {
+		return nil, errs.B().Code(errs.InvalidArgument).Msg("only rejected requests can be recreated").Err()
+	}
+	if originalRequest.RequestType != RequestTypeMain {
+		return nil, errs.B().Code(errs.InvalidArgument).Msg("only main requests can be recreated").Err()
+	}
+
+	// Create a new request with the provided data
+	detail, err := createAdminRequest(ctx, actor, req)
+	if err != nil {
+		return nil, err
+	}
+
+	return &GetRequestResponse{Detail: *detail}, nil
+}
+
 // CancelAdminRequest cancels a main request and refunds budget if it was written off.
 //
 //encore:api auth method=POST path=/requests/admin/:id/cancel
@@ -416,21 +451,60 @@ func resolveCurrentActor(ctx context.Context) (*actor, error) {
 	}
 
 	row := db.QueryRow(ctx, `
-		SELECT id, role, dzo_id
+		SELECT id, role, dzo_id, is_active, is_onboarded
 		FROM users
-		WHERE keycloak_user_id = $1 AND is_active = TRUE
+		WHERE keycloak_user_id = $1
 	`, ad.KeycloakUserID)
 
 	var (
-		id    uuid.UUID
-		role  string
-		dzoID sql.NullString
+		id           uuid.UUID
+		role         string
+		dzoID        sql.NullString
+		isActive     bool
+		isOnboarded  bool
 	)
-	if err := row.Scan(&id, &role, &dzoID); err != nil {
+	err = row.Scan(&id, &role, &dzoID, &isActive, &isOnboarded)
+	
+	// If user not found, auto-provision
+	if err != nil {
 		if errors.Is(err, sqldb.ErrNoRows) {
-			return nil, errs.B().Code(errs.NotFound).Msg("actor not found").Err()
+			newUser, err := autoProvisionActor(ctx, ad)
+			if err != nil {
+				return nil, err
+			}
+			return newUser, nil
 		}
 		return nil, errs.B().Code(errs.Internal).Msg("failed to resolve actor").Cause(err).Err()
+	}
+
+	// If user is pending activation (admin created by SA), activate on first login
+	if !isOnboarded && !isActive {
+		if _, err := db.Exec(ctx, `
+			UPDATE users
+			SET is_active = TRUE, is_onboarded = TRUE, updated_at = NOW()
+			WHERE id = $1
+		`, id); err != nil {
+			return nil, errs.B().Code(errs.Internal).Msg("failed to activate user").Cause(err).Err()
+		}
+		isActive = true
+	}
+
+	// Check if user is blocked
+	if !isActive {
+		return nil, errs.B().Code(errs.PermissionDenied).Msg("user is blocked").Err()
+	}
+
+	// Sync role from JWT to database
+	jwtRole := string(ad.Role)
+	if strings.ToUpper(strings.TrimSpace(role)) != jwtRole {
+		if _, err := db.Exec(ctx, `
+			UPDATE users
+			SET role = $1, updated_at = NOW()
+			WHERE id = $2
+		`, jwtRole, id); err != nil {
+			return nil, errs.B().Code(errs.Internal).Msg("failed to sync role").Cause(err).Err()
+		}
+		role = jwtRole
 	}
 
 	current := &actor{
@@ -443,6 +517,59 @@ func resolveCurrentActor(ctx context.Context) (*actor, error) {
 			return nil, errs.B().Code(errs.Internal).Msg("failed to parse actor dzo").Cause(err).Err()
 		}
 		current.DzoID = &value
+	}
+	return current, nil
+}
+
+// autoProvisionActor creates a new user from JWT claims.
+// SA is the only exception: a fresh SA must be trusted from the JWT to
+// bootstrap the system — SA can only be granted by a Keycloak realm admin.
+// ADM role is also trusted from JWT if present.
+// All other users default to EMP role.
+func autoProvisionActor(ctx context.Context, ad *authhandler.AuthData) (*actor, error) {
+	role := authhandler.RoleEMP
+	if ad.Role == authhandler.RoleSA {
+		role = authhandler.RoleSA
+	} else if ad.Role == authhandler.RoleADM {
+		role = authhandler.RoleADM
+	}
+
+	builder := Client.User.
+		Create().
+		SetKeycloakUserID(ad.KeycloakUserID).
+		SetEmail(ad.Email).
+		SetRole(string(role))
+
+	if ad.CompanyID != "" {
+		clientUUID, err := uuid.Parse(ad.CompanyID)
+		if err != nil {
+			return nil, errs.B().Code(errs.InvalidArgument).Msg("invalid client_id format").Err()
+		}
+		builder = builder.SetClientID(clientUUID)
+	}
+
+	if ad.DzoID != "" {
+		dzoUUID, err := uuid.Parse(ad.DzoID)
+		if err != nil {
+			return nil, errs.B().Code(errs.InvalidArgument).Msg("invalid dzo_id format").Err()
+		}
+		builder = builder.SetDzoID(dzoUUID)
+	}
+
+	newUser, err := builder.Save(ctx)
+	if err != nil {
+		if dbent.IsConstraintError(err) {
+			return nil, errs.B().Code(errs.AlreadyExists).Msg("user with this keycloak_user_id already exists").Err()
+		}
+		return nil, errs.B().Code(errs.Internal).Msg("failed to create user").Cause(err).Err()
+	}
+
+	current := &actor{
+		ID:   newUser.ID,
+		Role: authhandler.UserRole(strings.ToUpper(strings.TrimSpace(newUser.Role))),
+	}
+	if newUser.DzoID != nil && *newUser.DzoID != uuid.Nil {
+		current.DzoID = newUser.DzoID
 	}
 	return current, nil
 }
@@ -478,12 +605,6 @@ func createAdminRequest(ctx context.Context, actor *actor, req *CreateAdminReque
 	if req.Title != nil && strings.TrimSpace(*req.Title) != "" {
 		title = strings.TrimSpace(*req.Title)
 	}
-	var format interface{}
-	if req.Format != nil && strings.TrimSpace(*req.Format) != "" {
-		format = strings.TrimSpace(*req.Format)
-	} else if trainingEvent.LocationType.Valid {
-		format = trainingEvent.LocationType.String
-	}
 
 	deadlineAt, err := parseOptionalTime(req.DeadlineAt)
 	if err != nil {
@@ -500,16 +621,15 @@ func createAdminRequest(ctx context.Context, actor *actor, req *CreateAdminReque
 	if _, err := tx.Exec(ctx, `
 		INSERT INTO requests (
 			id, initiator_id, entity_id, entity_type, request_type, kind, title, category,
-			responsible_admin_id, step, status, created_at, updated_at, completed_at
+			responsible_admin_id, training_date, deadline_at, cost_amount, cost_mode, step, status, created_at, updated_at
 		)
-		VALUES ($1, $2, $3, 'TRAINING_EVENT', 'MAIN', 'REGULAR', $4, $5, $6, $7, $8, $9, $10, $11, 0, 'DRAFT', NOW(), NOW())
+		VALUES ($1, $2, $3, 'TRAINING_EVENT', 'MAIN', 'REGULAR', $4, $5, $6, $7, $8, $9, $10, 0, 'DRAFT', NOW(), NOW())
 	`,
 		requestID,
 		actor.ID,
 		trainingEvent.ID,
 		title,
 		nullableString(req.Category),
-		format,
 		actor.ID,
 		trainingEvent.StartDate,
 		deadlineAt,

@@ -66,7 +66,24 @@ INSERT INTO public.users (
   '55555555-5555-5555-5555-555555555555',
   'kc-demo-user',
   'admin@demo.local',
-  'ADMIN',
+  'ADM',
+  '33333333-3333-3333-3333-333333333333',
+  true,
+  true,
+  now(),
+  now(),
+  '11111111-1111-1111-1111-111111111111'
+);
+
+-- HR user for DZO
+INSERT INTO public.users (
+  id, keycloak_user_id, email, role, dzo_id,
+  is_active, is_onboarded, created_at, updated_at, client_id
+) VALUES (
+  'aaaaaaaa-aaaa-aaaa-aaaa-aaaaaaaaaaaa',
+  'kc-demo-hr',
+  'hr@demo.local',
+  'HR',
   '33333333-3333-3333-3333-333333333333',
   true,
   true,
@@ -234,6 +251,71 @@ INSERT INTO public.requests (
   now(),
   now(),
   'PENDING'
+);
+
+---------------------------------------------------
+-- REJECTED REQUEST (для тестирования RecreateRejectedRequest)
+---------------------------------------------------
+INSERT INTO public.requests (
+  id,
+  initiator_id,
+  entity_id,
+  entity_type,
+  request_type,
+  kind,
+  title,
+  category,
+  format,
+  responsible_admin_id,
+  training_date,
+  cost_amount,
+  cost_mode,
+  step,
+  status,
+  created_at,
+  updated_at
+) VALUES (
+  'eeeeeeee-eeee-eeee-eeee-eeeeeeeeeeee',
+  '55555555-5555-5555-5555-555555555555',
+  'aaaaaaaa-aaaa-aaaa-aaaa-aaaaaaaaaaaa',
+  'TRAINING_EVENT',
+  'MAIN',
+  'REGULAR',
+  'Rejected Training Request',
+  'Safety Training',
+  'OFFLINE',
+  '55555555-5555-5555-5555-555555555555',
+  now() + interval '10 days',
+  100000,
+  'PER_EMPLOYEE',
+  0,
+  'REJECTED',
+  now() - interval '2 days',
+  now() - interval '1 day'
+);
+
+---------------------------------------------------
+-- REQUEST PARTICIPANTS (для отклоненной заявки)
+---------------------------------------------------
+INSERT INTO public.request_participants (
+  id, request_id, employee_id, created_at
+) VALUES (
+  'ffffffff-ffff-ffff-ffff-ffffffffffff',
+  'eeeeeeee-eeee-eeee-eeee-eeeeeeeeeeee',
+  '66666666-6666-6666-6666-666666666666',
+  now()
+);
+
+---------------------------------------------------
+-- REQUEST TARGET DZO (для отклоненной заявки)
+---------------------------------------------------
+INSERT INTO public.request_target_dzos (
+  id, request_id, dzo_id, created_at
+) VALUES (
+  '10101010-1010-1010-1010-101010101010',
+  'eeeeeeee-eeee-eeee-eeee-eeeeeeeeeeee',
+  '33333333-3333-3333-3333-333333333333',
+  now()
 );
 
 ---------------------------------------------------
