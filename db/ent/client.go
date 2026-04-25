@@ -13,12 +13,15 @@ import (
 	"github.com/google/uuid"
 
 	"encore.app/db/ent/company"
+	"encore.app/db/ent/contractsupplier"
+	"encore.app/db/ent/contractsupplierhistory"
 	"encore.app/db/ent/dzoorganization"
 	"encore.app/db/ent/employee"
 	"encore.app/db/ent/organization"
 	"encore.app/db/ent/request"
 	"encore.app/db/ent/requestparticipant"
 	"encore.app/db/ent/requesttargetdzo"
+	"encore.app/db/ent/supplier"
 	"encore.app/db/ent/trainingevent"
 	"encore.app/db/ent/trainingparticipant"
 	"encore.app/db/ent/user"
@@ -35,6 +38,10 @@ type Client struct {
 	Schema *migrate.Schema
 	// Company is the client for interacting with the Company builders.
 	Company *CompanyClient
+	// ContractSupplier is the client for interacting with the ContractSupplier builders.
+	ContractSupplier *ContractSupplierClient
+	// ContractSupplierHistory is the client for interacting with the ContractSupplierHistory builders.
+	ContractSupplierHistory *ContractSupplierHistoryClient
 	// DzoOrganization is the client for interacting with the DzoOrganization builders.
 	DzoOrganization *DzoOrganizationClient
 	// Employee is the client for interacting with the Employee builders.
@@ -47,6 +54,8 @@ type Client struct {
 	RequestParticipant *RequestParticipantClient
 	// RequestTargetDzo is the client for interacting with the RequestTargetDzo builders.
 	RequestTargetDzo *RequestTargetDzoClient
+	// Supplier is the client for interacting with the Supplier builders.
+	Supplier *SupplierClient
 	// TrainingEvent is the client for interacting with the TrainingEvent builders.
 	TrainingEvent *TrainingEventClient
 	// TrainingParticipant is the client for interacting with the TrainingParticipant builders.
@@ -65,12 +74,15 @@ func NewClient(opts ...Option) *Client {
 func (c *Client) init() {
 	c.Schema = migrate.NewSchema(c.driver)
 	c.Company = NewCompanyClient(c.config)
+	c.ContractSupplier = NewContractSupplierClient(c.config)
+	c.ContractSupplierHistory = NewContractSupplierHistoryClient(c.config)
 	c.DzoOrganization = NewDzoOrganizationClient(c.config)
 	c.Employee = NewEmployeeClient(c.config)
 	c.Organization = NewOrganizationClient(c.config)
 	c.Request = NewRequestClient(c.config)
 	c.RequestParticipant = NewRequestParticipantClient(c.config)
 	c.RequestTargetDzo = NewRequestTargetDzoClient(c.config)
+	c.Supplier = NewSupplierClient(c.config)
 	c.TrainingEvent = NewTrainingEventClient(c.config)
 	c.TrainingParticipant = NewTrainingParticipantClient(c.config)
 	c.User = NewUserClient(c.config)
@@ -164,18 +176,21 @@ func (c *Client) Tx(ctx context.Context) (*Tx, error) {
 	cfg := c.config
 	cfg.driver = tx
 	return &Tx{
-		ctx:                 ctx,
-		config:              cfg,
-		Company:             NewCompanyClient(cfg),
-		DzoOrganization:     NewDzoOrganizationClient(cfg),
-		Employee:            NewEmployeeClient(cfg),
-		Organization:        NewOrganizationClient(cfg),
-		Request:             NewRequestClient(cfg),
-		RequestParticipant:  NewRequestParticipantClient(cfg),
-		RequestTargetDzo:    NewRequestTargetDzoClient(cfg),
-		TrainingEvent:       NewTrainingEventClient(cfg),
-		TrainingParticipant: NewTrainingParticipantClient(cfg),
-		User:                NewUserClient(cfg),
+		ctx:                     ctx,
+		config:                  cfg,
+		Company:                 NewCompanyClient(cfg),
+		ContractSupplier:        NewContractSupplierClient(cfg),
+		ContractSupplierHistory: NewContractSupplierHistoryClient(cfg),
+		DzoOrganization:         NewDzoOrganizationClient(cfg),
+		Employee:                NewEmployeeClient(cfg),
+		Organization:            NewOrganizationClient(cfg),
+		Request:                 NewRequestClient(cfg),
+		RequestParticipant:      NewRequestParticipantClient(cfg),
+		RequestTargetDzo:        NewRequestTargetDzoClient(cfg),
+		Supplier:                NewSupplierClient(cfg),
+		TrainingEvent:           NewTrainingEventClient(cfg),
+		TrainingParticipant:     NewTrainingParticipantClient(cfg),
+		User:                    NewUserClient(cfg),
 	}, nil
 }
 
@@ -193,18 +208,21 @@ func (c *Client) BeginTx(ctx context.Context, opts *sql.TxOptions) (*Tx, error) 
 	cfg := c.config
 	cfg.driver = &txDriver{tx: tx, drv: c.driver}
 	return &Tx{
-		ctx:                 ctx,
-		config:              cfg,
-		Company:             NewCompanyClient(cfg),
-		DzoOrganization:     NewDzoOrganizationClient(cfg),
-		Employee:            NewEmployeeClient(cfg),
-		Organization:        NewOrganizationClient(cfg),
-		Request:             NewRequestClient(cfg),
-		RequestParticipant:  NewRequestParticipantClient(cfg),
-		RequestTargetDzo:    NewRequestTargetDzoClient(cfg),
-		TrainingEvent:       NewTrainingEventClient(cfg),
-		TrainingParticipant: NewTrainingParticipantClient(cfg),
-		User:                NewUserClient(cfg),
+		ctx:                     ctx,
+		config:                  cfg,
+		Company:                 NewCompanyClient(cfg),
+		ContractSupplier:        NewContractSupplierClient(cfg),
+		ContractSupplierHistory: NewContractSupplierHistoryClient(cfg),
+		DzoOrganization:         NewDzoOrganizationClient(cfg),
+		Employee:                NewEmployeeClient(cfg),
+		Organization:            NewOrganizationClient(cfg),
+		Request:                 NewRequestClient(cfg),
+		RequestParticipant:      NewRequestParticipantClient(cfg),
+		RequestTargetDzo:        NewRequestTargetDzoClient(cfg),
+		Supplier:                NewSupplierClient(cfg),
+		TrainingEvent:           NewTrainingEventClient(cfg),
+		TrainingParticipant:     NewTrainingParticipantClient(cfg),
+		User:                    NewUserClient(cfg),
 	}, nil
 }
 
@@ -234,9 +252,9 @@ func (c *Client) Close() error {
 // In order to add hooks to a specific client, call: `client.Node.Use(...)`.
 func (c *Client) Use(hooks ...Hook) {
 	for _, n := range []interface{ Use(...Hook) }{
-		c.Company, c.DzoOrganization, c.Employee, c.Organization, c.Request,
-		c.RequestParticipant, c.RequestTargetDzo, c.TrainingEvent,
-		c.TrainingParticipant, c.User,
+		c.Company, c.ContractSupplier, c.ContractSupplierHistory, c.DzoOrganization,
+		c.Employee, c.Organization, c.Request, c.RequestParticipant,
+		c.RequestTargetDzo, c.Supplier, c.TrainingEvent, c.TrainingParticipant, c.User,
 	} {
 		n.Use(hooks...)
 	}
@@ -246,9 +264,9 @@ func (c *Client) Use(hooks ...Hook) {
 // In order to add interceptors to a specific client, call: `client.Node.Intercept(...)`.
 func (c *Client) Intercept(interceptors ...Interceptor) {
 	for _, n := range []interface{ Intercept(...Interceptor) }{
-		c.Company, c.DzoOrganization, c.Employee, c.Organization, c.Request,
-		c.RequestParticipant, c.RequestTargetDzo, c.TrainingEvent,
-		c.TrainingParticipant, c.User,
+		c.Company, c.ContractSupplier, c.ContractSupplierHistory, c.DzoOrganization,
+		c.Employee, c.Organization, c.Request, c.RequestParticipant,
+		c.RequestTargetDzo, c.Supplier, c.TrainingEvent, c.TrainingParticipant, c.User,
 	} {
 		n.Intercept(interceptors...)
 	}
@@ -259,6 +277,10 @@ func (c *Client) Mutate(ctx context.Context, m Mutation) (Value, error) {
 	switch m := m.(type) {
 	case *CompanyMutation:
 		return c.Company.mutate(ctx, m)
+	case *ContractSupplierMutation:
+		return c.ContractSupplier.mutate(ctx, m)
+	case *ContractSupplierHistoryMutation:
+		return c.ContractSupplierHistory.mutate(ctx, m)
 	case *DzoOrganizationMutation:
 		return c.DzoOrganization.mutate(ctx, m)
 	case *EmployeeMutation:
@@ -271,6 +293,8 @@ func (c *Client) Mutate(ctx context.Context, m Mutation) (Value, error) {
 		return c.RequestParticipant.mutate(ctx, m)
 	case *RequestTargetDzoMutation:
 		return c.RequestTargetDzo.mutate(ctx, m)
+	case *SupplierMutation:
+		return c.Supplier.mutate(ctx, m)
 	case *TrainingEventMutation:
 		return c.TrainingEvent.mutate(ctx, m)
 	case *TrainingParticipantMutation:
@@ -428,6 +452,272 @@ func (c *CompanyClient) mutate(ctx context.Context, m *CompanyMutation) (Value, 
 		return (&CompanyDelete{config: c.config, hooks: c.Hooks(), mutation: m}).Exec(ctx)
 	default:
 		return nil, fmt.Errorf("ent: unknown Company mutation op: %q", m.Op())
+	}
+}
+
+// ContractSupplierClient is a client for the ContractSupplier schema.
+type ContractSupplierClient struct {
+	config
+}
+
+// NewContractSupplierClient returns a client for the ContractSupplier from the given config.
+func NewContractSupplierClient(c config) *ContractSupplierClient {
+	return &ContractSupplierClient{config: c}
+}
+
+// Use adds a list of mutation hooks to the hooks stack.
+// A call to `Use(f, g, h)` equals to `contractsupplier.Hooks(f(g(h())))`.
+func (c *ContractSupplierClient) Use(hooks ...Hook) {
+	c.hooks.ContractSupplier = append(c.hooks.ContractSupplier, hooks...)
+}
+
+// Intercept adds a list of query interceptors to the interceptors stack.
+// A call to `Intercept(f, g, h)` equals to `contractsupplier.Intercept(f(g(h())))`.
+func (c *ContractSupplierClient) Intercept(interceptors ...Interceptor) {
+	c.inters.ContractSupplier = append(c.inters.ContractSupplier, interceptors...)
+}
+
+// Create returns a builder for creating a ContractSupplier entity.
+func (c *ContractSupplierClient) Create() *ContractSupplierCreate {
+	mutation := newContractSupplierMutation(c.config, OpCreate)
+	return &ContractSupplierCreate{config: c.config, hooks: c.Hooks(), mutation: mutation}
+}
+
+// CreateBulk returns a builder for creating a bulk of ContractSupplier entities.
+func (c *ContractSupplierClient) CreateBulk(builders ...*ContractSupplierCreate) *ContractSupplierCreateBulk {
+	return &ContractSupplierCreateBulk{config: c.config, builders: builders}
+}
+
+// MapCreateBulk creates a bulk creation builder from the given slice. For each item in the slice, the function creates
+// a builder and applies setFunc on it.
+func (c *ContractSupplierClient) MapCreateBulk(slice any, setFunc func(*ContractSupplierCreate, int)) *ContractSupplierCreateBulk {
+	rv := reflect.ValueOf(slice)
+	if rv.Kind() != reflect.Slice {
+		return &ContractSupplierCreateBulk{err: fmt.Errorf("calling to ContractSupplierClient.MapCreateBulk with wrong type %T, need slice", slice)}
+	}
+	builders := make([]*ContractSupplierCreate, rv.Len())
+	for i := 0; i < rv.Len(); i++ {
+		builders[i] = c.Create()
+		setFunc(builders[i], i)
+	}
+	return &ContractSupplierCreateBulk{config: c.config, builders: builders}
+}
+
+// Update returns an update builder for ContractSupplier.
+func (c *ContractSupplierClient) Update() *ContractSupplierUpdate {
+	mutation := newContractSupplierMutation(c.config, OpUpdate)
+	return &ContractSupplierUpdate{config: c.config, hooks: c.Hooks(), mutation: mutation}
+}
+
+// UpdateOne returns an update builder for the given entity.
+func (c *ContractSupplierClient) UpdateOne(_m *ContractSupplier) *ContractSupplierUpdateOne {
+	mutation := newContractSupplierMutation(c.config, OpUpdateOne, withContractSupplier(_m))
+	return &ContractSupplierUpdateOne{config: c.config, hooks: c.Hooks(), mutation: mutation}
+}
+
+// UpdateOneID returns an update builder for the given id.
+func (c *ContractSupplierClient) UpdateOneID(id uuid.UUID) *ContractSupplierUpdateOne {
+	mutation := newContractSupplierMutation(c.config, OpUpdateOne, withContractSupplierID(id))
+	return &ContractSupplierUpdateOne{config: c.config, hooks: c.Hooks(), mutation: mutation}
+}
+
+// Delete returns a delete builder for ContractSupplier.
+func (c *ContractSupplierClient) Delete() *ContractSupplierDelete {
+	mutation := newContractSupplierMutation(c.config, OpDelete)
+	return &ContractSupplierDelete{config: c.config, hooks: c.Hooks(), mutation: mutation}
+}
+
+// DeleteOne returns a builder for deleting the given entity.
+func (c *ContractSupplierClient) DeleteOne(_m *ContractSupplier) *ContractSupplierDeleteOne {
+	return c.DeleteOneID(_m.ID)
+}
+
+// DeleteOneID returns a builder for deleting the given entity by its id.
+func (c *ContractSupplierClient) DeleteOneID(id uuid.UUID) *ContractSupplierDeleteOne {
+	builder := c.Delete().Where(contractsupplier.ID(id))
+	builder.mutation.id = &id
+	builder.mutation.op = OpDeleteOne
+	return &ContractSupplierDeleteOne{builder}
+}
+
+// Query returns a query builder for ContractSupplier.
+func (c *ContractSupplierClient) Query() *ContractSupplierQuery {
+	return &ContractSupplierQuery{
+		config: c.config,
+		ctx:    &QueryContext{Type: TypeContractSupplier},
+		inters: c.Interceptors(),
+	}
+}
+
+// Get returns a ContractSupplier entity by its id.
+func (c *ContractSupplierClient) Get(ctx context.Context, id uuid.UUID) (*ContractSupplier, error) {
+	return c.Query().Where(contractsupplier.ID(id)).Only(ctx)
+}
+
+// GetX is like Get, but panics if an error occurs.
+func (c *ContractSupplierClient) GetX(ctx context.Context, id uuid.UUID) *ContractSupplier {
+	obj, err := c.Get(ctx, id)
+	if err != nil {
+		panic(err)
+	}
+	return obj
+}
+
+// Hooks returns the client hooks.
+func (c *ContractSupplierClient) Hooks() []Hook {
+	return c.hooks.ContractSupplier
+}
+
+// Interceptors returns the client interceptors.
+func (c *ContractSupplierClient) Interceptors() []Interceptor {
+	return c.inters.ContractSupplier
+}
+
+func (c *ContractSupplierClient) mutate(ctx context.Context, m *ContractSupplierMutation) (Value, error) {
+	switch m.Op() {
+	case OpCreate:
+		return (&ContractSupplierCreate{config: c.config, hooks: c.Hooks(), mutation: m}).Save(ctx)
+	case OpUpdate:
+		return (&ContractSupplierUpdate{config: c.config, hooks: c.Hooks(), mutation: m}).Save(ctx)
+	case OpUpdateOne:
+		return (&ContractSupplierUpdateOne{config: c.config, hooks: c.Hooks(), mutation: m}).Save(ctx)
+	case OpDelete, OpDeleteOne:
+		return (&ContractSupplierDelete{config: c.config, hooks: c.Hooks(), mutation: m}).Exec(ctx)
+	default:
+		return nil, fmt.Errorf("ent: unknown ContractSupplier mutation op: %q", m.Op())
+	}
+}
+
+// ContractSupplierHistoryClient is a client for the ContractSupplierHistory schema.
+type ContractSupplierHistoryClient struct {
+	config
+}
+
+// NewContractSupplierHistoryClient returns a client for the ContractSupplierHistory from the given config.
+func NewContractSupplierHistoryClient(c config) *ContractSupplierHistoryClient {
+	return &ContractSupplierHistoryClient{config: c}
+}
+
+// Use adds a list of mutation hooks to the hooks stack.
+// A call to `Use(f, g, h)` equals to `contractsupplierhistory.Hooks(f(g(h())))`.
+func (c *ContractSupplierHistoryClient) Use(hooks ...Hook) {
+	c.hooks.ContractSupplierHistory = append(c.hooks.ContractSupplierHistory, hooks...)
+}
+
+// Intercept adds a list of query interceptors to the interceptors stack.
+// A call to `Intercept(f, g, h)` equals to `contractsupplierhistory.Intercept(f(g(h())))`.
+func (c *ContractSupplierHistoryClient) Intercept(interceptors ...Interceptor) {
+	c.inters.ContractSupplierHistory = append(c.inters.ContractSupplierHistory, interceptors...)
+}
+
+// Create returns a builder for creating a ContractSupplierHistory entity.
+func (c *ContractSupplierHistoryClient) Create() *ContractSupplierHistoryCreate {
+	mutation := newContractSupplierHistoryMutation(c.config, OpCreate)
+	return &ContractSupplierHistoryCreate{config: c.config, hooks: c.Hooks(), mutation: mutation}
+}
+
+// CreateBulk returns a builder for creating a bulk of ContractSupplierHistory entities.
+func (c *ContractSupplierHistoryClient) CreateBulk(builders ...*ContractSupplierHistoryCreate) *ContractSupplierHistoryCreateBulk {
+	return &ContractSupplierHistoryCreateBulk{config: c.config, builders: builders}
+}
+
+// MapCreateBulk creates a bulk creation builder from the given slice. For each item in the slice, the function creates
+// a builder and applies setFunc on it.
+func (c *ContractSupplierHistoryClient) MapCreateBulk(slice any, setFunc func(*ContractSupplierHistoryCreate, int)) *ContractSupplierHistoryCreateBulk {
+	rv := reflect.ValueOf(slice)
+	if rv.Kind() != reflect.Slice {
+		return &ContractSupplierHistoryCreateBulk{err: fmt.Errorf("calling to ContractSupplierHistoryClient.MapCreateBulk with wrong type %T, need slice", slice)}
+	}
+	builders := make([]*ContractSupplierHistoryCreate, rv.Len())
+	for i := 0; i < rv.Len(); i++ {
+		builders[i] = c.Create()
+		setFunc(builders[i], i)
+	}
+	return &ContractSupplierHistoryCreateBulk{config: c.config, builders: builders}
+}
+
+// Update returns an update builder for ContractSupplierHistory.
+func (c *ContractSupplierHistoryClient) Update() *ContractSupplierHistoryUpdate {
+	mutation := newContractSupplierHistoryMutation(c.config, OpUpdate)
+	return &ContractSupplierHistoryUpdate{config: c.config, hooks: c.Hooks(), mutation: mutation}
+}
+
+// UpdateOne returns an update builder for the given entity.
+func (c *ContractSupplierHistoryClient) UpdateOne(_m *ContractSupplierHistory) *ContractSupplierHistoryUpdateOne {
+	mutation := newContractSupplierHistoryMutation(c.config, OpUpdateOne, withContractSupplierHistory(_m))
+	return &ContractSupplierHistoryUpdateOne{config: c.config, hooks: c.Hooks(), mutation: mutation}
+}
+
+// UpdateOneID returns an update builder for the given id.
+func (c *ContractSupplierHistoryClient) UpdateOneID(id int) *ContractSupplierHistoryUpdateOne {
+	mutation := newContractSupplierHistoryMutation(c.config, OpUpdateOne, withContractSupplierHistoryID(id))
+	return &ContractSupplierHistoryUpdateOne{config: c.config, hooks: c.Hooks(), mutation: mutation}
+}
+
+// Delete returns a delete builder for ContractSupplierHistory.
+func (c *ContractSupplierHistoryClient) Delete() *ContractSupplierHistoryDelete {
+	mutation := newContractSupplierHistoryMutation(c.config, OpDelete)
+	return &ContractSupplierHistoryDelete{config: c.config, hooks: c.Hooks(), mutation: mutation}
+}
+
+// DeleteOne returns a builder for deleting the given entity.
+func (c *ContractSupplierHistoryClient) DeleteOne(_m *ContractSupplierHistory) *ContractSupplierHistoryDeleteOne {
+	return c.DeleteOneID(_m.ID)
+}
+
+// DeleteOneID returns a builder for deleting the given entity by its id.
+func (c *ContractSupplierHistoryClient) DeleteOneID(id int) *ContractSupplierHistoryDeleteOne {
+	builder := c.Delete().Where(contractsupplierhistory.ID(id))
+	builder.mutation.id = &id
+	builder.mutation.op = OpDeleteOne
+	return &ContractSupplierHistoryDeleteOne{builder}
+}
+
+// Query returns a query builder for ContractSupplierHistory.
+func (c *ContractSupplierHistoryClient) Query() *ContractSupplierHistoryQuery {
+	return &ContractSupplierHistoryQuery{
+		config: c.config,
+		ctx:    &QueryContext{Type: TypeContractSupplierHistory},
+		inters: c.Interceptors(),
+	}
+}
+
+// Get returns a ContractSupplierHistory entity by its id.
+func (c *ContractSupplierHistoryClient) Get(ctx context.Context, id int) (*ContractSupplierHistory, error) {
+	return c.Query().Where(contractsupplierhistory.ID(id)).Only(ctx)
+}
+
+// GetX is like Get, but panics if an error occurs.
+func (c *ContractSupplierHistoryClient) GetX(ctx context.Context, id int) *ContractSupplierHistory {
+	obj, err := c.Get(ctx, id)
+	if err != nil {
+		panic(err)
+	}
+	return obj
+}
+
+// Hooks returns the client hooks.
+func (c *ContractSupplierHistoryClient) Hooks() []Hook {
+	return c.hooks.ContractSupplierHistory
+}
+
+// Interceptors returns the client interceptors.
+func (c *ContractSupplierHistoryClient) Interceptors() []Interceptor {
+	return c.inters.ContractSupplierHistory
+}
+
+func (c *ContractSupplierHistoryClient) mutate(ctx context.Context, m *ContractSupplierHistoryMutation) (Value, error) {
+	switch m.Op() {
+	case OpCreate:
+		return (&ContractSupplierHistoryCreate{config: c.config, hooks: c.Hooks(), mutation: m}).Save(ctx)
+	case OpUpdate:
+		return (&ContractSupplierHistoryUpdate{config: c.config, hooks: c.Hooks(), mutation: m}).Save(ctx)
+	case OpUpdateOne:
+		return (&ContractSupplierHistoryUpdateOne{config: c.config, hooks: c.Hooks(), mutation: m}).Save(ctx)
+	case OpDelete, OpDeleteOne:
+		return (&ContractSupplierHistoryDelete{config: c.config, hooks: c.Hooks(), mutation: m}).Exec(ctx)
+	default:
+		return nil, fmt.Errorf("ent: unknown ContractSupplierHistory mutation op: %q", m.Op())
 	}
 }
 
@@ -1341,6 +1631,139 @@ func (c *RequestTargetDzoClient) mutate(ctx context.Context, m *RequestTargetDzo
 	}
 }
 
+// SupplierClient is a client for the Supplier schema.
+type SupplierClient struct {
+	config
+}
+
+// NewSupplierClient returns a client for the Supplier from the given config.
+func NewSupplierClient(c config) *SupplierClient {
+	return &SupplierClient{config: c}
+}
+
+// Use adds a list of mutation hooks to the hooks stack.
+// A call to `Use(f, g, h)` equals to `supplier.Hooks(f(g(h())))`.
+func (c *SupplierClient) Use(hooks ...Hook) {
+	c.hooks.Supplier = append(c.hooks.Supplier, hooks...)
+}
+
+// Intercept adds a list of query interceptors to the interceptors stack.
+// A call to `Intercept(f, g, h)` equals to `supplier.Intercept(f(g(h())))`.
+func (c *SupplierClient) Intercept(interceptors ...Interceptor) {
+	c.inters.Supplier = append(c.inters.Supplier, interceptors...)
+}
+
+// Create returns a builder for creating a Supplier entity.
+func (c *SupplierClient) Create() *SupplierCreate {
+	mutation := newSupplierMutation(c.config, OpCreate)
+	return &SupplierCreate{config: c.config, hooks: c.Hooks(), mutation: mutation}
+}
+
+// CreateBulk returns a builder for creating a bulk of Supplier entities.
+func (c *SupplierClient) CreateBulk(builders ...*SupplierCreate) *SupplierCreateBulk {
+	return &SupplierCreateBulk{config: c.config, builders: builders}
+}
+
+// MapCreateBulk creates a bulk creation builder from the given slice. For each item in the slice, the function creates
+// a builder and applies setFunc on it.
+func (c *SupplierClient) MapCreateBulk(slice any, setFunc func(*SupplierCreate, int)) *SupplierCreateBulk {
+	rv := reflect.ValueOf(slice)
+	if rv.Kind() != reflect.Slice {
+		return &SupplierCreateBulk{err: fmt.Errorf("calling to SupplierClient.MapCreateBulk with wrong type %T, need slice", slice)}
+	}
+	builders := make([]*SupplierCreate, rv.Len())
+	for i := 0; i < rv.Len(); i++ {
+		builders[i] = c.Create()
+		setFunc(builders[i], i)
+	}
+	return &SupplierCreateBulk{config: c.config, builders: builders}
+}
+
+// Update returns an update builder for Supplier.
+func (c *SupplierClient) Update() *SupplierUpdate {
+	mutation := newSupplierMutation(c.config, OpUpdate)
+	return &SupplierUpdate{config: c.config, hooks: c.Hooks(), mutation: mutation}
+}
+
+// UpdateOne returns an update builder for the given entity.
+func (c *SupplierClient) UpdateOne(_m *Supplier) *SupplierUpdateOne {
+	mutation := newSupplierMutation(c.config, OpUpdateOne, withSupplier(_m))
+	return &SupplierUpdateOne{config: c.config, hooks: c.Hooks(), mutation: mutation}
+}
+
+// UpdateOneID returns an update builder for the given id.
+func (c *SupplierClient) UpdateOneID(id uuid.UUID) *SupplierUpdateOne {
+	mutation := newSupplierMutation(c.config, OpUpdateOne, withSupplierID(id))
+	return &SupplierUpdateOne{config: c.config, hooks: c.Hooks(), mutation: mutation}
+}
+
+// Delete returns a delete builder for Supplier.
+func (c *SupplierClient) Delete() *SupplierDelete {
+	mutation := newSupplierMutation(c.config, OpDelete)
+	return &SupplierDelete{config: c.config, hooks: c.Hooks(), mutation: mutation}
+}
+
+// DeleteOne returns a builder for deleting the given entity.
+func (c *SupplierClient) DeleteOne(_m *Supplier) *SupplierDeleteOne {
+	return c.DeleteOneID(_m.ID)
+}
+
+// DeleteOneID returns a builder for deleting the given entity by its id.
+func (c *SupplierClient) DeleteOneID(id uuid.UUID) *SupplierDeleteOne {
+	builder := c.Delete().Where(supplier.ID(id))
+	builder.mutation.id = &id
+	builder.mutation.op = OpDeleteOne
+	return &SupplierDeleteOne{builder}
+}
+
+// Query returns a query builder for Supplier.
+func (c *SupplierClient) Query() *SupplierQuery {
+	return &SupplierQuery{
+		config: c.config,
+		ctx:    &QueryContext{Type: TypeSupplier},
+		inters: c.Interceptors(),
+	}
+}
+
+// Get returns a Supplier entity by its id.
+func (c *SupplierClient) Get(ctx context.Context, id uuid.UUID) (*Supplier, error) {
+	return c.Query().Where(supplier.ID(id)).Only(ctx)
+}
+
+// GetX is like Get, but panics if an error occurs.
+func (c *SupplierClient) GetX(ctx context.Context, id uuid.UUID) *Supplier {
+	obj, err := c.Get(ctx, id)
+	if err != nil {
+		panic(err)
+	}
+	return obj
+}
+
+// Hooks returns the client hooks.
+func (c *SupplierClient) Hooks() []Hook {
+	return c.hooks.Supplier
+}
+
+// Interceptors returns the client interceptors.
+func (c *SupplierClient) Interceptors() []Interceptor {
+	return c.inters.Supplier
+}
+
+func (c *SupplierClient) mutate(ctx context.Context, m *SupplierMutation) (Value, error) {
+	switch m.Op() {
+	case OpCreate:
+		return (&SupplierCreate{config: c.config, hooks: c.Hooks(), mutation: m}).Save(ctx)
+	case OpUpdate:
+		return (&SupplierUpdate{config: c.config, hooks: c.Hooks(), mutation: m}).Save(ctx)
+	case OpUpdateOne:
+		return (&SupplierUpdateOne{config: c.config, hooks: c.Hooks(), mutation: m}).Save(ctx)
+	case OpDelete, OpDeleteOne:
+		return (&SupplierDelete{config: c.config, hooks: c.Hooks(), mutation: m}).Exec(ctx)
+	default:
+		return nil, fmt.Errorf("ent: unknown Supplier mutation op: %q", m.Op())
+	}
+}
+
 // TrainingEventClient is a client for the TrainingEvent schema.
 type TrainingEventClient struct {
 	config
@@ -1775,11 +2198,13 @@ func (c *UserClient) mutate(ctx context.Context, m *UserMutation) (Value, error)
 // hooks and interceptors per client, for fast access.
 type (
 	hooks struct {
-		Company, DzoOrganization, Employee, Organization, Request, RequestParticipant,
-		RequestTargetDzo, TrainingEvent, TrainingParticipant, User []ent.Hook
+		Company, ContractSupplier, ContractSupplierHistory, DzoOrganization, Employee,
+		Organization, Request, RequestParticipant, RequestTargetDzo, Supplier,
+		TrainingEvent, TrainingParticipant, User []ent.Hook
 	}
 	inters struct {
-		Company, DzoOrganization, Employee, Organization, Request, RequestParticipant,
-		RequestTargetDzo, TrainingEvent, TrainingParticipant, User []ent.Interceptor
+		Company, ContractSupplier, ContractSupplierHistory, DzoOrganization, Employee,
+		Organization, Request, RequestParticipant, RequestTargetDzo, Supplier,
+		TrainingEvent, TrainingParticipant, User []ent.Interceptor
 	}
 )

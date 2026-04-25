@@ -28,7 +28,7 @@ func ctx() context.Context {
 func makeClient(t *testing.T) uuid.UUID {
 	t.Helper()
 
-	id := uuid.MustParse("00000000-0000-0000-0000-000000000001")
+	id := uuid.MustParse(testClientID)
 
 	_, err := Client.Company.
 		Create().
