@@ -2,6 +2,7 @@ package certificates
 
 import (
 	"context"
+	"errors"
 	"fmt"
 	"io"
 	"net/http"
@@ -14,6 +15,7 @@ import (
 	"encore.app/db/ent"
 	"encore.app/db/ent/certificate"
 	"encore.app/db/ent/employee"
+	entuser "encore.app/db/ent/user"
 	"encore.dev/beta/auth"
 	"encore.dev/beta/errs"
 	"encore.dev/storage/sqldb"
@@ -34,15 +36,25 @@ func newEntClient() *ent.Client {
 	return ent.NewClient(ent.Driver(drv))
 }
 
+const maxUploadSize = 10 << 20 // 10 MiB
+
 // ════ ENDPOINTS ════
 
-// List returns certificates with optional filtering.
+// List returns certificates with optional filtering. EMP role is not allowed — use /my/certificates.
 //
 //encore:api auth method=GET path=/certificates
 func List(ctx context.Context, params *ListParams) (*ListResponse, error) {
+	ad, ok := auth.Data().(*authhandler.AuthData)
+	if !ok {
+		return nil, errs.B().Code(errs.Unauthenticated).Err()
+	}
+	if ad.Role == authhandler.RoleEMP {
+		return nil, errs.B().Code(errs.PermissionDenied).Msg("используйте /my/certificates для просмотра своих сертификатов").Err()
+	}
+
 	query := Client.Certificate.Query().Where(certificate.IsActiveEQ(true))
 
-	if ad, ok := auth.Data().(*authhandler.AuthData); ok && ad.Role == authhandler.RoleHR {
+	if ad.Role == authhandler.RoleHR {
 		if ad.DzoID == "" {
 			return nil, errs.B().Code(errs.PermissionDenied).Msg("HR user has no DZO assigned").Err()
 		}
@@ -82,10 +94,45 @@ func List(ctx context.Context, params *ListParams) (*ListResponse, error) {
 	return &ListResponse{Certificates: certs, Total: len(certs)}, nil
 }
 
-// Create creates a new certificate.
+// MyCertificates returns certificates belonging to the current user's employee record.
+// Works for any role; returns an empty list if the caller has no linked employee.
+//
+//encore:api auth method=GET path=/my/certificates
+func MyCertificates(ctx context.Context) (*ListResponse, error) {
+	ad, ok := auth.Data().(*authhandler.AuthData)
+	if !ok {
+		return nil, errs.B().Code(errs.Unauthenticated).Err()
+	}
+
+	empID, err := resolveEmployeeIDForUser(ctx, ad.KeycloakUserID)
+	if err != nil {
+		// no linked employee — not an error, just no certs
+		return &ListResponse{Certificates: []Certificate{}, Total: 0}, nil
+	}
+
+	rows, err := Client.Certificate.Query().
+		Where(certificate.EmployeeIDEQ(empID), certificate.IsActiveEQ(true)).
+		Order(ent.Desc(certificate.FieldIssuedDate)).
+		All(ctx)
+	if err != nil {
+		return nil, errs.B().Code(errs.Internal).Msg("failed to query certificates").Cause(err).Err()
+	}
+
+	certs := make([]Certificate, 0, len(rows))
+	for _, r := range rows {
+		certs = append(certs, *entToCert(r))
+	}
+	return &ListResponse{Certificates: certs, Total: len(certs)}, nil
+}
+
+// Create creates a new certificate. Requires SA or ADM role.
 //
 //encore:api auth method=POST path=/certificates
 func Create(ctx context.Context, req *CreateRequest) (*GetCertResponse, error) {
+	if err := requireSAorADM(); err != nil {
+		return nil, err
+	}
+
 	if req.Title == "" {
 		return nil, errs.B().Code(errs.InvalidArgument).Msg("title is required").Err()
 	}
@@ -96,25 +143,6 @@ func Create(ctx context.Context, req *CreateRequest) (*GetCertResponse, error) {
 		return nil, errs.B().Code(errs.InvalidArgument).Msg("type must be EXTERNAL").Err()
 	}
 
-	if ad, ok := auth.Data().(*authhandler.AuthData); ok && ad.Role == authhandler.RoleHR {
-		if ad.DzoID == "" {
-			return nil, errs.B().Code(errs.PermissionDenied).Msg("HR user has no DZO assigned").Err()
-		}
-		dzoUID, err := uuid.Parse(ad.DzoID)
-		if err != nil {
-			return nil, errs.B().Code(errs.Internal).Msg("invalid dzo_id in token").Err()
-		}
-		exists, err := Client.Employee.Query().
-			Where(employee.IDEQ(req.EmployeeID), employee.IsDeletedEQ(false), employee.DzoIDEQ(dzoUID)).
-			Exist(ctx)
-		if err != nil {
-			return nil, errs.B().Code(errs.Internal).Msg("failed to validate employee DZO").Cause(err).Err()
-		}
-		if !exists {
-			return nil, errs.B().Code(errs.PermissionDenied).Msg("employee is outside your DZO").Err()
-		}
-	}
-
 	cert, err := insertCert(ctx, req)
 	if err != nil {
 		return nil, err
@@ -122,13 +150,18 @@ func Create(ctx context.Context, req *CreateRequest) (*GetCertResponse, error) {
 	return &GetCertResponse{Certificate: *cert}, nil
 }
 
-// Update updates certificate fields.
+// Update updates certificate fields. Requires SA or ADM role.
+// File attachment is managed separately via UploadFile.
 //
 //encore:api auth method=PUT path=/certificates/:id
 func Update(ctx context.Context, id string, req *UpdateRequest) (*GetCertResponse, error) {
 	uid, err := uuid.Parse(id)
 	if err != nil {
 		return nil, errs.B().Code(errs.InvalidArgument).Msg("invalid id format").Err()
+	}
+
+	if err := requireSAorADM(); err != nil {
+		return nil, err
 	}
 
 	exists, err := Client.Certificate.Query().
@@ -153,6 +186,63 @@ func Update(ctx context.Context, id string, req *UpdateRequest) (*GetCertRespons
 		return nil, errs.B().Code(errs.Internal).Msg("failed to update certificate").Cause(err).Err()
 	}
 	return &GetCertResponse{Certificate: *entToCert(row)}, nil
+}
+
+// MyHRContact returns the contact details of active HR users in the caller's DZO.
+// If the caller has no DzoID in the token (e.g. SA), returns an empty list.
+//
+//encore:api auth method=GET path=/my/hr-contact
+func MyHRContact(ctx context.Context) (*HRContactResponse, error) {
+	ad, ok := auth.Data().(*authhandler.AuthData)
+	if !ok {
+		return nil, errs.B().Code(errs.Unauthenticated).Err()
+	}
+	if ad.DzoID == "" {
+		return &HRContactResponse{Contacts: []HRContact{}}, nil
+	}
+	dzoUID, err := uuid.Parse(ad.DzoID)
+	if err != nil {
+		return nil, errs.B().Code(errs.Internal).Msg("invalid dzo_id in token").Err()
+	}
+
+	hrUsers, err := Client.User.Query().
+		Where(entuser.RoleEQ("HR"), entuser.DzoIDEQ(dzoUID), entuser.IsActiveEQ(true)).
+		All(ctx)
+	if err != nil {
+		return nil, errs.B().Code(errs.Internal).Msg("failed to query HR contacts").Cause(err).Err()
+	}
+
+	// batch-lookup employee records linked to these HR users (for name + phone)
+	hrUserIDs := make([]uuid.UUID, 0, len(hrUsers))
+	for _, u := range hrUsers {
+		hrUserIDs = append(hrUserIDs, u.ID)
+	}
+
+	empByUserID := make(map[uuid.UUID]*ent.Employee)
+	if len(hrUserIDs) > 0 {
+		empRows, empErr := Client.Employee.Query().
+			Where(employee.UserIDIn(hrUserIDs...), employee.IsDeletedEQ(false)).
+			All(ctx)
+		if empErr == nil {
+			for _, e := range empRows {
+				if e.UserID != nil {
+					empByUserID[*e.UserID] = e
+				}
+			}
+		}
+	}
+
+	contacts := make([]HRContact, 0, len(hrUsers))
+	for _, u := range hrUsers {
+		c := HRContact{Email: u.Email}
+		if emp, found := empByUserID[u.ID]; found {
+			c.Name = emp.FullName
+			c.Phone = emp.InternalPhone
+		}
+		contacts = append(contacts, c)
+	}
+
+	return &HRContactResponse{Contacts: contacts}, nil
 }
 
 // GetByID returns a single certificate by ID.
@@ -237,6 +327,7 @@ func ListExpiring(ctx context.Context, params *ExpiringParams) (*ListResponse, e
 }
 
 // UploadFile uploads a PDF file for a certificate.
+// SA/ADM: any certificate. HR: own DZO only. EMP: forbidden.
 //
 //encore:api auth raw method=POST path=/certificates/:id/upload
 func UploadFile(w http.ResponseWriter, r *http.Request) {
@@ -244,6 +335,7 @@ func UploadFile(w http.ResponseWriter, r *http.Request) {
 }
 
 // DownloadFile downloads the PDF file for a certificate.
+// SA/ADM: any certificate. HR: own DZO only. EMP: own certificates only.
 //
 //encore:api auth raw method=GET path=/certificates/:id/download
 func DownloadFile(w http.ResponseWriter, r *http.Request) {
@@ -360,8 +452,72 @@ func softDeleteCert(ctx context.Context, id string) error {
 	return Client.Certificate.UpdateOneID(uid).SetIsActive(false).Exec(ctx)
 }
 
+// requireSAorADM returns PermissionDenied for any role other than SA or ADM.
+func requireSAorADM() error {
+	ad, ok := auth.Data().(*authhandler.AuthData)
+	if !ok || (ad.Role != authhandler.RoleSA && ad.Role != authhandler.RoleADM) {
+		return errs.B().Code(errs.PermissionDenied).Msg("Нет доступа").Err()
+	}
+	return nil
+}
+
+// checkHRCertScope returns an error if the HR caller's DZO does not contain empID.
+func checkHRCertScope(ctx context.Context, ad *authhandler.AuthData, empID uuid.UUID) error {
+	if ad.DzoID == "" {
+		return errs.B().Code(errs.PermissionDenied).Msg("HR user has no DZO assigned").Err()
+	}
+	dzoUID, err := uuid.Parse(ad.DzoID)
+	if err != nil {
+		return errs.B().Code(errs.Internal).Msg("invalid dzo_id in token").Err()
+	}
+	ok, err := Client.Employee.Query().
+		Where(employee.IDEQ(empID), employee.DzoIDEQ(dzoUID), employee.IsDeletedEQ(false)).
+		Exist(ctx)
+	if err != nil {
+		return errs.B().Code(errs.Internal).Msg("failed to validate employee DZO").Cause(err).Err()
+	}
+	if !ok {
+		return errs.B().Code(errs.PermissionDenied).Msg("employee is outside your DZO").Err()
+	}
+	return nil
+}
+
+// resolveEmployeeIDForUser returns the employee row ID linked to the given Keycloak user.
+func resolveEmployeeIDForUser(ctx context.Context, keycloakUserID string) (uuid.UUID, error) {
+	userRow, err := Client.User.Query().
+		Where(entuser.KeycloakUserIDEQ(keycloakUserID)).
+		Only(ctx)
+	if err != nil {
+		if ent.IsNotFound(err) {
+			return uuid.UUID{}, errs.B().Code(errs.PermissionDenied).Msg("user not found").Err()
+		}
+		return uuid.UUID{}, errs.B().Code(errs.Internal).Err()
+	}
+	empRow, err := Client.Employee.Query().
+		Where(employee.UserIDEQ(userRow.ID), employee.IsDeletedEQ(false)).
+		Only(ctx)
+	if err != nil {
+		if ent.IsNotFound(err) {
+			return uuid.UUID{}, errs.B().Code(errs.PermissionDenied).Msg("no employee linked to your account").Err()
+		}
+		return uuid.UUID{}, errs.B().Code(errs.Internal).Err()
+	}
+	return empRow.ID, nil
+}
+
 func handleUpload(w http.ResponseWriter, r *http.Request) {
 	ctx := r.Context()
+
+	ad, ok := auth.Data().(*authhandler.AuthData)
+	if !ok {
+		http.Error(w, "forbidden", http.StatusForbidden)
+		return
+	}
+	if ad.Role == authhandler.RoleEMP {
+		http.Error(w, "forbidden", http.StatusForbidden)
+		return
+	}
+
 	// Encore raw endpoints may not set PathValue; find the UUID segment in the path.
 	var idStr string
 	for _, seg := range strings.Split(r.URL.Path, "/") {
@@ -381,19 +537,32 @@ func handleUpload(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	exists, err := Client.Certificate.Query().
+	certRow, err := Client.Certificate.Query().
 		Where(certificate.IDEQ(uid), certificate.IsActiveEQ(true)).
-		Exist(ctx)
+		Only(ctx)
 	if err != nil {
+		if ent.IsNotFound(err) {
+			http.Error(w, "certificate not found", http.StatusNotFound)
+			return
+		}
 		http.Error(w, "database error", http.StatusInternalServerError)
 		return
 	}
-	if !exists {
-		http.Error(w, "certificate not found", http.StatusNotFound)
-		return
+
+	if ad.Role == authhandler.RoleHR {
+		if scopeErr := checkHRCertScope(ctx, ad, certRow.EmployeeID); scopeErr != nil {
+			http.Error(w, "forbidden", http.StatusForbidden)
+			return
+		}
 	}
 
-	if err := r.ParseMultipartForm(10 << 20); err != nil {
+	r.Body = http.MaxBytesReader(w, r.Body, maxUploadSize)
+	if err := r.ParseMultipartForm(maxUploadSize); err != nil {
+		var maxErr *http.MaxBytesError
+		if errors.As(err, &maxErr) {
+			http.Error(w, "file too large: maximum size is 10 MiB", http.StatusRequestEntityTooLarge)
+			return
+		}
 		http.Error(w, "failed to parse multipart form", http.StatusBadRequest)
 		return
 	}
@@ -460,6 +629,13 @@ func handleUpload(w http.ResponseWriter, r *http.Request) {
 
 func handleDownload(w http.ResponseWriter, r *http.Request) {
 	ctx := r.Context()
+
+	ad, ok := auth.Data().(*authhandler.AuthData)
+	if !ok {
+		http.Error(w, "forbidden", http.StatusForbidden)
+		return
+	}
+
 	var idStr string
 	for _, seg := range strings.Split(r.URL.Path, "/") {
 		if _, parseErr := uuid.Parse(seg); parseErr == nil {
@@ -489,6 +665,30 @@ func handleDownload(w http.ResponseWriter, r *http.Request) {
 		http.Error(w, "database error", http.StatusInternalServerError)
 		return
 	}
+
+	switch ad.Role {
+	case authhandler.RoleSA, authhandler.RoleADM:
+		// full access — no additional check needed
+	case authhandler.RoleHR:
+		if scopeErr := checkHRCertScope(ctx, ad, row.EmployeeID); scopeErr != nil {
+			http.Error(w, "forbidden", http.StatusForbidden)
+			return
+		}
+	case authhandler.RoleEMP:
+		empID, resolveErr := resolveEmployeeIDForUser(ctx, ad.KeycloakUserID)
+		if resolveErr != nil {
+			http.Error(w, "forbidden", http.StatusForbidden)
+			return
+		}
+		if row.EmployeeID != empID {
+			http.Error(w, "forbidden", http.StatusForbidden)
+			return
+		}
+	default:
+		http.Error(w, "forbidden", http.StatusForbidden)
+		return
+	}
+
 	if row.FileURL == nil || *row.FileURL == "" {
 		http.Error(w, "no file attached to this certificate", http.StatusNotFound)
 		return

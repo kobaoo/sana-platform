@@ -13,7 +13,8 @@ func notificationExists(ctx context.Context, req *NotifyRequest) (bool, error) {
 	var count int
 	err := db.QueryRow(ctx,
 		`SELECT COUNT(*) FROM notifications
-		 WHERE user_id = $1 AND type = $2 AND entity_type = $3 AND entity_id = $4`,
+		 WHERE user_id = $1 AND type = $2 AND entity_type = $3 AND entity_id = $4
+		   AND status = 'SENT'`,
 		req.UserID, string(req.Type), string(req.EntityType), req.EntityID,
 	).Scan(&count)
 	if err != nil {

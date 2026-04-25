@@ -65,7 +65,7 @@ func CreateDZO(ctx context.Context, req *CreateDZORequest) (*GetDZOResponse, err
 	return &GetDZOResponse{DZO: *dzo}, nil
 }
 
-// ListDZO returns all active DZO. SA sees all; ADM sees only their client's DZOs.
+// ListDZO returns all active DZO. SA sees all; ADM sees only their client's DZOs; HR sees only their own DZO.
 //
 //encore:api auth method=GET path=/dzo
 func ListDZO(ctx context.Context) (*ListDZOResponse, error) {
@@ -74,14 +74,22 @@ func ListDZO(ctx context.Context) (*ListDZOResponse, error) {
 		return nil, err
 	}
 
-	if err := requireRole(ad, authhandler.RoleSA, authhandler.RoleADM); err != nil {
+	if err := requireRole(ad, authhandler.RoleSA, authhandler.RoleADM, authhandler.RoleHR); err != nil {
 		return nil, err
 	}
 
 	var dzos []DZO
-	if ad.Role == authhandler.RoleSA {
+	switch ad.Role {
+	case authhandler.RoleSA:
 		dzos, err = queryActiveDZO(ctx)
-	} else {
+	case authhandler.RoleHR:
+		// HR sees only their own DZO (from token)
+		if ad.DzoID == "" {
+			dzos = []DZO{}
+		} else {
+			dzos, err = queryActiveDZOByID(ctx, ad.DzoID)
+		}
+	default:
 		// ADM: scoped to their client
 		if ad.CompanyID == "" {
 			dzos = []DZO{}
@@ -263,6 +271,32 @@ func queryActiveDZOByClient(ctx context.Context, clientID string) ([]DZO, error)
 		Where(
 			dzoorganization.IsActiveEQ(true),
 			dzoorganization.ClientIDEQ(clientUUID),
+		).
+		All(ctx)
+
+	if err != nil {
+		return nil, errs.B().Code(errs.Internal).Err()
+	}
+
+	res := make([]DZO, 0, len(rows))
+	for _, r := range rows {
+		res = append(res, *entToDZO(r, 0))
+	}
+
+	return res, nil
+}
+
+func queryActiveDZOByID(ctx context.Context, dzoID string) ([]DZO, error) {
+	dzoUUID, err := uuid.Parse(dzoID)
+	if err != nil {
+		return nil, errs.B().Code(errs.InvalidArgument).Msg("invalid dzo_id format").Err()
+	}
+
+	rows, err := Client.DzoOrganization.
+		Query().
+		Where(
+			dzoorganization.IsActiveEQ(true),
+			dzoorganization.IDEQ(dzoUUID),
 		).
 		All(ctx)
 

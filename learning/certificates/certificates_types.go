@@ -46,10 +46,10 @@ type ListResponse struct {
 }
 
 // UpdateRequest is the request body for updating a certificate.
+// FileURL is intentionally absent — file attachment is managed via UploadFile only.
 type UpdateRequest struct {
 	Type       string     `json:"type"`
 	Title      string     `json:"title"`
-	FileURL    *string    `json:"file_url"`
 	IssuedDate time.Time  `json:"issued_date"`
 	ExpiryDate *time.Time `json:"expiry_date"`
 	EntityType string     `json:"entity_type"`
@@ -71,4 +71,16 @@ type ExpiringParams struct {
 // DeleteResponse is the response for deleting a certificate.
 type DeleteResponse struct {
 	Message string `json:"message"`
+}
+
+// HRContact holds public contact details for one HR user.
+type HRContact struct {
+	Name  string  `json:"name"`
+	Email string  `json:"email"`
+	Phone *string `json:"phone,omitempty"`
+}
+
+// HRContactResponse is the response for GET /my/hr-contact.
+type HRContactResponse struct {
+	Contacts []HRContact `json:"contacts"`
 }

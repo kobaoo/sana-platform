@@ -10,6 +10,8 @@ import (
 
 	"encore.app/auth/authhandler"
 	"encore.app/db/ent"
+	"encore.app/db/ent/certificate"
+	"encore.app/db/ent/employee"
 	"encore.app/db/ent/request"
 	"encore.app/db/ent/user"
 )
@@ -33,6 +35,10 @@ func CreateCertificateRenewal(ctx context.Context, req *CreateCertificateRenewal
 	}
 	if !canCreateCertRenewal(string(ad.Role)) {
 		return nil, errs.B().Code(errs.PermissionDenied).Msg("only HR can create certificate renewal requests").Err()
+	}
+
+	if err := validateCertForHR(ctx, req.EntityID, ad); err != nil {
+		return nil, err
 	}
 
 	initiatorID, err := resolveInitiatorID(ctx, ad)
@@ -130,6 +136,47 @@ func PatchCertificateRenewalStatus(ctx context.Context, id string, req *PatchCer
 }
 
 // ════ INTERNAL ════
+
+// validateCertForHR checks that the certificate exists, is active,
+// and belongs to an employee inside the HR's DZO.
+func validateCertForHR(ctx context.Context, certID uuid.UUID, ad *authhandler.AuthData) error {
+	certRow, err := Client.Certificate.Query().
+		Where(
+			certificate.IDEQ(certID),
+			certificate.IsActiveEQ(true),
+		).
+		Only(ctx)
+	if err != nil {
+		if ent.IsNotFound(err) {
+			return errs.B().Code(errs.NotFound).Msg("certificate not found or inactive").Err()
+		}
+		return errs.B().Code(errs.Internal).Msg("failed to validate certificate").Cause(err).Err()
+	}
+
+	if ad.DzoID == "" {
+		return errs.B().Code(errs.PermissionDenied).Msg("HR user has no DZO assigned").Err()
+	}
+	dzoUID, err := uuid.Parse(ad.DzoID)
+	if err != nil {
+		return errs.B().Code(errs.Internal).Msg("invalid dzo_id in token").Err()
+	}
+
+	ok, err := Client.Employee.Query().
+		Where(
+			employee.IDEQ(certRow.EmployeeID),
+			employee.DzoIDEQ(dzoUID),
+			employee.IsDeletedEQ(false),
+		).
+		Exist(ctx)
+	if err != nil {
+		return errs.B().Code(errs.Internal).Msg("failed to validate employee DZO").Cause(err).Err()
+	}
+	if !ok {
+		return errs.B().Code(errs.PermissionDenied).Msg("certificate belongs to an employee outside your DZO").Err()
+	}
+
+	return nil
+}
 
 func insertCertRenewal(ctx context.Context, initiatorID, entityID uuid.UUID) (*RequestResponse, error) {
 	r, err := Client.Request.
