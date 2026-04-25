@@ -139,6 +139,28 @@ type ListRequestsResponse struct {
 	Items []RequestSummary `json:"items"`
 }
 
+// ════ BUDGET FLOW TYPES ════
+
+type BudgetHistoryItem struct {
+	OperationType string    `json:"operation_type"`
+	Amount        float64   `json:"amount"`
+	CreatedBy     string    `json:"created_by"`
+	Reason        *string   `json:"reason"`
+	CreatedAt     time.Time `json:"created_at"`
+}
+
+type GetRequestBudgetHistoryResponse struct {
+	Items []BudgetHistoryItem `json:"items"`
+}
+
+// CreateHRRequest creates a main request from HR to Admin.
+type CreateHRRequestRequest struct {
+	Title                  string   `json:"title"`
+	EmployeeIDs            []string `json:"employee_ids,omitempty"`
+	AllowInactiveEmployees bool     `json:"allow_inactive_employees,omitempty"`
+	DeadlineAt             *string  `json:"deadline_at,omitempty"`
+}
+
 // ════ ARCHIVE FLOW TYPES ════
 
 type CreateRequestRequest struct {

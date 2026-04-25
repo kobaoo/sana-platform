@@ -9,6 +9,18 @@ import (
 )
 
 var (
+	// CategoriesColumns holds the columns for the "categories" table.
+	CategoriesColumns = []*schema.Column{
+		{Name: "id", Type: field.TypeUUID},
+		{Name: "name", Type: field.TypeString},
+		{Name: "description", Type: field.TypeString, Nullable: true},
+	}
+	// CategoriesTable holds the schema information for the "categories" table.
+	CategoriesTable = &schema.Table{
+		Name:       "categories",
+		Columns:    CategoriesColumns,
+		PrimaryKey: []*schema.Column{CategoriesColumns[0]},
+	}
 	// ClientsColumns holds the columns for the "clients" table.
 	ClientsColumns = []*schema.Column{
 		{Name: "id", Type: field.TypeUUID, Unique: true},
@@ -142,6 +154,54 @@ var (
 				Columns:    []*schema.Column{EmployeesColumns[13]},
 				RefColumns: []*schema.Column{DzoOrganizationsColumns[0]},
 				OnDelete:   schema.NoAction,
+			},
+		},
+	}
+	// ExternalTrainingEventsColumns holds the columns for the "external_training_events" table.
+	ExternalTrainingEventsColumns = []*schema.Column{
+		{Name: "id", Type: field.TypeUUID},
+		{Name: "name", Type: field.TypeString},
+		{Name: "format", Type: field.TypeString, Nullable: true},
+		{Name: "capacity", Type: field.TypeInt, Nullable: true},
+		{Name: "supplier_cost_vat", Type: field.TypeFloat64, Nullable: true},
+		{Name: "start_date", Type: field.TypeTime},
+		{Name: "is_active", Type: field.TypeBool, Default: true},
+		{Name: "created_at", Type: field.TypeTime},
+		{Name: "is_deleted", Type: field.TypeBool, Default: false},
+		{Name: "category_id", Type: field.TypeUUID, Nullable: true},
+		{Name: "contract_id", Type: field.TypeUUID},
+		{Name: "supplier_id", Type: field.TypeUUID},
+		{Name: "responsible_user_id", Type: field.TypeUUID, Nullable: true},
+	}
+	// ExternalTrainingEventsTable holds the schema information for the "external_training_events" table.
+	ExternalTrainingEventsTable = &schema.Table{
+		Name:       "external_training_events",
+		Columns:    ExternalTrainingEventsColumns,
+		PrimaryKey: []*schema.Column{ExternalTrainingEventsColumns[0]},
+		ForeignKeys: []*schema.ForeignKey{
+			{
+				Symbol:     "external_training_events_categories_external_training_events",
+				Columns:    []*schema.Column{ExternalTrainingEventsColumns[9]},
+				RefColumns: []*schema.Column{CategoriesColumns[0]},
+				OnDelete:   schema.SetNull,
+			},
+			{
+				Symbol:     "external_training_events_contract_suppliers_external_training_events",
+				Columns:    []*schema.Column{ExternalTrainingEventsColumns[10]},
+				RefColumns: []*schema.Column{ContractSuppliersColumns[0]},
+				OnDelete:   schema.NoAction,
+			},
+			{
+				Symbol:     "external_training_events_suppliers_external_training_events",
+				Columns:    []*schema.Column{ExternalTrainingEventsColumns[11]},
+				RefColumns: []*schema.Column{SuppliersColumns[0]},
+				OnDelete:   schema.NoAction,
+			},
+			{
+				Symbol:     "external_training_events_users_responsible_external_training_events",
+				Columns:    []*schema.Column{ExternalTrainingEventsColumns[12]},
+				RefColumns: []*schema.Column{UsersColumns[0]},
+				OnDelete:   schema.SetNull,
 			},
 		},
 	}
@@ -478,11 +538,13 @@ var (
 	}
 	// Tables holds all the tables in the schema.
 	Tables = []*schema.Table{
+		CategoriesTable,
 		ClientsTable,
 		ContractSuppliersTable,
 		ContractSupplierHistoriesTable,
 		DzoOrganizationsTable,
 		EmployeesTable,
+		ExternalTrainingEventsTable,
 		OrganizationsTable,
 		RequestsTable,
 		RequestDzoContractsTable,
@@ -505,6 +567,13 @@ func init() {
 	EmployeesTable.ForeignKeys[0].RefTable = DzoOrganizationsTable
 	EmployeesTable.Annotation = &entsql.Annotation{
 		Table: "employees",
+	}
+	ExternalTrainingEventsTable.ForeignKeys[0].RefTable = CategoriesTable
+	ExternalTrainingEventsTable.ForeignKeys[1].RefTable = ContractSuppliersTable
+	ExternalTrainingEventsTable.ForeignKeys[2].RefTable = SuppliersTable
+	ExternalTrainingEventsTable.ForeignKeys[3].RefTable = UsersTable
+	ExternalTrainingEventsTable.Annotation = &entsql.Annotation{
+		Table: "external_training_events",
 	}
 	OrganizationsTable.ForeignKeys[0].RefTable = OrganizationsTable
 	RequestsTable.ForeignKeys[0].RefTable = RequestsTable

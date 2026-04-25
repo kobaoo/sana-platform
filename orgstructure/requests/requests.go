@@ -140,6 +140,26 @@ func SubmitRequest(ctx context.Context, id encoreuuid.UUID) (*GetRequestResponse
 	return &GetRequestResponse{Detail: *detail}, nil
 }
 
+// CancelAdminRequest cancels a main request and refunds budget if it was written off.
+//
+//encore:api auth method=POST path=/requests/admin/:id/cancel
+func CancelAdminRequest(ctx context.Context, id encoreuuid.UUID) (*GetRequestResponse, error) {
+	actor, err := resolveCurrentActor(ctx)
+	if err != nil {
+		return nil, err
+	}
+	if !canManageAdminRequests(actor.Role) {
+		return nil, errs.B().Code(errs.PermissionDenied).Msg("insufficient permissions").Err()
+	}
+
+	detail, err := cancelAdminRequest(ctx, actor, uuid.UUID(id))
+	if err != nil {
+		return nil, err
+	}
+
+	return &GetRequestResponse{Detail: *detail}, nil
+}
+
 // ListHRRequests returns subrequests assigned to the current HR.
 //
 //encore:api auth method=GET path=/requests/hr
@@ -257,6 +277,96 @@ func CancelHRRequest(ctx context.Context, id encoreuuid.UUID) (*GetRequestRespon
 	}
 
 	return &GetRequestResponse{Detail: *detail}, nil
+}
+
+// CreateHRRequest creates a main request from HR to Admin.
+//
+//encore:api auth method=POST path=/requests/hr-request
+func CreateHRRequest(ctx context.Context, req *CreateHRRequestRequest) (*GetRequestResponse, error) {
+	actor, err := resolveCurrentActor(ctx)
+	if err != nil {
+		return nil, err
+	}
+	if actor.Role != authhandler.RoleHR {
+		return nil, errs.B().Code(errs.PermissionDenied).Msg("only HR can create request").Err()
+	}
+
+	detail, err := createHRRequest(ctx, actor, req)
+	if err != nil {
+		return nil, err
+	}
+
+	return &GetRequestResponse{Detail: *detail}, nil
+}
+
+// FinalizeAdminRequest finalizes a main request and writes off budget.
+//
+//encore:api auth method=POST path=/requests/admin/:id/finalize
+func FinalizeAdminRequest(ctx context.Context, id encoreuuid.UUID) (*GetRequestResponse, error) {
+	actor, err := resolveCurrentActor(ctx)
+	if err != nil {
+		return nil, err
+	}
+	if !canManageAdminRequests(actor.Role) {
+		return nil, errs.B().Code(errs.PermissionDenied).Msg("insufficient permissions").Err()
+	}
+
+	detail, err := finalizeAdminRequest(ctx, actor, uuid.UUID(id))
+	if err != nil {
+		return nil, err
+	}
+
+	return &GetRequestResponse{Detail: *detail}, nil
+}
+
+// budget
+//
+//encore:api auth method=GET path=/requests/admin/:id/budget-history
+func GetRequestBudgetHistory(ctx context.Context, id encoreuuid.UUID) (*GetRequestBudgetHistoryResponse, error) {
+	actor, err := resolveCurrentActor(ctx)
+	if err != nil {
+		return nil, err
+	}
+	if !canManageAdminRequests(actor.Role) {
+		return nil, errs.B().Code(errs.PermissionDenied).Msg("insufficient permissions").Err()
+	}
+
+	rows, err := db.Query(ctx, `
+		SELECT operation_type, amount, created_by, reason, created_at
+		FROM request_budget_transactions
+		WHERE request_id = $1
+		ORDER BY created_at ASC
+	`, uuid.UUID(id))
+	if err != nil {
+		return nil, errs.B().Code(errs.Internal).Msg("failed to load budget history").Cause(err).Err()
+	}
+	defer rows.Close()
+
+	items := []BudgetHistoryItem{}
+
+	for rows.Next() {
+		var (
+			op        string
+			amount    float64
+			createdBy uuid.UUID
+			reason    sql.NullString
+			createdAt time.Time
+		)
+
+		if err := rows.Scan(&op, &amount, &createdBy, &reason, &createdAt); err != nil {
+			return nil, errs.B().Code(errs.Internal).Msg("failed to scan budget history").Cause(err).Err()
+		}
+
+		items = append(items, BudgetHistoryItem{
+			OperationType: op,
+			Amount:        amount,
+			CreatedBy:     createdBy.String(),
+			Reason:        nullableStringValue(reason),
+			CreatedAt:     createdAt,
+		})
+	}
+
+	return &GetRequestBudgetHistoryResponse{Items: items}, nil
 }
 
 // ════ INTERNAL ════
@@ -418,6 +528,69 @@ func createAdminRequest(ctx context.Context, actor *actor, req *CreateAdminReque
 	return buildRequestDetail(ctx, requestID)
 }
 
+// CreateHRRequest creates a main request from HR to Admin.
+func createHRRequest(ctx context.Context, actor *actor, req *CreateHRRequestRequest) (*RequestDetail, error) {
+	if actor.DzoID == nil {
+		return nil, errs.B().Code(errs.InvalidArgument).Msg("HR must be assigned to DZO").Err()
+	}
+
+	title := strings.TrimSpace(req.Title)
+	if title == "" {
+		return nil, errs.B().Code(errs.InvalidArgument).Msg("title is required").Err()
+	}
+
+	selectedEmployeeIDs, err := resolveHREmployeesForRequest(ctx, req.EmployeeIDs, *actor.DzoID, req.AllowInactiveEmployees)
+	if err != nil {
+		return nil, err
+	}
+
+	deadlineAt, err := parseOptionalTime(req.DeadlineAt)
+	if err != nil {
+		return nil, err
+	}
+
+	tx, err := db.Begin(ctx)
+	if err != nil {
+		return nil, errs.B().Code(errs.Internal).Msg("failed to begin transaction").Cause(err).Err()
+	}
+	defer tx.Rollback()
+
+	requestID := uuid.New()
+
+	if _, err := tx.Exec(ctx, `
+		INSERT INTO requests (
+			id, initiator_id, entity_id, entity_type, request_type,
+			target_dzo_id, title, deadline_at,
+			step, status, created_at, updated_at
+		)
+		VALUES ($1, $2, $3, 'HR_REQUEST', 'MAIN',
+			$4, $5, $6,
+			0, 'PENDING', NOW(), NOW())
+	`,
+		requestID,
+		actor.ID,
+		uuid.Nil,
+		*actor.DzoID,
+		title,
+		deadlineAt,
+	); err != nil {
+		return nil, errs.B().Code(errs.Internal).Msg("failed to create HR request").Cause(err).Err()
+	}
+
+	if err := replaceRequestParticipantsTx(ctx, tx, requestID, selectedEmployeeIDs); err != nil {
+		return nil, err
+	}
+
+	if err := replaceRequestTargetDZOsTx(ctx, tx, requestID, []uuid.UUID{*actor.DzoID}); err != nil {
+		return nil, err
+	}
+
+	if err := tx.Commit(); err != nil {
+		return nil, errs.B().Code(errs.Internal).Msg("failed to commit HR request").Cause(err).Err()
+	}
+
+	return buildRequestDetail(ctx, requestID)
+}
 func submitRequest(ctx context.Context, actor *actor, requestID uuid.UUID) (*RequestDetail, error) {
 	mainRequest, err := queryRequestSummaryByID(ctx, requestID)
 	if err != nil {
@@ -466,6 +639,10 @@ func submitRequest(ctx context.Context, actor *actor, requestID uuid.UUID) (*Req
 	}
 	defer tx.Rollback()
 
+	//budget reserve
+	if err := reserveBudgetTx(ctx, tx, requestID, actor.ID); err != nil {
+		return nil, err
+	}
 	for _, dzoID := range mapsKeys(groupedEmployeeIDs) {
 		hrID, ok := hrByDZO[dzoID]
 		if !ok {
@@ -817,7 +994,6 @@ func queryRequestDzoContracts(ctx context.Context, requestID uuid.UUID) ([]Reque
 
 	return items, nil
 }
-
 func queryRequestTargetDZOIDs(ctx context.Context, requestID uuid.UUID) ([]uuid.UUID, error) {
 	rows, err := db.Query(ctx, `
 		SELECT dzo_id
@@ -902,6 +1078,51 @@ func resolveSelectedEmployees(ctx context.Context, rawIDs []string) ([]employeeR
 	return employees, ids, nil
 }
 
+// helper проверки сотрудников (CreateHRRequest creates a main request from HR to Admin)
+func resolveHREmployeesForRequest(ctx context.Context, rawIDs []string, hrDzoID uuid.UUID, allowInactive bool) ([]uuid.UUID, error) {
+	seen := make(map[uuid.UUID]struct{}, len(rawIDs))
+	ids := make([]uuid.UUID, 0, len(rawIDs))
+
+	for _, rawID := range rawIDs {
+		employeeID, err := uuid.Parse(strings.TrimSpace(rawID))
+		if err != nil {
+			return nil, errs.B().Code(errs.InvalidArgument).Msg("invalid employee_id format").Err()
+		}
+		if _, ok := seen[employeeID]; ok {
+			continue
+		}
+		seen[employeeID] = struct{}{}
+
+		var (
+			dzoID     uuid.UUID
+			isActive  bool
+			isDeleted bool
+		)
+
+		if err := db.QueryRow(ctx, `
+			SELECT dzo_id, is_active, is_deleted
+			FROM employees
+			WHERE id = $1
+		`, employeeID).Scan(&dzoID, &isActive, &isDeleted); err != nil {
+			if errors.Is(err, sqldb.ErrNoRows) {
+				return nil, errs.B().Code(errs.InvalidArgument).Msg("employee not found").Err()
+			}
+			return nil, errs.B().Code(errs.Internal).Msg("failed to load employee").Cause(err).Err()
+		}
+
+		if dzoID != hrDzoID {
+			return nil, errs.B().Code(errs.InvalidArgument).Msg("employee does not belong to HR DZO").Err()
+		}
+
+		if (!isActive || isDeleted) && !allowInactive {
+			return nil, errs.B().Code(errs.InvalidArgument).Msg("employee is inactive").Err()
+		}
+
+		ids = append(ids, employeeID)
+	}
+
+	return ids, nil
+}
 func resolveSelectedDZOs(ctx context.Context, rawIDs []string) ([]uuid.UUID, error) {
 	seen := make(map[uuid.UUID]struct{}, len(rawIDs))
 	dzoIDs := make([]uuid.UUID, 0, len(rawIDs))
@@ -1047,6 +1268,120 @@ func queryParticipantCount(ctx context.Context, requestID uuid.UUID) (int, error
 		return 0, errs.B().Code(errs.Internal).Msg("failed to count request participants").Cause(err).Err()
 	}
 	return count, nil
+}
+
+func finalizeAdminRequest(ctx context.Context, actor *actor, requestID uuid.UUID) (*RequestDetail, error) {
+	requestSummary, err := queryRequestSummaryByID(ctx, requestID)
+	if err != nil {
+		return nil, err
+	}
+
+	if requestSummary.RequestType != RequestTypeMain {
+		return nil, errs.B().Code(errs.InvalidArgument).Msg("only main requests can be finalized").Err()
+	}
+
+	if requestSummary.Status == RequestStatusRejected {
+		return nil, errs.B().Code(errs.InvalidArgument).Msg("cancelled request cannot be finalized").Err()
+	}
+
+	tx, err := db.Begin(ctx)
+	if err != nil {
+		return nil, errs.B().Code(errs.Internal).Msg("failed to begin transaction").Cause(err).Err()
+	}
+	defer tx.Rollback()
+
+	var pendingChildren int
+	if err := tx.QueryRow(ctx, `
+		SELECT COUNT(*)
+		FROM requests
+		WHERE parent_request_id = $1 AND status = 'PENDING'
+	`, requestID).Scan(&pendingChildren); err != nil {
+		return nil, errs.B().Code(errs.Internal).Msg("failed to check pending subrequests").Cause(err).Err()
+	}
+
+	if pendingChildren > 0 {
+		return nil, errs.B().Code(errs.InvalidArgument).Msg("not all HR subrequests are finalized").Err()
+	}
+
+	hasReserve, err := budgetOperationExistsTx(ctx, tx, requestID, "RESERVE")
+	if err != nil {
+		return nil, err
+	}
+
+	if !hasReserve {
+		if err := reserveBudgetTx(ctx, tx, requestID, actor.ID); err != nil {
+			return nil, err
+		}
+	}
+
+	if err := writeOffBudgetTx(ctx, tx, requestID, actor.ID); err != nil {
+		return nil, err
+	}
+
+	if _, err := tx.Exec(ctx, `
+		UPDATE requests
+		SET status = 'IN_PROGRESS',
+			responsible_admin_id = $2,
+			updated_at = NOW()
+		WHERE id = $1
+	`, requestID, actor.ID); err != nil {
+		return nil, errs.B().Code(errs.Internal).Msg("failed to finalize request").Cause(err).Err()
+	}
+
+	if err := tx.Commit(); err != nil {
+		return nil, errs.B().Code(errs.Internal).Msg("failed to commit admin finalization").Cause(err).Err()
+	}
+
+	return buildRequestDetail(ctx, requestID)
+}
+
+// cancel admin
+func cancelAdminRequest(ctx context.Context, actor *actor, requestID uuid.UUID) (*RequestDetail, error) {
+	requestSummary, err := queryRequestSummaryByID(ctx, requestID)
+	if err != nil {
+		return nil, err
+	}
+
+	if requestSummary.RequestType != RequestTypeMain {
+		return nil, errs.B().Code(errs.InvalidArgument).Msg("only main requests can be cancelled by admin").Err()
+	}
+
+	if requestSummary.Status == RequestStatusRejected {
+		return nil, errs.B().Code(errs.InvalidArgument).Msg("request is already cancelled").Err()
+	}
+
+	tx, err := db.Begin(ctx)
+	if err != nil {
+		return nil, errs.B().Code(errs.Internal).Msg("failed to begin transaction").Cause(err).Err()
+	}
+	defer tx.Rollback()
+
+	if _, err := tx.Exec(ctx, `
+		UPDATE requests
+		SET status = 'REJECTED', updated_at = NOW()
+		WHERE id = $1
+	`, requestID); err != nil {
+		return nil, errs.B().Code(errs.Internal).Msg("failed to cancel request").Cause(err).Err()
+	}
+
+	if _, err := tx.Exec(ctx, `
+		UPDATE requests
+		SET status = 'REJECTED', updated_at = NOW()
+		WHERE parent_request_id = $1 AND status = 'PENDING'
+	`, requestID); err != nil {
+		return nil, errs.B().Code(errs.Internal).Msg("failed to cancel child requests").Cause(err).Err()
+	}
+
+	//refund
+	if err := refundBudgetTx(ctx, tx, requestID, actor.ID); err != nil {
+		return nil, err
+	}
+
+	if err := tx.Commit(); err != nil {
+		return nil, errs.B().Code(errs.Internal).Msg("failed to commit request cancellation").Cause(err).Err()
+	}
+
+	return buildRequestDetail(ctx, requestID)
 }
 
 func scanRequestSummary(s rowScanner) (*RequestSummary, error) {
@@ -1490,3 +1825,194 @@ func isAdminRole(role string) bool {
 	}
 }
 
+func getRequestBudgetSource(ctx context.Context, requestID uuid.UUID) (uuid.UUID, float64, error) {
+	row := db.QueryRow(ctx, `
+		SELECT te.supplier_contract_id, r.cost_amount
+		FROM requests r
+		JOIN training_events te ON te.id = r.entity_id
+		WHERE r.id = $1
+	`, requestID)
+
+	var (
+		contractID uuid.UUID
+		costAmount sql.NullFloat64
+	)
+
+	if err := row.Scan(&contractID, &costAmount); err != nil {
+		if errors.Is(err, sqldb.ErrNoRows) {
+			return uuid.Nil, 0, errs.B().Code(errs.NotFound).Msg("request budget source not found").Err()
+		}
+		return uuid.Nil, 0, errs.B().Code(errs.Internal).Msg("failed to load request budget source").Cause(err).Err()
+	}
+
+	if !costAmount.Valid || costAmount.Float64 <= 0 {
+		return contractID, 0, nil
+	}
+
+	return contractID, costAmount.Float64, nil
+}
+
+func reserveBudgetTx(ctx context.Context, tx *sqldb.Tx, requestID uuid.UUID, actorID uuid.UUID) error {
+	contractID, amount, err := getRequestBudgetSource(ctx, requestID)
+	if err != nil {
+		return err
+	}
+	if amount <= 0 {
+		return nil
+	}
+
+	var remaining float64
+	if err := tx.QueryRow(ctx, `
+		SELECT remaining_amount
+		FROM contract_suppliers
+		WHERE id = $1
+		FOR UPDATE
+	`, contractID).Scan(&remaining); err != nil {
+		return errs.B().Code(errs.Internal).Msg("failed to lock contract budget").Cause(err).Err()
+	}
+
+	if remaining < amount {
+		return errs.B().Code(errs.InvalidArgument).Msg("not enough budget").Err()
+	}
+
+	if _, err := tx.Exec(ctx, `
+		UPDATE contract_suppliers
+		SET remaining_amount = remaining_amount - $2, updated_at = NOW()
+		WHERE id = $1
+	`, contractID, amount); err != nil {
+		return errs.B().Code(errs.Internal).Msg("failed to reserve budget").Cause(err).Err()
+	}
+
+	if _, err := tx.Exec(ctx, `
+		INSERT INTO request_budget_transactions (
+			id, request_id, contract_id, amount, operation_type, created_by, reason, created_at
+		)
+		VALUES ($1, $2, $3, $4, 'RESERVE', $5, 'Budget reserved on request submit', NOW())
+	`, uuid.New(), requestID, contractID, amount, actorID); err != nil {
+		return errs.B().Code(errs.Internal).Msg("failed to log budget reserve").Cause(err).Err()
+	}
+
+	return nil
+}
+
+func writeOffBudgetTx(ctx context.Context, tx *sqldb.Tx, requestID uuid.UUID, actorID uuid.UUID) error {
+	contractID, amount, err := getRequestBudgetSource(ctx, requestID)
+	if err != nil {
+		return err
+	}
+	if amount <= 0 {
+		return nil
+	}
+
+	var alreadyWrittenOff bool
+	if err := tx.QueryRow(ctx, `
+		SELECT EXISTS (
+			SELECT 1
+			FROM request_budget_transactions
+			WHERE request_id = $1 AND operation_type = 'WRITE_OFF'
+		)
+	`, requestID).Scan(&alreadyWrittenOff); err != nil {
+		return errs.B().Code(errs.Internal).Msg("failed to check budget write-off").Cause(err).Err()
+	}
+	if alreadyWrittenOff {
+		return nil
+	}
+
+	if _, err := tx.Exec(ctx, `
+		INSERT INTO request_budget_transactions (
+			id, request_id, contract_id, amount, operation_type, created_by, reason, created_at
+		)
+		VALUES ($1, $2, $3, $4, 'WRITE_OFF', $5, 'Budget written off on final approve', NOW())
+	`, uuid.New(), requestID, contractID, amount, actorID); err != nil {
+		return errs.B().Code(errs.Internal).Msg("failed to log budget write-off").Cause(err).Err()
+	}
+
+	return nil
+}
+
+func refundBudgetTx(ctx context.Context, tx *sqldb.Tx, requestID uuid.UUID, actorID uuid.UUID) error {
+	contractID, amount, err := getRequestBudgetSource(ctx, requestID)
+	if err != nil {
+		return err
+	}
+	if amount <= 0 {
+		return nil
+	}
+
+	var wasWriteOff bool
+	if err := tx.QueryRow(ctx, `
+		SELECT EXISTS (
+			SELECT 1 FROM request_budget_transactions
+			WHERE request_id = $1 AND operation_type = 'WRITE_OFF'
+		)
+	`, requestID).Scan(&wasWriteOff); err != nil {
+		return err
+	}
+
+	var wasReserve bool
+	if err := tx.QueryRow(ctx, `
+		SELECT EXISTS (
+			SELECT 1 FROM request_budget_transactions
+			WHERE request_id = $1 AND operation_type = 'RESERVE'
+		)
+	`, requestID).Scan(&wasReserve); err != nil {
+		return err
+	}
+
+	// 1. если был write-off → REFUND
+	if wasWriteOff {
+		_, err := tx.Exec(ctx, `
+			UPDATE contract_suppliers
+			SET remaining_amount = remaining_amount + $2, updated_at = NOW()
+			WHERE id = $1
+		`, contractID, amount)
+		if err != nil {
+			return err
+		}
+
+		_, err = tx.Exec(ctx, `
+	INSERT INTO request_budget_transactions (
+		id, request_id, contract_id, amount, operation_type, created_by, reason, created_at
+	)
+	VALUES ($1, $2, $3, $4, 'REFUND', $5, 'Budget refunded on request cancel after write-off', NOW())
+`, uuid.New(), requestID, contractID, amount, actorID)
+		return err
+	}
+
+	// 2. если был reserve → RELEASE
+	if wasReserve {
+		_, err := tx.Exec(ctx, `
+			UPDATE contract_suppliers
+			SET remaining_amount = remaining_amount + $2, updated_at = NOW()
+			WHERE id = $1
+		`, contractID, amount)
+		if err != nil {
+			return err
+		}
+
+		_, err = tx.Exec(ctx, `
+	INSERT INTO request_budget_transactions (
+		id, request_id, contract_id, amount, operation_type, created_by, reason, created_at
+	)
+	VALUES ($1, $2, $3, $4, 'RELEASE', $5, 'Budget reserve released on request cancel', NOW())
+`, uuid.New(), requestID, contractID, amount, actorID)
+		return err
+	}
+
+	return nil
+}
+func budgetOperationExistsTx(ctx context.Context, tx *sqldb.Tx, requestID uuid.UUID, operationType string) (bool, error) {
+	var exists bool
+
+	if err := tx.QueryRow(ctx, `
+		SELECT EXISTS (
+			SELECT 1
+			FROM request_budget_transactions
+			WHERE request_id = $1 AND operation_type = $2
+		)
+	`, requestID, operationType).Scan(&exists); err != nil {
+		return false, errs.B().Code(errs.Internal).Msg("failed to check budget operation").Cause(err).Err()
+	}
+
+	return exists, nil
+}

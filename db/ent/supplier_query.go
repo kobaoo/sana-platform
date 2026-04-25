@@ -4,9 +4,11 @@ package ent
 
 import (
 	"context"
+	"database/sql/driver"
 	"fmt"
 	"math"
 
+	"encore.app/db/ent/externaltrainingevent"
 	"encore.app/db/ent/predicate"
 	"encore.app/db/ent/supplier"
 	"entgo.io/ent"
@@ -19,10 +21,11 @@ import (
 // SupplierQuery is the builder for querying Supplier entities.
 type SupplierQuery struct {
 	config
-	ctx        *QueryContext
-	order      []supplier.OrderOption
-	inters     []Interceptor
-	predicates []predicate.Supplier
+	ctx                        *QueryContext
+	order                      []supplier.OrderOption
+	inters                     []Interceptor
+	predicates                 []predicate.Supplier
+	withExternalTrainingEvents *ExternalTrainingEventQuery
 	// intermediate query (i.e. traversal path).
 	sql  *sql.Selector
 	path func(context.Context) (*sql.Selector, error)
@@ -57,6 +60,28 @@ func (_q *SupplierQuery) Unique(unique bool) *SupplierQuery {
 func (_q *SupplierQuery) Order(o ...supplier.OrderOption) *SupplierQuery {
 	_q.order = append(_q.order, o...)
 	return _q
+}
+
+// QueryExternalTrainingEvents chains the current query on the "external_training_events" edge.
+func (_q *SupplierQuery) QueryExternalTrainingEvents() *ExternalTrainingEventQuery {
+	query := (&ExternalTrainingEventClient{config: _q.config}).Query()
+	query.path = func(ctx context.Context) (fromU *sql.Selector, err error) {
+		if err := _q.prepareQuery(ctx); err != nil {
+			return nil, err
+		}
+		selector := _q.sqlQuery(ctx)
+		if err := selector.Err(); err != nil {
+			return nil, err
+		}
+		step := sqlgraph.NewStep(
+			sqlgraph.From(supplier.Table, supplier.FieldID, selector),
+			sqlgraph.To(externaltrainingevent.Table, externaltrainingevent.FieldID),
+			sqlgraph.Edge(sqlgraph.O2M, false, supplier.ExternalTrainingEventsTable, supplier.ExternalTrainingEventsColumn),
+		)
+		fromU = sqlgraph.SetNeighbors(_q.driver.Dialect(), step)
+		return fromU, nil
+	}
+	return query
 }
 
 // First returns the first Supplier entity from the query.
@@ -246,15 +271,27 @@ func (_q *SupplierQuery) Clone() *SupplierQuery {
 		return nil
 	}
 	return &SupplierQuery{
-		config:     _q.config,
-		ctx:        _q.ctx.Clone(),
-		order:      append([]supplier.OrderOption{}, _q.order...),
-		inters:     append([]Interceptor{}, _q.inters...),
-		predicates: append([]predicate.Supplier{}, _q.predicates...),
+		config:                     _q.config,
+		ctx:                        _q.ctx.Clone(),
+		order:                      append([]supplier.OrderOption{}, _q.order...),
+		inters:                     append([]Interceptor{}, _q.inters...),
+		predicates:                 append([]predicate.Supplier{}, _q.predicates...),
+		withExternalTrainingEvents: _q.withExternalTrainingEvents.Clone(),
 		// clone intermediate query.
 		sql:  _q.sql.Clone(),
 		path: _q.path,
 	}
+}
+
+// WithExternalTrainingEvents tells the query-builder to eager-load the nodes that are connected to
+// the "external_training_events" edge. The optional arguments are used to configure the query builder of the edge.
+func (_q *SupplierQuery) WithExternalTrainingEvents(opts ...func(*ExternalTrainingEventQuery)) *SupplierQuery {
+	query := (&ExternalTrainingEventClient{config: _q.config}).Query()
+	for _, opt := range opts {
+		opt(query)
+	}
+	_q.withExternalTrainingEvents = query
+	return _q
 }
 
 // GroupBy is used to group vertices by one or more fields/columns.
@@ -333,8 +370,11 @@ func (_q *SupplierQuery) prepareQuery(ctx context.Context) error {
 
 func (_q *SupplierQuery) sqlAll(ctx context.Context, hooks ...queryHook) ([]*Supplier, error) {
 	var (
-		nodes = []*Supplier{}
-		_spec = _q.querySpec()
+		nodes       = []*Supplier{}
+		_spec       = _q.querySpec()
+		loadedTypes = [1]bool{
+			_q.withExternalTrainingEvents != nil,
+		}
 	)
 	_spec.ScanValues = func(columns []string) ([]any, error) {
 		return (*Supplier).scanValues(nil, columns)
@@ -342,6 +382,7 @@ func (_q *SupplierQuery) sqlAll(ctx context.Context, hooks ...queryHook) ([]*Sup
 	_spec.Assign = func(columns []string, values []any) error {
 		node := &Supplier{config: _q.config}
 		nodes = append(nodes, node)
+		node.Edges.loadedTypes = loadedTypes
 		return node.assignValues(columns, values)
 	}
 	for i := range hooks {
@@ -353,7 +394,47 @@ func (_q *SupplierQuery) sqlAll(ctx context.Context, hooks ...queryHook) ([]*Sup
 	if len(nodes) == 0 {
 		return nodes, nil
 	}
+	if query := _q.withExternalTrainingEvents; query != nil {
+		if err := _q.loadExternalTrainingEvents(ctx, query, nodes,
+			func(n *Supplier) { n.Edges.ExternalTrainingEvents = []*ExternalTrainingEvent{} },
+			func(n *Supplier, e *ExternalTrainingEvent) {
+				n.Edges.ExternalTrainingEvents = append(n.Edges.ExternalTrainingEvents, e)
+			}); err != nil {
+			return nil, err
+		}
+	}
 	return nodes, nil
+}
+
+func (_q *SupplierQuery) loadExternalTrainingEvents(ctx context.Context, query *ExternalTrainingEventQuery, nodes []*Supplier, init func(*Supplier), assign func(*Supplier, *ExternalTrainingEvent)) error {
+	fks := make([]driver.Value, 0, len(nodes))
+	nodeids := make(map[uuid.UUID]*Supplier)
+	for i := range nodes {
+		fks = append(fks, nodes[i].ID)
+		nodeids[nodes[i].ID] = nodes[i]
+		if init != nil {
+			init(nodes[i])
+		}
+	}
+	if len(query.ctx.Fields) > 0 {
+		query.ctx.AppendFieldOnce(externaltrainingevent.FieldSupplierID)
+	}
+	query.Where(predicate.ExternalTrainingEvent(func(s *sql.Selector) {
+		s.Where(sql.InValues(s.C(supplier.ExternalTrainingEventsColumn), fks...))
+	}))
+	neighbors, err := query.All(ctx)
+	if err != nil {
+		return err
+	}
+	for _, n := range neighbors {
+		fk := n.SupplierID
+		node, ok := nodeids[fk]
+		if !ok {
+			return fmt.Errorf(`unexpected referenced foreign-key "supplier_id" returned %v for node %v`, fk, n.ID)
+		}
+		assign(node, n)
+	}
+	return nil
 }
 
 func (_q *SupplierQuery) sqlCount(ctx context.Context) (int, error) {

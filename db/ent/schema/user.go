@@ -69,6 +69,7 @@ func (User) Edges() []ent.Edge {
 			Field("client_id").
 			Unique(),
 		edge.To("requests", Request.Type),
+		edge.To("responsible_external_training_events", ExternalTrainingEvent.Type),
 	}
 }
 

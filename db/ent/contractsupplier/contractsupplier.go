@@ -6,6 +6,7 @@ import (
 	"time"
 
 	"entgo.io/ent/dialect/sql"
+	"entgo.io/ent/dialect/sql/sqlgraph"
 	"github.com/google/uuid"
 )
 
@@ -56,8 +57,17 @@ const (
 	FieldCreatedAt = "created_at"
 	// FieldUpdatedAt holds the string denoting the updated_at field in the database.
 	FieldUpdatedAt = "updated_at"
+	// EdgeExternalTrainingEvents holds the string denoting the external_training_events edge name in mutations.
+	EdgeExternalTrainingEvents = "external_training_events"
 	// Table holds the table name of the contractsupplier in the database.
 	Table = "contract_suppliers"
+	// ExternalTrainingEventsTable is the table that holds the external_training_events relation/edge.
+	ExternalTrainingEventsTable = "external_training_events"
+	// ExternalTrainingEventsInverseTable is the table name for the ExternalTrainingEvent entity.
+	// It exists in this package in order to avoid circular dependency with the "externaltrainingevent" package.
+	ExternalTrainingEventsInverseTable = "external_training_events"
+	// ExternalTrainingEventsColumn is the table column denoting the external_training_events relation/edge.
+	ExternalTrainingEventsColumn = "contract_id"
 )
 
 // Columns holds all SQL columns for contractsupplier fields.
@@ -234,4 +244,25 @@ func ByCreatedAt(opts ...sql.OrderTermOption) OrderOption {
 // ByUpdatedAt orders the results by the updated_at field.
 func ByUpdatedAt(opts ...sql.OrderTermOption) OrderOption {
 	return sql.OrderByField(FieldUpdatedAt, opts...).ToFunc()
+}
+
+// ByExternalTrainingEventsCount orders the results by external_training_events count.
+func ByExternalTrainingEventsCount(opts ...sql.OrderTermOption) OrderOption {
+	return func(s *sql.Selector) {
+		sqlgraph.OrderByNeighborsCount(s, newExternalTrainingEventsStep(), opts...)
+	}
+}
+
+// ByExternalTrainingEvents orders the results by external_training_events terms.
+func ByExternalTrainingEvents(term sql.OrderTerm, terms ...sql.OrderTerm) OrderOption {
+	return func(s *sql.Selector) {
+		sqlgraph.OrderByNeighborTerms(s, newExternalTrainingEventsStep(), append([]sql.OrderTerm{term}, terms...)...)
+	}
+}
+func newExternalTrainingEventsStep() *sqlgraph.Step {
+	return sqlgraph.NewStep(
+		sqlgraph.From(Table, FieldID),
+		sqlgraph.To(ExternalTrainingEventsInverseTable, FieldID),
+		sqlgraph.Edge(sqlgraph.O2M, false, ExternalTrainingEventsTable, ExternalTrainingEventsColumn),
+	)
 }
