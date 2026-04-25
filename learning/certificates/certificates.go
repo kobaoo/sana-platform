@@ -509,11 +509,7 @@ func handleUpload(w http.ResponseWriter, r *http.Request) {
 	ctx := r.Context()
 
 	ad, ok := auth.Data().(*authhandler.AuthData)
-	if !ok {
-		http.Error(w, "forbidden", http.StatusForbidden)
-		return
-	}
-	if ad.Role == authhandler.RoleEMP {
+	if !ok || (ad.Role != authhandler.RoleSA && ad.Role != authhandler.RoleADM) {
 		http.Error(w, "forbidden", http.StatusForbidden)
 		return
 	}
