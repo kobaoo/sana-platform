@@ -9,6 +9,7 @@ import (
 	"reflect"
 	"sync"
 
+	"encore.app/db/ent/certificate"
 	"encore.app/db/ent/company"
 	"encore.app/db/ent/contractsupplier"
 	"encore.app/db/ent/contractsupplierhistory"
@@ -16,6 +17,7 @@ import (
 	"encore.app/db/ent/employee"
 	"encore.app/db/ent/event"
 	"encore.app/db/ent/eventparticipant"
+	"encore.app/db/ent/notification"
 	"encore.app/db/ent/organization"
 	"encore.app/db/ent/request"
 	"encore.app/db/ent/supplier"
@@ -85,6 +87,7 @@ var (
 func checkColumn(t, c string) error {
 	initCheck.Do(func() {
 		columnCheck = sql.NewColumnCheck(map[string]func(string) bool{
+			certificate.Table:             certificate.ValidColumn,
 			company.Table:                 company.ValidColumn,
 			contractsupplier.Table:        contractsupplier.ValidColumn,
 			contractsupplierhistory.Table: contractsupplierhistory.ValidColumn,
@@ -92,6 +95,7 @@ func checkColumn(t, c string) error {
 			employee.Table:                employee.ValidColumn,
 			event.Table:                   event.ValidColumn,
 			eventparticipant.Table:        eventparticipant.ValidColumn,
+			notification.Table:            notification.ValidColumn,
 			organization.Table:            organization.ValidColumn,
 			request.Table:                 request.ValidColumn,
 			supplier.Table:                supplier.ValidColumn,

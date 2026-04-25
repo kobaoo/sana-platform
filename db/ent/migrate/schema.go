@@ -9,6 +9,45 @@ import (
 )
 
 var (
+	// CertificatesColumns holds the columns for the "certificates" table.
+	CertificatesColumns = []*schema.Column{
+		{Name: "id", Type: field.TypeUUID, Unique: true},
+		{Name: "employee_id", Type: field.TypeUUID},
+		{Name: "type", Type: field.TypeEnum, Enums: []string{"EXTERNAL"}},
+		{Name: "title", Type: field.TypeString, Size: 300},
+		{Name: "issued_date", Type: field.TypeTime, SchemaType: map[string]string{"postgres": "date"}},
+		{Name: "expiry_date", Type: field.TypeTime, Nullable: true, SchemaType: map[string]string{"postgres": "date"}},
+		{Name: "file_url", Type: field.TypeString, Nullable: true, Size: 2147483647},
+		{Name: "uploaded_by", Type: field.TypeUUID, Nullable: true},
+		{Name: "entity_type", Type: field.TypeEnum, Enums: []string{"SCORM_COURSE", "TRAINING_EVENT"}},
+		{Name: "entity_id", Type: field.TypeUUID},
+		{Name: "is_active", Type: field.TypeBool, Default: true},
+		{Name: "created_at", Type: field.TypeTime},
+		{Name: "updated_at", Type: field.TypeTime},
+	}
+	// CertificatesTable holds the schema information for the "certificates" table.
+	CertificatesTable = &schema.Table{
+		Name:       "certificates",
+		Columns:    CertificatesColumns,
+		PrimaryKey: []*schema.Column{CertificatesColumns[0]},
+		Indexes: []*schema.Index{
+			{
+				Name:    "certificate_employee_id",
+				Unique:  false,
+				Columns: []*schema.Column{CertificatesColumns[1]},
+			},
+			{
+				Name:    "certificate_is_active",
+				Unique:  false,
+				Columns: []*schema.Column{CertificatesColumns[10]},
+			},
+			{
+				Name:    "certificate_expiry_date",
+				Unique:  false,
+				Columns: []*schema.Column{CertificatesColumns[5]},
+			},
+		},
+	}
 	// ClientsColumns holds the columns for the "clients" table.
 	ClientsColumns = []*schema.Column{
 		{Name: "id", Type: field.TypeUUID, Unique: true},
@@ -225,6 +264,40 @@ var (
 			},
 		},
 	}
+	// NotificationsColumns holds the columns for the "notifications" table.
+	NotificationsColumns = []*schema.Column{
+		{Name: "id", Type: field.TypeUUID, Unique: true},
+		{Name: "user_id", Type: field.TypeUUID},
+		{Name: "type", Type: field.TypeEnum, Enums: []string{"CERT_EXPIRING", "CERT_EXPIRED", "REQUEST_CREATED", "REQUEST_STEP_UPDATED", "REQUEST_APPROVED", "REQUEST_CANCELLED"}},
+		{Name: "entity_type", Type: field.TypeEnum, Enums: []string{"CERTIFICATE", "REQUEST"}},
+		{Name: "entity_id", Type: field.TypeUUID},
+		{Name: "status", Type: field.TypeEnum, Enums: []string{"PENDING", "SENT", "FAILED"}, Default: "PENDING"},
+		{Name: "sent_at", Type: field.TypeTime, Nullable: true},
+		{Name: "created_at", Type: field.TypeTime},
+	}
+	// NotificationsTable holds the schema information for the "notifications" table.
+	NotificationsTable = &schema.Table{
+		Name:       "notifications",
+		Columns:    NotificationsColumns,
+		PrimaryKey: []*schema.Column{NotificationsColumns[0]},
+		Indexes: []*schema.Index{
+			{
+				Name:    "notification_user_id_type_entity_type_entity_id",
+				Unique:  true,
+				Columns: []*schema.Column{NotificationsColumns[1], NotificationsColumns[2], NotificationsColumns[3], NotificationsColumns[4]},
+			},
+			{
+				Name:    "notification_user_id",
+				Unique:  false,
+				Columns: []*schema.Column{NotificationsColumns[1]},
+			},
+			{
+				Name:    "notification_status",
+				Unique:  false,
+				Columns: []*schema.Column{NotificationsColumns[5]},
+			},
+		},
+	}
 	// OrganizationsColumns holds the columns for the "organizations" table.
 	OrganizationsColumns = []*schema.Column{
 		{Name: "id", Type: field.TypeUUID, Unique: true},
@@ -425,6 +498,7 @@ var (
 	}
 	// Tables holds all the tables in the schema.
 	Tables = []*schema.Table{
+		CertificatesTable,
 		ClientsTable,
 		ContractSuppliersTable,
 		ContractSupplierHistoriesTable,
@@ -432,6 +506,7 @@ var (
 		EmployeesTable,
 		EventsTable,
 		EventParticipantsTable,
+		NotificationsTable,
 		OrganizationsTable,
 		RequestsTable,
 		SuppliersTable,
