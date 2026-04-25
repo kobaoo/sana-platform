@@ -682,3 +682,59 @@ func TestSetMaterials_PermissionDenied(t *testing.T) {
 		t.Errorf("expected PermissionDenied, got %v", errs.Code(err))
 	}
 }
+
+// ════ LIST HOSTS ════
+
+// makeAdmin inserts an ADM user bound to a client with explicit
+// is_active / is_onboarded flags.
+func makeAdmin(t *testing.T, clientID uuid.UUID, isActive, isOnboarded bool) uuid.UUID {
+	t.Helper()
+	id := uuid.New()
+	suffix := id.String()[:8]
+	_, err := Client.User.
+		Create().
+		SetID(id).
+		SetRole(string(authhandler.RoleADM)).
+		SetEmail("adm-" + suffix + "@test.com").
+		SetKeycloakUserID("adm-" + suffix).
+		SetClientID(clientID).
+		SetIsActive(isActive).
+		SetIsOnboarded(isOnboarded).
+		Save(context.Background())
+	if err != nil {
+		t.Fatalf("makeAdmin: %v", err)
+	}
+	return id
+}
+
+// Pending admins (registered via RegisterAdmin, not yet logged in:
+// is_active=false, is_onboarded=false) must appear in the host picker
+// so SA can pre-assign them as event hosts.
+func TestListHosts_IncludesPendingAdmin(t *testing.T) {
+	clientID := makeClient(t)
+
+	activeID := makeAdmin(t, clientID, true, true)
+	pendingID := makeAdmin(t, clientID, false, false)
+	blockedID := makeAdmin(t, clientID, false, true)
+
+	ctx := withRole(authhandler.RoleADM, clientID)
+	resp, err := ListHosts(ctx, &ListHostsParams{Limit: 50})
+	if err != nil {
+		t.Fatalf("ListHosts: %v", err)
+	}
+
+	got := make(map[string]bool, len(resp.Hosts))
+	for _, h := range resp.Hosts {
+		got[h.ID] = true
+	}
+
+	if !got[activeID.String()] {
+		t.Errorf("active admin %s missing from hosts", activeID)
+	}
+	if !got[pendingID.String()] {
+		t.Errorf("pending admin %s missing from hosts (regression: should be selectable)", pendingID)
+	}
+	if got[blockedID.String()] {
+		t.Errorf("blocked admin %s leaked into hosts", blockedID)
+	}
+}

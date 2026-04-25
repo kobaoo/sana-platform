@@ -715,11 +715,19 @@ func parseFlexibleDate(raw string, endOfDay bool) (*time.Time, error) {
 // queryHosts returns users with role SA/ADM/HR scoped to the given company,
 // enriched with full_name from the linked employee record when available.
 // Returns the page slice and the total matching count.
+//
+// Visibility rule: include both fully-active users and pending admins
+// (is_active=false AND is_onboarded=false — created via RegisterAdmin,
+// not yet activated on first login). Blocked users (is_active=false
+// AND is_onboarded=true) are excluded.
 func queryHosts(ctx context.Context, companyID, search string, limit, offset int) ([]Host, int, error) {
 	q := Client.User.
 		Query().
 		Where(
-			user.IsActiveEQ(true),
+			user.Or(
+				user.IsActiveEQ(true),
+				user.IsOnboardedEQ(false),
+			),
 			user.RoleIn(
 				string(authhandler.RoleSA),
 				string(authhandler.RoleADM),
