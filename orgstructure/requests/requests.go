@@ -160,6 +160,26 @@ func PrepareAdminRequest(ctx context.Context, id encoreuuid.UUID, req *PrepareAd
 	return &GetRequestResponse{Detail: *detail}, nil
 }
 
+// RemoveAdminRequestEmployee removes employee from main request during admin preparation.
+//
+//encore:api auth method=DELETE path=/requests/admin/:id/employees
+func RemoveAdminRequestEmployee(ctx context.Context, id encoreuuid.UUID, req *RemoveRequestEmployeeRequest) (*GetRequestResponse, error) {
+	actor, err := resolveCurrentActor(ctx)
+	if err != nil {
+		return nil, err
+	}
+	if !canManageAdminRequests(actor.Role) {
+		return nil, errs.B().Code(errs.PermissionDenied).Msg("insufficient permissions").Err()
+	}
+
+	detail, err := removeAdminRequestEmployee(ctx, uuid.UUID(id), req)
+	if err != nil {
+		return nil, err
+	}
+
+	return &GetRequestResponse{Detail: *detail}, nil
+}
+
 // RecreateRejectedRequest creates a new version of a rejected request.
 //
 //encore:api auth method=POST path=/requests/admin/:id/recreate
@@ -367,6 +387,34 @@ func FinalizeAdminRequest(ctx context.Context, id encoreuuid.UUID) (*GetRequestR
 	}
 
 	detail, err := finalizeAdminRequest(ctx, actor, uuid.UUID(id))
+	if err != nil {
+		return nil, err
+	}
+
+	return &GetRequestResponse{Detail: *detail}, nil
+}
+
+// ContinueAdminRequestWithInactiveEmployees confirms inactive employees warning.
+//
+//encore:api auth method=POST path=/requests/admin/:id/continue-with-inactive
+func ContinueAdminRequestWithInactiveEmployees(ctx context.Context, id encoreuuid.UUID, req *PrepareAdminRequestRequest) (*GetRequestResponse, error) {
+	req.AllowInactiveEmployees = true
+	return PrepareAdminRequest(ctx, id, req)
+}
+
+// SaveAdminRequestDraft moves main request back to draft during admin preparation.
+//
+//encore:api auth method=POST path=/requests/admin/:id/save-draft
+func SaveAdminRequestDraft(ctx context.Context, id encoreuuid.UUID) (*GetRequestResponse, error) {
+	actor, err := resolveCurrentActor(ctx)
+	if err != nil {
+		return nil, err
+	}
+	if !canManageAdminRequests(actor.Role) {
+		return nil, errs.B().Code(errs.PermissionDenied).Msg("insufficient permissions").Err()
+	}
+
+	detail, err := saveAdminRequestDraft(ctx, uuid.UUID(id))
 	if err != nil {
 		return nil, err
 	}
@@ -973,6 +1021,10 @@ func buildRequestDetail(ctx context.Context, requestID uuid.UUID) (*RequestDetai
 	if err != nil {
 		return nil, err
 	}
+	budget, supplier, err := queryRequestBudgetAndSupplier(ctx, requestID)
+	if err != nil {
+		return nil, err
+	}
 
 	children := []RequestSummary{}
 	if summary.RequestType == RequestTypeMain {
@@ -999,6 +1051,8 @@ func buildRequestDetail(ctx context.Context, requestID uuid.UUID) (*RequestDetai
 		TargetDZOs:    targetDZOs,
 		DZOContracts:  contracts,
 		ChildRequests: children,
+		Budget:        budget,
+		Supplier:      supplier,
 	}, nil
 }
 
@@ -1526,6 +1580,33 @@ func prepareAdminRequest(ctx context.Context, actor *actor, requestID uuid.UUID,
 	return buildRequestDetail(ctx, requestID)
 }
 
+func removeAdminRequestEmployee(ctx context.Context, requestID uuid.UUID, req *RemoveRequestEmployeeRequest) (*RequestDetail, error) {
+	employeeID, err := uuid.Parse(strings.TrimSpace(req.EmployeeID))
+	if err != nil {
+		return nil, errs.B().Code(errs.InvalidArgument).Msg("invalid employee_id format").Err()
+	}
+
+	summary, err := queryRequestSummaryByID(ctx, requestID)
+	if err != nil {
+		return nil, err
+	}
+	if summary.RequestType != RequestTypeMain {
+		return nil, errs.B().Code(errs.InvalidArgument).Msg("only main requests can be edited").Err()
+	}
+	if summary.Status == RequestStatusApproved || summary.Status == RequestStatusCompleted || summary.Status == RequestStatusRejected {
+		return nil, errs.B().Code(errs.InvalidArgument).Msg("request cannot be edited in current status").Err()
+	}
+
+	if _, err := db.Exec(ctx, `
+		DELETE FROM request_participants
+		WHERE request_id = $1 AND employee_id = $2
+	`, requestID, employeeID); err != nil {
+		return nil, errs.B().Code(errs.Internal).Msg("failed to remove request employee").Cause(err).Err()
+	}
+
+	return buildRequestDetail(ctx, requestID)
+}
+
 func finalizeAdminRequest(ctx context.Context, actor *actor, requestID uuid.UUID) (*RequestDetail, error) {
 	requestSummary, err := queryRequestSummaryByID(ctx, requestID)
 	if err != nil {
@@ -1576,7 +1657,7 @@ func finalizeAdminRequest(ctx context.Context, actor *actor, requestID uuid.UUID
 
 	if _, err := tx.Exec(ctx, `
 		UPDATE requests
-		SET status = 'IN_PROGRESS',
+SET status = 'APPROVED',
 			responsible_admin_id = $2,
 			updated_at = NOW()
 		WHERE id = $1
@@ -1586,6 +1667,29 @@ func finalizeAdminRequest(ctx context.Context, actor *actor, requestID uuid.UUID
 
 	if err := tx.Commit(); err != nil {
 		return nil, errs.B().Code(errs.Internal).Msg("failed to commit admin finalization").Cause(err).Err()
+	}
+
+	return buildRequestDetail(ctx, requestID)
+}
+
+func saveAdminRequestDraft(ctx context.Context, requestID uuid.UUID) (*RequestDetail, error) {
+	summary, err := queryRequestSummaryByID(ctx, requestID)
+	if err != nil {
+		return nil, err
+	}
+	if summary.RequestType != RequestTypeMain {
+		return nil, errs.B().Code(errs.InvalidArgument).Msg("only main requests can be saved as draft").Err()
+	}
+	if summary.Status == RequestStatusApproved || summary.Status == RequestStatusCompleted || summary.Status == RequestStatusRejected {
+		return nil, errs.B().Code(errs.InvalidArgument).Msg("request cannot be saved as draft").Err()
+	}
+
+	if _, err := db.Exec(ctx, `
+		UPDATE requests
+		SET status = 'DRAFT', updated_at = NOW()
+		WHERE id = $1
+	`, requestID); err != nil {
+		return nil, errs.B().Code(errs.Internal).Msg("failed to save request draft").Cause(err).Err()
 	}
 
 	return buildRequestDetail(ctx, requestID)
@@ -2108,6 +2212,74 @@ func isAdminRole(role string) bool {
 	default:
 		return false
 	}
+}
+
+func queryRequestBudgetAndSupplier(ctx context.Context, requestID uuid.UUID) (*RequestBudgetInfo, *RequestSupplierInfo, error) {
+	row := db.QueryRow(ctx, `
+		SELECT
+			cs.id,
+			cs.contract_number,
+			cs.amount,
+			cs.remaining_amount,
+			cs.currency,
+			s.id,
+			s.name,
+			s.bin_or_iin
+		FROM requests r
+		JOIN training_events te ON te.id = r.entity_id
+		LEFT JOIN contract_suppliers cs ON cs.id = te.supplier_contract_id
+		LEFT JOIN suppliers s ON s.id = te.supplier_id
+		WHERE r.id = $1
+	`, requestID)
+
+	var (
+		contractID       sql.NullString
+		contractNumber   sql.NullString
+		amount           sql.NullFloat64
+		remainingAmount  sql.NullFloat64
+		currency         sql.NullString
+		supplierID       sql.NullString
+		supplierName     sql.NullString
+		supplierBinOrIin sql.NullString
+	)
+
+	if err := row.Scan(
+		&contractID,
+		&contractNumber,
+		&amount,
+		&remainingAmount,
+		&currency,
+		&supplierID,
+		&supplierName,
+		&supplierBinOrIin,
+	); err != nil {
+		if errors.Is(err, sqldb.ErrNoRows) {
+			return nil, nil, nil
+		}
+		return nil, nil, errs.B().Code(errs.Internal).Msg("failed to load request budget supplier info").Cause(err).Err()
+	}
+
+	var budget *RequestBudgetInfo
+	if contractID.Valid {
+		budget = &RequestBudgetInfo{
+			ContractID:      contractID.String,
+			ContractNumber:  contractNumber.String,
+			Amount:          amount.Float64,
+			RemainingAmount: remainingAmount.Float64,
+			Currency:        nullableStringValue(currency),
+		}
+	}
+
+	var supplier *RequestSupplierInfo
+	if supplierID.Valid {
+		supplier = &RequestSupplierInfo{
+			ID:       supplierID.String,
+			Name:     supplierName.String,
+			BinOrIin: nullableStringValue(supplierBinOrIin),
+		}
+	}
+
+	return budget, supplier, nil
 }
 
 func getRequestBudgetSource(ctx context.Context, requestID uuid.UUID) (uuid.UUID, float64, error) {
