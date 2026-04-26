@@ -9,7 +9,6 @@ import (
 	"strings"
 	"time"
 
-	"encore.app/db/ent/user"
 	"encore.dev/beta/auth"
 	"encore.dev/beta/errs"
 	"encore.dev/storage/sqldb"
