@@ -1,4 +1,4 @@
-h1:I70bi/X2hJDq3WjE1okOxkZFgGxUFwoXYvLLMoLmPyw=
+h1:VoxjP/uqYzrPAFBA1DiRZFpt1S+cHq9PvwOfXPY5xUc=
 20260416133254_add_dzo_organizations_and_employee.up.sql h1:tHxSiit9OStmUVceHS33iKUEmrrDhFyOPjVOBXKXBkA=
 20260416154539_initial.up.sql h1:4hMjm/KzLwDsBjlATYUyMLm5B2q1yimYjPi9qmTx/ow=
 20260416170000_seed_users.up.sql h1:R8C4qekqRPt3lAEgO3HqO6wVn+ebRWGFQV9qn1MnOtg=
@@ -14,3 +14,4 @@ h1:I70bi/X2hJDq3WjE1okOxkZFgGxUFwoXYvLLMoLmPyw=
 20260422022336_add_contract_end_date.up.sql h1:gCJG+vyMfjoicv6sZvHNXsxEMiOQMFK3MMH6a7ytUSQ=
 20260425124628.up.sql h1:Xl26i2ACaCot5UNPsBO+h/DqS/vl/eGG0OsSsxhb2IM=
 20260426131339.up.sql h1:Ndsv9FpKaGrGP9RoVU40YgKc/+DLsE93M4h2IMi++7k=
+20260426190000_seed_categories.up.sql h1:ARhU2oy52HhdIetc365PWDM+9c+fOkB/vMrpe2ZH6Mk=

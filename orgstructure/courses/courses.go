@@ -20,7 +20,7 @@ import (
 	//"encore.app/db/ent/scormprogress"
 )
 
-// в•ђв•ђв•ђв•ђ DATABASE в•ђв•ђв•ђв•ђ
+// DATABASE
 
 var (
 	db          = sqldb.Named("lms")
@@ -33,7 +33,7 @@ func newEntClient() *ent.Client {
 	return ent.NewClient(ent.Driver(drv))
 }
 
-// в•ђв•ђв•ђв•ђ ENDPOINTS в•ђв•ђв•ђв•ђ
+// ENDPOINTS
 
 //encore:api auth method=POST path=/courses/upload-scorm
 func UploadSCORM(ctx context.Context, req *UploadSCORMRequest) (*UploadSCORMResponse, error) {
@@ -67,6 +67,40 @@ func UploadSCORM(ctx context.Context, req *UploadSCORMRequest) (*UploadSCORMResp
 		ScormURL: scormURL,
 		IsValid:  true,
 		Message:  "SCORM package uploaded successfully",
+	}, nil
+}
+
+//encore:api auth method=POST path=/courses/upload-image
+func UploadCourseImage(ctx context.Context, req *UploadCourseImageRequest) (*UploadCourseImageResponse, error) {
+	ad, err := getAuthData()
+	if err != nil {
+		return nil, err
+	}
+	if err := requireRole(ad, authhandler.RoleSA, authhandler.RoleADM); err != nil {
+		return nil, err
+	}
+
+	if req == nil {
+		return nil, errs.B().
+			Code(errs.InvalidArgument).
+			Msg("request body is required").
+			Err()
+	}
+
+	if err := validateUploadCourseImageRequest(req.FileName, req.FileData); err != nil {
+		return nil, err
+	}
+
+	imageURL, err := uploadCourseImageToStorage(ctx, req.FileName, req.FileData)
+	if err != nil {
+		return nil, err
+	}
+
+	return &UploadCourseImageResponse{
+		FileName: req.FileName,
+		FileSize: len(req.FileData),
+		ImageURL: imageURL,
+		Message:  "Course image uploaded successfully",
 	}, nil
 }
 
@@ -190,7 +224,7 @@ func DeleteCourse(ctx context.Context, id string) error {
 	return nil
 }
 
-// в•ђв•ђв•ђв•ђ INTERNAL в•ђв•ђв•ђв•ђ
+// INTERNAL
 
 func sanitizeFileName(name string) string {
 	name = filepath.Base(name)
@@ -224,6 +258,32 @@ func validateUploadSCORMRequest(fileName string, fileData []byte) error {
 	return nil
 }
 
+func validateUploadCourseImageRequest(fileName string, fileData []byte) error {
+	if strings.TrimSpace(fileName) == "" {
+		return errs.B().
+			Code(errs.InvalidArgument).
+			Msg("file_name is required").
+			Err()
+	}
+
+	if len(fileData) == 0 {
+		return errs.B().
+			Code(errs.InvalidArgument).
+			Msg("file_data is required").
+			Err()
+	}
+
+	switch strings.ToLower(filepath.Ext(fileName)) {
+	case ".jpg", ".jpeg", ".png", ".webp":
+		return nil
+	default:
+		return errs.B().
+			Code(errs.InvalidArgument).
+			Msg("only .jpg, .jpeg, .png, and .webp files are allowed").
+			Err()
+	}
+}
+
 func uploadSCORMToStorage(ctx context.Context, fileName string, fileData []byte) (string, error) {
 	objectKey := fmt.Sprintf(
 		"scorm/uploads/%s",
@@ -247,6 +307,36 @@ func uploadSCORMToStorage(ctx context.Context, fileName string, fileData []byte)
 		return "", errs.B().
 			Code(errs.Internal).
 			Msg("failed to finalize SCORM upload").
+			Cause(err).
+			Err()
+	}
+
+	return objectKey, nil
+}
+
+func uploadCourseImageToStorage(ctx context.Context, fileName string, fileData []byte) (string, error) {
+	objectKey := fmt.Sprintf(
+		"course-images/%s",
+		sanitizeFileName(fileName),
+	)
+
+	writer := scormBucket.Upload(ctx, objectKey)
+
+	_, err := writer.Write(fileData)
+	if err != nil {
+		writer.Abort(err)
+		return "", errs.B().
+			Code(errs.Internal).
+			Msg("failed to upload course image").
+			Cause(err).
+			Err()
+	}
+
+	if err := writer.Close(); err != nil {
+		writer.Abort(err)
+		return "", errs.B().
+			Code(errs.Internal).
+			Msg("failed to finalize course image upload").
 			Cause(err).
 			Err()
 	}
@@ -289,6 +379,10 @@ func insertCourse(ctx context.Context, clientUID uuid.UUID, req *CreateCourseReq
 
 	if req.Lecturer != nil {
 		builder = builder.SetLecturer(strings.TrimSpace(*req.Lecturer))
+	}
+
+	if req.ImageURL != nil {
+		builder = builder.SetImageURL(strings.TrimSpace(*req.ImageURL))
 	}
 
 	row, err := builder.Save(ctx)
@@ -438,6 +532,9 @@ func updateCourse(ctx context.Context, clientUID uuid.UUID, role authhandler.Use
 	if req.ScormURL != nil {
 		builder = builder.SetScormURL(strings.TrimSpace(*req.ScormURL))
 	}
+	if req.ImageURL != nil {
+		builder = builder.SetImageURL(strings.TrimSpace(*req.ImageURL))
+	}
 	if req.IsActive != nil {
 		builder = builder.SetIsActive(*req.IsActive)
 	}
@@ -503,7 +600,7 @@ func softDeleteCourse(ctx context.Context, clientUID uuid.UUID, role authhandler
 	return nil
 }
 
-// в•ђв•ђв•ђв•ђ HELPERS в•ђв•ђв•ђв•ђ
+// HELPERS
 
 func entToCourse(row *ent.ScormCourse) *Course {
 	if row == nil {
@@ -518,6 +615,7 @@ func entToCourse(row *ent.ScormCourse) *Course {
 		Description: row.Description,
 		Lecturer:    row.Lecturer,
 		ScormURL:    row.ScormURL,
+		ImageURL:    row.ImageURL,
 		IsActive:    row.IsActive,
 	}
 }

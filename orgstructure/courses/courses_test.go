@@ -137,6 +137,44 @@ func TestUploadSCORM_EmployeeDenied(t *testing.T) {
 	}
 }
 
+func TestUploadCourseImage_Success(t *testing.T) {
+	req := &UploadCourseImageRequest{
+		FileName: "Preview Image.png",
+		FileData: bytes.Repeat([]byte("png-data"), 4),
+	}
+
+	resp, err := UploadCourseImage(adminCtx(), req)
+	if err != nil {
+		t.Fatalf("unexpected error: %v", err)
+	}
+
+	if resp.FileName != req.FileName {
+		t.Errorf("expected file_name %q, got %q", req.FileName, resp.FileName)
+	}
+	if resp.FileSize != len(req.FileData) {
+		t.Errorf("expected file_size %d, got %d", len(req.FileData), resp.FileSize)
+	}
+	if resp.ImageURL != "course-images/Preview_Image.png" {
+		t.Errorf("expected sanitized image_url, got %q", resp.ImageURL)
+	}
+	if resp.Message != "Course image uploaded successfully" {
+		t.Errorf("unexpected message %q", resp.Message)
+	}
+}
+
+func TestUploadCourseImage_UnsupportedExtension(t *testing.T) {
+	_, err := UploadCourseImage(adminCtx(), &UploadCourseImageRequest{
+		FileName: "preview.gif",
+		FileData: []byte("abc"),
+	})
+	if err == nil {
+		t.Fatal("expected error, got nil")
+	}
+	if errs.Code(err) != errs.InvalidArgument {
+		t.Errorf("expected InvalidArgument, got %v", errs.Code(err))
+	}
+}
+
 func TestCreateCourse_Success(t *testing.T) {
 	req := makeCreateCourseRequest()
 
@@ -173,6 +211,25 @@ func TestCreateCourse_Success(t *testing.T) {
 	}
 	if !reflect.DeepEqual(row.CategoryIds, req.CategoryIDs) {
 		t.Errorf("expected stored category_ids %v, got %v", req.CategoryIDs, row.CategoryIds)
+	}
+}
+
+func TestCreateCourse_WithImageURLSuccess(t *testing.T) {
+	req := makeCreateCourseRequest()
+	req.ImageURL = strPtr("course-images/preview.png")
+
+	resp, err := CreateCourse(adminCtx(), req)
+	if err != nil {
+		t.Fatalf("unexpected error: %v", err)
+	}
+
+	if resp.Course.ImageURL == nil || *resp.Course.ImageURL != *req.ImageURL {
+		t.Fatalf("expected image_url %q, got %v", *req.ImageURL, resp.Course.ImageURL)
+	}
+
+	row := mustGetCourseRow(t, resp.Course.ID)
+	if row.ImageURL == nil || *row.ImageURL != *req.ImageURL {
+		t.Fatalf("expected stored image_url %q, got %v", *req.ImageURL, row.ImageURL)
 	}
 }
 
@@ -354,6 +411,27 @@ func TestUpdateCourse_Success(t *testing.T) {
 	row := mustGetCourseRow(t, created.ID)
 	if !reflect.DeepEqual(row.CategoryIds, categoryIDs) {
 		t.Errorf("expected stored category_ids %v, got %v", categoryIDs, row.CategoryIds)
+	}
+}
+
+func TestUpdateCourse_ImageURLSuccess(t *testing.T) {
+	created := mustCreateCourse(t)
+	imageURL := "course-images/updated.webp"
+
+	resp, err := UpdateCourse(adminCtx(), created.ID.String(), &UpdateCourseRequest{
+		ImageURL: &imageURL,
+	})
+	if err != nil {
+		t.Fatalf("unexpected error: %v", err)
+	}
+
+	if resp.Course.ImageURL == nil || *resp.Course.ImageURL != imageURL {
+		t.Fatalf("expected image_url %q, got %v", imageURL, resp.Course.ImageURL)
+	}
+
+	row := mustGetCourseRow(t, created.ID)
+	if row.ImageURL == nil || *row.ImageURL != imageURL {
+		t.Fatalf("expected stored image_url %q, got %v", imageURL, row.ImageURL)
 	}
 }
 
