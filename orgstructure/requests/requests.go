@@ -140,6 +140,61 @@ func SubmitRequest(ctx context.Context, id encoreuuid.UUID) (*GetRequestResponse
 	return &GetRequestResponse{Detail: *detail}, nil
 }
 
+// PrepareAdminRequest fills training, supplier-contract and budget data before admin final approval.
+//
+//encore:api auth method=PUT path=/requests/admin/:id/prepare
+func PrepareAdminRequest(ctx context.Context, id encoreuuid.UUID, req *PrepareAdminRequestRequest) (*GetRequestResponse, error) {
+	actor, err := resolveCurrentActor(ctx)
+	if err != nil {
+		return nil, err
+	}
+	if !canManageAdminRequests(actor.Role) {
+		return nil, errs.B().Code(errs.PermissionDenied).Msg("insufficient permissions").Err()
+	}
+
+	detail, err := prepareAdminRequest(ctx, actor, uuid.UUID(id), req)
+	if err != nil {
+		return nil, err
+	}
+
+	return &GetRequestResponse{Detail: *detail}, nil
+}
+
+// RecreateRejectedRequest creates a new version of a rejected request.
+//
+//encore:api auth method=POST path=/requests/admin/:id/recreate
+func RecreateRejectedRequest(ctx context.Context, id encoreuuid.UUID, req *CreateAdminRequestRequest) (*GetRequestResponse, error) {
+	actor, err := resolveCurrentActor(ctx)
+	if err != nil {
+		return nil, err
+	}
+	if !canManageAdminRequests(actor.Role) {
+		return nil, errs.B().Code(errs.PermissionDenied).Msg("insufficient permissions").Err()
+	}
+
+	originalRequestID := uuid.UUID(id)
+
+	// Verify the original request exists and is rejected
+	originalRequest, err := queryRequestSummaryByID(ctx, originalRequestID)
+	if err != nil {
+		return nil, err
+	}
+	if originalRequest.Status != RequestStatusRejected {
+		return nil, errs.B().Code(errs.InvalidArgument).Msg("only rejected requests can be recreated").Err()
+	}
+	if originalRequest.RequestType != RequestTypeMain {
+		return nil, errs.B().Code(errs.InvalidArgument).Msg("only main requests can be recreated").Err()
+	}
+
+	// Create a new request with the provided data
+	detail, err := createAdminRequest(ctx, actor, req)
+	if err != nil {
+		return nil, err
+	}
+
+	return &GetRequestResponse{Detail: *detail}, nil
+}
+
 // CancelAdminRequest cancels a main request and refunds budget if it was written off.
 //
 //encore:api auth method=POST path=/requests/admin/:id/cancel
@@ -416,21 +471,60 @@ func resolveCurrentActor(ctx context.Context) (*actor, error) {
 	}
 
 	row := db.QueryRow(ctx, `
-		SELECT id, role, dzo_id
+		SELECT id, role, dzo_id, is_active, is_onboarded
 		FROM users
-		WHERE keycloak_user_id = $1 AND is_active = TRUE
+		WHERE keycloak_user_id = $1
 	`, ad.KeycloakUserID)
 
 	var (
-		id    uuid.UUID
-		role  string
-		dzoID sql.NullString
+		id          uuid.UUID
+		role        string
+		dzoID       sql.NullString
+		isActive    bool
+		isOnboarded bool
 	)
-	if err := row.Scan(&id, &role, &dzoID); err != nil {
+	err = row.Scan(&id, &role, &dzoID, &isActive, &isOnboarded)
+
+	// If user not found, auto-provision
+	if err != nil {
 		if errors.Is(err, sqldb.ErrNoRows) {
-			return nil, errs.B().Code(errs.NotFound).Msg("actor not found").Err()
+			newUser, err := autoProvisionActor(ctx, ad)
+			if err != nil {
+				return nil, err
+			}
+			return newUser, nil
 		}
 		return nil, errs.B().Code(errs.Internal).Msg("failed to resolve actor").Cause(err).Err()
+	}
+
+	// If user is pending activation (admin created by SA), activate on first login
+	if !isOnboarded && !isActive {
+		if _, err := db.Exec(ctx, `
+			UPDATE users
+			SET is_active = TRUE, is_onboarded = TRUE, updated_at = NOW()
+			WHERE id = $1
+		`, id); err != nil {
+			return nil, errs.B().Code(errs.Internal).Msg("failed to activate user").Cause(err).Err()
+		}
+		isActive = true
+	}
+
+	// Check if user is blocked
+	if !isActive {
+		return nil, errs.B().Code(errs.PermissionDenied).Msg("user is blocked").Err()
+	}
+
+	// Sync role from JWT to database
+	jwtRole := string(ad.Role)
+	if strings.ToUpper(strings.TrimSpace(role)) != jwtRole {
+		if _, err := db.Exec(ctx, `
+			UPDATE users
+			SET role = $1, updated_at = NOW()
+			WHERE id = $2
+		`, jwtRole, id); err != nil {
+			return nil, errs.B().Code(errs.Internal).Msg("failed to sync role").Cause(err).Err()
+		}
+		role = jwtRole
 	}
 
 	current := &actor{
@@ -443,6 +537,59 @@ func resolveCurrentActor(ctx context.Context) (*actor, error) {
 			return nil, errs.B().Code(errs.Internal).Msg("failed to parse actor dzo").Cause(err).Err()
 		}
 		current.DzoID = &value
+	}
+	return current, nil
+}
+
+// autoProvisionActor creates a new user from JWT claims.
+// SA is the only exception: a fresh SA must be trusted from the JWT to
+// bootstrap the system — SA can only be granted by a Keycloak realm admin.
+// ADM role is also trusted from JWT if present.
+// All other users default to EMP role.
+func autoProvisionActor(ctx context.Context, ad *authhandler.AuthData) (*actor, error) {
+	role := authhandler.RoleEMP
+	if ad.Role == authhandler.RoleSA {
+		role = authhandler.RoleSA
+	} else if ad.Role == authhandler.RoleADM {
+		role = authhandler.RoleADM
+	}
+
+	builder := Client.User.
+		Create().
+		SetKeycloakUserID(ad.KeycloakUserID).
+		SetEmail(ad.Email).
+		SetRole(string(role))
+
+	if ad.CompanyID != "" {
+		clientUUID, err := uuid.Parse(ad.CompanyID)
+		if err != nil {
+			return nil, errs.B().Code(errs.InvalidArgument).Msg("invalid client_id format").Err()
+		}
+		builder = builder.SetClientID(clientUUID)
+	}
+
+	if ad.DzoID != "" {
+		dzoUUID, err := uuid.Parse(ad.DzoID)
+		if err != nil {
+			return nil, errs.B().Code(errs.InvalidArgument).Msg("invalid dzo_id format").Err()
+		}
+		builder = builder.SetDzoID(dzoUUID)
+	}
+
+	newUser, err := builder.Save(ctx)
+	if err != nil {
+		if dbent.IsConstraintError(err) {
+			return nil, errs.B().Code(errs.AlreadyExists).Msg("user with this keycloak_user_id already exists").Err()
+		}
+		return nil, errs.B().Code(errs.Internal).Msg("failed to create user").Cause(err).Err()
+	}
+
+	current := &actor{
+		ID:   newUser.ID,
+		Role: authhandler.UserRole(strings.ToUpper(strings.TrimSpace(newUser.Role))),
+	}
+	if newUser.DzoID != nil && *newUser.DzoID != uuid.Nil {
+		current.DzoID = newUser.DzoID
 	}
 	return current, nil
 }
@@ -478,12 +625,6 @@ func createAdminRequest(ctx context.Context, actor *actor, req *CreateAdminReque
 	if req.Title != nil && strings.TrimSpace(*req.Title) != "" {
 		title = strings.TrimSpace(*req.Title)
 	}
-	var format interface{}
-	if req.Format != nil && strings.TrimSpace(*req.Format) != "" {
-		format = strings.TrimSpace(*req.Format)
-	} else if trainingEvent.LocationType.Valid {
-		format = trainingEvent.LocationType.String
-	}
 
 	deadlineAt, err := parseOptionalTime(req.DeadlineAt)
 	if err != nil {
@@ -500,16 +641,15 @@ func createAdminRequest(ctx context.Context, actor *actor, req *CreateAdminReque
 	if _, err := tx.Exec(ctx, `
 		INSERT INTO requests (
 			id, initiator_id, entity_id, entity_type, request_type, kind, title, category,
-			responsible_admin_id, step, status, created_at, updated_at, completed_at
+			responsible_admin_id, training_date, deadline_at, cost_amount, cost_mode, step, status, created_at, updated_at
 		)
-		VALUES ($1, $2, $3, 'TRAINING_EVENT', 'MAIN', 'REGULAR', $4, $5, $6, $7, $8, $9, $10, $11, 0, 'DRAFT', NOW(), NOW())
+		VALUES ($1, $2, $3, 'TRAINING_EVENT', 'MAIN', 'REGULAR', $4, $5, $6, $7, $8, $9, $10, 0, 'DRAFT', NOW(), NOW())
 	`,
 		requestID,
 		actor.ID,
 		trainingEvent.ID,
 		title,
 		nullableString(req.Category),
-		format,
 		actor.ID,
 		trainingEvent.StartDate,
 		deadlineAt,
@@ -1303,6 +1443,89 @@ func queryParticipantCount(ctx context.Context, requestID uuid.UUID) (int, error
 	return count, nil
 }
 
+// prepareAdminRequest prepares HR request for final admin approval.
+func prepareAdminRequest(ctx context.Context, actor *actor, requestID uuid.UUID, req *PrepareAdminRequestRequest) (*RequestDetail, error) {
+	requestSummary, err := queryRequestSummaryByID(ctx, requestID)
+	if err != nil {
+		return nil, err
+	}
+
+	if requestSummary.RequestType != RequestTypeMain {
+		return nil, errs.B().Code(errs.InvalidArgument).Msg("only main requests can be prepared").Err()
+	}
+	if requestSummary.Kind != RequestKindRegular {
+		return nil, errs.B().Code(errs.InvalidArgument).Msg("archive requests cannot be prepared").Err()
+	}
+	if requestSummary.Status == RequestStatusRejected || requestSummary.Status == RequestStatusCompleted {
+		return nil, errs.B().Code(errs.InvalidArgument).Msg("request cannot be prepared in current status").Err()
+	}
+	if strings.TrimSpace(req.TrainingEventID) == "" {
+		return nil, errs.B().Code(errs.InvalidArgument).Msg("training_event_id is required").Err()
+	}
+	if req.CostMode != nil && !req.CostMode.IsValid() {
+		return nil, errs.B().Code(errs.InvalidArgument).Msg("invalid cost_mode").Err()
+	}
+	if req.CostAmount != nil && *req.CostAmount < 0 {
+		return nil, errs.B().Code(errs.InvalidArgument).Msg("cost_amount cannot be negative").Err()
+	}
+
+	trainingEvent, err := loadTrainingEvent(ctx, req.TrainingEventID)
+	if err != nil {
+		return nil, err
+	}
+
+	if err := validateRequestEmployeesActive(ctx, requestID, req.AllowInactiveEmployees); err != nil {
+		return nil, err
+	}
+
+	deadlineAt, err := parseOptionalTime(req.DeadlineAt)
+	if err != nil {
+		return nil, err
+	}
+
+	tx, err := db.Begin(ctx)
+	if err != nil {
+		return nil, errs.B().Code(errs.Internal).Msg("failed to begin transaction").Cause(err).Err()
+	}
+	defer tx.Rollback()
+
+	if _, err := tx.Exec(ctx, `
+		UPDATE requests
+		SET
+			entity_id = $2,
+			entity_type = 'TRAINING_EVENT',
+			title = $3,
+			training_date = $4,
+			deadline_at = COALESCE($5, deadline_at),
+			cost_amount = $6,
+			cost_mode = $7,
+			responsible_admin_id = $8,
+			updated_at = NOW()
+		WHERE id = $1
+	`,
+		requestID,
+		trainingEvent.ID,
+		trainingEvent.Title,
+		trainingEvent.StartDate,
+		deadlineAt,
+		nullableFloat(req.CostAmount),
+		nullableCostMode(req.CostMode),
+		actor.ID,
+	); err != nil {
+		return nil, errs.B().Code(errs.Internal).Msg("failed to prepare request").Cause(err).Err()
+	}
+
+	if err := checkAvailableBudgetTx(ctx, tx, requestID); err != nil {
+		return nil, err
+	}
+
+	if err := tx.Commit(); err != nil {
+		return nil, errs.B().Code(errs.Internal).Msg("failed to commit request preparation").Cause(err).Err()
+	}
+
+	return buildRequestDetail(ctx, requestID)
+}
+
 func finalizeAdminRequest(ctx context.Context, actor *actor, requestID uuid.UUID) (*RequestDetail, error) {
 	requestSummary, err := queryRequestSummaryByID(ctx, requestID)
 	if err != nil {
@@ -2077,4 +2300,72 @@ func budgetOperationExistsTx(ctx context.Context, tx *sqldb.Tx, requestID uuid.U
 	}
 
 	return exists, nil
+}
+
+// validateRequestEmployeesActive verifies that request participants
+// are active employees.
+func validateRequestEmployeesActive(ctx context.Context, requestID uuid.UUID, allowInactive bool) error {
+	if allowInactive {
+		return nil
+	}
+
+	var inactiveCount int
+	if err := db.QueryRow(ctx, `
+		SELECT COUNT(*)
+		FROM request_participants rp
+		JOIN employees e ON e.id = rp.employee_id
+		WHERE rp.request_id = $1
+		  AND (e.is_active = FALSE OR e.is_deleted = TRUE)
+	`, requestID).Scan(&inactiveCount); err != nil {
+		return errs.B().Code(errs.Internal).Msg("failed to validate request employees").Cause(err).Err()
+	}
+
+	if inactiveCount > 0 {
+		return errs.B().Code(errs.InvalidArgument).Msg("request contains inactive employees").Err()
+	}
+
+	return nil
+}
+
+// checkAvailableBudgetTx verifies there is enough remaining contract
+// budget before request can move to final approval.
+func checkAvailableBudgetTx(ctx context.Context, tx *sqldb.Tx, requestID uuid.UUID) error {
+	contractID, amount, err := getRequestBudgetSource(ctx, requestID)
+	if err != nil {
+		return err
+	}
+	if amount <= 0 {
+		return nil
+	}
+
+	var remaining float64
+	if err := tx.QueryRow(ctx, `
+		SELECT remaining_amount
+		FROM contract_suppliers
+		WHERE id = $1
+	`, contractID).Scan(&remaining); err != nil {
+		return errs.B().Code(errs.Internal).Msg("failed to check contract budget").Cause(err).Err()
+	}
+
+	if remaining < amount {
+
+		// Если бюджета контракта недостаточно,
+		// оставить запрос в черновике
+		if _, err := tx.Exec(ctx, `
+		UPDATE requests
+		SET status = 'DRAFT',
+		    updated_at = NOW()
+		WHERE id = $1
+	`, requestID); err != nil {
+			return errs.B().
+				Code(errs.Internal).
+				Msg("failed to move request to draft").
+				Cause(err).
+				Err()
+		}
+
+		return nil
+	}
+
+	return nil
 }

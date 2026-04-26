@@ -126,30 +126,32 @@ type RequestDzoContract struct {
 }
 
 type RequestSummary struct {
-	ID                 string        `json:"id"`
-	InitiatorID        string        `json:"initiator_id"`
-	ParentRequestID    *string       `json:"parent_request_id,omitempty"`
-	TrainingEventID    string        `json:"training_event_id"`
-	EntityType         string        `json:"entity_type"`
-	RequestType        RequestType   `json:"request_type"`
-	Kind               RequestKind   `json:"kind"`
-	Status             RequestStatus `json:"status"`
-	AssignedHRID       *string       `json:"assigned_hr_id,omitempty"`
-	TargetDzoID        *string       `json:"target_dzo_id,omitempty"`
-	Title              string        `json:"title"`
-	Category           *string       `json:"category,omitempty"`
-	Format             *string       `json:"format,omitempty"`
-	ResponsibleAdminID *string       `json:"responsible_admin_id,omitempty"`
-	TrainingDate       *time.Time    `json:"training_date,omitempty"`
-	DeadlineAt         *time.Time    `json:"deadline_at,omitempty"`
-	CostAmount         *float64      `json:"cost_amount,omitempty"`
-	CostMode           *CostMode     `json:"cost_mode,omitempty"`
-	EmployeesCount     int           `json:"employees_count"`
-	ApprovedChildren   int           `json:"approved_children"`
-	TotalChildren      int           `json:"total_children"`
-	CreatedAt          time.Time     `json:"created_at"`
-	UpdatedAt          time.Time     `json:"updated_at"`
-	CompletedAt        *time.Time    `json:"completed_at,omitempty"`
+	ID                  string        `json:"id"`
+	InitiatorID         string        `json:"initiator_id"`
+	ParentRequestID     *string       `json:"parent_request_id,omitempty"`
+	TrainingEventID     string        `json:"training_event_id"`
+	EntityType          string        `json:"entity_type"`
+	RequestType         RequestType   `json:"request_type"`
+	Kind                RequestKind   `json:"kind"`
+	Status              RequestStatus `json:"status"`
+	AssignedHRID        *string       `json:"assigned_hr_id,omitempty"`
+	TargetDzoID         *string       `json:"target_dzo_id,omitempty"`
+	Title               string        `json:"title"`
+	Category            *string       `json:"category,omitempty"`
+	Format              *string       `json:"format,omitempty"`
+	ResponsibleAdminID  *string       `json:"responsible_admin_id,omitempty"`
+	TrainingDate        *time.Time    `json:"training_date,omitempty"`
+	DeadlineAt          *time.Time    `json:"deadline_at,omitempty"`
+	CostAmount          *float64      `json:"cost_amount,omitempty"`
+	CostMode            *CostMode     `json:"cost_mode,omitempty"`
+	EmployeesCount      int           `json:"employees_count"`
+	ApprovedChildren    int           `json:"approved_children"`
+	TotalChildren       int           `json:"total_children"`
+	IsBlocked           bool          `json:"is_blocked"`
+	ReplacedByRequestID *string       `json:"replaced_by_request_id,omitempty"`
+	CreatedAt           time.Time     `json:"created_at"`
+	UpdatedAt           time.Time     `json:"updated_at"`
+	CompletedAt         *time.Time    `json:"completed_at,omitempty"`
 }
 
 type RequestDetail struct {
@@ -188,6 +190,14 @@ type CreateHRRequestRequest struct {
 	EmployeeIDs            []string `json:"employee_ids,omitempty"`
 	AllowInactiveEmployees bool     `json:"allow_inactive_employees,omitempty"`
 	DeadlineAt             *string  `json:"deadline_at,omitempty"`
+}
+
+type PrepareAdminRequestRequest struct {
+	TrainingEventID        string    `json:"training_event_id"`
+	CostAmount             *float64  `json:"cost_amount,omitempty"`
+	CostMode               *CostMode `json:"cost_mode,omitempty"`
+	DeadlineAt             *string   `json:"deadline_at,omitempty"`
+	AllowInactiveEmployees bool      `json:"allow_inactive_employees,omitempty"`
 }
 
 // ════ ARCHIVE FLOW TYPES ════

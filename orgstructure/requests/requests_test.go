@@ -266,6 +266,13 @@ func mustUUID(t *testing.T, raw string) uuid.UUID {
 	}
 	return id
 }
+func floatPtr(v float64) *float64 {
+	return &v
+}
+
+func costModePtr(v CostMode) *CostMode {
+	return &v
+}
 
 func nullableUUIDForTest(id *uuid.UUID) interface{} {
 	if id == nil {
@@ -713,6 +720,174 @@ func TestBudgetRefundOnCancelAfterWriteOff(t *testing.T) {
 	}
 }
 
+func TestPrepareAdminRequest_Success(t *testing.T) {
+	fx := newFixture(t)
+
+	// draft -> submit
+	detail := makeDraftRequest(
+		t,
+		fx,
+		[]uuid.UUID{fx.empOneID},
+		nil,
+	)
+
+	submitted := submitDraftRequest(t, fx, detail)
+
+	childID := firstChildByDZO(t, submitted, fx.dzoOneID)
+
+	// HR approves child
+	if _, err := ApproveHRRequest(
+		authCtxFor(fx.hrOneKC, authhandler.RoleHR, &fx.dzoOneID),
+		toEncoreUUID(childID),
+	); err != nil {
+		t.Fatalf("approve hr request: %v", err)
+	}
+
+	// prepare
+	resp, err := PrepareAdminRequest(
+		authCtxFor(fx.adminKC, authhandler.RoleADM, nil),
+		toEncoreUUID(uuid.MustParse(detail.Request.ID)),
+		&PrepareAdminRequestRequest{
+			TrainingEventID: fx.trainingEventID.String(),
+			CostAmount:      floatPtr(5000),
+			CostMode:        costModePtr(CostModePerEmployee),
+		},
+	)
+	if err != nil {
+		t.Fatalf("prepare request: %v", err)
+	}
+
+	if resp.Detail.Request.TrainingEventID != fx.trainingEventID.String() {
+		t.Fatalf("expected training event %s, got %s", fx.trainingEventID, resp.Detail.Request.TrainingEventID)
+	}
+	if resp.Detail.Request.CostAmount == nil || *resp.Detail.Request.CostAmount != 5000 {
+		t.Fatalf("expected cost amount 5000, got %v", resp.Detail.Request.CostAmount)
+	}
+}
+func TestFinalizeRequiresPreparation(t *testing.T) {
+	fx := newFixture(t)
+
+	detail := makeDraftRequest(
+		t,
+		fx,
+		[]uuid.UUID{fx.empOneID},
+		nil,
+	)
+
+	submitted := submitDraftRequest(t, fx, detail)
+
+	childID := firstChildByDZO(t, submitted, fx.dzoOneID)
+
+	if _, err := ApproveHRRequest(
+		authCtxFor(fx.hrOneKC, authhandler.RoleHR, &fx.dzoOneID),
+		toEncoreUUID(childID),
+	); err != nil {
+		t.Fatal(err)
+	}
+
+	_, err := FinalizeAdminRequest(
+		authCtxFor(fx.adminKC, authhandler.RoleADM, nil),
+		toEncoreUUID(uuid.MustParse(detail.Request.ID)),
+	)
+
+	if err == nil {
+		t.Fatal("expected finalize to fail without prepare")
+	}
+}
+func TestFinalizeMarksRequestCompleted(t *testing.T) {
+	fx := newFixture(t)
+
+	detail := makeDraftRequest(
+		t,
+		fx,
+		[]uuid.UUID{fx.empOneID},
+		nil,
+	)
+
+	submitted := submitDraftRequest(t, fx, detail)
+
+	childID := firstChildByDZO(t, submitted, fx.dzoOneID)
+
+	if _, err := ApproveHRRequest(
+		authCtxFor(fx.hrOneKC, authhandler.RoleHR, &fx.dzoOneID),
+		toEncoreUUID(childID),
+	); err != nil {
+		t.Fatal(err)
+	}
+
+	if _, err := PrepareAdminRequest(
+		authCtxFor(fx.adminKC, authhandler.RoleADM, nil),
+		toEncoreUUID(uuid.MustParse(detail.Request.ID)),
+		&PrepareAdminRequestRequest{
+			TrainingEventID: fx.trainingEventID.String(),
+			CostAmount:      floatPtr(5000),
+			CostMode:        costModePtr(CostModePerEmployee),
+		},
+	); err != nil {
+		t.Fatal(err)
+	}
+
+	resp, err := FinalizeAdminRequest(
+		authCtxFor(fx.adminKC, authhandler.RoleADM, nil),
+		toEncoreUUID(uuid.MustParse(detail.Request.ID)),
+	)
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	if resp.Detail.Request.Status != RequestStatusCompleted {
+		t.Fatalf(
+			"expected COMPLETED got %s",
+			resp.Detail.Request.Status,
+		)
+	}
+
+	if resp.Detail.Request.CompletedAt == nil {
+		t.Fatal("completed_at not set")
+	}
+}
+func TestFinalizeBlockedWhenChildRejected(t *testing.T) {
+	fx := newFixture(t)
+
+	detail := makeDraftRequest(
+		t,
+		fx,
+		[]uuid.UUID{
+			fx.empOneID,
+			fx.empTwoID,
+		},
+		nil,
+	)
+
+	submitted := submitDraftRequest(t, fx, detail)
+
+	child1 := firstChildByDZO(t, submitted, fx.dzoOneID)
+	child2 := firstChildByDZO(t, submitted, fx.dzoTwoID)
+
+	if _, err := ApproveHRRequest(
+		authCtxFor(fx.hrOneKC, authhandler.RoleHR, &fx.dzoOneID),
+		toEncoreUUID(child1),
+	); err != nil {
+		t.Fatal(err)
+	}
+
+	if _, err := CancelHRRequest(
+		authCtxFor(fx.hrTwoKC, authhandler.RoleHR, &fx.dzoTwoID),
+		toEncoreUUID(child2),
+	); err != nil {
+		t.Fatal(err)
+	}
+
+	_, err := FinalizeAdminRequest(
+		authCtxFor(fx.adminKC, authhandler.RoleADM, nil),
+		toEncoreUUID(uuid.MustParse(detail.Request.ID)),
+	)
+
+	if err == nil {
+		t.Fatal("expected finalize blocked with rejected child")
+	}
+}
+
 func TestBudgetSubmitFailsWhenNotEnoughBudget(t *testing.T) {
 	fx := newFixture(t)
 
@@ -929,5 +1104,192 @@ func TestSubmitArchiveRequest_Fails(t *testing.T) {
 	}
 	if errs.Code(err) != errs.InvalidArgument {
 		t.Fatalf("expected InvalidArgument, got %v", errs.Code(err))
+	}
+}
+
+func TestRecreateRejectedRequest_Success(t *testing.T) {
+	fx := newFixture(t)
+
+	// Create and reject a request
+	resp, err := CreateAdminRequest(authCtxFor(fx.adminKC, authhandler.RoleADM, nil), &CreateAdminRequestRequest{
+		TrainingEventID: fx.trainingEventID.String(),
+		EmployeeIDs:     []string{fx.empOneID.String()},
+		CostAmount:      floatPtr(50000),
+		CostMode:        costModePtr(CostModePerEmployee),
+	})
+	if err != nil {
+		t.Fatalf("failed to create request: %v", err)
+	}
+
+	requestID := uuid.MustParse(resp.Detail.Request.ID)
+
+	// Manually set status to REJECTED
+	_, err = db.Exec(ctx(), "UPDATE requests SET status = 'REJECTED' WHERE id = $1", requestID)
+	if err != nil {
+		t.Fatalf("failed to reject request: %v", err)
+	}
+
+	// Recreate the rejected request
+	newResp, err := RecreateRejectedRequest(
+		authCtxFor(fx.adminKC, authhandler.RoleADM, nil),
+		toEncoreUUID(requestID),
+		&CreateAdminRequestRequest{
+			TrainingEventID: fx.trainingEventID.String(),
+			EmployeeIDs:     []string{fx.empOneID.String(), fx.empTwoID.String()},
+			CostAmount:      floatPtr(75000),
+			CostMode:        costModePtr(CostModePerEmployee),
+		},
+	)
+	if err != nil {
+		t.Fatalf("failed to recreate rejected request: %v", err)
+	}
+
+	if newResp.Detail.Request.Status != RequestStatusDraft {
+		t.Fatalf("expected DRAFT status, got %s", newResp.Detail.Request.Status)
+	}
+	if newResp.Detail.Request.EmployeesCount != 2 {
+		t.Fatalf("expected 2 employees, got %d", newResp.Detail.Request.EmployeesCount)
+	}
+	if *newResp.Detail.Request.CostAmount != 75000 {
+		t.Fatalf("expected cost 75000, got %f", *newResp.Detail.Request.CostAmount)
+	}
+	if newResp.Detail.Request.ID == resp.Detail.Request.ID {
+		t.Fatal("new request should have different ID from rejected request")
+	}
+
+	// Verify original request is blocked
+	var isBlocked bool
+	var replacedByID *uuid.UUID
+	err = db.QueryRow(ctx(), "SELECT is_blocked, replaced_by_request_id FROM requests WHERE id = $1", requestID).Scan(&isBlocked, &replacedByID)
+	if err != nil {
+		t.Fatalf("failed to check blocked status: %v", err)
+	}
+	if !isBlocked {
+		t.Fatal("original request should be blocked")
+	}
+	if replacedByID == nil {
+		t.Fatal("replaced_by_request_id should be set")
+	}
+	if replacedByID.String() != newResp.Detail.Request.ID {
+		t.Fatalf("replaced_by_request_id should match new request ID, got %s, expected %s", replacedByID.String(), newResp.Detail.Request.ID)
+	}
+}
+
+func TestRecreateRejectedRequest_BlockedRequestCannotBeRecreated(t *testing.T) {
+	fx := newFixture(t)
+
+	// Create and reject a request
+	resp, err := CreateAdminRequest(authCtxFor(fx.adminKC, authhandler.RoleADM, nil), &CreateAdminRequestRequest{
+		TrainingEventID: fx.trainingEventID.String(),
+		EmployeeIDs:     []string{fx.empOneID.String()},
+	})
+	if err != nil {
+		t.Fatalf("failed to create request: %v", err)
+	}
+
+	requestID := uuid.MustParse(resp.Detail.Request.ID)
+
+	// Set status to REJECTED
+	_, err = db.Exec(ctx(), "UPDATE requests SET status = 'REJECTED' WHERE id = $1", requestID)
+	if err != nil {
+		t.Fatalf("failed to reject request: %v", err)
+	}
+
+	// Recreate once
+	_, err = RecreateRejectedRequest(
+		authCtxFor(fx.adminKC, authhandler.RoleADM, nil),
+		toEncoreUUID(requestID),
+		&CreateAdminRequestRequest{
+			TrainingEventID: fx.trainingEventID.String(),
+			EmployeeIDs:     []string{fx.empOneID.String()},
+		},
+	)
+	if err != nil {
+		t.Fatalf("failed to recreate rejected request: %v", err)
+	}
+
+	// Try to recreate again (should fail because it's blocked)
+	_, err = RecreateRejectedRequest(
+		authCtxFor(fx.adminKC, authhandler.RoleADM, nil),
+		toEncoreUUID(requestID),
+		&CreateAdminRequestRequest{
+			TrainingEventID: fx.trainingEventID.String(),
+			EmployeeIDs:     []string{fx.empOneID.String()},
+		},
+	)
+
+	if err == nil {
+		t.Fatal("expected error when recreating blocked request")
+	}
+	if errs.Code(err) != errs.InvalidArgument {
+		t.Fatalf("expected InvalidArgument, got %v", errs.Code(err))
+	}
+}
+
+func TestRecreateRejectedRequest_OnlyRejectedRequests(t *testing.T) {
+	fx := newFixture(t)
+
+	resp, err := CreateAdminRequest(authCtxFor(fx.adminKC, authhandler.RoleADM, nil), &CreateAdminRequestRequest{
+		TrainingEventID: fx.trainingEventID.String(),
+		EmployeeIDs:     []string{fx.empOneID.String()},
+	})
+	if err != nil {
+		t.Fatalf("failed to create request: %v", err)
+	}
+
+	requestID := uuid.MustParse(resp.Detail.Request.ID)
+
+	// Try to recreate a non-rejected request
+	_, err = RecreateRejectedRequest(
+		authCtxFor(fx.adminKC, authhandler.RoleADM, nil),
+		toEncoreUUID(requestID),
+		&CreateAdminRequestRequest{
+			TrainingEventID: fx.trainingEventID.String(),
+			EmployeeIDs:     []string{fx.empOneID.String()},
+		},
+	)
+
+	if err == nil {
+		t.Fatal("expected error when recreating non-rejected request")
+	}
+	if errs.Code(err) != errs.InvalidArgument {
+		t.Fatalf("expected InvalidArgument, got %v", errs.Code(err))
+	}
+}
+
+func TestRecreateRejectedRequest_RequiresAdminPermission(t *testing.T) {
+	fx := newFixture(t)
+
+	resp, err := CreateAdminRequest(authCtxFor(fx.adminKC, authhandler.RoleADM, nil), &CreateAdminRequestRequest{
+		TrainingEventID: fx.trainingEventID.String(),
+		EmployeeIDs:     []string{fx.empOneID.String()},
+	})
+	if err != nil {
+		t.Fatalf("failed to create request: %v", err)
+	}
+
+	requestID := uuid.MustParse(resp.Detail.Request.ID)
+
+	// Set status to REJECTED
+	_, err = db.Exec(ctx(), "UPDATE requests SET status = 'REJECTED' WHERE id = $1", requestID)
+	if err != nil {
+		t.Fatalf("failed to reject request: %v", err)
+	}
+
+	// Try to recreate as HR
+	_, err = RecreateRejectedRequest(
+		authCtxFor(fx.hrOneKC, authhandler.RoleHR, &fx.dzoOneID),
+		toEncoreUUID(requestID),
+		&CreateAdminRequestRequest{
+			TrainingEventID: fx.trainingEventID.String(),
+			EmployeeIDs:     []string{fx.empOneID.String()},
+		},
+	)
+
+	if err == nil {
+		t.Fatal("expected permission denied")
+	}
+	if errs.Code(err) != errs.PermissionDenied {
+		t.Fatalf("expected PermissionDenied, got %v", errs.Code(err))
 	}
 }
