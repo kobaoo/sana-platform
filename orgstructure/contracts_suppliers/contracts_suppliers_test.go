@@ -125,7 +125,9 @@ func TestQueryContractByID_InvalidUUID(t *testing.T) {
 func TestValidateUpdateRequest(t *testing.T) {
 	str := func(s string) *string { return &s }
 	intP := func(i int) *int { return &i }
+	floatP := func(f float64) *float64 { return &f }
 	timeP := func(t time.Time) *time.Time { return &t }
+
 	validDate := time.Date(2025, 1, 15, 0, 0, 0, 0, time.UTC)
 
 	tests := []struct {
@@ -134,12 +136,22 @@ func TestValidateUpdateRequest(t *testing.T) {
 		wantErr bool
 	}{
 		{"valid single field", &UpdateContractRequest{VatFlag: intP(12)}, false},
-		{"valid multiple fields", &UpdateContractRequest{ContractNumber: str("№123"), SignedDate: timeP(validDate)}, false},
+		{"valid multiple fields", &UpdateContractRequest{
+			ContractNumber: str("№123"),
+			SignedDate:     timeP(validDate),
+		}, false},
+		{"valid amount update", &UpdateContractRequest{
+			Amount: floatP(1000),
+		}, false},
+
+		// edge cases
 		{"nil request", nil, true},
 		{"no fields", &UpdateContractRequest{}, true},
 		{"empty contract_number", &UpdateContractRequest{ContractNumber: str("   ")}, true},
 		{"zero signed_date", &UpdateContractRequest{SignedDate: timeP(time.Time{})}, true},
+		{"negative amount", &UpdateContractRequest{Amount: floatP(-10)}, true},
 	}
+
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
 			err := validateUpdateRequest(tt.req)
@@ -226,7 +238,7 @@ func TestBuildFileKey(t *testing.T) {
 	}{
 		{"abc123", "contract.pdf", "abc123/contract.pdf"},
 		{"abc123", "  contract.pdf  ", "abc123/contract.pdf"},
-		{"abc123", "/etc/passwd", "abc123/passwd"},        // strips directory traversal
+		{"abc123", "/etc/passwd", "abc123/passwd"}, // strips directory traversal
 		{"abc123", "../../secret.pdf", "abc123/secret.pdf"},
 	}
 	for _, c := range cases {

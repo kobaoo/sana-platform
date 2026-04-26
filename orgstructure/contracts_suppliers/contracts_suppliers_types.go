@@ -9,9 +9,9 @@ import (
 type ContractStatus string
 
 const (
-	StatusActive        ContractStatus = "ACTIVE"
-	StatusExpired       ContractStatus = "EXPIRED"
-	StatusExpiringSoon  ContractStatus = "EXPIRING_SOON"
+	StatusActive       ContractStatus = "ACTIVE"
+	StatusExpired      ContractStatus = "EXPIRED"
+	StatusExpiringSoon ContractStatus = "EXPIRING_SOON"
 )
 
 func (s ContractStatus) IsValid() bool {
@@ -36,21 +36,21 @@ type ContractSupplier struct {
 	EndDate            *time.Time     `json:"end_date,omitempty"`
 	Status             ContractStatus `json:"status"`
 	Amount             float64        `json:"amount"`
-	AmountCurrency     *float64   `json:"amount_currency,omitempty"`
-	Currency           *string    `json:"currency,omitempty"`
-	BalanceAtYearEnd   *float64   `json:"balance_at_year_end,omitempty"`
-	AmendmentNumber    *string    `json:"amendment_number,omitempty"`
-	AmendmentDate      *time.Time `json:"amendment_date,omitempty"`
-	AmendmentAmount    *float64   `json:"amendment_amount,omitempty"`
-	TotalWithAmendment float64    `json:"total_with_amendment"`
-	RemainingAmount    float64    `json:"remaining_amount"`
-	FileKey            *string    `json:"file_key,omitempty"`
-	FileName           *string    `json:"file_name,omitempty"`
-	FileSize           *int64     `json:"file_size,omitempty"`
-	FileMimeType       *string    `json:"file_mime_type,omitempty"`
-	IsActive           bool       `json:"is_active"`
-	CreatedAt          time.Time  `json:"created_at"`
-	UpdatedAt          time.Time  `json:"updated_at"`
+	AmountCurrency     *float64       `json:"amount_currency,omitempty"`
+	Currency           *string        `json:"currency,omitempty"`
+	BalanceAtYearEnd   *float64       `json:"balance_at_year_end,omitempty"`
+	AmendmentNumber    *string        `json:"amendment_number,omitempty"`
+	AmendmentDate      *time.Time     `json:"amendment_date,omitempty"`
+	AmendmentAmount    *float64       `json:"amendment_amount,omitempty"`
+	TotalWithAmendment float64        `json:"total_with_amendment"`
+	RemainingAmount    float64        `json:"remaining_amount"`
+	FileKey            *string        `json:"file_key,omitempty"`
+	FileName           *string        `json:"file_name,omitempty"`
+	FileSize           *int64         `json:"file_size,omitempty"`
+	FileMimeType       *string        `json:"file_mime_type,omitempty"`
+	IsActive           bool           `json:"is_active"`
+	CreatedAt          time.Time      `json:"created_at"`
+	UpdatedAt          time.Time      `json:"updated_at"`
 }
 
 // ════ REQUESTS ════
@@ -79,6 +79,7 @@ type UpdateContractRequest struct {
 	VatFlag          *int       `json:"vat_flag,omitempty"`
 	SignedDate       *time.Time `json:"signed_date,omitempty"`
 	EndDate          *time.Time `json:"end_date,omitempty"`
+	Amount           *float64   `json:"amount,omitempty"`
 	AmountCurrency   *float64   `json:"amount_currency,omitempty"`
 	Currency         *string    `json:"currency,omitempty"`
 	BalanceAtYearEnd *float64   `json:"balance_at_year_end,omitempty"`

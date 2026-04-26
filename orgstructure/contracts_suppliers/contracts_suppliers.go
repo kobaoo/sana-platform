@@ -447,10 +447,21 @@ func validateUpdateRequest(req *UpdateContractRequest) error {
 	if req.VatFlag != nil && (*req.VatFlag < 0 || *req.VatFlag > 100) {
 		return errs.B().Code(errs.InvalidArgument).Msg("vat_flag must be between 0 and 100").Err()
 	}
+	if req.Amount != nil && *req.Amount < 0 {
+		return errs.B().Code(errs.InvalidArgument).Msg("amount must be >= 0").Err()
+	}
+
 	return nil
 }
 
 func updateContract(ctx context.Context, row *ent.ContractSupplier, req *UpdateContractRequest) (*ent.ContractSupplier, error) {
+	if req.Amount != nil && row.AmendmentAmount != nil {
+		return nil, errs.B().
+			Code(errs.FailedPrecondition).
+			Msg("cannot update amount after amendment exists; use amendment flow").
+			Err()
+	}
+
 	upd := Client.ContractSupplier.UpdateOne(row)
 
 	if req.ContractNumber != nil {
@@ -464,6 +475,12 @@ func updateContract(ctx context.Context, row *ent.ContractSupplier, req *UpdateC
 	}
 	if req.EndDate != nil {
 		upd.SetEndDate(*req.EndDate)
+	}
+	if req.Amount != nil {
+		upd.SetAmount(*req.Amount)
+
+		upd.SetTotalWithAmendment(*req.Amount)
+		upd.SetRemainingAmount(*req.Amount)
 	}
 	if req.AmountCurrency != nil {
 		upd.SetAmountCurrency(*req.AmountCurrency)
