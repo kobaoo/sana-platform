@@ -160,6 +160,21 @@ type RequestDetail struct {
 	TargetDZOs    []RequestTargetDZO   `json:"target_dzos"`
 	DZOContracts  []RequestDzoContract `json:"dzo_contracts"`
 	ChildRequests []RequestSummary     `json:"child_requests"`
+	Budget        *RequestBudgetInfo   `json:"budget,omitempty"`
+	Supplier      *RequestSupplierInfo `json:"supplier,omitempty"`
+}
+type RequestBudgetInfo struct {
+	ContractID      string  `json:"contract_id"`
+	ContractNumber  string  `json:"contract_number"`
+	Amount          float64 `json:"amount"`
+	RemainingAmount float64 `json:"remaining_amount"`
+	Currency        *string `json:"currency,omitempty"`
+}
+
+type RequestSupplierInfo struct {
+	ID       string  `json:"id"`
+	Name     string  `json:"name"`
+	BinOrIin *string `json:"bin_or_iin,omitempty"`
 }
 
 type GetRequestResponse struct {
@@ -198,6 +213,11 @@ type PrepareAdminRequestRequest struct {
 	CostMode               *CostMode `json:"cost_mode,omitempty"`
 	DeadlineAt             *string   `json:"deadline_at,omitempty"`
 	AllowInactiveEmployees bool      `json:"allow_inactive_employees,omitempty"`
+	ShowBudget             bool      `json:"show_budget,omitempty"`
+}
+
+type RemoveRequestEmployeeRequest struct {
+	EmployeeID string `json:"employee_id"`
 }
 
 // ════ ARCHIVE FLOW TYPES ════
