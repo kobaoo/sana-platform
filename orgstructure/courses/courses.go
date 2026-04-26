@@ -367,7 +367,7 @@ func generateSignedURL(ctx context.Context, key string) (string, error) {
 		return "", errs.B().Code(errs.NotFound).Msg("object key not found").Err()
 	}
 
-	signedURL, err := scormBucket.SignedDownloadURL(ctx, key, objects.WithTTL(15*time.Minute))
+	signedURL, err := scormBucket.SignedDownloadURL(ctx, key, objects.WithTTL(240*time.Minute))
 	if err != nil {
 		return "", errs.B().
 			Code(errs.Internal).
