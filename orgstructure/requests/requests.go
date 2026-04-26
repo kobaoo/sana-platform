@@ -1576,8 +1576,9 @@ func finalizeAdminRequest(ctx context.Context, actor *actor, requestID uuid.UUID
 
 	if _, err := tx.Exec(ctx, `
 		UPDATE requests
-		SET status = 'IN_PROGRESS',
+		SET status = 'COMPLETED',
 			responsible_admin_id = $2,
+			completed_at = NOW(),
 			updated_at = NOW()
 		WHERE id = $1
 	`, requestID, actor.ID); err != nil {

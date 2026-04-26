@@ -764,7 +764,7 @@ func TestPrepareAdminRequest_Success(t *testing.T) {
 		t.Fatalf("expected cost amount 5000, got %v", resp.Detail.Request.CostAmount)
 	}
 }
-func TestFinalizeRequiresPreparation(t *testing.T) {
+func TestFinalizeWithoutExplicitPrepareSucceeds(t *testing.T) {
 	fx := newFixture(t)
 
 	detail := makeDraftRequest(
@@ -785,13 +785,17 @@ func TestFinalizeRequiresPreparation(t *testing.T) {
 		t.Fatal(err)
 	}
 
-	_, err := FinalizeAdminRequest(
+	// Admin requests already have a training event linked at creation time,
+	// so finalize does not require an explicit PrepareAdminRequest call.
+	resp, err := FinalizeAdminRequest(
 		authCtxFor(fx.adminKC, authhandler.RoleADM, nil),
 		toEncoreUUID(uuid.MustParse(detail.Request.ID)),
 	)
-
-	if err == nil {
-		t.Fatal("expected finalize to fail without prepare")
+	if err != nil {
+		t.Fatalf("expected finalize to succeed: %v", err)
+	}
+	if resp.Detail.Request.Status != RequestStatusCompleted {
+		t.Fatalf("expected COMPLETED, got %s", resp.Detail.Request.Status)
 	}
 }
 func TestFinalizeMarksRequestCompleted(t *testing.T) {
