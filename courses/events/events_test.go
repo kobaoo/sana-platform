@@ -1069,11 +1069,12 @@ func TestListAttendance_SearchByName(t *testing.T) {
 func TestUpdateAttendance_Success(t *testing.T) {
 	f := setup(t)
 	_, adminCtx := makeAdminUser(t, f.ClientID, authhandler.RoleADM)
+	hostID, hostCtx := makeAdminUser(t, f.ClientID, authhandler.RoleHR)
 
 	ev, err := CreateEvent(adminCtx, &CreateEventRequest{
 		Title:           "Webinar " + uuid.New().String()[:6],
 		EventDate:       time.Now().Add(48 * time.Hour),
-		HostID:          f.HostID.String(),
+		HostID:          hostID.String(),
 		ZoomLink:        "https://zoom.us/j/x",
 		MaxParticipants: 5,
 	})
@@ -1092,7 +1093,7 @@ func TestUpdateAttendance_Success(t *testing.T) {
 		t.Fatalf("complete: %v", err)
 	}
 
-	resp, err := UpdateAttendance(adminCtx, ev.Event.ID, &UpdateAttendanceRequest{
+	resp, err := UpdateAttendance(hostCtx, ev.Event.ID, &UpdateAttendanceRequest{
 		Updates: []AttendanceUpdate{
 			{EmployeeID: emp1.String(), Attended: true},
 			{EmployeeID: emp2.String(), Attended: false},
@@ -1141,10 +1142,11 @@ func TestUpdateAttendance_RejectsNonCompleted(t *testing.T) {
 func TestUpdateAttendance_UnknownEmployeeIgnored(t *testing.T) {
 	f := setup(t)
 	_, adminCtx := makeAdminUser(t, f.ClientID, authhandler.RoleADM)
+	hostID, hostCtx := makeAdminUser(t, f.ClientID, authhandler.RoleHR)
 	ev, err := CreateEvent(adminCtx, &CreateEventRequest{
 		Title:           "Webinar " + uuid.New().String()[:6],
 		EventDate:       time.Now().Add(48 * time.Hour),
-		HostID:          f.HostID.String(),
+		HostID:          hostID.String(),
 		ZoomLink:        "https://zoom.us/j/x",
 		MaxParticipants: 5,
 	})
@@ -1155,7 +1157,7 @@ func TestUpdateAttendance_UnknownEmployeeIgnored(t *testing.T) {
 		t.Fatalf("complete: %v", err)
 	}
 
-	resp, err := UpdateAttendance(adminCtx, ev.Event.ID, &UpdateAttendanceRequest{
+	resp, err := UpdateAttendance(hostCtx, ev.Event.ID, &UpdateAttendanceRequest{
 		Updates: []AttendanceUpdate{
 			{EmployeeID: uuid.New().String(), Attended: true},
 		},
@@ -1165,6 +1167,36 @@ func TestUpdateAttendance_UnknownEmployeeIgnored(t *testing.T) {
 	}
 	if resp.Updated != 0 {
 		t.Errorf("expected updated=0 for unknown employee, got %d", resp.Updated)
+	}
+}
+
+func TestUpdateAttendance_NonHostDenied(t *testing.T) {
+	f := setup(t)
+	_, adminCtx := makeAdminUser(t, f.ClientID, authhandler.RoleADM)
+	hostID, _ := makeAdminUser(t, f.ClientID, authhandler.RoleHR)
+	_, otherHostCtx := makeAdminUser(t, f.ClientID, authhandler.RoleHR)
+
+	ev, err := CreateEvent(adminCtx, &CreateEventRequest{
+		Title:           "Webinar " + uuid.New().String()[:6],
+		EventDate:       time.Now().Add(48 * time.Hour),
+		HostID:          hostID.String(),
+		ZoomLink:        "https://zoom.us/j/x",
+		MaxParticipants: 5,
+	})
+	if err != nil {
+		t.Fatalf("CreateEvent: %v", err)
+	}
+	if _, err := CompleteEvent(adminCtx, ev.Event.ID); err != nil {
+		t.Fatalf("complete: %v", err)
+	}
+
+	for _, ctx := range []context.Context{adminCtx, otherHostCtx} {
+		_, err := UpdateAttendance(ctx, ev.Event.ID, &UpdateAttendanceRequest{
+			Updates: []AttendanceUpdate{{EmployeeID: uuid.New().String(), Attended: true}},
+		})
+		if errs.Code(err) != errs.PermissionDenied {
+			t.Errorf("expected PermissionDenied for non-host caller, got %v", errs.Code(err))
+		}
 	}
 }
 

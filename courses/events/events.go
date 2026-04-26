@@ -468,7 +468,8 @@ func ListAttendance(ctx context.Context, id string, params *ListAttendanceParams
 // only meaningful after the event is over. Each row sets attendance_status
 // to ATTENDED or MISSED, and stamps reviewed_by/reviewed_at.
 // Unknown employee_ids are silently ignored (count returned via `updated`).
-// Allowed roles: SA, ADM, HR.
+// Allowed roles: SA, ADM, HR — but only the event's assigned host may submit
+// the update; other callers receive PermissionDenied.
 //
 //encore:api auth method=PUT path=/events/:id/attendance
 func UpdateAttendance(ctx context.Context, id string, req *UpdateAttendanceRequest) (*UpdateAttendanceResponse, error) {
@@ -503,6 +504,10 @@ func UpdateAttendance(ctx context.Context, id string, req *UpdateAttendanceReque
 	reviewerID, err := lookupReviewerID(ctx, ad)
 	if err != nil {
 		return nil, err
+	}
+	if row.HostID != reviewerID {
+		return nil, errs.B().Code(errs.PermissionDenied).
+			Msg("only the assigned host can mark attendance for this event").Err()
 	}
 
 	updated, err := bulkUpdateAttendance(ctx, uid, reviewerID, req.Updates)
