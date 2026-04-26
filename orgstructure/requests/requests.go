@@ -140,6 +140,26 @@ func SubmitRequest(ctx context.Context, id encoreuuid.UUID) (*GetRequestResponse
 	return &GetRequestResponse{Detail: *detail}, nil
 }
 
+// PrepareAdminRequest fills training, supplier-contract and budget data before admin final approval.
+//
+//encore:api auth method=PUT path=/requests/admin/:id/prepare
+func PrepareAdminRequest(ctx context.Context, id encoreuuid.UUID, req *PrepareAdminRequestRequest) (*GetRequestResponse, error) {
+	actor, err := resolveCurrentActor(ctx)
+	if err != nil {
+		return nil, err
+	}
+	if !canManageAdminRequests(actor.Role) {
+		return nil, errs.B().Code(errs.PermissionDenied).Msg("insufficient permissions").Err()
+	}
+
+	detail, err := prepareAdminRequest(ctx, actor, uuid.UUID(id), req)
+	if err != nil {
+		return nil, err
+	}
+
+	return &GetRequestResponse{Detail: *detail}, nil
+}
+
 // RecreateRejectedRequest creates a new version of a rejected request.
 //
 //encore:api auth method=POST path=/requests/admin/:id/recreate
@@ -457,14 +477,14 @@ func resolveCurrentActor(ctx context.Context) (*actor, error) {
 	`, ad.KeycloakUserID)
 
 	var (
-		id           uuid.UUID
-		role         string
-		dzoID        sql.NullString
-		isActive     bool
-		isOnboarded  bool
+		id          uuid.UUID
+		role        string
+		dzoID       sql.NullString
+		isActive    bool
+		isOnboarded bool
 	)
 	err = row.Scan(&id, &role, &dzoID, &isActive, &isOnboarded)
-	
+
 	// If user not found, auto-provision
 	if err != nil {
 		if errors.Is(err, sqldb.ErrNoRows) {
@@ -1423,6 +1443,89 @@ func queryParticipantCount(ctx context.Context, requestID uuid.UUID) (int, error
 	return count, nil
 }
 
+// prepareAdminRequest prepares HR request for final admin approval.
+func prepareAdminRequest(ctx context.Context, actor *actor, requestID uuid.UUID, req *PrepareAdminRequestRequest) (*RequestDetail, error) {
+	requestSummary, err := queryRequestSummaryByID(ctx, requestID)
+	if err != nil {
+		return nil, err
+	}
+
+	if requestSummary.RequestType != RequestTypeMain {
+		return nil, errs.B().Code(errs.InvalidArgument).Msg("only main requests can be prepared").Err()
+	}
+	if requestSummary.Kind != RequestKindRegular {
+		return nil, errs.B().Code(errs.InvalidArgument).Msg("archive requests cannot be prepared").Err()
+	}
+	if requestSummary.Status == RequestStatusRejected || requestSummary.Status == RequestStatusCompleted {
+		return nil, errs.B().Code(errs.InvalidArgument).Msg("request cannot be prepared in current status").Err()
+	}
+	if strings.TrimSpace(req.TrainingEventID) == "" {
+		return nil, errs.B().Code(errs.InvalidArgument).Msg("training_event_id is required").Err()
+	}
+	if req.CostMode != nil && !req.CostMode.IsValid() {
+		return nil, errs.B().Code(errs.InvalidArgument).Msg("invalid cost_mode").Err()
+	}
+	if req.CostAmount != nil && *req.CostAmount < 0 {
+		return nil, errs.B().Code(errs.InvalidArgument).Msg("cost_amount cannot be negative").Err()
+	}
+
+	trainingEvent, err := loadTrainingEvent(ctx, req.TrainingEventID)
+	if err != nil {
+		return nil, err
+	}
+
+	if err := validateRequestEmployeesActive(ctx, requestID, req.AllowInactiveEmployees); err != nil {
+		return nil, err
+	}
+
+	deadlineAt, err := parseOptionalTime(req.DeadlineAt)
+	if err != nil {
+		return nil, err
+	}
+
+	tx, err := db.Begin(ctx)
+	if err != nil {
+		return nil, errs.B().Code(errs.Internal).Msg("failed to begin transaction").Cause(err).Err()
+	}
+	defer tx.Rollback()
+
+	if _, err := tx.Exec(ctx, `
+		UPDATE requests
+		SET
+			entity_id = $2,
+			entity_type = 'TRAINING_EVENT',
+			title = $3,
+			training_date = $4,
+			deadline_at = COALESCE($5, deadline_at),
+			cost_amount = $6,
+			cost_mode = $7,
+			responsible_admin_id = $8,
+			updated_at = NOW()
+		WHERE id = $1
+	`,
+		requestID,
+		trainingEvent.ID,
+		trainingEvent.Title,
+		trainingEvent.StartDate,
+		deadlineAt,
+		nullableFloat(req.CostAmount),
+		nullableCostMode(req.CostMode),
+		actor.ID,
+	); err != nil {
+		return nil, errs.B().Code(errs.Internal).Msg("failed to prepare request").Cause(err).Err()
+	}
+
+	if err := checkAvailableBudgetTx(ctx, tx, requestID); err != nil {
+		return nil, err
+	}
+
+	if err := tx.Commit(); err != nil {
+		return nil, errs.B().Code(errs.Internal).Msg("failed to commit request preparation").Cause(err).Err()
+	}
+
+	return buildRequestDetail(ctx, requestID)
+}
+
 func finalizeAdminRequest(ctx context.Context, actor *actor, requestID uuid.UUID) (*RequestDetail, error) {
 	requestSummary, err := queryRequestSummaryByID(ctx, requestID)
 	if err != nil {
@@ -2197,4 +2300,72 @@ func budgetOperationExistsTx(ctx context.Context, tx *sqldb.Tx, requestID uuid.U
 	}
 
 	return exists, nil
+}
+
+// validateRequestEmployeesActive verifies that request participants
+// are active employees.
+func validateRequestEmployeesActive(ctx context.Context, requestID uuid.UUID, allowInactive bool) error {
+	if allowInactive {
+		return nil
+	}
+
+	var inactiveCount int
+	if err := db.QueryRow(ctx, `
+		SELECT COUNT(*)
+		FROM request_participants rp
+		JOIN employees e ON e.id = rp.employee_id
+		WHERE rp.request_id = $1
+		  AND (e.is_active = FALSE OR e.is_deleted = TRUE)
+	`, requestID).Scan(&inactiveCount); err != nil {
+		return errs.B().Code(errs.Internal).Msg("failed to validate request employees").Cause(err).Err()
+	}
+
+	if inactiveCount > 0 {
+		return errs.B().Code(errs.InvalidArgument).Msg("request contains inactive employees").Err()
+	}
+
+	return nil
+}
+
+// checkAvailableBudgetTx verifies there is enough remaining contract
+// budget before request can move to final approval.
+func checkAvailableBudgetTx(ctx context.Context, tx *sqldb.Tx, requestID uuid.UUID) error {
+	contractID, amount, err := getRequestBudgetSource(ctx, requestID)
+	if err != nil {
+		return err
+	}
+	if amount <= 0 {
+		return nil
+	}
+
+	var remaining float64
+	if err := tx.QueryRow(ctx, `
+		SELECT remaining_amount
+		FROM contract_suppliers
+		WHERE id = $1
+	`, contractID).Scan(&remaining); err != nil {
+		return errs.B().Code(errs.Internal).Msg("failed to check contract budget").Cause(err).Err()
+	}
+
+	if remaining < amount {
+
+		// Если бюджета контракта недостаточно,
+		// оставить запрос в черновике
+		if _, err := tx.Exec(ctx, `
+		UPDATE requests
+		SET status = 'DRAFT',
+		    updated_at = NOW()
+		WHERE id = $1
+	`, requestID); err != nil {
+			return errs.B().
+				Code(errs.Internal).
+				Msg("failed to move request to draft").
+				Cause(err).
+				Err()
+		}
+
+		return nil
+	}
+
+	return nil
 }

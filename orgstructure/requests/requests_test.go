@@ -266,6 +266,13 @@ func mustUUID(t *testing.T, raw string) uuid.UUID {
 	}
 	return id
 }
+func floatPtr(v float64) *float64 {
+	return &v
+}
+
+func costModePtr(v CostMode) *CostMode {
+	return &v
+}
 
 func nullableUUIDForTest(id *uuid.UUID) interface{} {
 	if id == nil {
@@ -710,6 +717,174 @@ func TestBudgetRefundOnCancelAfterWriteOff(t *testing.T) {
 
 	if got := budgetOperationCount(t, requestID, "REFUND"); got != 1 {
 		t.Fatalf("expected 1 REFUND transaction, got %d", got)
+	}
+}
+
+func TestPrepareAdminRequest_Success(t *testing.T) {
+	fx := newFixture(t)
+
+	// draft -> submit
+	detail := makeDraftRequest(
+		t,
+		fx,
+		[]uuid.UUID{fx.empOneID},
+		nil,
+	)
+
+	submitted := submitDraftRequest(t, fx, detail)
+
+	childID := firstChildByDZO(t, submitted, fx.dzoOneID)
+
+	// HR approves child
+	if _, err := ApproveHRRequest(
+		authCtxFor(fx.hrOneKC, authhandler.RoleHR, &fx.dzoOneID),
+		toEncoreUUID(childID),
+	); err != nil {
+		t.Fatalf("approve hr request: %v", err)
+	}
+
+	// prepare
+	resp, err := PrepareAdminRequest(
+		authCtxFor(fx.adminKC, authhandler.RoleADM, nil),
+		toEncoreUUID(uuid.MustParse(detail.Request.ID)),
+		&PrepareAdminRequestRequest{
+			TrainingEventID: fx.trainingEventID.String(),
+			CostAmount:      floatPtr(5000),
+			CostMode:        costModePtr(CostModePerEmployee),
+		},
+	)
+	if err != nil {
+		t.Fatalf("prepare request: %v", err)
+	}
+
+	if resp.Detail.Request.TrainingEventID != fx.trainingEventID.String() {
+		t.Fatalf("expected training event %s, got %s", fx.trainingEventID, resp.Detail.Request.TrainingEventID)
+	}
+	if resp.Detail.Request.CostAmount == nil || *resp.Detail.Request.CostAmount != 5000 {
+		t.Fatalf("expected cost amount 5000, got %v", resp.Detail.Request.CostAmount)
+	}
+}
+func TestFinalizeRequiresPreparation(t *testing.T) {
+	fx := newFixture(t)
+
+	detail := makeDraftRequest(
+		t,
+		fx,
+		[]uuid.UUID{fx.empOneID},
+		nil,
+	)
+
+	submitted := submitDraftRequest(t, fx, detail)
+
+	childID := firstChildByDZO(t, submitted, fx.dzoOneID)
+
+	if _, err := ApproveHRRequest(
+		authCtxFor(fx.hrOneKC, authhandler.RoleHR, &fx.dzoOneID),
+		toEncoreUUID(childID),
+	); err != nil {
+		t.Fatal(err)
+	}
+
+	_, err := FinalizeAdminRequest(
+		authCtxFor(fx.adminKC, authhandler.RoleADM, nil),
+		toEncoreUUID(uuid.MustParse(detail.Request.ID)),
+	)
+
+	if err == nil {
+		t.Fatal("expected finalize to fail without prepare")
+	}
+}
+func TestFinalizeMarksRequestCompleted(t *testing.T) {
+	fx := newFixture(t)
+
+	detail := makeDraftRequest(
+		t,
+		fx,
+		[]uuid.UUID{fx.empOneID},
+		nil,
+	)
+
+	submitted := submitDraftRequest(t, fx, detail)
+
+	childID := firstChildByDZO(t, submitted, fx.dzoOneID)
+
+	if _, err := ApproveHRRequest(
+		authCtxFor(fx.hrOneKC, authhandler.RoleHR, &fx.dzoOneID),
+		toEncoreUUID(childID),
+	); err != nil {
+		t.Fatal(err)
+	}
+
+	if _, err := PrepareAdminRequest(
+		authCtxFor(fx.adminKC, authhandler.RoleADM, nil),
+		toEncoreUUID(uuid.MustParse(detail.Request.ID)),
+		&PrepareAdminRequestRequest{
+			TrainingEventID: fx.trainingEventID.String(),
+			CostAmount:      floatPtr(5000),
+			CostMode:        costModePtr(CostModePerEmployee),
+		},
+	); err != nil {
+		t.Fatal(err)
+	}
+
+	resp, err := FinalizeAdminRequest(
+		authCtxFor(fx.adminKC, authhandler.RoleADM, nil),
+		toEncoreUUID(uuid.MustParse(detail.Request.ID)),
+	)
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	if resp.Detail.Request.Status != RequestStatusCompleted {
+		t.Fatalf(
+			"expected COMPLETED got %s",
+			resp.Detail.Request.Status,
+		)
+	}
+
+	if resp.Detail.Request.CompletedAt == nil {
+		t.Fatal("completed_at not set")
+	}
+}
+func TestFinalizeBlockedWhenChildRejected(t *testing.T) {
+	fx := newFixture(t)
+
+	detail := makeDraftRequest(
+		t,
+		fx,
+		[]uuid.UUID{
+			fx.empOneID,
+			fx.empTwoID,
+		},
+		nil,
+	)
+
+	submitted := submitDraftRequest(t, fx, detail)
+
+	child1 := firstChildByDZO(t, submitted, fx.dzoOneID)
+	child2 := firstChildByDZO(t, submitted, fx.dzoTwoID)
+
+	if _, err := ApproveHRRequest(
+		authCtxFor(fx.hrOneKC, authhandler.RoleHR, &fx.dzoOneID),
+		toEncoreUUID(child1),
+	); err != nil {
+		t.Fatal(err)
+	}
+
+	if _, err := CancelHRRequest(
+		authCtxFor(fx.hrTwoKC, authhandler.RoleHR, &fx.dzoTwoID),
+		toEncoreUUID(child2),
+	); err != nil {
+		t.Fatal(err)
+	}
+
+	_, err := FinalizeAdminRequest(
+		authCtxFor(fx.adminKC, authhandler.RoleADM, nil),
+		toEncoreUUID(uuid.MustParse(detail.Request.ID)),
+	)
+
+	if err == nil {
+		t.Fatal("expected finalize blocked with rejected child")
 	}
 }
 
