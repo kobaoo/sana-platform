@@ -24,6 +24,7 @@ type Event struct {
 	ID              string      `json:"id"`
 	ClientID        string      `json:"client_id"`
 	HostID          string      `json:"host_id"`
+	HostName        string      `json:"host_name"`
 	Title           string      `json:"title"`
 	Description     *string     `json:"description"`
 	ZoomLink        string      `json:"zoom_link"`

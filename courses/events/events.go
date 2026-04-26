@@ -838,9 +838,20 @@ func queryEvents(ctx context.Context, companyID string, from, to *time.Time, sta
 		return nil, errs.B().Code(errs.Internal).Msg("failed to list events").Cause(err).Err()
 	}
 
+	hostIDs := make([]uuid.UUID, 0, len(rows))
+	for _, r := range rows {
+		hostIDs = append(hostIDs, r.HostID)
+	}
+	names, err := hostNamesByUserIDs(ctx, hostIDs)
+	if err != nil {
+		return nil, err
+	}
+
 	out := make([]Event, 0, len(rows))
 	for _, r := range rows {
-		out = append(out, *entToEvent(r, false))
+		ev := entToEvent(r, false)
+		ev.HostName = names[r.HostID]
+		out = append(out, *ev)
 	}
 	return out, nil
 }
@@ -869,7 +880,13 @@ func loadEventByID(ctx context.Context, uid uuid.UUID, withParticipants bool) (*
 		return nil, errs.B().Code(errs.Internal).Msg("failed to get event").Cause(err).Err()
 	}
 
-	return entToEvent(row, withParticipants), nil
+	ev := entToEvent(row, withParticipants)
+	names, err := hostNamesByUserIDs(ctx, []uuid.UUID{row.HostID})
+	if err != nil {
+		return nil, err
+	}
+	ev.HostName = names[row.HostID]
+	return ev, nil
 }
 
 func softDeleteEvent(ctx context.Context, id string) error {
@@ -1077,6 +1094,30 @@ func queryHosts(ctx context.Context, companyID, search string, limit, offset int
 		})
 	}
 	return hosts, total, nil
+}
+
+// hostNamesByUserIDs resolves user IDs to their employee full_name. Missing
+// or inactive employees simply don't appear in the returned map. Returns an
+// empty map for nil/empty input.
+func hostNamesByUserIDs(ctx context.Context, ids []uuid.UUID) (map[uuid.UUID]string, error) {
+	if len(ids) == 0 {
+		return map[uuid.UUID]string{}, nil
+	}
+	emps, err := Client.Employee.
+		Query().
+		Where(employee.UserIDIn(ids...), employee.IsDeletedEQ(false)).
+		Select(employee.FieldUserID, employee.FieldFullName).
+		All(ctx)
+	if err != nil {
+		return nil, errs.B().Code(errs.Internal).Msg("failed to resolve host names").Cause(err).Err()
+	}
+	out := make(map[uuid.UUID]string, len(emps))
+	for _, e := range emps {
+		if e.UserID != nil {
+			out[*e.UserID] = e.FullName
+		}
+	}
+	return out, nil
 }
 
 func hostFullNames(ctx context.Context, users []*ent.User) (map[uuid.UUID]string, error) {
