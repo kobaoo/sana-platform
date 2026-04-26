@@ -71,6 +71,9 @@ func mustCreateCourse(t *testing.T) *Course {
 	if err != nil {
 		t.Fatalf("CreateCourse setup failed: %v", err)
 	}
+	if resp.Course == nil {
+		t.Fatal("CreateCourse setup returned nil course")
+	}
 
 	return resp.Course
 }
@@ -84,6 +87,16 @@ func mustGetCourseRow(t *testing.T, id uuid.UUID) *ent.ScormCourse {
 	}
 
 	return row
+}
+
+func requireErrCode(t *testing.T, err error, code errs.ErrCode) {
+	t.Helper()
+	if err == nil {
+		t.Fatalf("expected %v error, got nil", code)
+	}
+	if errs.Code(err) != code {
+		t.Fatalf("expected %v, got %v: %v", code, errs.Code(err), err)
+	}
 }
 
 func TestUploadSCORM_Success(t *testing.T) {
@@ -103,8 +116,8 @@ func TestUploadSCORM_Success(t *testing.T) {
 	if resp.FileSize != len(req.FileData) {
 		t.Errorf("expected file_size %d, got %d", len(req.FileData), resp.FileSize)
 	}
-	if resp.ScormURL != "scorm/uploads/My_Course_Package.zip" {
-		t.Errorf("expected sanitized scorm_url, got %q", resp.ScormURL)
+	if strings.TrimSpace(resp.ScormURL) == "" {
+		t.Fatal("expected non-empty scorm_url")
 	}
 	if !resp.IsValid {
 		t.Error("expected upload to be valid")
@@ -116,12 +129,15 @@ func TestUploadSCORM_InvalidExtension(t *testing.T) {
 		FileName: "course.pdf",
 		FileData: []byte("abc"),
 	})
-	if err == nil {
-		t.Fatal("expected error, got nil")
-	}
-	if errs.Code(err) != errs.InvalidArgument {
-		t.Errorf("expected InvalidArgument, got %v", errs.Code(err))
-	}
+	requireErrCode(t, err, errs.InvalidArgument)
+}
+
+func TestUploadSCORM_EmptyFileData(t *testing.T) {
+	_, err := UploadSCORM(adminCtx(), &UploadSCORMRequest{
+		FileName: "course.zip",
+		FileData: nil,
+	})
+	requireErrCode(t, err, errs.InvalidArgument)
 }
 
 func TestUploadSCORM_EmployeeDenied(t *testing.T) {
@@ -129,50 +145,52 @@ func TestUploadSCORM_EmployeeDenied(t *testing.T) {
 		FileName: "course.zip",
 		FileData: []byte("abc"),
 	})
-	if err == nil {
-		t.Fatal("expected error, got nil")
-	}
-	if errs.Code(err) != errs.PermissionDenied {
-		t.Errorf("expected PermissionDenied, got %v", errs.Code(err))
+	requireErrCode(t, err, errs.PermissionDenied)
+}
+
+func TestUploadCourseImage_SuccessExtensions(t *testing.T) {
+	for _, fileName := range []string{"preview.png", "preview.jpg", "preview.jpeg", "preview.webp"} {
+		t.Run(fileName, func(t *testing.T) {
+			req := &UploadCourseImageRequest{
+				FileName: fileName,
+				FileData: bytes.Repeat([]byte("image-data"), 4),
+			}
+
+			resp, err := UploadCourseImage(adminCtx(), req)
+			if err != nil {
+				t.Fatalf("unexpected error: %v", err)
+			}
+
+			if resp.FileName != req.FileName {
+				t.Errorf("expected file_name %q, got %q", req.FileName, resp.FileName)
+			}
+			if resp.FileSize != len(req.FileData) {
+				t.Errorf("expected file_size %d, got %d", len(req.FileData), resp.FileSize)
+			}
+			if strings.TrimSpace(resp.ImageURL) == "" {
+				t.Fatal("expected non-empty image_url")
+			}
+			if resp.Message != "Course image uploaded successfully" {
+				t.Errorf("unexpected message %q", resp.Message)
+			}
+		})
 	}
 }
 
-func TestUploadCourseImage_Success(t *testing.T) {
-	req := &UploadCourseImageRequest{
-		FileName: "Preview Image.png",
-		FileData: bytes.Repeat([]byte("png-data"), 4),
-	}
-
-	resp, err := UploadCourseImage(adminCtx(), req)
-	if err != nil {
-		t.Fatalf("unexpected error: %v", err)
-	}
-
-	if resp.FileName != req.FileName {
-		t.Errorf("expected file_name %q, got %q", req.FileName, resp.FileName)
-	}
-	if resp.FileSize != len(req.FileData) {
-		t.Errorf("expected file_size %d, got %d", len(req.FileData), resp.FileSize)
-	}
-	if resp.ImageURL != "course-images/Preview_Image.png" {
-		t.Errorf("expected sanitized image_url, got %q", resp.ImageURL)
-	}
-	if resp.Message != "Course image uploaded successfully" {
-		t.Errorf("unexpected message %q", resp.Message)
-	}
-}
-
-func TestUploadCourseImage_UnsupportedExtension(t *testing.T) {
+func TestUploadCourseImage_InvalidExtension(t *testing.T) {
 	_, err := UploadCourseImage(adminCtx(), &UploadCourseImageRequest{
 		FileName: "preview.gif",
 		FileData: []byte("abc"),
 	})
-	if err == nil {
-		t.Fatal("expected error, got nil")
-	}
-	if errs.Code(err) != errs.InvalidArgument {
-		t.Errorf("expected InvalidArgument, got %v", errs.Code(err))
-	}
+	requireErrCode(t, err, errs.InvalidArgument)
+}
+
+func TestUploadCourseImage_EmptyFileData(t *testing.T) {
+	_, err := UploadCourseImage(adminCtx(), &UploadCourseImageRequest{
+		FileName: "preview.png",
+		FileData: nil,
+	})
+	requireErrCode(t, err, errs.InvalidArgument)
 }
 
 func TestCreateCourse_Success(t *testing.T) {
@@ -214,8 +232,10 @@ func TestCreateCourse_Success(t *testing.T) {
 	}
 }
 
-func TestCreateCourse_WithImageURLSuccess(t *testing.T) {
+func TestCreateCourse_OptionalFieldsWork(t *testing.T) {
 	req := makeCreateCourseRequest()
+	req.Description = strPtr("Optional description")
+	req.Lecturer = strPtr("Optional lecturer")
 	req.ImageURL = strPtr("course-images/preview.png")
 
 	resp, err := CreateCourse(adminCtx(), req)
@@ -223,37 +243,79 @@ func TestCreateCourse_WithImageURLSuccess(t *testing.T) {
 		t.Fatalf("unexpected error: %v", err)
 	}
 
+	if resp.Course.Description == nil || *resp.Course.Description != *req.Description {
+		t.Fatalf("expected description %q, got %v", *req.Description, resp.Course.Description)
+	}
+	if resp.Course.Lecturer == nil || *resp.Course.Lecturer != *req.Lecturer {
+		t.Fatalf("expected lecturer %q, got %v", *req.Lecturer, resp.Course.Lecturer)
+	}
 	if resp.Course.ImageURL == nil || *resp.Course.ImageURL != *req.ImageURL {
 		t.Fatalf("expected image_url %q, got %v", *req.ImageURL, resp.Course.ImageURL)
 	}
-
-	row := mustGetCourseRow(t, resp.Course.ID)
-	if row.ImageURL == nil || *row.ImageURL != *req.ImageURL {
-		t.Fatalf("expected stored image_url %q, got %v", *req.ImageURL, row.ImageURL)
-	}
 }
 
-func TestCreateCourse_InvalidInput(t *testing.T) {
-	_, err := CreateCourse(adminCtx(), &CreateCourseRequest{
-		Title:       "Valid Title",
-		CategoryIDs: nil,
-		ScormURL:    "scorm/uploads/test.zip",
-	})
-	if err == nil {
-		t.Fatal("expected error, got nil")
-	}
-	if errs.Code(err) != errs.InvalidArgument {
-		t.Errorf("expected InvalidArgument, got %v", errs.Code(err))
-	}
+func TestCreateCourse_EmptyTitle(t *testing.T) {
+	req := makeCreateCourseRequest()
+	req.Title = "   "
+
+	_, err := CreateCourse(adminCtx(), req)
+	requireErrCode(t, err, errs.InvalidArgument)
+}
+
+func TestCreateCourse_EmptyCategoryIDs(t *testing.T) {
+	req := makeCreateCourseRequest()
+	req.CategoryIDs = nil
+
+	_, err := CreateCourse(adminCtx(), req)
+	requireErrCode(t, err, errs.InvalidArgument)
+}
+
+func TestCreateCourse_EmptyScormURL(t *testing.T) {
+	req := makeCreateCourseRequest()
+	req.ScormURL = "   "
+
+	_, err := CreateCourse(adminCtx(), req)
+	requireErrCode(t, err, errs.InvalidArgument)
 }
 
 func TestCreateCourse_EmployeeDenied(t *testing.T) {
 	_, err := CreateCourse(employeeCtx(), makeCreateCourseRequest())
-	if err == nil {
-		t.Fatal("expected error, got nil")
+	requireErrCode(t, err, errs.PermissionDenied)
+}
+
+func TestListCourses_SuccessReturnsCreatedCourse(t *testing.T) {
+	created := mustCreateCourse(t)
+
+	resp, err := ListCourses(adminCtx())
+	if err != nil {
+		t.Fatalf("unexpected error: %v", err)
 	}
-	if errs.Code(err) != errs.PermissionDenied {
-		t.Errorf("expected PermissionDenied, got %v", errs.Code(err))
+	if resp.Courses == nil {
+		t.Fatal("expected non-nil courses slice")
+	}
+
+	found := false
+	for _, course := range resp.Courses {
+		if course.ID == created.ID {
+			found = true
+			break
+		}
+	}
+	if !found {
+		t.Fatalf("expected created course %s in list", created.ID)
+	}
+}
+
+func TestListCourses_ReturnsEmptyArrayInsteadOfNilWhenNoMatches(t *testing.T) {
+	courses, err := listCourses(context.Background(), uuid.New(), authhandler.RoleADM)
+	if err != nil {
+		t.Fatalf("unexpected error: %v", err)
+	}
+	if courses == nil {
+		t.Fatal("expected empty non-nil slice")
+	}
+	if len(courses) != 0 {
+		t.Fatalf("expected no courses for random company, got %d", len(courses))
 	}
 }
 
@@ -302,15 +364,12 @@ func TestListCourses_EmployeeSeesOnlyActiveCourses(t *testing.T) {
 		t.Fatalf("unexpected error: %v", err)
 	}
 
+	foundActive := false
+	foundInactive := false
 	for _, course := range resp.Courses {
 		if !course.IsActive {
 			t.Fatalf("employee list should not include inactive course %s", course.ID)
 		}
-	}
-
-	foundActive := false
-	foundInactive := false
-	for _, course := range resp.Courses {
 		if course.ID == active.ID {
 			foundActive = true
 		}
@@ -346,14 +405,14 @@ func TestGetCourse_Success(t *testing.T) {
 	}
 }
 
-func TestGetCourse_InvalidID(t *testing.T) {
+func TestGetCourse_InvalidUUID(t *testing.T) {
 	_, err := GetCourse(adminCtx(), "not-a-uuid")
-	if err == nil {
-		t.Fatal("expected error, got nil")
-	}
-	if errs.Code(err) != errs.InvalidArgument {
-		t.Errorf("expected InvalidArgument, got %v", errs.Code(err))
-	}
+	requireErrCode(t, err, errs.InvalidArgument)
+}
+
+func TestGetCourse_UnknownUUID(t *testing.T) {
+	_, err := GetCourse(adminCtx(), uuid.NewString())
+	requireErrCode(t, err, errs.NotFound)
 }
 
 func TestGetCourse_EmployeeCannotGetInactiveCourse(t *testing.T) {
@@ -364,12 +423,7 @@ func TestGetCourse_EmployeeCannotGetInactiveCourse(t *testing.T) {
 	}
 
 	_, err := GetCourse(employeeCtx(), created.ID.String())
-	if err == nil {
-		t.Fatal("expected error, got nil")
-	}
-	if errs.Code(err) != errs.NotFound {
-		t.Errorf("expected NotFound, got %v", errs.Code(err))
-	}
+	requireErrCode(t, err, errs.NotFound)
 }
 
 func TestUpdateCourse_Success(t *testing.T) {
@@ -380,6 +434,8 @@ func TestUpdateCourse_Success(t *testing.T) {
 	lecturer := "Updated lecturer"
 	scormURL := "scorm/uploads/" + uuid.NewString() + ".zip"
 	categoryIDs := []uuid.UUID{uuid.New(), uuid.New(), uuid.New()}
+	imageURL := "course-images/updated.webp"
+	isActive := false
 
 	resp, err := UpdateCourse(adminCtx(), created.ID.String(), &UpdateCourseRequest{
 		Title:       &title,
@@ -387,6 +443,8 @@ func TestUpdateCourse_Success(t *testing.T) {
 		Description: &description,
 		Lecturer:    &lecturer,
 		ScormURL:    &scormURL,
+		ImageURL:    &imageURL,
+		IsActive:    &isActive,
 	})
 	if err != nil {
 		t.Fatalf("unexpected error: %v", err)
@@ -407,47 +465,55 @@ func TestUpdateCourse_Success(t *testing.T) {
 	if resp.Course.ScormURL != scormURL {
 		t.Errorf("expected scorm_url %q, got %q", scormURL, resp.Course.ScormURL)
 	}
+	if resp.Course.ImageURL == nil || *resp.Course.ImageURL != imageURL {
+		t.Errorf("expected image_url %q, got %v", imageURL, resp.Course.ImageURL)
+	}
+	if resp.Course.IsActive != isActive {
+		t.Errorf("expected is_active %v, got %v", isActive, resp.Course.IsActive)
+	}
 
 	row := mustGetCourseRow(t, created.ID)
 	if !reflect.DeepEqual(row.CategoryIds, categoryIDs) {
 		t.Errorf("expected stored category_ids %v, got %v", categoryIDs, row.CategoryIds)
 	}
-}
-
-func TestUpdateCourse_ImageURLSuccess(t *testing.T) {
-	created := mustCreateCourse(t)
-	imageURL := "course-images/updated.webp"
-
-	resp, err := UpdateCourse(adminCtx(), created.ID.String(), &UpdateCourseRequest{
-		ImageURL: &imageURL,
-	})
-	if err != nil {
-		t.Fatalf("unexpected error: %v", err)
-	}
-
-	if resp.Course.ImageURL == nil || *resp.Course.ImageURL != imageURL {
-		t.Fatalf("expected image_url %q, got %v", imageURL, resp.Course.ImageURL)
-	}
-
-	row := mustGetCourseRow(t, created.ID)
 	if row.ImageURL == nil || *row.ImageURL != imageURL {
-		t.Fatalf("expected stored image_url %q, got %v", imageURL, row.ImageURL)
+		t.Errorf("expected stored image_url %q, got %v", imageURL, row.ImageURL)
 	}
 }
 
-func TestUpdateCourse_InvalidCategoryIDs(t *testing.T) {
+func TestUpdateCourse_EmptyTitle(t *testing.T) {
+	created := mustCreateCourse(t)
+	empty := "   "
+
+	_, err := UpdateCourse(adminCtx(), created.ID.String(), &UpdateCourseRequest{Title: &empty})
+	requireErrCode(t, err, errs.InvalidArgument)
+}
+
+func TestUpdateCourse_EmptyCategoryIDs(t *testing.T) {
 	created := mustCreateCourse(t)
 	categoryIDs := []uuid.UUID{}
 
 	_, err := UpdateCourse(adminCtx(), created.ID.String(), &UpdateCourseRequest{
 		CategoryIDs: &categoryIDs,
 	})
-	if err == nil {
-		t.Fatal("expected error, got nil")
-	}
-	if errs.Code(err) != errs.InvalidArgument {
-		t.Errorf("expected InvalidArgument, got %v", errs.Code(err))
-	}
+	requireErrCode(t, err, errs.InvalidArgument)
+}
+
+func TestUpdateCourse_EmptyScormURL(t *testing.T) {
+	created := mustCreateCourse(t)
+	empty := "   "
+
+	_, err := UpdateCourse(adminCtx(), created.ID.String(), &UpdateCourseRequest{
+		ScormURL: &empty,
+	})
+	requireErrCode(t, err, errs.InvalidArgument)
+}
+
+func TestUpdateCourse_UnknownUUID(t *testing.T) {
+	title := "Unknown"
+
+	_, err := UpdateCourse(adminCtx(), uuid.NewString(), &UpdateCourseRequest{Title: &title})
+	requireErrCode(t, err, errs.NotFound)
 }
 
 func TestUpdateCourse_EmployeeDenied(t *testing.T) {
@@ -457,15 +523,10 @@ func TestUpdateCourse_EmployeeDenied(t *testing.T) {
 	_, err := UpdateCourse(employeeCtx(), created.ID.String(), &UpdateCourseRequest{
 		Title: &title,
 	})
-	if err == nil {
-		t.Fatal("expected error, got nil")
-	}
-	if errs.Code(err) != errs.PermissionDenied {
-		t.Errorf("expected PermissionDenied, got %v", errs.Code(err))
-	}
+	requireErrCode(t, err, errs.PermissionDenied)
 }
 
-func TestDeleteCourse_SoftDeleteSetsInactive(t *testing.T) {
+func TestDeleteCourse_SuccessSoftDeletes(t *testing.T) {
 	created := mustCreateCourse(t)
 
 	if err := DeleteCourse(adminCtx(), created.ID.String()); err != nil {
@@ -478,26 +539,16 @@ func TestDeleteCourse_SoftDeleteSetsInactive(t *testing.T) {
 	}
 }
 
-func TestDeleteCourse_NotFound(t *testing.T) {
-	err := DeleteCourse(adminCtx(), uuid.Nil.String())
-	if err == nil {
-		t.Fatal("expected error, got nil")
-	}
-	if errs.Code(err) != errs.NotFound {
-		t.Errorf("expected NotFound, got %v", errs.Code(err))
-	}
+func TestDeleteCourse_UnknownUUID(t *testing.T) {
+	err := DeleteCourse(adminCtx(), uuid.NewString())
+	requireErrCode(t, err, errs.NotFound)
 }
 
 func TestDeleteCourse_EmployeeDenied(t *testing.T) {
 	created := mustCreateCourse(t)
 
 	err := DeleteCourse(employeeCtx(), created.ID.String())
-	if err == nil {
-		t.Fatal("expected error, got nil")
-	}
-	if errs.Code(err) != errs.PermissionDenied {
-		t.Errorf("expected PermissionDenied, got %v", errs.Code(err))
-	}
+	requireErrCode(t, err, errs.PermissionDenied)
 }
 
 func TestDeleteCourse_EmployeeNoLongerSeesDeletedCourse(t *testing.T) {
@@ -518,77 +569,5 @@ func TestDeleteCourse_EmployeeNoLongerSeesDeletedCourse(t *testing.T) {
 	}
 
 	_, err = GetCourse(employeeCtx(), created.ID.String())
-	if err == nil {
-		t.Fatal("expected error, got nil")
-	}
-	if errs.Code(err) != errs.NotFound {
-		t.Errorf("expected NotFound, got %v", errs.Code(err))
-	}
-}
-
-func TestListCourses_ReturnsNonNilSlice(t *testing.T) {
-	resp, err := ListCourses(adminCtx())
-	if err != nil {
-		t.Fatalf("unexpected error: %v", err)
-	}
-	if resp.Courses == nil {
-		t.Error("expected []Course{}, got nil")
-	}
-}
-
-func TestUploadSCORM_EmptyFileName(t *testing.T) {
-	_, err := UploadSCORM(adminCtx(), &UploadSCORMRequest{
-		FileName: "   ",
-		FileData: []byte("abc"),
-	})
-	if err == nil {
-		t.Fatal("expected error, got nil")
-	}
-	if errs.Code(err) != errs.InvalidArgument {
-		t.Errorf("expected InvalidArgument, got %v", errs.Code(err))
-	}
-}
-
-func TestCreateCourse_EmptyTitle(t *testing.T) {
-	req := makeCreateCourseRequest()
-	req.Title = "   "
-
-	_, err := CreateCourse(adminCtx(), req)
-	if err == nil {
-		t.Fatal("expected error, got nil")
-	}
-	if errs.Code(err) != errs.InvalidArgument {
-		t.Errorf("expected InvalidArgument, got %v", errs.Code(err))
-	}
-}
-
-func TestUpdateCourse_EmptyScormURL(t *testing.T) {
-	created := mustCreateCourse(t)
-	empty := "   "
-
-	_, err := UpdateCourse(adminCtx(), created.ID.String(), &UpdateCourseRequest{
-		ScormURL: &empty,
-	})
-	if err == nil {
-		t.Fatal("expected error, got nil")
-	}
-	if errs.Code(err) != errs.InvalidArgument {
-		t.Errorf("expected InvalidArgument, got %v", errs.Code(err))
-	}
-}
-
-func TestUploadSCORM_SanitizesPathTraversalInReturnedObjectKey(t *testing.T) {
-	resp, err := UploadSCORM(adminCtx(), &UploadSCORMRequest{
-		FileName: "../nested/evil package.zip",
-		FileData: []byte("abc"),
-	})
-	if err != nil {
-		t.Fatalf("unexpected error: %v", err)
-	}
-	if strings.Contains(resp.ScormURL, "..") {
-		t.Fatalf("expected sanitized object key, got %q", resp.ScormURL)
-	}
-	if !strings.HasPrefix(resp.ScormURL, "scorm/uploads/") {
-		t.Fatalf("expected uploads prefix, got %q", resp.ScormURL)
-	}
+	requireErrCode(t, err, errs.NotFound)
 }

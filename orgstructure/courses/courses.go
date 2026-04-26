@@ -5,6 +5,7 @@ import (
 	"fmt"
 	"path/filepath"
 	"strings"
+	"time"
 
 	"encore.dev/beta/auth"
 	"encore.dev/beta/errs"
@@ -23,9 +24,12 @@ import (
 // DATABASE
 
 var (
-	db          = sqldb.Named("lms")
-	Client      = newEntClient()
-	scormBucket = objects.NewBucket("scorm-files", objects.BucketConfig{})
+	db           = sqldb.Named("lms")
+	Client       = newEntClient()
+	scormBucket  = objects.NewBucket("scorm-files", objects.BucketConfig{})
+	publicAssets = objects.NewBucket("public-assets", objects.BucketConfig{
+		Public: true,
+	})
 )
 
 func newEntClient() *ent.Client {
@@ -168,7 +172,14 @@ func GetCourse(ctx context.Context, id string) (*GetCourseResponse, error) {
 	if err != nil {
 		return nil, err
 	}
-
+	if course.ImageURL != nil {
+		signed, err := generateSignedURL(ctx, *course.ImageURL)
+		if err == nil {
+			course.ImageURL = &signed
+		} else {
+			return nil, err
+		}
+	}
 	return &GetCourseResponse{
 		Course: course,
 	}, nil
@@ -310,8 +321,11 @@ func uploadSCORMToStorage(ctx context.Context, fileName string, fileData []byte)
 			Cause(err).
 			Err()
 	}
-
-	return objectKey, nil
+	url, err := generateSignedURL(ctx, objectKey)
+	if err != nil {
+		return "", err
+	}
+	return url, nil
 }
 
 func uploadCourseImageToStorage(ctx context.Context, fileName string, fileData []byte) (string, error) {
@@ -320,7 +334,7 @@ func uploadCourseImageToStorage(ctx context.Context, fileName string, fileData [
 		sanitizeFileName(fileName),
 	)
 
-	writer := scormBucket.Upload(ctx, objectKey)
+	writer := publicAssets.Upload(ctx, objectKey)
 
 	_, err := writer.Write(fileData)
 	if err != nil {
@@ -340,8 +354,38 @@ func uploadCourseImageToStorage(ctx context.Context, fileName string, fileData [
 			Cause(err).
 			Err()
 	}
+	url, err := generatePublicURL(objectKey)
+	if err != nil {
+		return "", err
+	}
 
-	return objectKey, nil
+	return url, nil
+}
+
+func generateSignedURL(ctx context.Context, key string) (string, error) {
+	if strings.TrimSpace(key) == "" {
+		return "", errs.B().Code(errs.NotFound).Msg("object key not found").Err()
+	}
+
+	signedURL, err := scormBucket.SignedDownloadURL(ctx, key, objects.WithTTL(15*time.Minute))
+	if err != nil {
+		return "", errs.B().
+			Code(errs.Internal).
+			Msg("failed to generate signed URL").
+			Cause(err).
+			Err()
+	}
+
+	return signedURL.URL, nil
+}
+func generatePublicURL(key string) (string, error) {
+	if strings.TrimSpace(key) == "" {
+		return "", errs.B().Code(errs.NotFound).Msg("object key not found").Err()
+	}
+
+	signedURL := publicAssets.PublicURL(key)
+
+	return signedURL.String(), nil
 }
 
 func insertCourse(ctx context.Context, clientUID uuid.UUID, req *CreateCourseRequest) (*Course, error) {
@@ -425,7 +469,16 @@ func listCourses(ctx context.Context, clientUID uuid.UUID, role authhandler.User
 
 	result := make([]*Course, 0, len(rows))
 	for _, row := range rows {
-		result = append(result, entToCourse(row))
+		course := entToCourse(row)
+		if course.ImageURL != nil {
+			signed, err := generatePublicURL(*course.ImageURL)
+			if err == nil {
+				course.ImageURL = &signed
+			} else {
+				return nil, err
+			}
+		}
+		result = append(result, course)
 	}
 
 	return result, nil

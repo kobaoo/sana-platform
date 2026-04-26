@@ -43,6 +43,14 @@ type GetCourseResponse struct {
 	Course *Course `json:"course"`
 }
 
+type CourseImageURLResponse struct {
+	ImageURL string `json:"image_url"`
+}
+
+type CourseLaunchURLResponse struct {
+	LaunchURL string `json:"launch_url"`
+}
+
 type ListCoursesResponse struct {
 	Courses []*Course `json:"courses"`
 }
