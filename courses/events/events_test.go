@@ -921,3 +921,261 @@ func TestListHosts_IncludesPendingAdmin(t *testing.T) {
 		t.Errorf("blocked admin %s leaked into hosts", blockedID)
 	}
 }
+
+// ════ COMPLETE EVENT + ATTENDANCE FLOW ════
+
+// makeAdminUser inserts a User+Employee for an SA/ADM/HR caller and returns
+// (userID, ctx). Used so attendance updates can stamp reviewed_by.
+func makeAdminUser(t *testing.T, clientID uuid.UUID, role authhandler.UserRole) (uuid.UUID, context.Context) {
+	t.Helper()
+	suffix := uuid.New().String()[:8]
+	kcID := strings.ToLower(string(role)) + "-" + suffix
+	uid := uuid.New()
+	if _, err := Client.User.
+		Create().
+		SetID(uid).
+		SetRole(string(role)).
+		SetEmail(kcID + "@test.com").
+		SetKeycloakUserID(kcID).
+		SetClientID(clientID).
+		SetIsActive(true).
+		SetIsOnboarded(true).
+		Save(context.Background()); err != nil {
+		t.Fatalf("makeAdminUser: %v", err)
+	}
+	c := auth.WithContext(context.Background(), auth.UID(kcID), &authhandler.AuthData{
+		KeycloakUserID: kcID,
+		Role:           role,
+		CompanyID:      clientID.String(),
+	})
+	return uid, c
+}
+
+func TestCompleteEvent_Success(t *testing.T) {
+	f := setup(t)
+	ev := makeEvent(t, f)
+
+	resp, err := CompleteEvent(f.AdminCtx, ev.ID)
+	if err != nil {
+		t.Fatalf("CompleteEvent: %v", err)
+	}
+	if resp.Event.Status != StatusCompleted {
+		t.Errorf("expected status COMPLETED, got %s", resp.Event.Status)
+	}
+}
+
+func TestCompleteEvent_AlreadyCompleted(t *testing.T) {
+	f := setup(t)
+	ev := makeEvent(t, f)
+
+	if _, err := CompleteEvent(f.AdminCtx, ev.ID); err != nil {
+		t.Fatalf("first complete: %v", err)
+	}
+	_, err := CompleteEvent(f.AdminCtx, ev.ID)
+	if errs.Code(err) != errs.FailedPrecondition {
+		t.Errorf("expected FailedPrecondition on re-complete, got %v", errs.Code(err))
+	}
+}
+
+func TestCompleteEvent_PermissionDenied(t *testing.T) {
+	f := setup(t)
+	ev := makeEvent(t, f)
+
+	_, err := CompleteEvent(f.EmpCtx, ev.ID)
+	if errs.Code(err) != errs.PermissionDenied {
+		t.Errorf("expected PermissionDenied, got %v", errs.Code(err))
+	}
+}
+
+func TestListAttendance_ReturnsAllParticipants(t *testing.T) {
+	f := setup(t)
+	ev := makeEvent(t, f)
+	emp1, ctx1 := makeEmployeeUser(t, f.ClientID, f.DzoID)
+	emp2, ctx2 := makeEmployeeUser(t, f.ClientID, f.DzoID)
+	if _, err := RegisterForEvent(ctx1, ev.ID); err != nil {
+		t.Fatalf("register emp1: %v", err)
+	}
+	if _, err := RegisterForEvent(ctx2, ev.ID); err != nil {
+		t.Fatalf("register emp2: %v", err)
+	}
+
+	resp, err := ListAttendance(f.AdminCtx, ev.ID, &ListAttendanceParams{})
+	if err != nil {
+		t.Fatalf("ListAttendance: %v", err)
+	}
+	if resp.Total != 2 {
+		t.Errorf("expected 2 participants, got %d", resp.Total)
+	}
+	got := make(map[string]string, len(resp.Participants))
+	for _, p := range resp.Participants {
+		got[p.EmployeeID] = p.AttendanceStatus
+	}
+	if got[emp1.String()] != "PENDING" || got[emp2.String()] != "PENDING" {
+		t.Errorf("expected both PENDING, got %v", got)
+	}
+}
+
+func TestListAttendance_SearchByName(t *testing.T) {
+	f := setup(t)
+	ev := makeEvent(t, f)
+
+	// Create two employees with predictable distinct names.
+	suffix1 := uuid.New().String()[:6]
+	suffix2 := uuid.New().String()[:6]
+	makeNamed := func(name, suffix string) (uuid.UUID, context.Context) {
+		kcID := "emp-" + suffix
+		uid := uuid.New()
+		if _, err := Client.User.Create().
+			SetID(uid).SetRole(string(authhandler.RoleEMP)).
+			SetEmail(kcID + "@test.com").SetKeycloakUserID(kcID).
+			SetClientID(f.ClientID).SetIsActive(true).SetIsOnboarded(true).
+			Save(context.Background()); err != nil {
+			t.Fatalf("create user: %v", err)
+		}
+		row, err := Client.Employee.Create().
+			SetClientID(f.ClientID).SetDzoID(f.DzoID).
+			SetFullName(name).SetEmail(kcID + "@test.com").
+			SetIsActive(true).SetUserID(uid).
+			Save(context.Background())
+		if err != nil {
+			t.Fatalf("create emp: %v", err)
+		}
+		c := auth.WithContext(context.Background(), auth.UID(kcID), &authhandler.AuthData{
+			KeycloakUserID: kcID, Role: authhandler.RoleEMP, CompanyID: f.ClientID.String(),
+		})
+		return row.ID, c
+	}
+	alice, aliceCtx := makeNamed("Alice "+suffix1, suffix1)
+	_, bobCtx := makeNamed("Bob "+suffix2, suffix2)
+	if _, err := RegisterForEvent(aliceCtx, ev.ID); err != nil {
+		t.Fatalf("register alice: %v", err)
+	}
+	if _, err := RegisterForEvent(bobCtx, ev.ID); err != nil {
+		t.Fatalf("register bob: %v", err)
+	}
+
+	resp, err := ListAttendance(f.AdminCtx, ev.ID, &ListAttendanceParams{Search: "alice"})
+	if err != nil {
+		t.Fatalf("ListAttendance: %v", err)
+	}
+	if resp.Total != 1 {
+		t.Fatalf("expected 1 result for 'alice', got %d", resp.Total)
+	}
+	if resp.Participants[0].EmployeeID != alice.String() {
+		t.Errorf("expected alice's row, got %s", resp.Participants[0].EmployeeID)
+	}
+}
+
+func TestUpdateAttendance_Success(t *testing.T) {
+	f := setup(t)
+	_, adminCtx := makeAdminUser(t, f.ClientID, authhandler.RoleADM)
+
+	ev, err := CreateEvent(adminCtx, &CreateEventRequest{
+		Title:           "Webinar " + uuid.New().String()[:6],
+		EventDate:       time.Now().Add(48 * time.Hour),
+		HostID:          f.HostID.String(),
+		ZoomLink:        "https://zoom.us/j/x",
+		MaxParticipants: 5,
+	})
+	if err != nil {
+		t.Fatalf("CreateEvent: %v", err)
+	}
+	emp1, ctx1 := makeEmployeeUser(t, f.ClientID, f.DzoID)
+	emp2, ctx2 := makeEmployeeUser(t, f.ClientID, f.DzoID)
+	if _, err := RegisterForEvent(ctx1, ev.Event.ID); err != nil {
+		t.Fatalf("register emp1: %v", err)
+	}
+	if _, err := RegisterForEvent(ctx2, ev.Event.ID); err != nil {
+		t.Fatalf("register emp2: %v", err)
+	}
+	if _, err := CompleteEvent(adminCtx, ev.Event.ID); err != nil {
+		t.Fatalf("complete: %v", err)
+	}
+
+	resp, err := UpdateAttendance(adminCtx, ev.Event.ID, &UpdateAttendanceRequest{
+		Updates: []AttendanceUpdate{
+			{EmployeeID: emp1.String(), Attended: true},
+			{EmployeeID: emp2.String(), Attended: false},
+		},
+	})
+	if err != nil {
+		t.Fatalf("UpdateAttendance: %v", err)
+	}
+	if resp.Updated != 2 {
+		t.Errorf("expected updated=2, got %d", resp.Updated)
+	}
+
+	listResp, err := ListAttendance(adminCtx, ev.Event.ID, &ListAttendanceParams{})
+	if err != nil {
+		t.Fatalf("ListAttendance: %v", err)
+	}
+	got := make(map[string]string, len(listResp.Participants))
+	for _, p := range listResp.Participants {
+		got[p.EmployeeID] = p.AttendanceStatus
+	}
+	if got[emp1.String()] != "ATTENDED" {
+		t.Errorf("expected emp1=ATTENDED, got %s", got[emp1.String()])
+	}
+	if got[emp2.String()] != "MISSED" {
+		t.Errorf("expected emp2=MISSED, got %s", got[emp2.String()])
+	}
+}
+
+func TestUpdateAttendance_RejectsNonCompleted(t *testing.T) {
+	f := setup(t)
+	_, adminCtx := makeAdminUser(t, f.ClientID, authhandler.RoleADM)
+	ev := makeEvent(t, f)
+	emp, empCtx := makeEmployeeUser(t, f.ClientID, f.DzoID)
+	if _, err := RegisterForEvent(empCtx, ev.ID); err != nil {
+		t.Fatalf("register: %v", err)
+	}
+
+	_, err := UpdateAttendance(adminCtx, ev.ID, &UpdateAttendanceRequest{
+		Updates: []AttendanceUpdate{{EmployeeID: emp.String(), Attended: true}},
+	})
+	if errs.Code(err) != errs.FailedPrecondition {
+		t.Errorf("expected FailedPrecondition on ACTIVE event, got %v", errs.Code(err))
+	}
+}
+
+func TestUpdateAttendance_UnknownEmployeeIgnored(t *testing.T) {
+	f := setup(t)
+	_, adminCtx := makeAdminUser(t, f.ClientID, authhandler.RoleADM)
+	ev, err := CreateEvent(adminCtx, &CreateEventRequest{
+		Title:           "Webinar " + uuid.New().String()[:6],
+		EventDate:       time.Now().Add(48 * time.Hour),
+		HostID:          f.HostID.String(),
+		ZoomLink:        "https://zoom.us/j/x",
+		MaxParticipants: 5,
+	})
+	if err != nil {
+		t.Fatalf("CreateEvent: %v", err)
+	}
+	if _, err := CompleteEvent(adminCtx, ev.Event.ID); err != nil {
+		t.Fatalf("complete: %v", err)
+	}
+
+	resp, err := UpdateAttendance(adminCtx, ev.Event.ID, &UpdateAttendanceRequest{
+		Updates: []AttendanceUpdate{
+			{EmployeeID: uuid.New().String(), Attended: true},
+		},
+	})
+	if err != nil {
+		t.Fatalf("UpdateAttendance: %v", err)
+	}
+	if resp.Updated != 0 {
+		t.Errorf("expected updated=0 for unknown employee, got %d", resp.Updated)
+	}
+}
+
+func TestUpdateAttendance_PermissionDenied(t *testing.T) {
+	f := setup(t)
+	ev := makeEvent(t, f)
+
+	_, err := UpdateAttendance(f.EmpCtx, ev.ID, &UpdateAttendanceRequest{
+		Updates: []AttendanceUpdate{{EmployeeID: uuid.New().String(), Attended: true}},
+	})
+	if errs.Code(err) != errs.PermissionDenied {
+		t.Errorf("expected PermissionDenied, got %v", errs.Code(err))
+	}
+}

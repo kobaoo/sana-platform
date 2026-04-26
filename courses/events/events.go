@@ -354,6 +354,165 @@ func UnregisterFromEvent(ctx context.Context, id string) (*GetEventResponse, err
 	return &GetEventResponse{Event: *out}, nil
 }
 
+// CompleteEvent transitions an event to status=COMPLETED.
+// Allowed only when the current status is ACTIVE — calling on a
+// CANCELLED or already-COMPLETED event returns FailedPrecondition.
+// Allowed roles: SA, ADM, HR.
+//
+//encore:api auth method=PUT path=/events/:id/complete
+func CompleteEvent(ctx context.Context, id string) (*GetEventResponse, error) {
+	ad, err := getAuthData()
+	if err != nil {
+		return nil, err
+	}
+	if err := requireRole(ad, authhandler.RoleSA, authhandler.RoleADM, authhandler.RoleHR); err != nil {
+		return nil, err
+	}
+
+	uid, err := uuid.Parse(id)
+	if err != nil {
+		return nil, errs.B().Code(errs.InvalidArgument).Msg("invalid event id").Err()
+	}
+
+	row, err := Client.Event.Get(ctx, uid)
+	if err != nil {
+		if ent.IsNotFound(err) {
+			return nil, errs.B().Code(errs.NotFound).Msg("event not found").Err()
+		}
+		return nil, errs.B().Code(errs.Internal).Msg("failed to load event").Cause(err).Err()
+	}
+	if row.Status != entevent.StatusACTIVE {
+		return nil, errs.B().Code(errs.FailedPrecondition).
+			Msg("only active events can be completed").Err()
+	}
+
+	if _, err := Client.Event.UpdateOneID(uid).
+		SetStatus(entevent.StatusCOMPLETED).
+		Save(ctx); err != nil {
+		return nil, errs.B().Code(errs.Internal).Msg("failed to complete event").Cause(err).Err()
+	}
+
+	out, err := loadEventByID(ctx, uid, true)
+	if err != nil {
+		return nil, err
+	}
+	return &GetEventResponse{Event: *out}, nil
+}
+
+// ListAttendance returns the participant roster for an event with current
+// attendance status. Supports `search` — case-insensitive substring match
+// on full_name. Used by the admin attendance-marking screen.
+// Allowed roles: SA, ADM, HR.
+//
+//encore:api auth method=GET path=/events/:id/attendance
+func ListAttendance(ctx context.Context, id string, params *ListAttendanceParams) (*ListAttendanceResponse, error) {
+	ad, err := getAuthData()
+	if err != nil {
+		return nil, err
+	}
+	if err := requireRole(ad, authhandler.RoleSA, authhandler.RoleADM, authhandler.RoleHR); err != nil {
+		return nil, err
+	}
+
+	uid, err := uuid.Parse(id)
+	if err != nil {
+		return nil, errs.B().Code(errs.InvalidArgument).Msg("invalid event id").Err()
+	}
+
+	if exists, err := Client.Event.Query().Where(entevent.IDEQ(uid)).Exist(ctx); err != nil {
+		return nil, errs.B().Code(errs.Internal).Msg("failed to check event").Cause(err).Err()
+	} else if !exists {
+		return nil, errs.B().Code(errs.NotFound).Msg("event not found").Err()
+	}
+
+	q := Client.EventParticipant.
+		Query().
+		Where(eventparticipant.EventIDEQ(uid)).
+		WithEmployee()
+
+	search := strings.TrimSpace(params.Search)
+	if search != "" {
+		q = q.Where(eventparticipant.HasEmployeeWith(employee.FullNameContainsFold(search)))
+	}
+
+	rows, err := q.All(ctx)
+	if err != nil {
+		return nil, errs.B().Code(errs.Internal).Msg("failed to list participants").Cause(err).Err()
+	}
+
+	out := make([]Participant, 0, len(rows))
+	for _, p := range rows {
+		part := Participant{
+			ID:               p.ID.String(),
+			EmployeeID:       p.EmployeeID.String(),
+			AttendanceStatus: string(p.AttendanceStatus),
+			JoinedAt:         p.CreatedAt,
+		}
+		if p.JoinedAt != nil {
+			part.JoinedAt = *p.JoinedAt
+		}
+		if p.Edges.Employee != nil {
+			part.FullName = p.Edges.Employee.FullName
+			part.Email = p.Edges.Employee.Email
+			part.Department = p.Edges.Employee.Department
+			part.Position = p.Edges.Employee.Position
+		}
+		out = append(out, part)
+	}
+
+	return &ListAttendanceResponse{Participants: out, Total: len(out)}, nil
+}
+
+// UpdateAttendance applies a bulk update of attendance flags to participants
+// of a given event. The event must be in COMPLETED status — attendance is
+// only meaningful after the event is over. Each row sets attendance_status
+// to ATTENDED or MISSED, and stamps reviewed_by/reviewed_at.
+// Unknown employee_ids are silently ignored (count returned via `updated`).
+// Allowed roles: SA, ADM, HR.
+//
+//encore:api auth method=PUT path=/events/:id/attendance
+func UpdateAttendance(ctx context.Context, id string, req *UpdateAttendanceRequest) (*UpdateAttendanceResponse, error) {
+	ad, err := getAuthData()
+	if err != nil {
+		return nil, err
+	}
+	if err := requireRole(ad, authhandler.RoleSA, authhandler.RoleADM, authhandler.RoleHR); err != nil {
+		return nil, err
+	}
+
+	uid, err := uuid.Parse(id)
+	if err != nil {
+		return nil, errs.B().Code(errs.InvalidArgument).Msg("invalid event id").Err()
+	}
+	if req == nil || len(req.Updates) == 0 {
+		return nil, errs.B().Code(errs.InvalidArgument).Msg("updates list is empty").Err()
+	}
+
+	row, err := Client.Event.Get(ctx, uid)
+	if err != nil {
+		if ent.IsNotFound(err) {
+			return nil, errs.B().Code(errs.NotFound).Msg("event not found").Err()
+		}
+		return nil, errs.B().Code(errs.Internal).Msg("failed to load event").Cause(err).Err()
+	}
+	if row.Status != entevent.StatusCOMPLETED {
+		return nil, errs.B().Code(errs.FailedPrecondition).
+			Msg("attendance can only be marked on completed events").Err()
+	}
+
+	reviewerID, err := lookupReviewerID(ctx, ad)
+	if err != nil {
+		return nil, err
+	}
+
+	updated, err := bulkUpdateAttendance(ctx, uid, reviewerID, req.Updates)
+	if err != nil {
+		return nil, err
+	}
+
+	return &UpdateAttendanceResponse{Updated: updated}, nil
+}
+
 // ListHosts returns potential hosts (SA/ADM/HR users) scoped to the caller's
 // company. Used by the event creation form on the frontend. Supports `search`
 // (case-insensitive substring match on email/full_name) and limit/offset
@@ -1063,6 +1222,77 @@ func redactZoomForUnregistered(evs []Event) {
 			evs[i].ZoomLink = ""
 		}
 	}
+}
+
+// lookupReviewerID resolves the calling SA/ADM/HR user to their internal
+// user.id (used to stamp event_participants.reviewed_by). Returns
+// FailedPrecondition when no matching user record exists.
+func lookupReviewerID(ctx context.Context, ad *authhandler.AuthData) (uuid.UUID, error) {
+	if ad.KeycloakUserID == "" {
+		return uuid.Nil, errs.B().Code(errs.Unauthenticated).Msg("missing user identity").Err()
+	}
+	u, err := Client.User.
+		Query().
+		Where(user.KeycloakUserIDEQ(ad.KeycloakUserID)).
+		Only(ctx)
+	if err != nil {
+		if ent.IsNotFound(err) {
+			return uuid.Nil, errs.B().Code(errs.FailedPrecondition).Msg("caller has no user record").Err()
+		}
+		return uuid.Nil, errs.B().Code(errs.Internal).Msg("failed to resolve user").Cause(err).Err()
+	}
+	return u.ID, nil
+}
+
+// bulkUpdateAttendance applies a list of (employee_id, attended) updates
+// to event_participants of the given event in a single transaction.
+// Unknown employee_ids are skipped — the returned counter reflects how
+// many rows actually changed.
+func bulkUpdateAttendance(ctx context.Context, eventID, reviewerID uuid.UUID, updates []AttendanceUpdate) (int, error) {
+	tx, err := Client.Tx(ctx)
+	if err != nil {
+		return 0, errs.B().Code(errs.Internal).Msg("failed to begin transaction").Cause(err).Err()
+	}
+	defer func() {
+		if err != nil {
+			_ = tx.Rollback()
+		}
+	}()
+
+	now := time.Now()
+	updated := 0
+	for _, u := range updates {
+		empID, parseErr := uuid.Parse(strings.TrimSpace(u.EmployeeID))
+		if parseErr != nil {
+			err = errs.B().Code(errs.InvalidArgument).Msg("invalid employee_id format").Err()
+			return 0, err
+		}
+		status := eventparticipant.AttendanceStatusMISSED
+		if u.Attended {
+			status = eventparticipant.AttendanceStatusATTENDED
+		}
+		n, updErr := tx.EventParticipant.
+			Update().
+			Where(
+				eventparticipant.EventIDEQ(eventID),
+				eventparticipant.EmployeeIDEQ(empID),
+			).
+			SetAttendanceStatus(status).
+			SetReviewedBy(reviewerID).
+			SetReviewedAt(now).
+			Save(ctx)
+		if updErr != nil {
+			err = errs.B().Code(errs.Internal).Msg("failed to update attendance").Cause(updErr).Err()
+			return 0, err
+		}
+		updated += n
+	}
+
+	if err = tx.Commit(); err != nil {
+		err = errs.B().Code(errs.Internal).Msg("failed to commit attendance update").Cause(err).Err()
+		return 0, err
+	}
+	return updated, nil
 }
 
 // enrollEmployee inserts a participant row inside a transaction with a

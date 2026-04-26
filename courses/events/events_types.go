@@ -137,3 +137,33 @@ type ListHostsResponse struct {
 	Offset  int    `json:"offset"`
 	HasMore bool   `json:"has_more"`
 }
+
+// ListAttendanceParams are the query params for GET /events/:id/attendance.
+type ListAttendanceParams struct {
+	Search string `query:"search"`
+}
+
+// ListAttendanceResponse is the response for GET /events/:id/attendance —
+// the full participant list with attendance status, optionally filtered
+// by full_name substring.
+type ListAttendanceResponse struct {
+	Participants []Participant `json:"participants"`
+	Total        int           `json:"total"`
+}
+
+// AttendanceUpdate is one row in the bulk attendance update payload.
+// Attended=true → ATTENDED, false → MISSED.
+type AttendanceUpdate struct {
+	EmployeeID string `json:"employee_id"`
+	Attended   bool   `json:"attended"`
+}
+
+// UpdateAttendanceRequest is the body for PUT /events/:id/attendance.
+type UpdateAttendanceRequest struct {
+	Updates []AttendanceUpdate `json:"updates"`
+}
+
+// UpdateAttendanceResponse summarises the bulk write.
+type UpdateAttendanceResponse struct {
+	Updated int `json:"updated"`
+}
