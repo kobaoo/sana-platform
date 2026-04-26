@@ -138,6 +138,26 @@ func (_u *ScormCourseUpdate) SetNillableIsActive(v *bool) *ScormCourseUpdate {
 	return _u
 }
 
+// SetImageURL sets the "image_url" field.
+func (_u *ScormCourseUpdate) SetImageURL(v string) *ScormCourseUpdate {
+	_u.mutation.SetImageURL(v)
+	return _u
+}
+
+// SetNillableImageURL sets the "image_url" field if the given value is not nil.
+func (_u *ScormCourseUpdate) SetNillableImageURL(v *string) *ScormCourseUpdate {
+	if v != nil {
+		_u.SetImageURL(*v)
+	}
+	return _u
+}
+
+// ClearImageURL clears the value of the "image_url" field.
+func (_u *ScormCourseUpdate) ClearImageURL() *ScormCourseUpdate {
+	_u.mutation.ClearImageURL()
+	return _u
+}
+
 // AddCourseProgresIDs adds the "course_progress" edge to the ScormProgress entity by IDs.
 func (_u *ScormCourseUpdate) AddCourseProgresIDs(ids ...uuid.UUID) *ScormCourseUpdate {
 	_u.mutation.AddCourseProgresIDs(ids...)
@@ -223,6 +243,11 @@ func (_u *ScormCourseUpdate) check() error {
 			return &ValidationError{Name: "scorm_url", err: fmt.Errorf(`ent: validator failed for field "ScormCourse.scorm_url": %w`, err)}
 		}
 	}
+	if v, ok := _u.mutation.ImageURL(); ok {
+		if err := scormcourse.ImageURLValidator(v); err != nil {
+			return &ValidationError{Name: "image_url", err: fmt.Errorf(`ent: validator failed for field "ScormCourse.image_url": %w`, err)}
+		}
+	}
 	return nil
 }
 
@@ -269,6 +294,12 @@ func (_u *ScormCourseUpdate) sqlSave(ctx context.Context) (_node int, err error)
 	}
 	if value, ok := _u.mutation.IsActive(); ok {
 		_spec.SetField(scormcourse.FieldIsActive, field.TypeBool, value)
+	}
+	if value, ok := _u.mutation.ImageURL(); ok {
+		_spec.SetField(scormcourse.FieldImageURL, field.TypeString, value)
+	}
+	if _u.mutation.ImageURLCleared() {
+		_spec.ClearField(scormcourse.FieldImageURL, field.TypeString)
 	}
 	if _u.mutation.CourseProgressCleared() {
 		edge := &sqlgraph.EdgeSpec{
@@ -443,6 +474,26 @@ func (_u *ScormCourseUpdateOne) SetNillableIsActive(v *bool) *ScormCourseUpdateO
 	return _u
 }
 
+// SetImageURL sets the "image_url" field.
+func (_u *ScormCourseUpdateOne) SetImageURL(v string) *ScormCourseUpdateOne {
+	_u.mutation.SetImageURL(v)
+	return _u
+}
+
+// SetNillableImageURL sets the "image_url" field if the given value is not nil.
+func (_u *ScormCourseUpdateOne) SetNillableImageURL(v *string) *ScormCourseUpdateOne {
+	if v != nil {
+		_u.SetImageURL(*v)
+	}
+	return _u
+}
+
+// ClearImageURL clears the value of the "image_url" field.
+func (_u *ScormCourseUpdateOne) ClearImageURL() *ScormCourseUpdateOne {
+	_u.mutation.ClearImageURL()
+	return _u
+}
+
 // AddCourseProgresIDs adds the "course_progress" edge to the ScormProgress entity by IDs.
 func (_u *ScormCourseUpdateOne) AddCourseProgresIDs(ids ...uuid.UUID) *ScormCourseUpdateOne {
 	_u.mutation.AddCourseProgresIDs(ids...)
@@ -541,6 +592,11 @@ func (_u *ScormCourseUpdateOne) check() error {
 			return &ValidationError{Name: "scorm_url", err: fmt.Errorf(`ent: validator failed for field "ScormCourse.scorm_url": %w`, err)}
 		}
 	}
+	if v, ok := _u.mutation.ImageURL(); ok {
+		if err := scormcourse.ImageURLValidator(v); err != nil {
+			return &ValidationError{Name: "image_url", err: fmt.Errorf(`ent: validator failed for field "ScormCourse.image_url": %w`, err)}
+		}
+	}
 	return nil
 }
 
@@ -604,6 +660,12 @@ func (_u *ScormCourseUpdateOne) sqlSave(ctx context.Context) (_node *ScormCourse
 	}
 	if value, ok := _u.mutation.IsActive(); ok {
 		_spec.SetField(scormcourse.FieldIsActive, field.TypeBool, value)
+	}
+	if value, ok := _u.mutation.ImageURL(); ok {
+		_spec.SetField(scormcourse.FieldImageURL, field.TypeString, value)
+	}
+	if _u.mutation.ImageURLCleared() {
+		_spec.ClearField(scormcourse.FieldImageURL, field.TypeString)
 	}
 	if _u.mutation.CourseProgressCleared() {
 		edge := &sqlgraph.EdgeSpec{

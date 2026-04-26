@@ -84,6 +84,11 @@ func IsActive(v bool) predicate.ScormCourse {
 	return predicate.ScormCourse(sql.FieldEQ(FieldIsActive, v))
 }
 
+// ImageURL applies equality check predicate on the "image_url" field. It's identical to ImageURLEQ.
+func ImageURL(v string) predicate.ScormCourse {
+	return predicate.ScormCourse(sql.FieldEQ(FieldImageURL, v))
+}
+
 // ClientIDEQ applies the EQ predicate on the "client_id" field.
 func ClientIDEQ(v uuid.UUID) predicate.ScormCourse {
 	return predicate.ScormCourse(sql.FieldEQ(FieldClientID, v))
@@ -412,6 +417,81 @@ func IsActiveEQ(v bool) predicate.ScormCourse {
 // IsActiveNEQ applies the NEQ predicate on the "is_active" field.
 func IsActiveNEQ(v bool) predicate.ScormCourse {
 	return predicate.ScormCourse(sql.FieldNEQ(FieldIsActive, v))
+}
+
+// ImageURLEQ applies the EQ predicate on the "image_url" field.
+func ImageURLEQ(v string) predicate.ScormCourse {
+	return predicate.ScormCourse(sql.FieldEQ(FieldImageURL, v))
+}
+
+// ImageURLNEQ applies the NEQ predicate on the "image_url" field.
+func ImageURLNEQ(v string) predicate.ScormCourse {
+	return predicate.ScormCourse(sql.FieldNEQ(FieldImageURL, v))
+}
+
+// ImageURLIn applies the In predicate on the "image_url" field.
+func ImageURLIn(vs ...string) predicate.ScormCourse {
+	return predicate.ScormCourse(sql.FieldIn(FieldImageURL, vs...))
+}
+
+// ImageURLNotIn applies the NotIn predicate on the "image_url" field.
+func ImageURLNotIn(vs ...string) predicate.ScormCourse {
+	return predicate.ScormCourse(sql.FieldNotIn(FieldImageURL, vs...))
+}
+
+// ImageURLGT applies the GT predicate on the "image_url" field.
+func ImageURLGT(v string) predicate.ScormCourse {
+	return predicate.ScormCourse(sql.FieldGT(FieldImageURL, v))
+}
+
+// ImageURLGTE applies the GTE predicate on the "image_url" field.
+func ImageURLGTE(v string) predicate.ScormCourse {
+	return predicate.ScormCourse(sql.FieldGTE(FieldImageURL, v))
+}
+
+// ImageURLLT applies the LT predicate on the "image_url" field.
+func ImageURLLT(v string) predicate.ScormCourse {
+	return predicate.ScormCourse(sql.FieldLT(FieldImageURL, v))
+}
+
+// ImageURLLTE applies the LTE predicate on the "image_url" field.
+func ImageURLLTE(v string) predicate.ScormCourse {
+	return predicate.ScormCourse(sql.FieldLTE(FieldImageURL, v))
+}
+
+// ImageURLContains applies the Contains predicate on the "image_url" field.
+func ImageURLContains(v string) predicate.ScormCourse {
+	return predicate.ScormCourse(sql.FieldContains(FieldImageURL, v))
+}
+
+// ImageURLHasPrefix applies the HasPrefix predicate on the "image_url" field.
+func ImageURLHasPrefix(v string) predicate.ScormCourse {
+	return predicate.ScormCourse(sql.FieldHasPrefix(FieldImageURL, v))
+}
+
+// ImageURLHasSuffix applies the HasSuffix predicate on the "image_url" field.
+func ImageURLHasSuffix(v string) predicate.ScormCourse {
+	return predicate.ScormCourse(sql.FieldHasSuffix(FieldImageURL, v))
+}
+
+// ImageURLIsNil applies the IsNil predicate on the "image_url" field.
+func ImageURLIsNil() predicate.ScormCourse {
+	return predicate.ScormCourse(sql.FieldIsNull(FieldImageURL))
+}
+
+// ImageURLNotNil applies the NotNil predicate on the "image_url" field.
+func ImageURLNotNil() predicate.ScormCourse {
+	return predicate.ScormCourse(sql.FieldNotNull(FieldImageURL))
+}
+
+// ImageURLEqualFold applies the EqualFold predicate on the "image_url" field.
+func ImageURLEqualFold(v string) predicate.ScormCourse {
+	return predicate.ScormCourse(sql.FieldEqualFold(FieldImageURL, v))
+}
+
+// ImageURLContainsFold applies the ContainsFold predicate on the "image_url" field.
+func ImageURLContainsFold(v string) predicate.ScormCourse {
+	return predicate.ScormCourse(sql.FieldContainsFold(FieldImageURL, v))
 }
 
 // HasCourseProgress applies the HasEdge predicate on the "course_progress" edge.

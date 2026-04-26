@@ -32,6 +32,8 @@ type ScormCourse struct {
 	ScormURL string `json:"scorm_url,omitempty"`
 	// IsActive holds the value of the "is_active" field.
 	IsActive bool `json:"is_active,omitempty"`
+	// ImageURL holds the value of the "image_url" field.
+	ImageURL *string `json:"image_url,omitempty"`
 	// Edges holds the relations/edges for other nodes in the graph.
 	// The values are being populated by the ScormCourseQuery when eager-loading is set.
 	Edges        ScormCourseEdges `json:"edges"`
@@ -65,7 +67,7 @@ func (*ScormCourse) scanValues(columns []string) ([]any, error) {
 			values[i] = new([]byte)
 		case scormcourse.FieldIsActive:
 			values[i] = new(sql.NullBool)
-		case scormcourse.FieldTitle, scormcourse.FieldDescription, scormcourse.FieldLecturer, scormcourse.FieldScormURL:
+		case scormcourse.FieldTitle, scormcourse.FieldDescription, scormcourse.FieldLecturer, scormcourse.FieldScormURL, scormcourse.FieldImageURL:
 			values[i] = new(sql.NullString)
 		case scormcourse.FieldID, scormcourse.FieldClientID:
 			values[i] = new(uuid.UUID)
@@ -136,6 +138,13 @@ func (_m *ScormCourse) assignValues(columns []string, values []any) error {
 			} else if value.Valid {
 				_m.IsActive = value.Bool
 			}
+		case scormcourse.FieldImageURL:
+			if value, ok := values[i].(*sql.NullString); !ok {
+				return fmt.Errorf("unexpected type %T for field image_url", values[i])
+			} else if value.Valid {
+				_m.ImageURL = new(string)
+				*_m.ImageURL = value.String
+			}
 		default:
 			_m.selectValues.Set(columns[i], values[i])
 		}
@@ -201,6 +210,11 @@ func (_m *ScormCourse) String() string {
 	builder.WriteString(", ")
 	builder.WriteString("is_active=")
 	builder.WriteString(fmt.Sprintf("%v", _m.IsActive))
+	builder.WriteString(", ")
+	if v := _m.ImageURL; v != nil {
+		builder.WriteString("image_url=")
+		builder.WriteString(*v)
+	}
 	builder.WriteByte(')')
 	return builder.String()
 }

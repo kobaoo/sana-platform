@@ -21,7 +21,7 @@ func (ScormCourse) Fields() []ent.Field {
 
 		field.String("title").
 			NotEmpty(),
-		
+
 		field.JSON("category_ids", []uuid.UUID{}),
 
 		field.Text("description").
@@ -38,6 +38,11 @@ func (ScormCourse) Fields() []ent.Field {
 
 		field.Bool("is_active").
 			Default(true),
+
+		field.String("image_url").
+			Optional().
+			Nillable().
+			MaxLen(512),
 	}
 }
 
@@ -50,14 +55,6 @@ func (ScormCourse) Edges() []ent.Edge {
 		// 	Required().
 		// 	Unique(),
 
-		// Category
-		// edge.From("category", Category.Type).
-		// 	Ref("courses").
-		// 	Field("category_id").
-		// 	Required().
-		// 	Unique(),
-
-		//
 		edge.To("course_progress", ScormProgress.Type),
 	}
 }

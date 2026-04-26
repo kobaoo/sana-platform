@@ -87,6 +87,20 @@ func (_c *ScormCourseCreate) SetNillableIsActive(v *bool) *ScormCourseCreate {
 	return _c
 }
 
+// SetImageURL sets the "image_url" field.
+func (_c *ScormCourseCreate) SetImageURL(v string) *ScormCourseCreate {
+	_c.mutation.SetImageURL(v)
+	return _c
+}
+
+// SetNillableImageURL sets the "image_url" field if the given value is not nil.
+func (_c *ScormCourseCreate) SetNillableImageURL(v *string) *ScormCourseCreate {
+	if v != nil {
+		_c.SetImageURL(*v)
+	}
+	return _c
+}
+
 // SetID sets the "id" field.
 func (_c *ScormCourseCreate) SetID(v uuid.UUID) *ScormCourseCreate {
 	_c.mutation.SetID(v)
@@ -193,6 +207,11 @@ func (_c *ScormCourseCreate) check() error {
 	if _, ok := _c.mutation.IsActive(); !ok {
 		return &ValidationError{Name: "is_active", err: errors.New(`ent: missing required field "ScormCourse.is_active"`)}
 	}
+	if v, ok := _c.mutation.ImageURL(); ok {
+		if err := scormcourse.ImageURLValidator(v); err != nil {
+			return &ValidationError{Name: "image_url", err: fmt.Errorf(`ent: validator failed for field "ScormCourse.image_url": %w`, err)}
+		}
+	}
 	return nil
 }
 
@@ -255,6 +274,10 @@ func (_c *ScormCourseCreate) createSpec() (*ScormCourse, *sqlgraph.CreateSpec) {
 	if value, ok := _c.mutation.IsActive(); ok {
 		_spec.SetField(scormcourse.FieldIsActive, field.TypeBool, value)
 		_node.IsActive = value
+	}
+	if value, ok := _c.mutation.ImageURL(); ok {
+		_spec.SetField(scormcourse.FieldImageURL, field.TypeString, value)
+		_node.ImageURL = &value
 	}
 	if nodes := _c.mutation.CourseProgressIDs(); len(nodes) > 0 {
 		edge := &sqlgraph.EdgeSpec{

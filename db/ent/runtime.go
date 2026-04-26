@@ -5,6 +5,7 @@ package ent
 import (
 	"time"
 
+	"encore.app/db/ent/category"
 	"encore.app/db/ent/company"
 	"encore.app/db/ent/contractsupplier"
 	"encore.app/db/ent/contractsupplierhistory"
@@ -26,6 +27,30 @@ import (
 // (default values, validators, hooks and policies) and stitches it
 // to their package variables.
 func init() {
+	categoryFields := schema.Category{}.Fields()
+	_ = categoryFields
+	// categoryDescName is the schema descriptor for name field.
+	categoryDescName := categoryFields[1].Descriptor()
+	// category.NameValidator is a validator for the "name" field. It is called by the builders before save.
+	category.NameValidator = func() func(string) error {
+		validators := categoryDescName.Validators
+		fns := [...]func(string) error{
+			validators[0].(func(string) error),
+			validators[1].(func(string) error),
+		}
+		return func(name string) error {
+			for _, fn := range fns {
+				if err := fn(name); err != nil {
+					return err
+				}
+			}
+			return nil
+		}
+	}()
+	// categoryDescID is the schema descriptor for id field.
+	categoryDescID := categoryFields[0].Descriptor()
+	// category.DefaultID holds the default value on creation for the id field.
+	category.DefaultID = categoryDescID.Default.(func() uuid.UUID)
 	companyFields := schema.Company{}.Fields()
 	_ = companyFields
 	// companyDescName is the schema descriptor for name field.
@@ -418,6 +443,10 @@ func init() {
 	scormcourseDescIsActive := scormcourseFields[7].Descriptor()
 	// scormcourse.DefaultIsActive holds the default value on creation for the is_active field.
 	scormcourse.DefaultIsActive = scormcourseDescIsActive.Default.(bool)
+	// scormcourseDescImageURL is the schema descriptor for image_url field.
+	scormcourseDescImageURL := scormcourseFields[8].Descriptor()
+	// scormcourse.ImageURLValidator is a validator for the "image_url" field. It is called by the builders before save.
+	scormcourse.ImageURLValidator = scormcourseDescImageURL.Validators[0].(func(string) error)
 	// scormcourseDescID is the schema descriptor for id field.
 	scormcourseDescID := scormcourseFields[0].Descriptor()
 	// scormcourse.DefaultID holds the default value on creation for the id field.

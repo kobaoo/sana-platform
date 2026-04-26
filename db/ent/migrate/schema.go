@@ -9,6 +9,18 @@ import (
 )
 
 var (
+	// CategoriesColumns holds the columns for the "categories" table.
+	CategoriesColumns = []*schema.Column{
+		{Name: "id", Type: field.TypeUUID},
+		{Name: "name", Type: field.TypeString, Size: 100},
+		{Name: "description", Type: field.TypeString, Nullable: true, Size: 2147483647},
+	}
+	// CategoriesTable holds the schema information for the "categories" table.
+	CategoriesTable = &schema.Table{
+		Name:       "categories",
+		Columns:    CategoriesColumns,
+		PrimaryKey: []*schema.Column{CategoriesColumns[0]},
+	}
 	// ClientsColumns holds the columns for the "clients" table.
 	ClientsColumns = []*schema.Column{
 		{Name: "id", Type: field.TypeUUID, Unique: true},
@@ -238,6 +250,7 @@ var (
 		{Name: "lecturer", Type: field.TypeString, Nullable: true, Size: 255},
 		{Name: "scorm_url", Type: field.TypeString, Size: 2147483647},
 		{Name: "is_active", Type: field.TypeBool, Default: true},
+		{Name: "image_url", Type: field.TypeString, Nullable: true, Size: 512},
 	}
 	// ScormCoursesTable holds the schema information for the "scorm_courses" table.
 	ScormCoursesTable = &schema.Table{
@@ -386,6 +399,7 @@ var (
 	}
 	// Tables holds all the tables in the schema.
 	Tables = []*schema.Table{
+		CategoriesTable,
 		ClientsTable,
 		ContractSuppliersTable,
 		ContractSupplierHistoriesTable,

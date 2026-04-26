@@ -249,14 +249,21 @@ func GetMyCourseProgress(ctx context.Context, course_id string) (*GetMyCoursePro
 		Where(scormprogress.EmployeeIDEQ(employeeID)).
 		Where(scormprogress.CourseIDEQ(courseID)).
 		Only(ctx)
+	progress := CourseProgress{}
 	if err != nil {
 		if ent.IsNotFound(err) {
-			return nil, errs.B().Code(errs.NotFound).Msg("course is not assigned").Err()
+			progress, err = createNewCourseProgress(ctx, courseID, employeeID)
+			if err != nil {
+				return nil, err
+			}
+			//return nil, errs.B().Code(errs.NotFound).Msg("course is not assigned").Err()
+		} else {
+			return nil, errs.B().Code(errs.Internal).Msg("failed to get course").Cause(err).Err()
 		}
-		return nil, errs.B().Code(errs.Internal).Msg("failed to get course").Cause(err).Err()
+	} else {
+		progress = entToCourseProgress(row)
 	}
 
-	progress := entToCourseProgress(row)
 	return &GetMyCourseProgressResponse{Progress: progress}, nil
 }
 
@@ -396,7 +403,17 @@ func getEmployeesByIDs(ctx context.Context, employeeIDs []uuid.UUID) ([]*ent.Emp
 	}
 	return rows, nil
 }
-
+func createNewCourseProgress(ctx context.Context, courseID uuid.UUID, employeeID uuid.UUID) (CourseProgress, error) {
+	builder := Client.ScormProgress.Create().
+		SetCourseID(courseID).
+		SetEmployeeID(employeeID).
+		SetStatus(scormprogress.StatusNOT_STARTED)
+	row, err := builder.Save(ctx)
+	if err != nil {
+		return CourseProgress{}, errs.B().Code(errs.Internal).Msg("failed to assign this course to employee").Cause(err).Err()
+	}
+	return entToCourseProgress(row), nil
+}
 func ensureEmployeeInScope(ad *authhandler.AuthData, emp *ent.Employee) error {
 	switch ad.Role {
 	case authhandler.RoleSA:
