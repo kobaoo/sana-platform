@@ -10,16 +10,29 @@ import (
 	"testing"
 	"time"
 
+	"encore.dev/beta/auth"
 	"encore.dev/beta/errs"
+	"encore.dev/et"
 	"github.com/google/uuid"
+
+	"encore.app/auth/authhandler"
 )
 
 func ctx() context.Context {
 	return context.Background()
 }
 
+func withADMAuth(t *testing.T) {
+	t.Helper()
+	et.OverrideAuthInfo(auth.UID("test-adm"), &authhandler.AuthData{
+		KeycloakUserID: "test-adm",
+		Role:           authhandler.RoleADM,
+	})
+}
+
 func makeCert(t *testing.T, title string) *Certificate {
 	t.Helper()
+	withADMAuth(t)
 	resp, err := Create(ctx(), &CreateRequest{
 		EmployeeID: uuid.New(),
 		Type:       "EXTERNAL",
@@ -37,6 +50,7 @@ func makeCert(t *testing.T, title string) *Certificate {
 // ════ CREATE ════
 
 func TestCreate_Success(t *testing.T) {
+	withADMAuth(t)
 	resp, err := Create(ctx(), &CreateRequest{
 		EmployeeID: uuid.New(),
 		Type:       "EXTERNAL",
@@ -54,6 +68,7 @@ func TestCreate_Success(t *testing.T) {
 }
 
 func TestCreate_EmptyTitle(t *testing.T) {
+	withADMAuth(t)
 	_, err := Create(ctx(), &CreateRequest{
 		EmployeeID: uuid.New(),
 		Type:       "EXTERNAL",
@@ -97,6 +112,7 @@ func TestGetByID_NotFound(t *testing.T) {
 // ════ LIST ════
 
 func TestList_FilterByEmployeeID(t *testing.T) {
+	withADMAuth(t)
 	targetEmployee := uuid.New()
 
 	resp1, err := Create(ctx(), &CreateRequest{
@@ -150,6 +166,7 @@ func TestList_FilterByEmployeeID(t *testing.T) {
 }
 
 func TestList_FilterByEntityType(t *testing.T) {
+	withADMAuth(t)
 	_, err := Create(ctx(), &CreateRequest{
 		EmployeeID: uuid.New(),
 		Type:       "EXTERNAL",
@@ -175,6 +192,7 @@ func TestList_FilterByEntityType(t *testing.T) {
 }
 
 func TestList_InvalidEmployeeID(t *testing.T) {
+	withADMAuth(t)
 	_, err := List(ctx(), &ListParams{EmployeeID: "bad-uuid"})
 	if errs.Code(err) != errs.InvalidArgument {
 		t.Errorf("expected InvalidArgument, got %v", err)
@@ -185,7 +203,7 @@ func TestList_InvalidEmployeeID(t *testing.T) {
 
 func TestUpdate_Success(t *testing.T) {
 	cert := makeCert(t, "Original Title")
-
+	withADMAuth(t)
 	resp, err := Update(ctx(), cert.ID, &UpdateRequest{
 		Type:       "EXTERNAL",
 		Title:      "Updated Title",
@@ -247,6 +265,7 @@ func TestDelete_InvalidID(t *testing.T) {
 
 func TestUploadFile_ValidPDF(t *testing.T) {
 	cert := makeCert(t, "Upload Test")
+	withADMAuth(t)
 
 	body := &bytes.Buffer{}
 	writer := multipart.NewWriter(body)
@@ -279,6 +298,7 @@ func TestUploadFile_ValidPDF(t *testing.T) {
 
 func TestUploadFile_NotPDF(t *testing.T) {
 	cert := makeCert(t, "Upload Wrong Type")
+	withADMAuth(t)
 
 	body := &bytes.Buffer{}
 	writer := multipart.NewWriter(body)
@@ -302,6 +322,7 @@ func TestUploadFile_NotPDF(t *testing.T) {
 }
 
 func TestUploadFile_CertNotFound(t *testing.T) {
+	withADMAuth(t)
 	body := &bytes.Buffer{}
 	writer := multipart.NewWriter(body)
 	h := make(textproto.MIMEHeader)

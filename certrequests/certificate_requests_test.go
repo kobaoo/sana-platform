@@ -1,7 +1,9 @@
 package certrequests
 
 import (
+	"context"
 	"testing"
+	"time"
 
 	"encore.dev/beta/auth"
 	"encore.dev/beta/errs"
@@ -9,7 +11,13 @@ import (
 	"github.com/google/uuid"
 
 	"encore.app/auth/authhandler"
+	"encore.app/db/ent"
+	"encore.app/db/ent/certificate"
 )
+
+func ctx() context.Context {
+	return context.Background()
+}
 
 // makeAuthUser creates a DB user with a deterministic KC ID, then injects auth so
 // auth.Data() returns the given role for the rest of the test.
@@ -41,14 +49,85 @@ func makeAuthUser(t *testing.T, role authhandler.UserRole) (uuid.UUID, string) {
 	return id, kcID
 }
 
+func makeCompany(t *testing.T) uuid.UUID {
+	t.Helper()
+	id := uuid.MustParse("00000000-0000-0000-0000-000000000001")
+	_, err := Client.Company.Create().
+		SetID(id).
+		SetName("Test Company").
+		Save(ctx())
+	if err != nil && !ent.IsConstraintError(err) {
+		t.Fatalf("makeCompany: %v", err)
+	}
+	return id
+}
+
+func makeDzo(t *testing.T) uuid.UUID {
+	t.Helper()
+	id := uuid.New()
+	_, err := Client.DzoOrganization.Create().
+		SetID(id).
+		SetClientID(makeCompany(t)).
+		SetName("Test DZO " + id.String()).
+		Save(ctx())
+	if err != nil {
+		t.Fatalf("makeDzo: %v", err)
+	}
+	return id
+}
+
+func makeEmployee(t *testing.T, dzoID uuid.UUID) uuid.UUID {
+	t.Helper()
+	id := uuid.New()
+	_, err := Client.Employee.Create().
+		SetID(id).
+		SetClientID(makeCompany(t)).
+		SetDzoID(dzoID).
+		SetFullName("Test Employee").
+		SetEmail("emp-" + id.String() + "@test.com").
+		Save(ctx())
+	if err != nil {
+		t.Fatalf("makeEmployee: %v", err)
+	}
+	return id
+}
+
+func makeCertInDB(t *testing.T, employeeID uuid.UUID) uuid.UUID {
+	t.Helper()
+	id := uuid.New()
+	_, err := Client.Certificate.Create().
+		SetID(id).
+		SetEmployeeID(employeeID).
+		SetType(certificate.TypeEXTERNAL).
+		SetTitle("Test Certificate").
+		SetIssuedDate(time.Now()).
+		SetEntityType(certificate.EntityTypeTRAINING_EVENT).
+		SetEntityID(uuid.New()).
+		Save(ctx())
+	if err != nil {
+		t.Fatalf("makeCertInDB: %v", err)
+	}
+	return id
+}
+
 // ════ ТЗ TESTS — endpoint-level (5 обязательных сценариев) ════
 
 // ТЗ-1: HR creates request via endpoint → success, status PENDING
 func TestCreateCertificateRenewal_HRSuccess(t *testing.T) {
-	hrID, _ := makeAuthUser(t, authhandler.RoleHR)
+	hrID, kcID := makeAuthUser(t, authhandler.RoleHR)
+
+	dzoID := makeDzo(t)
+	empID := makeEmployee(t, dzoID)
+	certID := makeCertInDB(t, empID)
+
+	et.OverrideAuthInfo(auth.UID(kcID), &authhandler.AuthData{
+		KeycloakUserID: kcID,
+		Role:           authhandler.RoleHR,
+		DzoID:          dzoID.String(),
+	})
 
 	resp, err := CreateCertificateRenewal(ctx(), &CreateCertificateRenewalRequest{
-		EntityID: uuid.New(),
+		EntityID: certID,
 	})
 	if err != nil {
 		t.Fatalf("unexpected error: %v", err)
@@ -228,22 +307,40 @@ func TestCanReviewCertRenewal_Roles(t *testing.T) {
 
 // Get возвращает 404 если ID принадлежит Epic 4 (другой entity_type)
 func TestGetCertificateRenewal_WrongEntityType(t *testing.T) {
-	makeAuthUser(t, authhandler.RoleHR)
+	hrID, _ := makeAuthUser(t, authhandler.RoleHR)
 
-	tr, err := CreateRequest(ctx(), &CreateRequestRequest{
-		EntityID:   uuid.New(),
-		EntityType: "TRAINING_EVENT",
-	})
+	// Создаём запись с EntityType != CERTIFICATE_RENEWAL напрямую через DB
+	r, err := Client.Request.Create().
+		SetInitiatorID(hrID).
+		SetEntityID(uuid.New()).
+		SetEntityType("TRAINING_EVENT").
+		SetStatus("PENDING").
+		Save(ctx())
 	if err != nil {
 		t.Fatalf("create training event request: %v", err)
 	}
 
-	_, err = queryCertRenewalByID(ctx(), tr.ID)
+	_, err = queryCertRenewalByID(ctx(), r.ID)
 	if err == nil {
 		t.Fatal("expected NotFound when querying TRAINING_EVENT as cert renewal")
 	}
 	if errs.Code(err) != errs.NotFound {
 		t.Fatalf("expected NotFound, got %v", errs.Code(err))
+	}
+}
+
+func ensureUser(t *testing.T, id uuid.UUID, role string) {
+	t.Helper()
+	_, err := Client.User.Create().
+		SetID(id).
+		SetRole(role).
+		SetEmail(role+"-"+id.String()+"@test.com").
+		SetKeycloakUserID(role+"-"+id.String()).
+		SetIsActive(true).
+		SetIsOnboarded(true).
+		Save(ctx())
+	if err != nil {
+		t.Fatalf("ensureUser(%q): %v", role, err)
 	}
 }
 

@@ -22,7 +22,6 @@ import (
 	"encore.app/db/ent"
 	"encore.app/db/ent/dzoorganization"
 	"encore.app/db/ent/employee"
-	"encore.app/db/ent/user"
 )
 
 // ════ DATABASE ════
