@@ -3,6 +3,7 @@ package events
 import (
 	"context"
 	"slices"
+	"sort"
 	"strings"
 	"time"
 
@@ -397,6 +398,128 @@ func CompleteEvent(ctx context.Context, id string) (*GetEventResponse, error) {
 		return nil, err
 	}
 	return &GetEventResponse{Event: *out}, nil
+}
+
+// ListMyRegistrations returns events the calling employee is registered for —
+// powers the employee sidebar. Optional `filter` query: upcoming|past|all
+// (default upcoming). CANCELLED events are excluded; the caller's own
+// attendance_status is included for past/completed entries.
+// Allowed role: EMP.
+//
+// Path is sibling to /event-hosts because Encore disallows a static segment
+// (`my-registrations`) under the same parent as `/events/:id`.
+//
+//encore:api auth method=GET path=/my-event-registrations
+func ListMyRegistrations(ctx context.Context, params *ListMyRegistrationsParams) (*ListMyRegistrationsResponse, error) {
+	ad, err := getAuthData()
+	if err != nil {
+		return nil, err
+	}
+	if err := requireRole(ad, authhandler.RoleEMP); err != nil {
+		return nil, err
+	}
+
+	filter, err := parseRegistrationsFilter(params.Filter)
+	if err != nil {
+		return nil, err
+	}
+
+	empID, err := lookupEmployeeID(ctx, ad)
+	if err != nil {
+		return nil, err
+	}
+
+	rows, err := Client.EventParticipant.
+		Query().
+		Where(eventparticipant.EmployeeIDEQ(empID)).
+		WithEvent().
+		All(ctx)
+	if err != nil {
+		return nil, errs.B().Code(errs.Internal).Msg("failed to load registrations").Cause(err).Err()
+	}
+
+	now := time.Now()
+	out := make([]MyRegistration, 0, len(rows))
+	hostIDs := make([]uuid.UUID, 0, len(rows))
+
+	for _, p := range rows {
+		ev := p.Edges.Event
+		if ev == nil || ev.Status == entevent.StatusCANCELLED {
+			continue
+		}
+		switch filter {
+		case "upcoming":
+			if ev.EventDate.Before(now) {
+				continue
+			}
+		case "past":
+			if !ev.EventDate.Before(now) {
+				continue
+			}
+		}
+
+		domain := entToEvent(ev, false)
+		domain.IsRegistered = true
+		joinedAt := p.CreatedAt
+		if p.JoinedAt != nil {
+			joinedAt = *p.JoinedAt
+		}
+		out = append(out, MyRegistration{
+			Event:            *domain,
+			AttendanceStatus: string(p.AttendanceStatus),
+			JoinedAt:         joinedAt,
+		})
+		hostIDs = append(hostIDs, ev.HostID)
+	}
+
+	names, err := hostNamesByUserIDs(ctx, hostIDs)
+	if err != nil {
+		return nil, err
+	}
+	for i := range out {
+		if hid, e := uuid.Parse(out[i].Event.HostID); e == nil {
+			out[i].Event.HostName = names[hid]
+		}
+	}
+
+	sortMyRegistrations(out, filter, now)
+
+	limit, offset := normalizeMyRegistrationsPagination(params.Limit, params.Offset)
+	total := len(out)
+	page := paginate(out, offset, limit)
+
+	return &ListMyRegistrationsResponse{
+		Registrations: page,
+		Total:         total,
+		Limit:         limit,
+		Offset:        offset,
+		HasMore:       offset+len(page) < total,
+	}, nil
+}
+
+func normalizeMyRegistrationsPagination(limit, offset int) (int, int) {
+	const (
+		defaultLimit = 6
+		maxLimit     = 50
+	)
+	if limit <= 0 {
+		limit = defaultLimit
+	}
+	if limit > maxLimit {
+		limit = maxLimit
+	}
+	if offset < 0 {
+		offset = 0
+	}
+	return limit, offset
+}
+
+func paginate(items []MyRegistration, offset, limit int) []MyRegistration {
+	if offset >= len(items) {
+		return []MyRegistration{}
+	}
+	end := min(offset+limit, len(items))
+	return items[offset:end]
 }
 
 // ListAttendance returns the participant roster for an event with current
@@ -1160,6 +1283,47 @@ func normalizeHostsPagination(limit, offset int) (int, int) {
 		offset = 0
 	}
 	return limit, offset
+}
+
+func parseRegistrationsFilter(raw string) (string, error) {
+	f := strings.ToLower(strings.TrimSpace(raw))
+	if f == "" {
+		return "upcoming", nil
+	}
+	switch f {
+	case "upcoming", "past", "all":
+		return f, nil
+	}
+	return "", errs.B().Code(errs.InvalidArgument).Msg("invalid filter, expected upcoming|past|all").Err()
+}
+
+// sortMyRegistrations orders registrations for the sidebar:
+//   - upcoming → soonest first (asc by event_date)
+//   - past     → most recent first (desc by event_date)
+//   - all      → upcoming first asc, then past desc
+func sortMyRegistrations(items []MyRegistration, filter string, now time.Time) {
+	switch filter {
+	case "past":
+		sort.Slice(items, func(i, j int) bool {
+			return items[i].Event.EventDate.After(items[j].Event.EventDate)
+		})
+	case "upcoming":
+		sort.Slice(items, func(i, j int) bool {
+			return items[i].Event.EventDate.Before(items[j].Event.EventDate)
+		})
+	default:
+		sort.Slice(items, func(i, j int) bool {
+			iFuture := !items[i].Event.EventDate.Before(now)
+			jFuture := !items[j].Event.EventDate.Before(now)
+			if iFuture != jFuture {
+				return iFuture
+			}
+			if iFuture {
+				return items[i].Event.EventDate.Before(items[j].Event.EventDate)
+			}
+			return items[i].Event.EventDate.After(items[j].Event.EventDate)
+		})
+	}
 }
 
 func parseStatus(raw string) (*entevent.Status, error) {

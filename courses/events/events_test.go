@@ -1211,3 +1211,236 @@ func TestUpdateAttendance_PermissionDenied(t *testing.T) {
 		t.Errorf("expected PermissionDenied, got %v", errs.Code(err))
 	}
 }
+
+// ════ MY REGISTRATIONS (sidebar) ════
+
+// makeEventWithDate creates an event whose event_date is shifted relative to now.
+func makeEventWithDate(t *testing.T, f fixture, when time.Time) *Event {
+	t.Helper()
+	req := validCreateRequest(f)
+	// CreateEvent rejects past dates, so we insert directly via Ent for back-dated events.
+	if when.Before(time.Now()) {
+		clientID := f.ClientID
+		row, err := Client.Event.
+			Create().
+			SetClientID(clientID).
+			SetHostID(f.HostID).
+			SetTitle(req.Title).
+			SetEventDate(when).
+			SetZoomLink(req.ZoomLink).
+			SetMaxParticipants(req.MaxParticipants).
+			Save(context.Background())
+		if err != nil {
+			t.Fatalf("makeEventWithDate (past): %v", err)
+		}
+		return entToEvent(row, false)
+	}
+	req.EventDate = when
+	resp, err := CreateEvent(f.AdminCtx, req)
+	if err != nil {
+		t.Fatalf("makeEventWithDate: %v", err)
+	}
+	return &resp.Event
+}
+
+func TestListMyRegistrations_DefaultUpcomingOnly(t *testing.T) {
+	f := setup(t)
+	upcoming := makeEvent(t, f)
+	past := makeEventWithDate(t, f, time.Now().Add(-72*time.Hour))
+	empID, empCtx := makeEmployeeUser(t, f.ClientID, f.DzoID)
+
+	if _, err := RegisterForEvent(empCtx, upcoming.ID); err != nil {
+		t.Fatalf("register upcoming: %v", err)
+	}
+	if _, err := Client.EventParticipant.
+		Create().
+		SetEventID(uuid.MustParse(past.ID)).
+		SetEmployeeID(empID).
+		Save(context.Background()); err != nil {
+		t.Fatalf("seed past registration: %v", err)
+	}
+
+	resp, err := ListMyRegistrations(empCtx, &ListMyRegistrationsParams{})
+	if err != nil {
+		t.Fatalf("ListMyRegistrations: %v", err)
+	}
+	if resp.Total != 1 || len(resp.Registrations) != 1 {
+		t.Fatalf("expected 1 upcoming registration, got %d", resp.Total)
+	}
+	if resp.Registrations[0].Event.ID != upcoming.ID {
+		t.Errorf("expected upcoming event in default filter")
+	}
+	if !resp.Registrations[0].Event.IsRegistered {
+		t.Errorf("expected is_registered=true")
+	}
+}
+
+func TestListMyRegistrations_PastIncludesAttendance(t *testing.T) {
+	f := setup(t)
+	past := makeEventWithDate(t, f, time.Now().Add(-72*time.Hour))
+	empID, empCtx := makeEmployeeUser(t, f.ClientID, f.DzoID)
+
+	if _, err := Client.EventParticipant.
+		Create().
+		SetEventID(uuid.MustParse(past.ID)).
+		SetEmployeeID(empID).
+		SetAttendanceStatus("ATTENDED").
+		Save(context.Background()); err != nil {
+		t.Fatalf("seed past registration: %v", err)
+	}
+
+	resp, err := ListMyRegistrations(empCtx, &ListMyRegistrationsParams{Filter: "past"})
+	if err != nil {
+		t.Fatalf("ListMyRegistrations: %v", err)
+	}
+	if resp.Total != 1 {
+		t.Fatalf("expected 1 past registration, got %d", resp.Total)
+	}
+	if resp.Registrations[0].AttendanceStatus != "ATTENDED" {
+		t.Errorf("expected attendance_status=ATTENDED, got %s",
+			resp.Registrations[0].AttendanceStatus)
+	}
+}
+
+func TestListMyRegistrations_AllOrdersUpcomingThenPast(t *testing.T) {
+	f := setup(t)
+	soon := makeEventWithDate(t, f, time.Now().Add(24*time.Hour))
+	later := makeEventWithDate(t, f, time.Now().Add(72*time.Hour))
+	recentPast := makeEventWithDate(t, f, time.Now().Add(-24*time.Hour))
+	olderPast := makeEventWithDate(t, f, time.Now().Add(-96*time.Hour))
+	empID, empCtx := makeEmployeeUser(t, f.ClientID, f.DzoID)
+
+	for _, ev := range []*Event{soon, later, recentPast, olderPast} {
+		if _, err := Client.EventParticipant.
+			Create().
+			SetEventID(uuid.MustParse(ev.ID)).
+			SetEmployeeID(empID).
+			Save(context.Background()); err != nil {
+			t.Fatalf("seed registration: %v", err)
+		}
+	}
+
+	resp, err := ListMyRegistrations(empCtx, &ListMyRegistrationsParams{Filter: "all"})
+	if err != nil {
+		t.Fatalf("ListMyRegistrations: %v", err)
+	}
+	if resp.Total != 4 {
+		t.Fatalf("expected 4 registrations, got %d", resp.Total)
+	}
+	wantOrder := []string{soon.ID, later.ID, recentPast.ID, olderPast.ID}
+	for i, want := range wantOrder {
+		if resp.Registrations[i].Event.ID != want {
+			t.Errorf("position %d: want %s, got %s", i, want, resp.Registrations[i].Event.ID)
+		}
+	}
+}
+
+func TestListMyRegistrations_ExcludesCancelled(t *testing.T) {
+	f := setup(t)
+	live := makeEvent(t, f)
+	cancelled := makeEvent(t, f)
+	empID, empCtx := makeEmployeeUser(t, f.ClientID, f.DzoID)
+
+	for _, ev := range []*Event{live, cancelled} {
+		if _, err := Client.EventParticipant.
+			Create().
+			SetEventID(uuid.MustParse(ev.ID)).
+			SetEmployeeID(empID).
+			Save(context.Background()); err != nil {
+			t.Fatalf("seed registration: %v", err)
+		}
+	}
+	if _, err := DeleteEvent(f.AdminCtx, cancelled.ID); err != nil {
+		t.Fatalf("cancel event: %v", err)
+	}
+
+	resp, err := ListMyRegistrations(empCtx, &ListMyRegistrationsParams{})
+	if err != nil {
+		t.Fatalf("ListMyRegistrations: %v", err)
+	}
+	if resp.Total != 1 || resp.Registrations[0].Event.ID != live.ID {
+		t.Errorf("expected only the live event, got %d entries", resp.Total)
+	}
+}
+
+func TestListMyRegistrations_InvalidFilter(t *testing.T) {
+	f := setup(t)
+	_, empCtx := makeEmployeeUser(t, f.ClientID, f.DzoID)
+
+	_, err := ListMyRegistrations(empCtx, &ListMyRegistrationsParams{Filter: "weird"})
+	if errs.Code(err) != errs.InvalidArgument {
+		t.Errorf("expected InvalidArgument, got %v", errs.Code(err))
+	}
+}
+
+func TestListMyRegistrations_PermissionDenied(t *testing.T) {
+	f := setup(t)
+
+	_, err := ListMyRegistrations(f.AdminCtx, &ListMyRegistrationsParams{})
+	if errs.Code(err) != errs.PermissionDenied {
+		t.Errorf("expected PermissionDenied for ADM, got %v", errs.Code(err))
+	}
+}
+
+func TestListMyRegistrations_PaginationDefaultsToSix(t *testing.T) {
+	f := setup(t)
+	empID, empCtx := makeEmployeeUser(t, f.ClientID, f.DzoID)
+
+	for i := range 8 {
+		ev := makeEventWithDate(t, f, time.Now().Add(time.Duration(24+i)*time.Hour))
+		if _, err := Client.EventParticipant.
+			Create().
+			SetEventID(uuid.MustParse(ev.ID)).
+			SetEmployeeID(empID).
+			Save(context.Background()); err != nil {
+			t.Fatalf("seed registration: %v", err)
+		}
+	}
+
+	resp, err := ListMyRegistrations(empCtx, &ListMyRegistrationsParams{})
+	if err != nil {
+		t.Fatalf("ListMyRegistrations: %v", err)
+	}
+	if resp.Total != 8 {
+		t.Errorf("expected total=8, got %d", resp.Total)
+	}
+	if len(resp.Registrations) != 6 {
+		t.Errorf("expected page size=6, got %d", len(resp.Registrations))
+	}
+	if resp.Limit != 6 || resp.Offset != 0 {
+		t.Errorf("expected limit=6 offset=0, got limit=%d offset=%d", resp.Limit, resp.Offset)
+	}
+	if !resp.HasMore {
+		t.Errorf("expected has_more=true")
+	}
+}
+
+func TestListMyRegistrations_PaginationOffsetSecondPage(t *testing.T) {
+	f := setup(t)
+	empID, empCtx := makeEmployeeUser(t, f.ClientID, f.DzoID)
+
+	for i := range 8 {
+		ev := makeEventWithDate(t, f, time.Now().Add(time.Duration(24+i)*time.Hour))
+		if _, err := Client.EventParticipant.
+			Create().
+			SetEventID(uuid.MustParse(ev.ID)).
+			SetEmployeeID(empID).
+			Save(context.Background()); err != nil {
+			t.Fatalf("seed registration: %v", err)
+		}
+	}
+
+	resp, err := ListMyRegistrations(empCtx, &ListMyRegistrationsParams{Offset: 6})
+	if err != nil {
+		t.Fatalf("ListMyRegistrations: %v", err)
+	}
+	if resp.Total != 8 {
+		t.Errorf("expected total=8, got %d", resp.Total)
+	}
+	if len(resp.Registrations) != 2 {
+		t.Errorf("expected 2 items on second page, got %d", len(resp.Registrations))
+	}
+	if resp.HasMore {
+		t.Errorf("expected has_more=false on last page")
+	}
+}

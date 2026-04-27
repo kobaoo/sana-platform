@@ -152,6 +152,33 @@ type ListAttendanceResponse struct {
 	Total        int           `json:"total"`
 }
 
+// ListMyRegistrationsParams are the query params for GET /my-event-registrations.
+// Filter accepts upcoming|past|all and defaults to upcoming.
+// Limit defaults to 6 (sidebar page size); offset defaults to 0.
+type ListMyRegistrationsParams struct {
+	Filter string `query:"filter"`
+	Limit  int    `query:"limit"`
+	Offset int    `query:"offset"`
+}
+
+// MyRegistration is one row in GET /events/my-registrations — the event the
+// caller is enrolled into plus the caller's per-event attendance fields.
+type MyRegistration struct {
+	Event            Event     `json:"event"`
+	AttendanceStatus string    `json:"attendance_status"`
+	JoinedAt         time.Time `json:"joined_at"`
+}
+
+// ListMyRegistrationsResponse is the response for GET /my-event-registrations.
+// Total is the count of all rows matching the filter (before paging).
+type ListMyRegistrationsResponse struct {
+	Registrations []MyRegistration `json:"registrations"`
+	Total         int              `json:"total"`
+	Limit         int              `json:"limit"`
+	Offset        int              `json:"offset"`
+	HasMore       bool             `json:"has_more"`
+}
+
 // AttendanceUpdate is one row in the bulk attendance update payload.
 // Attended=true → ATTENDED, false → MISSED.
 type AttendanceUpdate struct {
