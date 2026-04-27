@@ -3,7 +3,6 @@ package courses
 import (
 	"context"
 	"fmt"
-	"log"
 	"path/filepath"
 	"strings"
 	"time"
@@ -49,7 +48,6 @@ func UploadSCORM(ctx context.Context, req *UploadSCORMRequest) (*UploadSCORMResp
 	if err := requireRole(ad, authhandler.RoleSA, authhandler.RoleADM); err != nil {
 		return nil, err
 	}
-
 	if req == nil {
 		return nil, errs.B().
 			Code(errs.InvalidArgument).
@@ -84,7 +82,6 @@ func UploadCourseImage(ctx context.Context, req *UploadCourseImageRequest) (*Upl
 	if err := requireRole(ad, authhandler.RoleSA, authhandler.RoleADM); err != nil {
 		return nil, err
 	}
-
 	if req == nil {
 		return nil, errs.B().
 			Code(errs.InvalidArgument).
@@ -118,7 +115,6 @@ func CreateCourse(ctx context.Context, req *CreateCourseRequest) (*GetCourseResp
 	if err := requireRole(ad, authhandler.RoleSA, authhandler.RoleADM); err != nil {
 		return nil, err
 	}
-
 	if req == nil {
 		return nil, errs.B().
 			Code(errs.InvalidArgument).
@@ -145,7 +141,6 @@ func ListCourses(ctx context.Context) (*ListCoursesResponse, error) {
 	if err != nil {
 		return nil, err
 	}
-
 	clientUID, err := uuid.Parse(ad.CompanyID)
 	if err != nil {
 		return nil, errs.B().Code(errs.InvalidArgument).Msg("invalid company_id in token").Err()
@@ -166,27 +161,12 @@ func GetCourse(ctx context.Context, id string) (*GetCourseResponse, error) {
 	if err != nil {
 		return nil, err
 	}
-
 	clientUID, err := uuid.Parse(ad.CompanyID)
 	if err != nil {
 		return nil, errs.B().Code(errs.InvalidArgument).Msg("invalid company_id in token").Err()
 	}
 	course, err := getCourseByID(ctx, clientUID, ad.Role, id)
 	if err != nil {
-		return nil, err
-	}
-	if course.ImageURL != nil {
-		signed, err := generatePublicURL(*course.ImageURL)
-		if err == nil {
-			course.ImageURL = &signed
-		} else {
-			return nil, err
-		}
-	}
-	signed, err := generateSignedURL(ctx, course.ScormURL)
-	if err == nil {
-		course.ScormURL = signed
-	} else {
 		return nil, err
 	}
 
@@ -204,7 +184,6 @@ func UpdateCourse(ctx context.Context, id string, req *UpdateCourseRequest) (*Ge
 	if err := requireRole(ad, authhandler.RoleSA, authhandler.RoleADM); err != nil {
 		return nil, err
 	}
-
 	if req == nil {
 		return nil, errs.B().
 			Code(errs.InvalidArgument).
@@ -333,7 +312,11 @@ func uploadSCORMToStorage(ctx context.Context, fileName string, fileData []byte)
 			Cause(err).
 			Err()
 	}
-	return objectKey, nil
+	url, err := generateSignedURL(ctx, objectKey)
+	if err != nil {
+		return "", err
+	}
+	return url, nil
 }
 
 func uploadCourseImageToStorage(ctx context.Context, fileName string, fileData []byte) (string, error) {
@@ -364,7 +347,11 @@ func uploadCourseImageToStorage(ctx context.Context, fileName string, fileData [
 			Cause(err).
 			Err()
 	}
-	return objectKey, nil
+	url, err := generatePublicURL(objectKey)
+	if err != nil {
+		return "", err
+	}
+	return url, nil
 }
 
 func generateSignedURL(ctx context.Context, key string) (string, error) {
@@ -387,13 +374,7 @@ func generatePublicURL(key string) (string, error) {
 	if strings.TrimSpace(key) == "" {
 		return "", errs.B().Code(errs.NotFound).Msg("object key not found").Err()
 	}
-	log.Printf("key raw      = %q", key)
-	log.Printf("key bytes    = % x", []byte(key))
-
 	publicURL := publicAssets.PublicURL(key)
-
-	log.Printf("public url   = %s", publicURL.String())
-	log.Printf("url path     = %q", publicURL.EscapedPath())
 	return publicURL.String(), nil
 }
 func insertCourse(ctx context.Context, clientUID uuid.UUID, req *CreateCourseRequest) (*Course, error) {
@@ -478,14 +459,6 @@ func listCourses(ctx context.Context, clientUID uuid.UUID, role authhandler.User
 	result := make([]*Course, 0, len(rows))
 	for _, row := range rows {
 		course := entToCourse(row)
-		if course.ImageURL != nil {
-			signed, err := generatePublicURL(*course.ImageURL)
-			if err == nil {
-				course.ImageURL = &signed
-			} else {
-				return nil, err
-			}
-		}
 		result = append(result, course)
 	}
 
@@ -593,8 +566,11 @@ func updateCourse(ctx context.Context, clientUID uuid.UUID, role authhandler.Use
 	if req.ScormURL != nil {
 		builder = builder.SetScormURL(strings.TrimSpace(*req.ScormURL))
 	}
-	if req.ImageURL != nil {
+
+	if (req.ImageURL != nil) && (*req.ImageURL != "") {
 		builder = builder.SetImageURL(strings.TrimSpace(*req.ImageURL))
+	} else {
+		builder = builder.SetImageURL(strings.TrimSpace(*row.ImageURL))
 	}
 	if req.IsActive != nil {
 		builder = builder.SetIsActive(*req.IsActive)
