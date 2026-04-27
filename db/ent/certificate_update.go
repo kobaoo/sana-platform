@@ -193,11 +193,6 @@ func (_u *CertificateUpdate) SetUpdatedAt(v time.Time) *CertificateUpdate {
 	return _u
 }
 
-// SetEmployee sets the "employee" edge to the Employee entity.
-func (_u *CertificateUpdate) SetEmployee(v *Employee) *CertificateUpdate {
-	return _u.SetEmployeeID(v.ID)
-}
-
 // Mutation returns the CertificateMutation object of the builder.
 func (_u *CertificateUpdate) Mutation() *CertificateMutation {
 	return _u.mutation
@@ -271,6 +266,9 @@ func (_u *CertificateUpdate) sqlSave(ctx context.Context) (_node int, err error)
 			}
 		}
 	}
+	if value, ok := _u.mutation.EmployeeID(); ok {
+		_spec.SetField(certificate.FieldEmployeeID, field.TypeUUID, value)
+	}
 	if value, ok := _u.mutation.GetType(); ok {
 		_spec.SetField(certificate.FieldType, field.TypeEnum, value)
 	}
@@ -309,9 +307,6 @@ func (_u *CertificateUpdate) sqlSave(ctx context.Context) (_node int, err error)
 	}
 	if value, ok := _u.mutation.UpdatedAt(); ok {
 		_spec.SetField(certificate.FieldUpdatedAt, field.TypeTime, value)
-	}
-	if value, ok := _u.mutation.EmployeeID(); ok {
-		_spec.SetField(certificate.FieldEmployeeID, field.TypeUUID, value)
 	}
 	if _node, err = sqlgraph.UpdateNodes(ctx, _u.driver, _spec); err != nil {
 		if _, ok := err.(*sqlgraph.NotFoundError); ok {
@@ -497,11 +492,6 @@ func (_u *CertificateUpdateOne) SetUpdatedAt(v time.Time) *CertificateUpdateOne 
 	return _u
 }
 
-// SetEmployee sets the "employee" edge to the Employee entity.
-func (_u *CertificateUpdateOne) SetEmployee(v *Employee) *CertificateUpdateOne {
-	return _u.SetEmployeeID(v.ID)
-}
-
 // Mutation returns the CertificateMutation object of the builder.
 func (_u *CertificateUpdateOne) Mutation() *CertificateMutation {
 	return _u.mutation
@@ -605,6 +595,9 @@ func (_u *CertificateUpdateOne) sqlSave(ctx context.Context) (_node *Certificate
 			}
 		}
 	}
+	if value, ok := _u.mutation.EmployeeID(); ok {
+		_spec.SetField(certificate.FieldEmployeeID, field.TypeUUID, value)
+	}
 	if value, ok := _u.mutation.GetType(); ok {
 		_spec.SetField(certificate.FieldType, field.TypeEnum, value)
 	}
@@ -643,9 +636,6 @@ func (_u *CertificateUpdateOne) sqlSave(ctx context.Context) (_node *Certificate
 	}
 	if value, ok := _u.mutation.UpdatedAt(); ok {
 		_spec.SetField(certificate.FieldUpdatedAt, field.TypeTime, value)
-	}
-	if value, ok := _u.mutation.EmployeeID(); ok {
-		_spec.SetField(certificate.FieldEmployeeID, field.TypeUUID, value)
 	}
 	_node = &Certificate{config: _u.config}
 	_spec.Assign = _node.assignValues

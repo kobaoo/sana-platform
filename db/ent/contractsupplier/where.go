@@ -7,6 +7,7 @@ import (
 
 	"encore.app/db/ent/predicate"
 	"entgo.io/ent/dialect/sql"
+	"entgo.io/ent/dialect/sql/sqlgraph"
 	"github.com/google/uuid"
 )
 
@@ -66,7 +67,7 @@ func ContractNumber(v string) predicate.ContractSupplier {
 }
 
 // VatFlag applies equality check predicate on the "vat_flag" field. It's identical to VatFlagEQ.
-func VatFlag(v bool) predicate.ContractSupplier {
+func VatFlag(v int) predicate.ContractSupplier {
 	return predicate.ContractSupplier(sql.FieldEQ(FieldVatFlag, v))
 }
 
@@ -266,13 +267,43 @@ func ContractNumberContainsFold(v string) predicate.ContractSupplier {
 }
 
 // VatFlagEQ applies the EQ predicate on the "vat_flag" field.
-func VatFlagEQ(v bool) predicate.ContractSupplier {
+func VatFlagEQ(v int) predicate.ContractSupplier {
 	return predicate.ContractSupplier(sql.FieldEQ(FieldVatFlag, v))
 }
 
 // VatFlagNEQ applies the NEQ predicate on the "vat_flag" field.
-func VatFlagNEQ(v bool) predicate.ContractSupplier {
+func VatFlagNEQ(v int) predicate.ContractSupplier {
 	return predicate.ContractSupplier(sql.FieldNEQ(FieldVatFlag, v))
+}
+
+// VatFlagIn applies the In predicate on the "vat_flag" field.
+func VatFlagIn(vs ...int) predicate.ContractSupplier {
+	return predicate.ContractSupplier(sql.FieldIn(FieldVatFlag, vs...))
+}
+
+// VatFlagNotIn applies the NotIn predicate on the "vat_flag" field.
+func VatFlagNotIn(vs ...int) predicate.ContractSupplier {
+	return predicate.ContractSupplier(sql.FieldNotIn(FieldVatFlag, vs...))
+}
+
+// VatFlagGT applies the GT predicate on the "vat_flag" field.
+func VatFlagGT(v int) predicate.ContractSupplier {
+	return predicate.ContractSupplier(sql.FieldGT(FieldVatFlag, v))
+}
+
+// VatFlagGTE applies the GTE predicate on the "vat_flag" field.
+func VatFlagGTE(v int) predicate.ContractSupplier {
+	return predicate.ContractSupplier(sql.FieldGTE(FieldVatFlag, v))
+}
+
+// VatFlagLT applies the LT predicate on the "vat_flag" field.
+func VatFlagLT(v int) predicate.ContractSupplier {
+	return predicate.ContractSupplier(sql.FieldLT(FieldVatFlag, v))
+}
+
+// VatFlagLTE applies the LTE predicate on the "vat_flag" field.
+func VatFlagLTE(v int) predicate.ContractSupplier {
+	return predicate.ContractSupplier(sql.FieldLTE(FieldVatFlag, v))
 }
 
 // SignedDateEQ applies the EQ predicate on the "signed_date" field.
@@ -1198,6 +1229,29 @@ func UpdatedAtLT(v time.Time) predicate.ContractSupplier {
 // UpdatedAtLTE applies the LTE predicate on the "updated_at" field.
 func UpdatedAtLTE(v time.Time) predicate.ContractSupplier {
 	return predicate.ContractSupplier(sql.FieldLTE(FieldUpdatedAt, v))
+}
+
+// HasExternalTrainingEvents applies the HasEdge predicate on the "external_training_events" edge.
+func HasExternalTrainingEvents() predicate.ContractSupplier {
+	return predicate.ContractSupplier(func(s *sql.Selector) {
+		step := sqlgraph.NewStep(
+			sqlgraph.From(Table, FieldID),
+			sqlgraph.Edge(sqlgraph.O2M, false, ExternalTrainingEventsTable, ExternalTrainingEventsColumn),
+		)
+		sqlgraph.HasNeighbors(s, step)
+	})
+}
+
+// HasExternalTrainingEventsWith applies the HasEdge predicate on the "external_training_events" edge with a given conditions (other predicates).
+func HasExternalTrainingEventsWith(preds ...predicate.ExternalTrainingEvent) predicate.ContractSupplier {
+	return predicate.ContractSupplier(func(s *sql.Selector) {
+		step := newExternalTrainingEventsStep()
+		sqlgraph.HasNeighborsWith(s, step, func(s *sql.Selector) {
+			for _, p := range preds {
+				p(s)
+			}
+		})
+	})
 }
 
 // And groups predicates with the AND operator between them.

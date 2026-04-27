@@ -155,11 +155,6 @@ func (_c *CertificateCreate) SetNillableID(v *uuid.UUID) *CertificateCreate {
 	return _c
 }
 
-// SetEmployee sets the "employee" edge to the Employee entity.
-func (_c *CertificateCreate) SetEmployee(v *Employee) *CertificateCreate {
-	return _c.SetEmployeeID(v.ID)
-}
-
 // Mutation returns the CertificateMutation object of the builder.
 func (_c *CertificateCreate) Mutation() *CertificateMutation {
 	return _c.mutation
@@ -292,6 +287,10 @@ func (_c *CertificateCreate) createSpec() (*Certificate, *sqlgraph.CreateSpec) {
 		_node.ID = id
 		_spec.ID.Value = &id
 	}
+	if value, ok := _c.mutation.EmployeeID(); ok {
+		_spec.SetField(certificate.FieldEmployeeID, field.TypeUUID, value)
+		_node.EmployeeID = value
+	}
 	if value, ok := _c.mutation.GetType(); ok {
 		_spec.SetField(certificate.FieldType, field.TypeEnum, value)
 		_node.Type = value
@@ -335,10 +334,6 @@ func (_c *CertificateCreate) createSpec() (*Certificate, *sqlgraph.CreateSpec) {
 	if value, ok := _c.mutation.UpdatedAt(); ok {
 		_spec.SetField(certificate.FieldUpdatedAt, field.TypeTime, value)
 		_node.UpdatedAt = value
-	}
-	if value, ok := _c.mutation.EmployeeID(); ok {
-		_spec.SetField(certificate.FieldEmployeeID, field.TypeUUID, value)
-		_node.EmployeeID = value
 	}
 	return _node, _spec
 }

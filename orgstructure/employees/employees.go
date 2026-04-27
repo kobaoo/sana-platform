@@ -9,9 +9,9 @@ import (
 	"strings"
 	"time"
 
-	"encore.app/db/ent/user"
 	"encore.dev/beta/auth"
 	"encore.dev/beta/errs"
+	"encore.dev/rlog"
 	"encore.dev/storage/sqldb"
 	"entgo.io/ent/dialect"
 	entsql "entgo.io/ent/dialect/sql"
@@ -39,6 +39,7 @@ func newEntClient() *ent.Client {
 // ════ ENDPOINTS ════
 
 // CreateEmployee creates a new employee.
+//
 //encore:api auth method=POST path=/employees/create
 func CreateEmployee(ctx context.Context, req *CreateEmployeeRequest) (*GetEmployeeResponse, error) {
 	if strings.TrimSpace(req.FullName) == "" {
@@ -55,7 +56,6 @@ func CreateEmployee(ctx context.Context, req *CreateEmployeeRequest) (*GetEmploy
 			return nil, errs.B().Code(errs.PermissionDenied).Msg("admin cannot assign admin role for employee").Err()
 		}
 	}
-
 
 	dzoUID, err := uuid.Parse(req.DzoID)
 	if err != nil {
@@ -84,6 +84,8 @@ func CreateEmployee(ctx context.Context, req *CreateEmployeeRequest) (*GetEmploy
 	if err := checkEmailUnique(ctx, req.Email, nil); err != nil {
 		return nil, err
 	}
+
+	rlog.Info("CreateEmployee auth data", "company_id", ad.CompanyID, "role", ad.Role, "email", ad.Email)
 
 	clientUID, err := uuid.Parse(ad.CompanyID)
 	if err != nil {
@@ -429,7 +431,6 @@ func BulkDeleteEmployees(ctx context.Context, req *BulkDeleteRequest) (*BulkDele
 
 	deletedCount := 0
 	var errors []string
-
 
 	// 1. Удаление конкретных сотрудников по ID
 	for _, id := range req.IDs {
@@ -825,7 +826,6 @@ func queryActiveEmployees(ctx context.Context, search string, dzoID string, page
 		return nil, 0, errs.B().Code(errs.Internal).Msg("failed to count employees").Cause(err).Err()
 	}
 
-
 	offset := (page - 1) * limit
 
 	rows, err := q.
@@ -869,7 +869,6 @@ func queryEmployeeByKeycloakUserID(ctx context.Context, kcUserID string) (*Emplo
 
 	return entToEmployee(empRow), nil
 }
-
 
 func queryEmployeeByID(ctx context.Context, id string) (*Employee, error) {
 	uid, err := uuid.Parse(id)
@@ -1244,7 +1243,6 @@ func checkDzoExists(ctx context.Context, dzoID uuid.UUID) error {
 	}
 	return nil
 }
-
 
 // checkDzoExistsForClient ensures the DZO exists and belongs to the given client.
 // Used to prevent ADM from creating employees in DZOs outside their client.

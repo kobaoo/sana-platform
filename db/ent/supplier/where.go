@@ -5,6 +5,7 @@ package supplier
 import (
 	"encore.app/db/ent/predicate"
 	"entgo.io/ent/dialect/sql"
+	"entgo.io/ent/dialect/sql/sqlgraph"
 	"github.com/google/uuid"
 )
 
@@ -336,6 +337,29 @@ func IsActiveEQ(v bool) predicate.Supplier {
 // IsActiveNEQ applies the NEQ predicate on the "is_active" field.
 func IsActiveNEQ(v bool) predicate.Supplier {
 	return predicate.Supplier(sql.FieldNEQ(FieldIsActive, v))
+}
+
+// HasExternalTrainingEvents applies the HasEdge predicate on the "external_training_events" edge.
+func HasExternalTrainingEvents() predicate.Supplier {
+	return predicate.Supplier(func(s *sql.Selector) {
+		step := sqlgraph.NewStep(
+			sqlgraph.From(Table, FieldID),
+			sqlgraph.Edge(sqlgraph.O2M, false, ExternalTrainingEventsTable, ExternalTrainingEventsColumn),
+		)
+		sqlgraph.HasNeighbors(s, step)
+	})
+}
+
+// HasExternalTrainingEventsWith applies the HasEdge predicate on the "external_training_events" edge with a given conditions (other predicates).
+func HasExternalTrainingEventsWith(preds ...predicate.ExternalTrainingEvent) predicate.Supplier {
+	return predicate.Supplier(func(s *sql.Selector) {
+		step := newExternalTrainingEventsStep()
+		sqlgraph.HasNeighborsWith(s, step, func(s *sql.Selector) {
+			for _, p := range preds {
+				p(s)
+			}
+		})
+	})
 }
 
 // And groups predicates with the AND operator between them.

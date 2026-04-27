@@ -7,7 +7,6 @@ import (
 	"time"
 
 	"entgo.io/ent/dialect/sql"
-	"entgo.io/ent/dialect/sql/sqlgraph"
 	"github.com/google/uuid"
 )
 
@@ -40,17 +39,8 @@ const (
 	FieldCreatedAt = "created_at"
 	// FieldUpdatedAt holds the string denoting the updated_at field in the database.
 	FieldUpdatedAt = "updated_at"
-	// EdgeEmployee holds the string denoting the employee edge name in mutations.
-	EdgeEmployee = "employee"
 	// Table holds the table name of the certificate in the database.
 	Table = "certificates"
-	// EmployeeTable is the table that holds the employee relation/edge.
-	EmployeeTable = "certificates"
-	// EmployeeInverseTable is the table name for the Employee entity.
-	// It exists in this package in order to avoid circular dependency with the "employee" package.
-	EmployeeInverseTable = "employees"
-	// EmployeeColumn is the table column denoting the employee relation/edge.
-	EmployeeColumn = "employee_id"
 )
 
 // Columns holds all SQL columns for certificate fields.
@@ -100,9 +90,7 @@ type Type string
 
 // Type values.
 const (
-	TypeEXTERNAL  Type = "EXTERNAL"
-	TypeSCORM     Type = "SCORM"
-	TypeINTERNAL  Type = "INTERNAL"
+	TypeEXTERNAL Type = "EXTERNAL"
 )
 
 func (_type Type) String() string {
@@ -112,7 +100,7 @@ func (_type Type) String() string {
 // TypeValidator is a validator for the "type" field enum values. It is called by the builders before save.
 func TypeValidator(_type Type) error {
 	switch _type {
-	case TypeEXTERNAL, TypeSCORM, TypeINTERNAL:
+	case TypeEXTERNAL:
 		return nil
 	default:
 		return fmt.Errorf("certificate: invalid enum value for type field: %q", _type)
@@ -208,18 +196,4 @@ func ByCreatedAt(opts ...sql.OrderTermOption) OrderOption {
 // ByUpdatedAt orders the results by the updated_at field.
 func ByUpdatedAt(opts ...sql.OrderTermOption) OrderOption {
 	return sql.OrderByField(FieldUpdatedAt, opts...).ToFunc()
-}
-
-// ByEmployeeField orders the results by employee field.
-func ByEmployeeField(field string, opts ...sql.OrderTermOption) OrderOption {
-	return func(s *sql.Selector) {
-		sqlgraph.OrderByNeighborTerms(s, newEmployeeStep(), sql.OrderByField(field, opts...))
-	}
-}
-func newEmployeeStep() *sqlgraph.Step {
-	return sqlgraph.NewStep(
-		sqlgraph.From(Table, FieldID),
-		sqlgraph.To(EmployeeInverseTable, FieldID),
-		sqlgraph.Edge(sqlgraph.M2O, false, EmployeeTable, EmployeeColumn),
-	)
 }
