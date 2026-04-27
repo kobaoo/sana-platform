@@ -6,6 +6,7 @@ import (
 	"context"
 	"errors"
 	"fmt"
+	"time"
 
 	"encore.app/db/ent/predicate"
 	"encore.app/db/ent/request"
@@ -43,6 +44,26 @@ func (_u *RequestUpdate) SetNillableInitiatorID(v *uuid.UUID) *RequestUpdate {
 	return _u
 }
 
+// SetParentRequestID sets the "parent_request_id" field.
+func (_u *RequestUpdate) SetParentRequestID(v uuid.UUID) *RequestUpdate {
+	_u.mutation.SetParentRequestID(v)
+	return _u
+}
+
+// SetNillableParentRequestID sets the "parent_request_id" field if the given value is not nil.
+func (_u *RequestUpdate) SetNillableParentRequestID(v *uuid.UUID) *RequestUpdate {
+	if v != nil {
+		_u.SetParentRequestID(*v)
+	}
+	return _u
+}
+
+// ClearParentRequestID clears the value of the "parent_request_id" field.
+func (_u *RequestUpdate) ClearParentRequestID() *RequestUpdate {
+	_u.mutation.ClearParentRequestID()
+	return _u
+}
+
 // SetEntityID sets the "entity_id" field.
 func (_u *RequestUpdate) SetEntityID(v uuid.UUID) *RequestUpdate {
 	_u.mutation.SetEntityID(v)
@@ -71,6 +92,241 @@ func (_u *RequestUpdate) SetNillableEntityType(v *string) *RequestUpdate {
 	return _u
 }
 
+// SetRequestType sets the "request_type" field.
+func (_u *RequestUpdate) SetRequestType(v string) *RequestUpdate {
+	_u.mutation.SetRequestType(v)
+	return _u
+}
+
+// SetNillableRequestType sets the "request_type" field if the given value is not nil.
+func (_u *RequestUpdate) SetNillableRequestType(v *string) *RequestUpdate {
+	if v != nil {
+		_u.SetRequestType(*v)
+	}
+	return _u
+}
+
+// SetKind sets the "kind" field.
+func (_u *RequestUpdate) SetKind(v string) *RequestUpdate {
+	_u.mutation.SetKind(v)
+	return _u
+}
+
+// SetNillableKind sets the "kind" field if the given value is not nil.
+func (_u *RequestUpdate) SetNillableKind(v *string) *RequestUpdate {
+	if v != nil {
+		_u.SetKind(*v)
+	}
+	return _u
+}
+
+// SetAssignedHrID sets the "assigned_hr_id" field.
+func (_u *RequestUpdate) SetAssignedHrID(v uuid.UUID) *RequestUpdate {
+	_u.mutation.SetAssignedHrID(v)
+	return _u
+}
+
+// SetNillableAssignedHrID sets the "assigned_hr_id" field if the given value is not nil.
+func (_u *RequestUpdate) SetNillableAssignedHrID(v *uuid.UUID) *RequestUpdate {
+	if v != nil {
+		_u.SetAssignedHrID(*v)
+	}
+	return _u
+}
+
+// ClearAssignedHrID clears the value of the "assigned_hr_id" field.
+func (_u *RequestUpdate) ClearAssignedHrID() *RequestUpdate {
+	_u.mutation.ClearAssignedHrID()
+	return _u
+}
+
+// SetTargetDzoID sets the "target_dzo_id" field.
+func (_u *RequestUpdate) SetTargetDzoID(v uuid.UUID) *RequestUpdate {
+	_u.mutation.SetTargetDzoID(v)
+	return _u
+}
+
+// SetNillableTargetDzoID sets the "target_dzo_id" field if the given value is not nil.
+func (_u *RequestUpdate) SetNillableTargetDzoID(v *uuid.UUID) *RequestUpdate {
+	if v != nil {
+		_u.SetTargetDzoID(*v)
+	}
+	return _u
+}
+
+// ClearTargetDzoID clears the value of the "target_dzo_id" field.
+func (_u *RequestUpdate) ClearTargetDzoID() *RequestUpdate {
+	_u.mutation.ClearTargetDzoID()
+	return _u
+}
+
+// SetTitle sets the "title" field.
+func (_u *RequestUpdate) SetTitle(v string) *RequestUpdate {
+	_u.mutation.SetTitle(v)
+	return _u
+}
+
+// SetNillableTitle sets the "title" field if the given value is not nil.
+func (_u *RequestUpdate) SetNillableTitle(v *string) *RequestUpdate {
+	if v != nil {
+		_u.SetTitle(*v)
+	}
+	return _u
+}
+
+// ClearTitle clears the value of the "title" field.
+func (_u *RequestUpdate) ClearTitle() *RequestUpdate {
+	_u.mutation.ClearTitle()
+	return _u
+}
+
+// SetCategory sets the "category" field.
+func (_u *RequestUpdate) SetCategory(v string) *RequestUpdate {
+	_u.mutation.SetCategory(v)
+	return _u
+}
+
+// SetNillableCategory sets the "category" field if the given value is not nil.
+func (_u *RequestUpdate) SetNillableCategory(v *string) *RequestUpdate {
+	if v != nil {
+		_u.SetCategory(*v)
+	}
+	return _u
+}
+
+// ClearCategory clears the value of the "category" field.
+func (_u *RequestUpdate) ClearCategory() *RequestUpdate {
+	_u.mutation.ClearCategory()
+	return _u
+}
+
+// SetFormat sets the "format" field.
+func (_u *RequestUpdate) SetFormat(v string) *RequestUpdate {
+	_u.mutation.SetFormat(v)
+	return _u
+}
+
+// SetNillableFormat sets the "format" field if the given value is not nil.
+func (_u *RequestUpdate) SetNillableFormat(v *string) *RequestUpdate {
+	if v != nil {
+		_u.SetFormat(*v)
+	}
+	return _u
+}
+
+// ClearFormat clears the value of the "format" field.
+func (_u *RequestUpdate) ClearFormat() *RequestUpdate {
+	_u.mutation.ClearFormat()
+	return _u
+}
+
+// SetResponsibleAdminID sets the "responsible_admin_id" field.
+func (_u *RequestUpdate) SetResponsibleAdminID(v uuid.UUID) *RequestUpdate {
+	_u.mutation.SetResponsibleAdminID(v)
+	return _u
+}
+
+// SetNillableResponsibleAdminID sets the "responsible_admin_id" field if the given value is not nil.
+func (_u *RequestUpdate) SetNillableResponsibleAdminID(v *uuid.UUID) *RequestUpdate {
+	if v != nil {
+		_u.SetResponsibleAdminID(*v)
+	}
+	return _u
+}
+
+// ClearResponsibleAdminID clears the value of the "responsible_admin_id" field.
+func (_u *RequestUpdate) ClearResponsibleAdminID() *RequestUpdate {
+	_u.mutation.ClearResponsibleAdminID()
+	return _u
+}
+
+// SetTrainingDate sets the "training_date" field.
+func (_u *RequestUpdate) SetTrainingDate(v time.Time) *RequestUpdate {
+	_u.mutation.SetTrainingDate(v)
+	return _u
+}
+
+// SetNillableTrainingDate sets the "training_date" field if the given value is not nil.
+func (_u *RequestUpdate) SetNillableTrainingDate(v *time.Time) *RequestUpdate {
+	if v != nil {
+		_u.SetTrainingDate(*v)
+	}
+	return _u
+}
+
+// ClearTrainingDate clears the value of the "training_date" field.
+func (_u *RequestUpdate) ClearTrainingDate() *RequestUpdate {
+	_u.mutation.ClearTrainingDate()
+	return _u
+}
+
+// SetDeadlineAt sets the "deadline_at" field.
+func (_u *RequestUpdate) SetDeadlineAt(v time.Time) *RequestUpdate {
+	_u.mutation.SetDeadlineAt(v)
+	return _u
+}
+
+// SetNillableDeadlineAt sets the "deadline_at" field if the given value is not nil.
+func (_u *RequestUpdate) SetNillableDeadlineAt(v *time.Time) *RequestUpdate {
+	if v != nil {
+		_u.SetDeadlineAt(*v)
+	}
+	return _u
+}
+
+// ClearDeadlineAt clears the value of the "deadline_at" field.
+func (_u *RequestUpdate) ClearDeadlineAt() *RequestUpdate {
+	_u.mutation.ClearDeadlineAt()
+	return _u
+}
+
+// SetCostAmount sets the "cost_amount" field.
+func (_u *RequestUpdate) SetCostAmount(v float64) *RequestUpdate {
+	_u.mutation.ResetCostAmount()
+	_u.mutation.SetCostAmount(v)
+	return _u
+}
+
+// SetNillableCostAmount sets the "cost_amount" field if the given value is not nil.
+func (_u *RequestUpdate) SetNillableCostAmount(v *float64) *RequestUpdate {
+	if v != nil {
+		_u.SetCostAmount(*v)
+	}
+	return _u
+}
+
+// AddCostAmount adds value to the "cost_amount" field.
+func (_u *RequestUpdate) AddCostAmount(v float64) *RequestUpdate {
+	_u.mutation.AddCostAmount(v)
+	return _u
+}
+
+// ClearCostAmount clears the value of the "cost_amount" field.
+func (_u *RequestUpdate) ClearCostAmount() *RequestUpdate {
+	_u.mutation.ClearCostAmount()
+	return _u
+}
+
+// SetCostMode sets the "cost_mode" field.
+func (_u *RequestUpdate) SetCostMode(v string) *RequestUpdate {
+	_u.mutation.SetCostMode(v)
+	return _u
+}
+
+// SetNillableCostMode sets the "cost_mode" field if the given value is not nil.
+func (_u *RequestUpdate) SetNillableCostMode(v *string) *RequestUpdate {
+	if v != nil {
+		_u.SetCostMode(*v)
+	}
+	return _u
+}
+
+// ClearCostMode clears the value of the "cost_mode" field.
+func (_u *RequestUpdate) ClearCostMode() *RequestUpdate {
+	_u.mutation.ClearCostMode()
+	return _u
+}
+
 // SetStep sets the "step" field.
 func (_u *RequestUpdate) SetStep(v int) *RequestUpdate {
 	_u.mutation.ResetStep()
@@ -92,6 +348,32 @@ func (_u *RequestUpdate) AddStep(v int) *RequestUpdate {
 	return _u
 }
 
+// SetUpdatedAt sets the "updated_at" field.
+func (_u *RequestUpdate) SetUpdatedAt(v time.Time) *RequestUpdate {
+	_u.mutation.SetUpdatedAt(v)
+	return _u
+}
+
+// SetCompletedAt sets the "completed_at" field.
+func (_u *RequestUpdate) SetCompletedAt(v time.Time) *RequestUpdate {
+	_u.mutation.SetCompletedAt(v)
+	return _u
+}
+
+// SetNillableCompletedAt sets the "completed_at" field if the given value is not nil.
+func (_u *RequestUpdate) SetNillableCompletedAt(v *time.Time) *RequestUpdate {
+	if v != nil {
+		_u.SetCompletedAt(*v)
+	}
+	return _u
+}
+
+// ClearCompletedAt clears the value of the "completed_at" field.
+func (_u *RequestUpdate) ClearCompletedAt() *RequestUpdate {
+	_u.mutation.ClearCompletedAt()
+	return _u
+}
+
 // SetStatus sets the "status" field.
 func (_u *RequestUpdate) SetStatus(v string) *RequestUpdate {
 	_u.mutation.SetStatus(v)
@@ -106,9 +388,77 @@ func (_u *RequestUpdate) SetNillableStatus(v *string) *RequestUpdate {
 	return _u
 }
 
+// SetReplacedByRequestID sets the "replaced_by_request_id" field.
+func (_u *RequestUpdate) SetReplacedByRequestID(v uuid.UUID) *RequestUpdate {
+	_u.mutation.SetReplacedByRequestID(v)
+	return _u
+}
+
+// SetNillableReplacedByRequestID sets the "replaced_by_request_id" field if the given value is not nil.
+func (_u *RequestUpdate) SetNillableReplacedByRequestID(v *uuid.UUID) *RequestUpdate {
+	if v != nil {
+		_u.SetReplacedByRequestID(*v)
+	}
+	return _u
+}
+
+// ClearReplacedByRequestID clears the value of the "replaced_by_request_id" field.
+func (_u *RequestUpdate) ClearReplacedByRequestID() *RequestUpdate {
+	_u.mutation.ClearReplacedByRequestID()
+	return _u
+}
+
+// SetIsBlocked sets the "is_blocked" field.
+func (_u *RequestUpdate) SetIsBlocked(v bool) *RequestUpdate {
+	_u.mutation.SetIsBlocked(v)
+	return _u
+}
+
+// SetNillableIsBlocked sets the "is_blocked" field if the given value is not nil.
+func (_u *RequestUpdate) SetNillableIsBlocked(v *bool) *RequestUpdate {
+	if v != nil {
+		_u.SetIsBlocked(*v)
+	}
+	return _u
+}
+
 // SetInitiator sets the "initiator" edge to the User entity.
 func (_u *RequestUpdate) SetInitiator(v *User) *RequestUpdate {
 	return _u.SetInitiatorID(v.ID)
+}
+
+// SetParentID sets the "parent" edge to the Request entity by ID.
+func (_u *RequestUpdate) SetParentID(id uuid.UUID) *RequestUpdate {
+	_u.mutation.SetParentID(id)
+	return _u
+}
+
+// SetNillableParentID sets the "parent" edge to the Request entity by ID if the given value is not nil.
+func (_u *RequestUpdate) SetNillableParentID(id *uuid.UUID) *RequestUpdate {
+	if id != nil {
+		_u = _u.SetParentID(*id)
+	}
+	return _u
+}
+
+// SetParent sets the "parent" edge to the Request entity.
+func (_u *RequestUpdate) SetParent(v *Request) *RequestUpdate {
+	return _u.SetParentID(v.ID)
+}
+
+// AddChildIDs adds the "children" edge to the Request entity by IDs.
+func (_u *RequestUpdate) AddChildIDs(ids ...uuid.UUID) *RequestUpdate {
+	_u.mutation.AddChildIDs(ids...)
+	return _u
+}
+
+// AddChildren adds the "children" edges to the Request entity.
+func (_u *RequestUpdate) AddChildren(v ...*Request) *RequestUpdate {
+	ids := make([]uuid.UUID, len(v))
+	for i := range v {
+		ids[i] = v[i].ID
+	}
+	return _u.AddChildIDs(ids...)
 }
 
 // Mutation returns the RequestMutation object of the builder.
@@ -122,8 +472,36 @@ func (_u *RequestUpdate) ClearInitiator() *RequestUpdate {
 	return _u
 }
 
+// ClearParent clears the "parent" edge to the Request entity.
+func (_u *RequestUpdate) ClearParent() *RequestUpdate {
+	_u.mutation.ClearParent()
+	return _u
+}
+
+// ClearChildren clears all "children" edges to the Request entity.
+func (_u *RequestUpdate) ClearChildren() *RequestUpdate {
+	_u.mutation.ClearChildren()
+	return _u
+}
+
+// RemoveChildIDs removes the "children" edge to Request entities by IDs.
+func (_u *RequestUpdate) RemoveChildIDs(ids ...uuid.UUID) *RequestUpdate {
+	_u.mutation.RemoveChildIDs(ids...)
+	return _u
+}
+
+// RemoveChildren removes "children" edges to Request entities.
+func (_u *RequestUpdate) RemoveChildren(v ...*Request) *RequestUpdate {
+	ids := make([]uuid.UUID, len(v))
+	for i := range v {
+		ids[i] = v[i].ID
+	}
+	return _u.RemoveChildIDs(ids...)
+}
+
 // Save executes the query and returns the number of nodes affected by the update operation.
 func (_u *RequestUpdate) Save(ctx context.Context) (int, error) {
+	_u.defaults()
 	return withHooks(ctx, _u.sqlSave, _u.mutation, _u.hooks)
 }
 
@@ -149,11 +527,49 @@ func (_u *RequestUpdate) ExecX(ctx context.Context) {
 	}
 }
 
+// defaults sets the default values of the builder before save.
+func (_u *RequestUpdate) defaults() {
+	if _, ok := _u.mutation.UpdatedAt(); !ok {
+		v := request.UpdateDefaultUpdatedAt()
+		_u.mutation.SetUpdatedAt(v)
+	}
+}
+
 // check runs all checks and user-defined validators on the builder.
 func (_u *RequestUpdate) check() error {
 	if v, ok := _u.mutation.EntityType(); ok {
 		if err := request.EntityTypeValidator(v); err != nil {
 			return &ValidationError{Name: "entity_type", err: fmt.Errorf(`ent: validator failed for field "Request.entity_type": %w`, err)}
+		}
+	}
+	if v, ok := _u.mutation.RequestType(); ok {
+		if err := request.RequestTypeValidator(v); err != nil {
+			return &ValidationError{Name: "request_type", err: fmt.Errorf(`ent: validator failed for field "Request.request_type": %w`, err)}
+		}
+	}
+	if v, ok := _u.mutation.Kind(); ok {
+		if err := request.KindValidator(v); err != nil {
+			return &ValidationError{Name: "kind", err: fmt.Errorf(`ent: validator failed for field "Request.kind": %w`, err)}
+		}
+	}
+	if v, ok := _u.mutation.Title(); ok {
+		if err := request.TitleValidator(v); err != nil {
+			return &ValidationError{Name: "title", err: fmt.Errorf(`ent: validator failed for field "Request.title": %w`, err)}
+		}
+	}
+	if v, ok := _u.mutation.Category(); ok {
+		if err := request.CategoryValidator(v); err != nil {
+			return &ValidationError{Name: "category", err: fmt.Errorf(`ent: validator failed for field "Request.category": %w`, err)}
+		}
+	}
+	if v, ok := _u.mutation.Format(); ok {
+		if err := request.FormatValidator(v); err != nil {
+			return &ValidationError{Name: "format", err: fmt.Errorf(`ent: validator failed for field "Request.format": %w`, err)}
+		}
+	}
+	if v, ok := _u.mutation.CostMode(); ok {
+		if err := request.CostModeValidator(v); err != nil {
+			return &ValidationError{Name: "cost_mode", err: fmt.Errorf(`ent: validator failed for field "Request.cost_mode": %w`, err)}
 		}
 	}
 	if v, ok := _u.mutation.Status(); ok {
@@ -185,14 +601,101 @@ func (_u *RequestUpdate) sqlSave(ctx context.Context) (_node int, err error) {
 	if value, ok := _u.mutation.EntityType(); ok {
 		_spec.SetField(request.FieldEntityType, field.TypeString, value)
 	}
+	if value, ok := _u.mutation.RequestType(); ok {
+		_spec.SetField(request.FieldRequestType, field.TypeString, value)
+	}
+	if value, ok := _u.mutation.Kind(); ok {
+		_spec.SetField(request.FieldKind, field.TypeString, value)
+	}
+	if value, ok := _u.mutation.AssignedHrID(); ok {
+		_spec.SetField(request.FieldAssignedHrID, field.TypeUUID, value)
+	}
+	if _u.mutation.AssignedHrIDCleared() {
+		_spec.ClearField(request.FieldAssignedHrID, field.TypeUUID)
+	}
+	if value, ok := _u.mutation.TargetDzoID(); ok {
+		_spec.SetField(request.FieldTargetDzoID, field.TypeUUID, value)
+	}
+	if _u.mutation.TargetDzoIDCleared() {
+		_spec.ClearField(request.FieldTargetDzoID, field.TypeUUID)
+	}
+	if value, ok := _u.mutation.Title(); ok {
+		_spec.SetField(request.FieldTitle, field.TypeString, value)
+	}
+	if _u.mutation.TitleCleared() {
+		_spec.ClearField(request.FieldTitle, field.TypeString)
+	}
+	if value, ok := _u.mutation.Category(); ok {
+		_spec.SetField(request.FieldCategory, field.TypeString, value)
+	}
+	if _u.mutation.CategoryCleared() {
+		_spec.ClearField(request.FieldCategory, field.TypeString)
+	}
+	if value, ok := _u.mutation.Format(); ok {
+		_spec.SetField(request.FieldFormat, field.TypeString, value)
+	}
+	if _u.mutation.FormatCleared() {
+		_spec.ClearField(request.FieldFormat, field.TypeString)
+	}
+	if value, ok := _u.mutation.ResponsibleAdminID(); ok {
+		_spec.SetField(request.FieldResponsibleAdminID, field.TypeUUID, value)
+	}
+	if _u.mutation.ResponsibleAdminIDCleared() {
+		_spec.ClearField(request.FieldResponsibleAdminID, field.TypeUUID)
+	}
+	if value, ok := _u.mutation.TrainingDate(); ok {
+		_spec.SetField(request.FieldTrainingDate, field.TypeTime, value)
+	}
+	if _u.mutation.TrainingDateCleared() {
+		_spec.ClearField(request.FieldTrainingDate, field.TypeTime)
+	}
+	if value, ok := _u.mutation.DeadlineAt(); ok {
+		_spec.SetField(request.FieldDeadlineAt, field.TypeTime, value)
+	}
+	if _u.mutation.DeadlineAtCleared() {
+		_spec.ClearField(request.FieldDeadlineAt, field.TypeTime)
+	}
+	if value, ok := _u.mutation.CostAmount(); ok {
+		_spec.SetField(request.FieldCostAmount, field.TypeFloat64, value)
+	}
+	if value, ok := _u.mutation.AddedCostAmount(); ok {
+		_spec.AddField(request.FieldCostAmount, field.TypeFloat64, value)
+	}
+	if _u.mutation.CostAmountCleared() {
+		_spec.ClearField(request.FieldCostAmount, field.TypeFloat64)
+	}
+	if value, ok := _u.mutation.CostMode(); ok {
+		_spec.SetField(request.FieldCostMode, field.TypeString, value)
+	}
+	if _u.mutation.CostModeCleared() {
+		_spec.ClearField(request.FieldCostMode, field.TypeString)
+	}
 	if value, ok := _u.mutation.Step(); ok {
 		_spec.SetField(request.FieldStep, field.TypeInt, value)
 	}
 	if value, ok := _u.mutation.AddedStep(); ok {
 		_spec.AddField(request.FieldStep, field.TypeInt, value)
 	}
+	if value, ok := _u.mutation.UpdatedAt(); ok {
+		_spec.SetField(request.FieldUpdatedAt, field.TypeTime, value)
+	}
+	if value, ok := _u.mutation.CompletedAt(); ok {
+		_spec.SetField(request.FieldCompletedAt, field.TypeTime, value)
+	}
+	if _u.mutation.CompletedAtCleared() {
+		_spec.ClearField(request.FieldCompletedAt, field.TypeTime)
+	}
 	if value, ok := _u.mutation.Status(); ok {
 		_spec.SetField(request.FieldStatus, field.TypeString, value)
+	}
+	if value, ok := _u.mutation.ReplacedByRequestID(); ok {
+		_spec.SetField(request.FieldReplacedByRequestID, field.TypeUUID, value)
+	}
+	if _u.mutation.ReplacedByRequestIDCleared() {
+		_spec.ClearField(request.FieldReplacedByRequestID, field.TypeUUID)
+	}
+	if value, ok := _u.mutation.IsBlocked(); ok {
+		_spec.SetField(request.FieldIsBlocked, field.TypeBool, value)
 	}
 	if _u.mutation.InitiatorCleared() {
 		edge := &sqlgraph.EdgeSpec{
@@ -216,6 +719,80 @@ func (_u *RequestUpdate) sqlSave(ctx context.Context) (_node int, err error) {
 			Bidi:    false,
 			Target: &sqlgraph.EdgeTarget{
 				IDSpec: sqlgraph.NewFieldSpec(user.FieldID, field.TypeUUID),
+			},
+		}
+		for _, k := range nodes {
+			edge.Target.Nodes = append(edge.Target.Nodes, k)
+		}
+		_spec.Edges.Add = append(_spec.Edges.Add, edge)
+	}
+	if _u.mutation.ParentCleared() {
+		edge := &sqlgraph.EdgeSpec{
+			Rel:     sqlgraph.M2O,
+			Inverse: true,
+			Table:   request.ParentTable,
+			Columns: []string{request.ParentColumn},
+			Bidi:    false,
+			Target: &sqlgraph.EdgeTarget{
+				IDSpec: sqlgraph.NewFieldSpec(request.FieldID, field.TypeUUID),
+			},
+		}
+		_spec.Edges.Clear = append(_spec.Edges.Clear, edge)
+	}
+	if nodes := _u.mutation.ParentIDs(); len(nodes) > 0 {
+		edge := &sqlgraph.EdgeSpec{
+			Rel:     sqlgraph.M2O,
+			Inverse: true,
+			Table:   request.ParentTable,
+			Columns: []string{request.ParentColumn},
+			Bidi:    false,
+			Target: &sqlgraph.EdgeTarget{
+				IDSpec: sqlgraph.NewFieldSpec(request.FieldID, field.TypeUUID),
+			},
+		}
+		for _, k := range nodes {
+			edge.Target.Nodes = append(edge.Target.Nodes, k)
+		}
+		_spec.Edges.Add = append(_spec.Edges.Add, edge)
+	}
+	if _u.mutation.ChildrenCleared() {
+		edge := &sqlgraph.EdgeSpec{
+			Rel:     sqlgraph.O2M,
+			Inverse: false,
+			Table:   request.ChildrenTable,
+			Columns: []string{request.ChildrenColumn},
+			Bidi:    false,
+			Target: &sqlgraph.EdgeTarget{
+				IDSpec: sqlgraph.NewFieldSpec(request.FieldID, field.TypeUUID),
+			},
+		}
+		_spec.Edges.Clear = append(_spec.Edges.Clear, edge)
+	}
+	if nodes := _u.mutation.RemovedChildrenIDs(); len(nodes) > 0 && !_u.mutation.ChildrenCleared() {
+		edge := &sqlgraph.EdgeSpec{
+			Rel:     sqlgraph.O2M,
+			Inverse: false,
+			Table:   request.ChildrenTable,
+			Columns: []string{request.ChildrenColumn},
+			Bidi:    false,
+			Target: &sqlgraph.EdgeTarget{
+				IDSpec: sqlgraph.NewFieldSpec(request.FieldID, field.TypeUUID),
+			},
+		}
+		for _, k := range nodes {
+			edge.Target.Nodes = append(edge.Target.Nodes, k)
+		}
+		_spec.Edges.Clear = append(_spec.Edges.Clear, edge)
+	}
+	if nodes := _u.mutation.ChildrenIDs(); len(nodes) > 0 {
+		edge := &sqlgraph.EdgeSpec{
+			Rel:     sqlgraph.O2M,
+			Inverse: false,
+			Table:   request.ChildrenTable,
+			Columns: []string{request.ChildrenColumn},
+			Bidi:    false,
+			Target: &sqlgraph.EdgeTarget{
+				IDSpec: sqlgraph.NewFieldSpec(request.FieldID, field.TypeUUID),
 			},
 		}
 		for _, k := range nodes {
@@ -257,6 +834,26 @@ func (_u *RequestUpdateOne) SetNillableInitiatorID(v *uuid.UUID) *RequestUpdateO
 	return _u
 }
 
+// SetParentRequestID sets the "parent_request_id" field.
+func (_u *RequestUpdateOne) SetParentRequestID(v uuid.UUID) *RequestUpdateOne {
+	_u.mutation.SetParentRequestID(v)
+	return _u
+}
+
+// SetNillableParentRequestID sets the "parent_request_id" field if the given value is not nil.
+func (_u *RequestUpdateOne) SetNillableParentRequestID(v *uuid.UUID) *RequestUpdateOne {
+	if v != nil {
+		_u.SetParentRequestID(*v)
+	}
+	return _u
+}
+
+// ClearParentRequestID clears the value of the "parent_request_id" field.
+func (_u *RequestUpdateOne) ClearParentRequestID() *RequestUpdateOne {
+	_u.mutation.ClearParentRequestID()
+	return _u
+}
+
 // SetEntityID sets the "entity_id" field.
 func (_u *RequestUpdateOne) SetEntityID(v uuid.UUID) *RequestUpdateOne {
 	_u.mutation.SetEntityID(v)
@@ -285,6 +882,241 @@ func (_u *RequestUpdateOne) SetNillableEntityType(v *string) *RequestUpdateOne {
 	return _u
 }
 
+// SetRequestType sets the "request_type" field.
+func (_u *RequestUpdateOne) SetRequestType(v string) *RequestUpdateOne {
+	_u.mutation.SetRequestType(v)
+	return _u
+}
+
+// SetNillableRequestType sets the "request_type" field if the given value is not nil.
+func (_u *RequestUpdateOne) SetNillableRequestType(v *string) *RequestUpdateOne {
+	if v != nil {
+		_u.SetRequestType(*v)
+	}
+	return _u
+}
+
+// SetKind sets the "kind" field.
+func (_u *RequestUpdateOne) SetKind(v string) *RequestUpdateOne {
+	_u.mutation.SetKind(v)
+	return _u
+}
+
+// SetNillableKind sets the "kind" field if the given value is not nil.
+func (_u *RequestUpdateOne) SetNillableKind(v *string) *RequestUpdateOne {
+	if v != nil {
+		_u.SetKind(*v)
+	}
+	return _u
+}
+
+// SetAssignedHrID sets the "assigned_hr_id" field.
+func (_u *RequestUpdateOne) SetAssignedHrID(v uuid.UUID) *RequestUpdateOne {
+	_u.mutation.SetAssignedHrID(v)
+	return _u
+}
+
+// SetNillableAssignedHrID sets the "assigned_hr_id" field if the given value is not nil.
+func (_u *RequestUpdateOne) SetNillableAssignedHrID(v *uuid.UUID) *RequestUpdateOne {
+	if v != nil {
+		_u.SetAssignedHrID(*v)
+	}
+	return _u
+}
+
+// ClearAssignedHrID clears the value of the "assigned_hr_id" field.
+func (_u *RequestUpdateOne) ClearAssignedHrID() *RequestUpdateOne {
+	_u.mutation.ClearAssignedHrID()
+	return _u
+}
+
+// SetTargetDzoID sets the "target_dzo_id" field.
+func (_u *RequestUpdateOne) SetTargetDzoID(v uuid.UUID) *RequestUpdateOne {
+	_u.mutation.SetTargetDzoID(v)
+	return _u
+}
+
+// SetNillableTargetDzoID sets the "target_dzo_id" field if the given value is not nil.
+func (_u *RequestUpdateOne) SetNillableTargetDzoID(v *uuid.UUID) *RequestUpdateOne {
+	if v != nil {
+		_u.SetTargetDzoID(*v)
+	}
+	return _u
+}
+
+// ClearTargetDzoID clears the value of the "target_dzo_id" field.
+func (_u *RequestUpdateOne) ClearTargetDzoID() *RequestUpdateOne {
+	_u.mutation.ClearTargetDzoID()
+	return _u
+}
+
+// SetTitle sets the "title" field.
+func (_u *RequestUpdateOne) SetTitle(v string) *RequestUpdateOne {
+	_u.mutation.SetTitle(v)
+	return _u
+}
+
+// SetNillableTitle sets the "title" field if the given value is not nil.
+func (_u *RequestUpdateOne) SetNillableTitle(v *string) *RequestUpdateOne {
+	if v != nil {
+		_u.SetTitle(*v)
+	}
+	return _u
+}
+
+// ClearTitle clears the value of the "title" field.
+func (_u *RequestUpdateOne) ClearTitle() *RequestUpdateOne {
+	_u.mutation.ClearTitle()
+	return _u
+}
+
+// SetCategory sets the "category" field.
+func (_u *RequestUpdateOne) SetCategory(v string) *RequestUpdateOne {
+	_u.mutation.SetCategory(v)
+	return _u
+}
+
+// SetNillableCategory sets the "category" field if the given value is not nil.
+func (_u *RequestUpdateOne) SetNillableCategory(v *string) *RequestUpdateOne {
+	if v != nil {
+		_u.SetCategory(*v)
+	}
+	return _u
+}
+
+// ClearCategory clears the value of the "category" field.
+func (_u *RequestUpdateOne) ClearCategory() *RequestUpdateOne {
+	_u.mutation.ClearCategory()
+	return _u
+}
+
+// SetFormat sets the "format" field.
+func (_u *RequestUpdateOne) SetFormat(v string) *RequestUpdateOne {
+	_u.mutation.SetFormat(v)
+	return _u
+}
+
+// SetNillableFormat sets the "format" field if the given value is not nil.
+func (_u *RequestUpdateOne) SetNillableFormat(v *string) *RequestUpdateOne {
+	if v != nil {
+		_u.SetFormat(*v)
+	}
+	return _u
+}
+
+// ClearFormat clears the value of the "format" field.
+func (_u *RequestUpdateOne) ClearFormat() *RequestUpdateOne {
+	_u.mutation.ClearFormat()
+	return _u
+}
+
+// SetResponsibleAdminID sets the "responsible_admin_id" field.
+func (_u *RequestUpdateOne) SetResponsibleAdminID(v uuid.UUID) *RequestUpdateOne {
+	_u.mutation.SetResponsibleAdminID(v)
+	return _u
+}
+
+// SetNillableResponsibleAdminID sets the "responsible_admin_id" field if the given value is not nil.
+func (_u *RequestUpdateOne) SetNillableResponsibleAdminID(v *uuid.UUID) *RequestUpdateOne {
+	if v != nil {
+		_u.SetResponsibleAdminID(*v)
+	}
+	return _u
+}
+
+// ClearResponsibleAdminID clears the value of the "responsible_admin_id" field.
+func (_u *RequestUpdateOne) ClearResponsibleAdminID() *RequestUpdateOne {
+	_u.mutation.ClearResponsibleAdminID()
+	return _u
+}
+
+// SetTrainingDate sets the "training_date" field.
+func (_u *RequestUpdateOne) SetTrainingDate(v time.Time) *RequestUpdateOne {
+	_u.mutation.SetTrainingDate(v)
+	return _u
+}
+
+// SetNillableTrainingDate sets the "training_date" field if the given value is not nil.
+func (_u *RequestUpdateOne) SetNillableTrainingDate(v *time.Time) *RequestUpdateOne {
+	if v != nil {
+		_u.SetTrainingDate(*v)
+	}
+	return _u
+}
+
+// ClearTrainingDate clears the value of the "training_date" field.
+func (_u *RequestUpdateOne) ClearTrainingDate() *RequestUpdateOne {
+	_u.mutation.ClearTrainingDate()
+	return _u
+}
+
+// SetDeadlineAt sets the "deadline_at" field.
+func (_u *RequestUpdateOne) SetDeadlineAt(v time.Time) *RequestUpdateOne {
+	_u.mutation.SetDeadlineAt(v)
+	return _u
+}
+
+// SetNillableDeadlineAt sets the "deadline_at" field if the given value is not nil.
+func (_u *RequestUpdateOne) SetNillableDeadlineAt(v *time.Time) *RequestUpdateOne {
+	if v != nil {
+		_u.SetDeadlineAt(*v)
+	}
+	return _u
+}
+
+// ClearDeadlineAt clears the value of the "deadline_at" field.
+func (_u *RequestUpdateOne) ClearDeadlineAt() *RequestUpdateOne {
+	_u.mutation.ClearDeadlineAt()
+	return _u
+}
+
+// SetCostAmount sets the "cost_amount" field.
+func (_u *RequestUpdateOne) SetCostAmount(v float64) *RequestUpdateOne {
+	_u.mutation.ResetCostAmount()
+	_u.mutation.SetCostAmount(v)
+	return _u
+}
+
+// SetNillableCostAmount sets the "cost_amount" field if the given value is not nil.
+func (_u *RequestUpdateOne) SetNillableCostAmount(v *float64) *RequestUpdateOne {
+	if v != nil {
+		_u.SetCostAmount(*v)
+	}
+	return _u
+}
+
+// AddCostAmount adds value to the "cost_amount" field.
+func (_u *RequestUpdateOne) AddCostAmount(v float64) *RequestUpdateOne {
+	_u.mutation.AddCostAmount(v)
+	return _u
+}
+
+// ClearCostAmount clears the value of the "cost_amount" field.
+func (_u *RequestUpdateOne) ClearCostAmount() *RequestUpdateOne {
+	_u.mutation.ClearCostAmount()
+	return _u
+}
+
+// SetCostMode sets the "cost_mode" field.
+func (_u *RequestUpdateOne) SetCostMode(v string) *RequestUpdateOne {
+	_u.mutation.SetCostMode(v)
+	return _u
+}
+
+// SetNillableCostMode sets the "cost_mode" field if the given value is not nil.
+func (_u *RequestUpdateOne) SetNillableCostMode(v *string) *RequestUpdateOne {
+	if v != nil {
+		_u.SetCostMode(*v)
+	}
+	return _u
+}
+
+// ClearCostMode clears the value of the "cost_mode" field.
+func (_u *RequestUpdateOne) ClearCostMode() *RequestUpdateOne {
+	_u.mutation.ClearCostMode()
+	return _u
+}
+
 // SetStep sets the "step" field.
 func (_u *RequestUpdateOne) SetStep(v int) *RequestUpdateOne {
 	_u.mutation.ResetStep()
@@ -306,6 +1138,32 @@ func (_u *RequestUpdateOne) AddStep(v int) *RequestUpdateOne {
 	return _u
 }
 
+// SetUpdatedAt sets the "updated_at" field.
+func (_u *RequestUpdateOne) SetUpdatedAt(v time.Time) *RequestUpdateOne {
+	_u.mutation.SetUpdatedAt(v)
+	return _u
+}
+
+// SetCompletedAt sets the "completed_at" field.
+func (_u *RequestUpdateOne) SetCompletedAt(v time.Time) *RequestUpdateOne {
+	_u.mutation.SetCompletedAt(v)
+	return _u
+}
+
+// SetNillableCompletedAt sets the "completed_at" field if the given value is not nil.
+func (_u *RequestUpdateOne) SetNillableCompletedAt(v *time.Time) *RequestUpdateOne {
+	if v != nil {
+		_u.SetCompletedAt(*v)
+	}
+	return _u
+}
+
+// ClearCompletedAt clears the value of the "completed_at" field.
+func (_u *RequestUpdateOne) ClearCompletedAt() *RequestUpdateOne {
+	_u.mutation.ClearCompletedAt()
+	return _u
+}
+
 // SetStatus sets the "status" field.
 func (_u *RequestUpdateOne) SetStatus(v string) *RequestUpdateOne {
 	_u.mutation.SetStatus(v)
@@ -320,9 +1178,77 @@ func (_u *RequestUpdateOne) SetNillableStatus(v *string) *RequestUpdateOne {
 	return _u
 }
 
+// SetReplacedByRequestID sets the "replaced_by_request_id" field.
+func (_u *RequestUpdateOne) SetReplacedByRequestID(v uuid.UUID) *RequestUpdateOne {
+	_u.mutation.SetReplacedByRequestID(v)
+	return _u
+}
+
+// SetNillableReplacedByRequestID sets the "replaced_by_request_id" field if the given value is not nil.
+func (_u *RequestUpdateOne) SetNillableReplacedByRequestID(v *uuid.UUID) *RequestUpdateOne {
+	if v != nil {
+		_u.SetReplacedByRequestID(*v)
+	}
+	return _u
+}
+
+// ClearReplacedByRequestID clears the value of the "replaced_by_request_id" field.
+func (_u *RequestUpdateOne) ClearReplacedByRequestID() *RequestUpdateOne {
+	_u.mutation.ClearReplacedByRequestID()
+	return _u
+}
+
+// SetIsBlocked sets the "is_blocked" field.
+func (_u *RequestUpdateOne) SetIsBlocked(v bool) *RequestUpdateOne {
+	_u.mutation.SetIsBlocked(v)
+	return _u
+}
+
+// SetNillableIsBlocked sets the "is_blocked" field if the given value is not nil.
+func (_u *RequestUpdateOne) SetNillableIsBlocked(v *bool) *RequestUpdateOne {
+	if v != nil {
+		_u.SetIsBlocked(*v)
+	}
+	return _u
+}
+
 // SetInitiator sets the "initiator" edge to the User entity.
 func (_u *RequestUpdateOne) SetInitiator(v *User) *RequestUpdateOne {
 	return _u.SetInitiatorID(v.ID)
+}
+
+// SetParentID sets the "parent" edge to the Request entity by ID.
+func (_u *RequestUpdateOne) SetParentID(id uuid.UUID) *RequestUpdateOne {
+	_u.mutation.SetParentID(id)
+	return _u
+}
+
+// SetNillableParentID sets the "parent" edge to the Request entity by ID if the given value is not nil.
+func (_u *RequestUpdateOne) SetNillableParentID(id *uuid.UUID) *RequestUpdateOne {
+	if id != nil {
+		_u = _u.SetParentID(*id)
+	}
+	return _u
+}
+
+// SetParent sets the "parent" edge to the Request entity.
+func (_u *RequestUpdateOne) SetParent(v *Request) *RequestUpdateOne {
+	return _u.SetParentID(v.ID)
+}
+
+// AddChildIDs adds the "children" edge to the Request entity by IDs.
+func (_u *RequestUpdateOne) AddChildIDs(ids ...uuid.UUID) *RequestUpdateOne {
+	_u.mutation.AddChildIDs(ids...)
+	return _u
+}
+
+// AddChildren adds the "children" edges to the Request entity.
+func (_u *RequestUpdateOne) AddChildren(v ...*Request) *RequestUpdateOne {
+	ids := make([]uuid.UUID, len(v))
+	for i := range v {
+		ids[i] = v[i].ID
+	}
+	return _u.AddChildIDs(ids...)
 }
 
 // Mutation returns the RequestMutation object of the builder.
@@ -334,6 +1260,33 @@ func (_u *RequestUpdateOne) Mutation() *RequestMutation {
 func (_u *RequestUpdateOne) ClearInitiator() *RequestUpdateOne {
 	_u.mutation.ClearInitiator()
 	return _u
+}
+
+// ClearParent clears the "parent" edge to the Request entity.
+func (_u *RequestUpdateOne) ClearParent() *RequestUpdateOne {
+	_u.mutation.ClearParent()
+	return _u
+}
+
+// ClearChildren clears all "children" edges to the Request entity.
+func (_u *RequestUpdateOne) ClearChildren() *RequestUpdateOne {
+	_u.mutation.ClearChildren()
+	return _u
+}
+
+// RemoveChildIDs removes the "children" edge to Request entities by IDs.
+func (_u *RequestUpdateOne) RemoveChildIDs(ids ...uuid.UUID) *RequestUpdateOne {
+	_u.mutation.RemoveChildIDs(ids...)
+	return _u
+}
+
+// RemoveChildren removes "children" edges to Request entities.
+func (_u *RequestUpdateOne) RemoveChildren(v ...*Request) *RequestUpdateOne {
+	ids := make([]uuid.UUID, len(v))
+	for i := range v {
+		ids[i] = v[i].ID
+	}
+	return _u.RemoveChildIDs(ids...)
 }
 
 // Where appends a list predicates to the RequestUpdate builder.
@@ -351,6 +1304,7 @@ func (_u *RequestUpdateOne) Select(field string, fields ...string) *RequestUpdat
 
 // Save executes the query and returns the updated Request entity.
 func (_u *RequestUpdateOne) Save(ctx context.Context) (*Request, error) {
+	_u.defaults()
 	return withHooks(ctx, _u.sqlSave, _u.mutation, _u.hooks)
 }
 
@@ -376,11 +1330,49 @@ func (_u *RequestUpdateOne) ExecX(ctx context.Context) {
 	}
 }
 
+// defaults sets the default values of the builder before save.
+func (_u *RequestUpdateOne) defaults() {
+	if _, ok := _u.mutation.UpdatedAt(); !ok {
+		v := request.UpdateDefaultUpdatedAt()
+		_u.mutation.SetUpdatedAt(v)
+	}
+}
+
 // check runs all checks and user-defined validators on the builder.
 func (_u *RequestUpdateOne) check() error {
 	if v, ok := _u.mutation.EntityType(); ok {
 		if err := request.EntityTypeValidator(v); err != nil {
 			return &ValidationError{Name: "entity_type", err: fmt.Errorf(`ent: validator failed for field "Request.entity_type": %w`, err)}
+		}
+	}
+	if v, ok := _u.mutation.RequestType(); ok {
+		if err := request.RequestTypeValidator(v); err != nil {
+			return &ValidationError{Name: "request_type", err: fmt.Errorf(`ent: validator failed for field "Request.request_type": %w`, err)}
+		}
+	}
+	if v, ok := _u.mutation.Kind(); ok {
+		if err := request.KindValidator(v); err != nil {
+			return &ValidationError{Name: "kind", err: fmt.Errorf(`ent: validator failed for field "Request.kind": %w`, err)}
+		}
+	}
+	if v, ok := _u.mutation.Title(); ok {
+		if err := request.TitleValidator(v); err != nil {
+			return &ValidationError{Name: "title", err: fmt.Errorf(`ent: validator failed for field "Request.title": %w`, err)}
+		}
+	}
+	if v, ok := _u.mutation.Category(); ok {
+		if err := request.CategoryValidator(v); err != nil {
+			return &ValidationError{Name: "category", err: fmt.Errorf(`ent: validator failed for field "Request.category": %w`, err)}
+		}
+	}
+	if v, ok := _u.mutation.Format(); ok {
+		if err := request.FormatValidator(v); err != nil {
+			return &ValidationError{Name: "format", err: fmt.Errorf(`ent: validator failed for field "Request.format": %w`, err)}
+		}
+	}
+	if v, ok := _u.mutation.CostMode(); ok {
+		if err := request.CostModeValidator(v); err != nil {
+			return &ValidationError{Name: "cost_mode", err: fmt.Errorf(`ent: validator failed for field "Request.cost_mode": %w`, err)}
 		}
 	}
 	if v, ok := _u.mutation.Status(); ok {
@@ -429,14 +1421,101 @@ func (_u *RequestUpdateOne) sqlSave(ctx context.Context) (_node *Request, err er
 	if value, ok := _u.mutation.EntityType(); ok {
 		_spec.SetField(request.FieldEntityType, field.TypeString, value)
 	}
+	if value, ok := _u.mutation.RequestType(); ok {
+		_spec.SetField(request.FieldRequestType, field.TypeString, value)
+	}
+	if value, ok := _u.mutation.Kind(); ok {
+		_spec.SetField(request.FieldKind, field.TypeString, value)
+	}
+	if value, ok := _u.mutation.AssignedHrID(); ok {
+		_spec.SetField(request.FieldAssignedHrID, field.TypeUUID, value)
+	}
+	if _u.mutation.AssignedHrIDCleared() {
+		_spec.ClearField(request.FieldAssignedHrID, field.TypeUUID)
+	}
+	if value, ok := _u.mutation.TargetDzoID(); ok {
+		_spec.SetField(request.FieldTargetDzoID, field.TypeUUID, value)
+	}
+	if _u.mutation.TargetDzoIDCleared() {
+		_spec.ClearField(request.FieldTargetDzoID, field.TypeUUID)
+	}
+	if value, ok := _u.mutation.Title(); ok {
+		_spec.SetField(request.FieldTitle, field.TypeString, value)
+	}
+	if _u.mutation.TitleCleared() {
+		_spec.ClearField(request.FieldTitle, field.TypeString)
+	}
+	if value, ok := _u.mutation.Category(); ok {
+		_spec.SetField(request.FieldCategory, field.TypeString, value)
+	}
+	if _u.mutation.CategoryCleared() {
+		_spec.ClearField(request.FieldCategory, field.TypeString)
+	}
+	if value, ok := _u.mutation.Format(); ok {
+		_spec.SetField(request.FieldFormat, field.TypeString, value)
+	}
+	if _u.mutation.FormatCleared() {
+		_spec.ClearField(request.FieldFormat, field.TypeString)
+	}
+	if value, ok := _u.mutation.ResponsibleAdminID(); ok {
+		_spec.SetField(request.FieldResponsibleAdminID, field.TypeUUID, value)
+	}
+	if _u.mutation.ResponsibleAdminIDCleared() {
+		_spec.ClearField(request.FieldResponsibleAdminID, field.TypeUUID)
+	}
+	if value, ok := _u.mutation.TrainingDate(); ok {
+		_spec.SetField(request.FieldTrainingDate, field.TypeTime, value)
+	}
+	if _u.mutation.TrainingDateCleared() {
+		_spec.ClearField(request.FieldTrainingDate, field.TypeTime)
+	}
+	if value, ok := _u.mutation.DeadlineAt(); ok {
+		_spec.SetField(request.FieldDeadlineAt, field.TypeTime, value)
+	}
+	if _u.mutation.DeadlineAtCleared() {
+		_spec.ClearField(request.FieldDeadlineAt, field.TypeTime)
+	}
+	if value, ok := _u.mutation.CostAmount(); ok {
+		_spec.SetField(request.FieldCostAmount, field.TypeFloat64, value)
+	}
+	if value, ok := _u.mutation.AddedCostAmount(); ok {
+		_spec.AddField(request.FieldCostAmount, field.TypeFloat64, value)
+	}
+	if _u.mutation.CostAmountCleared() {
+		_spec.ClearField(request.FieldCostAmount, field.TypeFloat64)
+	}
+	if value, ok := _u.mutation.CostMode(); ok {
+		_spec.SetField(request.FieldCostMode, field.TypeString, value)
+	}
+	if _u.mutation.CostModeCleared() {
+		_spec.ClearField(request.FieldCostMode, field.TypeString)
+	}
 	if value, ok := _u.mutation.Step(); ok {
 		_spec.SetField(request.FieldStep, field.TypeInt, value)
 	}
 	if value, ok := _u.mutation.AddedStep(); ok {
 		_spec.AddField(request.FieldStep, field.TypeInt, value)
 	}
+	if value, ok := _u.mutation.UpdatedAt(); ok {
+		_spec.SetField(request.FieldUpdatedAt, field.TypeTime, value)
+	}
+	if value, ok := _u.mutation.CompletedAt(); ok {
+		_spec.SetField(request.FieldCompletedAt, field.TypeTime, value)
+	}
+	if _u.mutation.CompletedAtCleared() {
+		_spec.ClearField(request.FieldCompletedAt, field.TypeTime)
+	}
 	if value, ok := _u.mutation.Status(); ok {
 		_spec.SetField(request.FieldStatus, field.TypeString, value)
+	}
+	if value, ok := _u.mutation.ReplacedByRequestID(); ok {
+		_spec.SetField(request.FieldReplacedByRequestID, field.TypeUUID, value)
+	}
+	if _u.mutation.ReplacedByRequestIDCleared() {
+		_spec.ClearField(request.FieldReplacedByRequestID, field.TypeUUID)
+	}
+	if value, ok := _u.mutation.IsBlocked(); ok {
+		_spec.SetField(request.FieldIsBlocked, field.TypeBool, value)
 	}
 	if _u.mutation.InitiatorCleared() {
 		edge := &sqlgraph.EdgeSpec{
@@ -460,6 +1539,80 @@ func (_u *RequestUpdateOne) sqlSave(ctx context.Context) (_node *Request, err er
 			Bidi:    false,
 			Target: &sqlgraph.EdgeTarget{
 				IDSpec: sqlgraph.NewFieldSpec(user.FieldID, field.TypeUUID),
+			},
+		}
+		for _, k := range nodes {
+			edge.Target.Nodes = append(edge.Target.Nodes, k)
+		}
+		_spec.Edges.Add = append(_spec.Edges.Add, edge)
+	}
+	if _u.mutation.ParentCleared() {
+		edge := &sqlgraph.EdgeSpec{
+			Rel:     sqlgraph.M2O,
+			Inverse: true,
+			Table:   request.ParentTable,
+			Columns: []string{request.ParentColumn},
+			Bidi:    false,
+			Target: &sqlgraph.EdgeTarget{
+				IDSpec: sqlgraph.NewFieldSpec(request.FieldID, field.TypeUUID),
+			},
+		}
+		_spec.Edges.Clear = append(_spec.Edges.Clear, edge)
+	}
+	if nodes := _u.mutation.ParentIDs(); len(nodes) > 0 {
+		edge := &sqlgraph.EdgeSpec{
+			Rel:     sqlgraph.M2O,
+			Inverse: true,
+			Table:   request.ParentTable,
+			Columns: []string{request.ParentColumn},
+			Bidi:    false,
+			Target: &sqlgraph.EdgeTarget{
+				IDSpec: sqlgraph.NewFieldSpec(request.FieldID, field.TypeUUID),
+			},
+		}
+		for _, k := range nodes {
+			edge.Target.Nodes = append(edge.Target.Nodes, k)
+		}
+		_spec.Edges.Add = append(_spec.Edges.Add, edge)
+	}
+	if _u.mutation.ChildrenCleared() {
+		edge := &sqlgraph.EdgeSpec{
+			Rel:     sqlgraph.O2M,
+			Inverse: false,
+			Table:   request.ChildrenTable,
+			Columns: []string{request.ChildrenColumn},
+			Bidi:    false,
+			Target: &sqlgraph.EdgeTarget{
+				IDSpec: sqlgraph.NewFieldSpec(request.FieldID, field.TypeUUID),
+			},
+		}
+		_spec.Edges.Clear = append(_spec.Edges.Clear, edge)
+	}
+	if nodes := _u.mutation.RemovedChildrenIDs(); len(nodes) > 0 && !_u.mutation.ChildrenCleared() {
+		edge := &sqlgraph.EdgeSpec{
+			Rel:     sqlgraph.O2M,
+			Inverse: false,
+			Table:   request.ChildrenTable,
+			Columns: []string{request.ChildrenColumn},
+			Bidi:    false,
+			Target: &sqlgraph.EdgeTarget{
+				IDSpec: sqlgraph.NewFieldSpec(request.FieldID, field.TypeUUID),
+			},
+		}
+		for _, k := range nodes {
+			edge.Target.Nodes = append(edge.Target.Nodes, k)
+		}
+		_spec.Edges.Clear = append(_spec.Edges.Clear, edge)
+	}
+	if nodes := _u.mutation.ChildrenIDs(); len(nodes) > 0 {
+		edge := &sqlgraph.EdgeSpec{
+			Rel:     sqlgraph.O2M,
+			Inverse: false,
+			Table:   request.ChildrenTable,
+			Columns: []string{request.ChildrenColumn},
+			Bidi:    false,
+			Target: &sqlgraph.EdgeTarget{
+				IDSpec: sqlgraph.NewFieldSpec(request.FieldID, field.TypeUUID),
 			},
 		}
 		for _, k := range nodes {

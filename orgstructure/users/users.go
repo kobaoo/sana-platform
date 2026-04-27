@@ -406,9 +406,6 @@ func insertUser(ctx context.Context, req *CreateUserRequest) (*User, error) {
 
 	row, err := builder.Save(ctx)
 	if err != nil {
-		if ent.IsConstraintError(err) {
-			return nil, errs.B().Code(errs.AlreadyExists).Msg("user with this keycloak_user_id already exists").Err()
-		}
 		return nil, errs.B().Code(errs.Internal).Msg("failed to create user").Cause(err).Err()
 	}
 	return entToUser(row), nil

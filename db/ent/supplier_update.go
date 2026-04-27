@@ -7,6 +7,7 @@ import (
 	"errors"
 	"fmt"
 
+	"encore.app/db/ent/externaltrainingevent"
 	"encore.app/db/ent/predicate"
 	"encore.app/db/ent/supplier"
 	"entgo.io/ent/dialect/sql"
@@ -131,9 +132,45 @@ func (_u *SupplierUpdate) SetNillableIsActive(v *bool) *SupplierUpdate {
 	return _u
 }
 
+// AddExternalTrainingEventIDs adds the "external_training_events" edge to the ExternalTrainingEvent entity by IDs.
+func (_u *SupplierUpdate) AddExternalTrainingEventIDs(ids ...uuid.UUID) *SupplierUpdate {
+	_u.mutation.AddExternalTrainingEventIDs(ids...)
+	return _u
+}
+
+// AddExternalTrainingEvents adds the "external_training_events" edges to the ExternalTrainingEvent entity.
+func (_u *SupplierUpdate) AddExternalTrainingEvents(v ...*ExternalTrainingEvent) *SupplierUpdate {
+	ids := make([]uuid.UUID, len(v))
+	for i := range v {
+		ids[i] = v[i].ID
+	}
+	return _u.AddExternalTrainingEventIDs(ids...)
+}
+
 // Mutation returns the SupplierMutation object of the builder.
 func (_u *SupplierUpdate) Mutation() *SupplierMutation {
 	return _u.mutation
+}
+
+// ClearExternalTrainingEvents clears all "external_training_events" edges to the ExternalTrainingEvent entity.
+func (_u *SupplierUpdate) ClearExternalTrainingEvents() *SupplierUpdate {
+	_u.mutation.ClearExternalTrainingEvents()
+	return _u
+}
+
+// RemoveExternalTrainingEventIDs removes the "external_training_events" edge to ExternalTrainingEvent entities by IDs.
+func (_u *SupplierUpdate) RemoveExternalTrainingEventIDs(ids ...uuid.UUID) *SupplierUpdate {
+	_u.mutation.RemoveExternalTrainingEventIDs(ids...)
+	return _u
+}
+
+// RemoveExternalTrainingEvents removes "external_training_events" edges to ExternalTrainingEvent entities.
+func (_u *SupplierUpdate) RemoveExternalTrainingEvents(v ...*ExternalTrainingEvent) *SupplierUpdate {
+	ids := make([]uuid.UUID, len(v))
+	for i := range v {
+		ids[i] = v[i].ID
+	}
+	return _u.RemoveExternalTrainingEventIDs(ids...)
 }
 
 // Save executes the query and returns the number of nodes affected by the update operation.
@@ -221,6 +258,51 @@ func (_u *SupplierUpdate) sqlSave(ctx context.Context) (_node int, err error) {
 	}
 	if value, ok := _u.mutation.IsActive(); ok {
 		_spec.SetField(supplier.FieldIsActive, field.TypeBool, value)
+	}
+	if _u.mutation.ExternalTrainingEventsCleared() {
+		edge := &sqlgraph.EdgeSpec{
+			Rel:     sqlgraph.O2M,
+			Inverse: false,
+			Table:   supplier.ExternalTrainingEventsTable,
+			Columns: []string{supplier.ExternalTrainingEventsColumn},
+			Bidi:    false,
+			Target: &sqlgraph.EdgeTarget{
+				IDSpec: sqlgraph.NewFieldSpec(externaltrainingevent.FieldID, field.TypeUUID),
+			},
+		}
+		_spec.Edges.Clear = append(_spec.Edges.Clear, edge)
+	}
+	if nodes := _u.mutation.RemovedExternalTrainingEventsIDs(); len(nodes) > 0 && !_u.mutation.ExternalTrainingEventsCleared() {
+		edge := &sqlgraph.EdgeSpec{
+			Rel:     sqlgraph.O2M,
+			Inverse: false,
+			Table:   supplier.ExternalTrainingEventsTable,
+			Columns: []string{supplier.ExternalTrainingEventsColumn},
+			Bidi:    false,
+			Target: &sqlgraph.EdgeTarget{
+				IDSpec: sqlgraph.NewFieldSpec(externaltrainingevent.FieldID, field.TypeUUID),
+			},
+		}
+		for _, k := range nodes {
+			edge.Target.Nodes = append(edge.Target.Nodes, k)
+		}
+		_spec.Edges.Clear = append(_spec.Edges.Clear, edge)
+	}
+	if nodes := _u.mutation.ExternalTrainingEventsIDs(); len(nodes) > 0 {
+		edge := &sqlgraph.EdgeSpec{
+			Rel:     sqlgraph.O2M,
+			Inverse: false,
+			Table:   supplier.ExternalTrainingEventsTable,
+			Columns: []string{supplier.ExternalTrainingEventsColumn},
+			Bidi:    false,
+			Target: &sqlgraph.EdgeTarget{
+				IDSpec: sqlgraph.NewFieldSpec(externaltrainingevent.FieldID, field.TypeUUID),
+			},
+		}
+		for _, k := range nodes {
+			edge.Target.Nodes = append(edge.Target.Nodes, k)
+		}
+		_spec.Edges.Add = append(_spec.Edges.Add, edge)
 	}
 	if _node, err = sqlgraph.UpdateNodes(ctx, _u.driver, _spec); err != nil {
 		if _, ok := err.(*sqlgraph.NotFoundError); ok {
@@ -345,9 +427,45 @@ func (_u *SupplierUpdateOne) SetNillableIsActive(v *bool) *SupplierUpdateOne {
 	return _u
 }
 
+// AddExternalTrainingEventIDs adds the "external_training_events" edge to the ExternalTrainingEvent entity by IDs.
+func (_u *SupplierUpdateOne) AddExternalTrainingEventIDs(ids ...uuid.UUID) *SupplierUpdateOne {
+	_u.mutation.AddExternalTrainingEventIDs(ids...)
+	return _u
+}
+
+// AddExternalTrainingEvents adds the "external_training_events" edges to the ExternalTrainingEvent entity.
+func (_u *SupplierUpdateOne) AddExternalTrainingEvents(v ...*ExternalTrainingEvent) *SupplierUpdateOne {
+	ids := make([]uuid.UUID, len(v))
+	for i := range v {
+		ids[i] = v[i].ID
+	}
+	return _u.AddExternalTrainingEventIDs(ids...)
+}
+
 // Mutation returns the SupplierMutation object of the builder.
 func (_u *SupplierUpdateOne) Mutation() *SupplierMutation {
 	return _u.mutation
+}
+
+// ClearExternalTrainingEvents clears all "external_training_events" edges to the ExternalTrainingEvent entity.
+func (_u *SupplierUpdateOne) ClearExternalTrainingEvents() *SupplierUpdateOne {
+	_u.mutation.ClearExternalTrainingEvents()
+	return _u
+}
+
+// RemoveExternalTrainingEventIDs removes the "external_training_events" edge to ExternalTrainingEvent entities by IDs.
+func (_u *SupplierUpdateOne) RemoveExternalTrainingEventIDs(ids ...uuid.UUID) *SupplierUpdateOne {
+	_u.mutation.RemoveExternalTrainingEventIDs(ids...)
+	return _u
+}
+
+// RemoveExternalTrainingEvents removes "external_training_events" edges to ExternalTrainingEvent entities.
+func (_u *SupplierUpdateOne) RemoveExternalTrainingEvents(v ...*ExternalTrainingEvent) *SupplierUpdateOne {
+	ids := make([]uuid.UUID, len(v))
+	for i := range v {
+		ids[i] = v[i].ID
+	}
+	return _u.RemoveExternalTrainingEventIDs(ids...)
 }
 
 // Where appends a list predicates to the SupplierUpdate builder.
@@ -465,6 +583,51 @@ func (_u *SupplierUpdateOne) sqlSave(ctx context.Context) (_node *Supplier, err 
 	}
 	if value, ok := _u.mutation.IsActive(); ok {
 		_spec.SetField(supplier.FieldIsActive, field.TypeBool, value)
+	}
+	if _u.mutation.ExternalTrainingEventsCleared() {
+		edge := &sqlgraph.EdgeSpec{
+			Rel:     sqlgraph.O2M,
+			Inverse: false,
+			Table:   supplier.ExternalTrainingEventsTable,
+			Columns: []string{supplier.ExternalTrainingEventsColumn},
+			Bidi:    false,
+			Target: &sqlgraph.EdgeTarget{
+				IDSpec: sqlgraph.NewFieldSpec(externaltrainingevent.FieldID, field.TypeUUID),
+			},
+		}
+		_spec.Edges.Clear = append(_spec.Edges.Clear, edge)
+	}
+	if nodes := _u.mutation.RemovedExternalTrainingEventsIDs(); len(nodes) > 0 && !_u.mutation.ExternalTrainingEventsCleared() {
+		edge := &sqlgraph.EdgeSpec{
+			Rel:     sqlgraph.O2M,
+			Inverse: false,
+			Table:   supplier.ExternalTrainingEventsTable,
+			Columns: []string{supplier.ExternalTrainingEventsColumn},
+			Bidi:    false,
+			Target: &sqlgraph.EdgeTarget{
+				IDSpec: sqlgraph.NewFieldSpec(externaltrainingevent.FieldID, field.TypeUUID),
+			},
+		}
+		for _, k := range nodes {
+			edge.Target.Nodes = append(edge.Target.Nodes, k)
+		}
+		_spec.Edges.Clear = append(_spec.Edges.Clear, edge)
+	}
+	if nodes := _u.mutation.ExternalTrainingEventsIDs(); len(nodes) > 0 {
+		edge := &sqlgraph.EdgeSpec{
+			Rel:     sqlgraph.O2M,
+			Inverse: false,
+			Table:   supplier.ExternalTrainingEventsTable,
+			Columns: []string{supplier.ExternalTrainingEventsColumn},
+			Bidi:    false,
+			Target: &sqlgraph.EdgeTarget{
+				IDSpec: sqlgraph.NewFieldSpec(externaltrainingevent.FieldID, field.TypeUUID),
+			},
+		}
+		for _, k := range nodes {
+			edge.Target.Nodes = append(edge.Target.Nodes, k)
+		}
+		_spec.Edges.Add = append(_spec.Edges.Add, edge)
 	}
 	_node = &Supplier{config: _u.config}
 	_spec.Assign = _node.assignValues

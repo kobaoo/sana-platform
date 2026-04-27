@@ -209,7 +209,7 @@ func buildDiff(old, new_ *ContractSupplier) map[string]interface{} {
 
 	diff := map[string]interface{}{}
 	checkString(diff, "contract_number", old.ContractNumber, new_.ContractNumber)
-	checkBool(diff, "vat_flag", old.VatFlag, new_.VatFlag)
+	checkInt(diff, "vat_flag", old.VatFlag, new_.VatFlag)
 	checkFloat(diff, "amount", old.Amount, new_.Amount)
 	checkFloatPtr(diff, "amount_currency", old.AmountCurrency, new_.AmountCurrency)
 	checkStringPtr(diff, "currency", old.Currency, new_.Currency)
@@ -231,6 +231,12 @@ func checkString(diff map[string]interface{}, field, old, new_ string) {
 }
 
 func checkBool(diff map[string]interface{}, field string, old, new_ bool) {
+	if old != new_ {
+		diff[field] = map[string]interface{}{"old": old, "new": new_}
+	}
+}
+
+func checkInt(diff map[string]interface{}, field string, old, new_ int) {
 	if old != new_ {
 		diff[field] = map[string]interface{}{"old": old, "new": new_}
 	}

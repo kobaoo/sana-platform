@@ -7,7 +7,6 @@ import (
 
 	"encore.app/db/ent/predicate"
 	"entgo.io/ent/dialect/sql"
-	"entgo.io/ent/dialect/sql/sqlgraph"
 	"github.com/google/uuid"
 )
 
@@ -124,6 +123,26 @@ func EmployeeIDIn(vs ...uuid.UUID) predicate.Certificate {
 // EmployeeIDNotIn applies the NotIn predicate on the "employee_id" field.
 func EmployeeIDNotIn(vs ...uuid.UUID) predicate.Certificate {
 	return predicate.Certificate(sql.FieldNotIn(FieldEmployeeID, vs...))
+}
+
+// EmployeeIDGT applies the GT predicate on the "employee_id" field.
+func EmployeeIDGT(v uuid.UUID) predicate.Certificate {
+	return predicate.Certificate(sql.FieldGT(FieldEmployeeID, v))
+}
+
+// EmployeeIDGTE applies the GTE predicate on the "employee_id" field.
+func EmployeeIDGTE(v uuid.UUID) predicate.Certificate {
+	return predicate.Certificate(sql.FieldGTE(FieldEmployeeID, v))
+}
+
+// EmployeeIDLT applies the LT predicate on the "employee_id" field.
+func EmployeeIDLT(v uuid.UUID) predicate.Certificate {
+	return predicate.Certificate(sql.FieldLT(FieldEmployeeID, v))
+}
+
+// EmployeeIDLTE applies the LTE predicate on the "employee_id" field.
+func EmployeeIDLTE(v uuid.UUID) predicate.Certificate {
+	return predicate.Certificate(sql.FieldLTE(FieldEmployeeID, v))
 }
 
 // TypeEQ applies the EQ predicate on the "type" field.
@@ -574,29 +593,6 @@ func UpdatedAtLT(v time.Time) predicate.Certificate {
 // UpdatedAtLTE applies the LTE predicate on the "updated_at" field.
 func UpdatedAtLTE(v time.Time) predicate.Certificate {
 	return predicate.Certificate(sql.FieldLTE(FieldUpdatedAt, v))
-}
-
-// HasEmployee applies the HasEdge predicate on the "employee" edge.
-func HasEmployee() predicate.Certificate {
-	return predicate.Certificate(func(s *sql.Selector) {
-		step := sqlgraph.NewStep(
-			sqlgraph.From(Table, FieldID),
-			sqlgraph.Edge(sqlgraph.M2O, false, EmployeeTable, EmployeeColumn),
-		)
-		sqlgraph.HasNeighbors(s, step)
-	})
-}
-
-// HasEmployeeWith applies the HasEdge predicate on the "employee" edge with a given conditions (other predicates).
-func HasEmployeeWith(preds ...predicate.Employee) predicate.Certificate {
-	return predicate.Certificate(func(s *sql.Selector) {
-		step := newEmployeeStep()
-		sqlgraph.HasNeighborsWith(s, step, func(s *sql.Selector) {
-			for _, p := range preds {
-				p(s)
-			}
-		})
-	})
 }
 
 // And groups predicates with the AND operator between them.

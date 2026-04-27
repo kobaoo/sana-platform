@@ -11,6 +11,7 @@ import (
 
 	"encore.dev/beta/auth"
 	"encore.dev/beta/errs"
+	"encore.dev/rlog"
 	"encore.dev/storage/sqldb"
 	"entgo.io/ent/dialect"
 	entsql "entgo.io/ent/dialect/sql"
@@ -84,6 +85,8 @@ func CreateEmployee(ctx context.Context, req *CreateEmployeeRequest) (*GetEmploy
 	if err := checkEmailUnique(ctx, req.Email, nil); err != nil {
 		return nil, err
 	}
+
+	rlog.Info("CreateEmployee auth data", "company_id", ad.CompanyID, "role", ad.Role, "email", ad.Email)
 
 	clientUID, err := uuid.Parse(ad.CompanyID)
 	if err != nil {

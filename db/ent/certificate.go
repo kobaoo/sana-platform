@@ -8,7 +8,6 @@ import (
 	"time"
 
 	"encore.app/db/ent/certificate"
-	"encore.app/db/ent/employee"
 	"entgo.io/ent"
 	"entgo.io/ent/dialect/sql"
 	"github.com/google/uuid"
@@ -42,31 +41,8 @@ type Certificate struct {
 	// CreatedAt holds the value of the "created_at" field.
 	CreatedAt time.Time `json:"created_at,omitempty"`
 	// UpdatedAt holds the value of the "updated_at" field.
-	UpdatedAt time.Time `json:"updated_at,omitempty"`
-	// Edges holds the relations/edges for other nodes in the graph.
-	// The values are being populated by the CertificateQuery when eager-loading is set.
-	Edges        CertificateEdges `json:"edges"`
+	UpdatedAt    time.Time `json:"updated_at,omitempty"`
 	selectValues sql.SelectValues
-}
-
-// CertificateEdges holds the relations/edges for other nodes in the graph.
-type CertificateEdges struct {
-	// Employee holds the value of the employee edge.
-	Employee *Employee `json:"employee,omitempty"`
-	// loadedTypes holds the information for reporting if a
-	// type was loaded (or requested) in eager-loading or not.
-	loadedTypes [1]bool
-}
-
-// EmployeeOrErr returns the Employee value or an error if the edge
-// was not loaded in eager-loading, or loaded but was not found.
-func (e CertificateEdges) EmployeeOrErr() (*Employee, error) {
-	if e.Employee != nil {
-		return e.Employee, nil
-	} else if e.loadedTypes[0] {
-		return nil, &NotFoundError{label: employee.Label}
-	}
-	return nil, &NotLoadedError{edge: "employee"}
 }
 
 // scanValues returns the types for scanning values from sql.Rows.

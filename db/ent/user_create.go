@@ -9,6 +9,7 @@ import (
 	"time"
 
 	"encore.app/db/ent/company"
+	"encore.app/db/ent/externaltrainingevent"
 	"encore.app/db/ent/request"
 	"encore.app/db/ent/user"
 	"entgo.io/ent/dialect/sql/sqlgraph"
@@ -165,6 +166,21 @@ func (_c *UserCreate) AddRequests(v ...*Request) *UserCreate {
 		ids[i] = v[i].ID
 	}
 	return _c.AddRequestIDs(ids...)
+}
+
+// AddResponsibleExternalTrainingEventIDs adds the "responsible_external_training_events" edge to the ExternalTrainingEvent entity by IDs.
+func (_c *UserCreate) AddResponsibleExternalTrainingEventIDs(ids ...uuid.UUID) *UserCreate {
+	_c.mutation.AddResponsibleExternalTrainingEventIDs(ids...)
+	return _c
+}
+
+// AddResponsibleExternalTrainingEvents adds the "responsible_external_training_events" edges to the ExternalTrainingEvent entity.
+func (_c *UserCreate) AddResponsibleExternalTrainingEvents(v ...*ExternalTrainingEvent) *UserCreate {
+	ids := make([]uuid.UUID, len(v))
+	for i := range v {
+		ids[i] = v[i].ID
+	}
+	return _c.AddResponsibleExternalTrainingEventIDs(ids...)
 }
 
 // Mutation returns the UserMutation object of the builder.
@@ -359,6 +375,22 @@ func (_c *UserCreate) createSpec() (*User, *sqlgraph.CreateSpec) {
 			Bidi:    false,
 			Target: &sqlgraph.EdgeTarget{
 				IDSpec: sqlgraph.NewFieldSpec(request.FieldID, field.TypeUUID),
+			},
+		}
+		for _, k := range nodes {
+			edge.Target.Nodes = append(edge.Target.Nodes, k)
+		}
+		_spec.Edges = append(_spec.Edges, edge)
+	}
+	if nodes := _c.mutation.ResponsibleExternalTrainingEventsIDs(); len(nodes) > 0 {
+		edge := &sqlgraph.EdgeSpec{
+			Rel:     sqlgraph.O2M,
+			Inverse: false,
+			Table:   user.ResponsibleExternalTrainingEventsTable,
+			Columns: []string{user.ResponsibleExternalTrainingEventsColumn},
+			Bidi:    false,
+			Target: &sqlgraph.EdgeTarget{
+				IDSpec: sqlgraph.NewFieldSpec(externaltrainingevent.FieldID, field.TypeUUID),
 			},
 		}
 		for _, k := range nodes {

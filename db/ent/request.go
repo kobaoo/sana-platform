@@ -21,16 +21,50 @@ type Request struct {
 	ID uuid.UUID `json:"id,omitempty"`
 	// InitiatorID holds the value of the "initiator_id" field.
 	InitiatorID uuid.UUID `json:"initiator_id,omitempty"`
+	// ParentRequestID holds the value of the "parent_request_id" field.
+	ParentRequestID *uuid.UUID `json:"parent_request_id,omitempty"`
 	// EntityID holds the value of the "entity_id" field.
 	EntityID uuid.UUID `json:"entity_id,omitempty"`
 	// EntityType holds the value of the "entity_type" field.
 	EntityType string `json:"entity_type,omitempty"`
+	// RequestType holds the value of the "request_type" field.
+	RequestType string `json:"request_type,omitempty"`
+	// Kind holds the value of the "kind" field.
+	Kind string `json:"kind,omitempty"`
+	// AssignedHrID holds the value of the "assigned_hr_id" field.
+	AssignedHrID *uuid.UUID `json:"assigned_hr_id,omitempty"`
+	// TargetDzoID holds the value of the "target_dzo_id" field.
+	TargetDzoID *uuid.UUID `json:"target_dzo_id,omitempty"`
+	// Title holds the value of the "title" field.
+	Title *string `json:"title,omitempty"`
+	// Category holds the value of the "category" field.
+	Category *string `json:"category,omitempty"`
+	// Format holds the value of the "format" field.
+	Format *string `json:"format,omitempty"`
+	// ResponsibleAdminID holds the value of the "responsible_admin_id" field.
+	ResponsibleAdminID *uuid.UUID `json:"responsible_admin_id,omitempty"`
+	// TrainingDate holds the value of the "training_date" field.
+	TrainingDate *time.Time `json:"training_date,omitempty"`
+	// DeadlineAt holds the value of the "deadline_at" field.
+	DeadlineAt *time.Time `json:"deadline_at,omitempty"`
+	// CostAmount holds the value of the "cost_amount" field.
+	CostAmount *float64 `json:"cost_amount,omitempty"`
+	// CostMode holds the value of the "cost_mode" field.
+	CostMode *string `json:"cost_mode,omitempty"`
 	// Step holds the value of the "step" field.
 	Step int `json:"step,omitempty"`
 	// CreatedAt holds the value of the "created_at" field.
 	CreatedAt time.Time `json:"created_at,omitempty"`
+	// UpdatedAt holds the value of the "updated_at" field.
+	UpdatedAt time.Time `json:"updated_at,omitempty"`
+	// CompletedAt holds the value of the "completed_at" field.
+	CompletedAt *time.Time `json:"completed_at,omitempty"`
 	// Status holds the value of the "status" field.
 	Status string `json:"status,omitempty"`
+	// ID новой заявки, которая заменила эту отклоненную
+	ReplacedByRequestID *uuid.UUID `json:"replaced_by_request_id,omitempty"`
+	// Заблокирована ли заявка после пересоздания
+	IsBlocked bool `json:"is_blocked,omitempty"`
 	// Edges holds the relations/edges for other nodes in the graph.
 	// The values are being populated by the RequestQuery when eager-loading is set.
 	Edges        RequestEdges `json:"edges"`
@@ -41,9 +75,13 @@ type Request struct {
 type RequestEdges struct {
 	// Initiator holds the value of the initiator edge.
 	Initiator *User `json:"initiator,omitempty"`
+	// Parent holds the value of the parent edge.
+	Parent *Request `json:"parent,omitempty"`
+	// Children holds the value of the children edge.
+	Children []*Request `json:"children,omitempty"`
 	// loadedTypes holds the information for reporting if a
 	// type was loaded (or requested) in eager-loading or not.
-	loadedTypes [1]bool
+	loadedTypes [3]bool
 }
 
 // InitiatorOrErr returns the Initiator value or an error if the edge
@@ -57,16 +95,42 @@ func (e RequestEdges) InitiatorOrErr() (*User, error) {
 	return nil, &NotLoadedError{edge: "initiator"}
 }
 
+// ParentOrErr returns the Parent value or an error if the edge
+// was not loaded in eager-loading, or loaded but was not found.
+func (e RequestEdges) ParentOrErr() (*Request, error) {
+	if e.Parent != nil {
+		return e.Parent, nil
+	} else if e.loadedTypes[1] {
+		return nil, &NotFoundError{label: request.Label}
+	}
+	return nil, &NotLoadedError{edge: "parent"}
+}
+
+// ChildrenOrErr returns the Children value or an error if the edge
+// was not loaded in eager-loading.
+func (e RequestEdges) ChildrenOrErr() ([]*Request, error) {
+	if e.loadedTypes[2] {
+		return e.Children, nil
+	}
+	return nil, &NotLoadedError{edge: "children"}
+}
+
 // scanValues returns the types for scanning values from sql.Rows.
 func (*Request) scanValues(columns []string) ([]any, error) {
 	values := make([]any, len(columns))
 	for i := range columns {
 		switch columns[i] {
+		case request.FieldParentRequestID, request.FieldAssignedHrID, request.FieldTargetDzoID, request.FieldResponsibleAdminID, request.FieldReplacedByRequestID:
+			values[i] = &sql.NullScanner{S: new(uuid.UUID)}
+		case request.FieldIsBlocked:
+			values[i] = new(sql.NullBool)
+		case request.FieldCostAmount:
+			values[i] = new(sql.NullFloat64)
 		case request.FieldStep:
 			values[i] = new(sql.NullInt64)
-		case request.FieldEntityType, request.FieldStatus:
+		case request.FieldEntityType, request.FieldRequestType, request.FieldKind, request.FieldTitle, request.FieldCategory, request.FieldFormat, request.FieldCostMode, request.FieldStatus:
 			values[i] = new(sql.NullString)
-		case request.FieldCreatedAt:
+		case request.FieldTrainingDate, request.FieldDeadlineAt, request.FieldCreatedAt, request.FieldUpdatedAt, request.FieldCompletedAt:
 			values[i] = new(sql.NullTime)
 		case request.FieldID, request.FieldInitiatorID, request.FieldEntityID:
 			values[i] = new(uuid.UUID)
@@ -97,6 +161,13 @@ func (_m *Request) assignValues(columns []string, values []any) error {
 			} else if value != nil {
 				_m.InitiatorID = *value
 			}
+		case request.FieldParentRequestID:
+			if value, ok := values[i].(*sql.NullScanner); !ok {
+				return fmt.Errorf("unexpected type %T for field parent_request_id", values[i])
+			} else if value.Valid {
+				_m.ParentRequestID = new(uuid.UUID)
+				*_m.ParentRequestID = *value.S.(*uuid.UUID)
+			}
 		case request.FieldEntityID:
 			if value, ok := values[i].(*uuid.UUID); !ok {
 				return fmt.Errorf("unexpected type %T for field entity_id", values[i])
@@ -108,6 +179,88 @@ func (_m *Request) assignValues(columns []string, values []any) error {
 				return fmt.Errorf("unexpected type %T for field entity_type", values[i])
 			} else if value.Valid {
 				_m.EntityType = value.String
+			}
+		case request.FieldRequestType:
+			if value, ok := values[i].(*sql.NullString); !ok {
+				return fmt.Errorf("unexpected type %T for field request_type", values[i])
+			} else if value.Valid {
+				_m.RequestType = value.String
+			}
+		case request.FieldKind:
+			if value, ok := values[i].(*sql.NullString); !ok {
+				return fmt.Errorf("unexpected type %T for field kind", values[i])
+			} else if value.Valid {
+				_m.Kind = value.String
+			}
+		case request.FieldAssignedHrID:
+			if value, ok := values[i].(*sql.NullScanner); !ok {
+				return fmt.Errorf("unexpected type %T for field assigned_hr_id", values[i])
+			} else if value.Valid {
+				_m.AssignedHrID = new(uuid.UUID)
+				*_m.AssignedHrID = *value.S.(*uuid.UUID)
+			}
+		case request.FieldTargetDzoID:
+			if value, ok := values[i].(*sql.NullScanner); !ok {
+				return fmt.Errorf("unexpected type %T for field target_dzo_id", values[i])
+			} else if value.Valid {
+				_m.TargetDzoID = new(uuid.UUID)
+				*_m.TargetDzoID = *value.S.(*uuid.UUID)
+			}
+		case request.FieldTitle:
+			if value, ok := values[i].(*sql.NullString); !ok {
+				return fmt.Errorf("unexpected type %T for field title", values[i])
+			} else if value.Valid {
+				_m.Title = new(string)
+				*_m.Title = value.String
+			}
+		case request.FieldCategory:
+			if value, ok := values[i].(*sql.NullString); !ok {
+				return fmt.Errorf("unexpected type %T for field category", values[i])
+			} else if value.Valid {
+				_m.Category = new(string)
+				*_m.Category = value.String
+			}
+		case request.FieldFormat:
+			if value, ok := values[i].(*sql.NullString); !ok {
+				return fmt.Errorf("unexpected type %T for field format", values[i])
+			} else if value.Valid {
+				_m.Format = new(string)
+				*_m.Format = value.String
+			}
+		case request.FieldResponsibleAdminID:
+			if value, ok := values[i].(*sql.NullScanner); !ok {
+				return fmt.Errorf("unexpected type %T for field responsible_admin_id", values[i])
+			} else if value.Valid {
+				_m.ResponsibleAdminID = new(uuid.UUID)
+				*_m.ResponsibleAdminID = *value.S.(*uuid.UUID)
+			}
+		case request.FieldTrainingDate:
+			if value, ok := values[i].(*sql.NullTime); !ok {
+				return fmt.Errorf("unexpected type %T for field training_date", values[i])
+			} else if value.Valid {
+				_m.TrainingDate = new(time.Time)
+				*_m.TrainingDate = value.Time
+			}
+		case request.FieldDeadlineAt:
+			if value, ok := values[i].(*sql.NullTime); !ok {
+				return fmt.Errorf("unexpected type %T for field deadline_at", values[i])
+			} else if value.Valid {
+				_m.DeadlineAt = new(time.Time)
+				*_m.DeadlineAt = value.Time
+			}
+		case request.FieldCostAmount:
+			if value, ok := values[i].(*sql.NullFloat64); !ok {
+				return fmt.Errorf("unexpected type %T for field cost_amount", values[i])
+			} else if value.Valid {
+				_m.CostAmount = new(float64)
+				*_m.CostAmount = value.Float64
+			}
+		case request.FieldCostMode:
+			if value, ok := values[i].(*sql.NullString); !ok {
+				return fmt.Errorf("unexpected type %T for field cost_mode", values[i])
+			} else if value.Valid {
+				_m.CostMode = new(string)
+				*_m.CostMode = value.String
 			}
 		case request.FieldStep:
 			if value, ok := values[i].(*sql.NullInt64); !ok {
@@ -121,11 +274,37 @@ func (_m *Request) assignValues(columns []string, values []any) error {
 			} else if value.Valid {
 				_m.CreatedAt = value.Time
 			}
+		case request.FieldUpdatedAt:
+			if value, ok := values[i].(*sql.NullTime); !ok {
+				return fmt.Errorf("unexpected type %T for field updated_at", values[i])
+			} else if value.Valid {
+				_m.UpdatedAt = value.Time
+			}
+		case request.FieldCompletedAt:
+			if value, ok := values[i].(*sql.NullTime); !ok {
+				return fmt.Errorf("unexpected type %T for field completed_at", values[i])
+			} else if value.Valid {
+				_m.CompletedAt = new(time.Time)
+				*_m.CompletedAt = value.Time
+			}
 		case request.FieldStatus:
 			if value, ok := values[i].(*sql.NullString); !ok {
 				return fmt.Errorf("unexpected type %T for field status", values[i])
 			} else if value.Valid {
 				_m.Status = value.String
+			}
+		case request.FieldReplacedByRequestID:
+			if value, ok := values[i].(*sql.NullScanner); !ok {
+				return fmt.Errorf("unexpected type %T for field replaced_by_request_id", values[i])
+			} else if value.Valid {
+				_m.ReplacedByRequestID = new(uuid.UUID)
+				*_m.ReplacedByRequestID = *value.S.(*uuid.UUID)
+			}
+		case request.FieldIsBlocked:
+			if value, ok := values[i].(*sql.NullBool); !ok {
+				return fmt.Errorf("unexpected type %T for field is_blocked", values[i])
+			} else if value.Valid {
+				_m.IsBlocked = value.Bool
 			}
 		default:
 			_m.selectValues.Set(columns[i], values[i])
@@ -143,6 +322,16 @@ func (_m *Request) Value(name string) (ent.Value, error) {
 // QueryInitiator queries the "initiator" edge of the Request entity.
 func (_m *Request) QueryInitiator() *UserQuery {
 	return NewRequestClient(_m.config).QueryInitiator(_m)
+}
+
+// QueryParent queries the "parent" edge of the Request entity.
+func (_m *Request) QueryParent() *RequestQuery {
+	return NewRequestClient(_m.config).QueryParent(_m)
+}
+
+// QueryChildren queries the "children" edge of the Request entity.
+func (_m *Request) QueryChildren() *RequestQuery {
+	return NewRequestClient(_m.config).QueryChildren(_m)
 }
 
 // Update returns a builder for updating this Request.
@@ -171,11 +360,72 @@ func (_m *Request) String() string {
 	builder.WriteString("initiator_id=")
 	builder.WriteString(fmt.Sprintf("%v", _m.InitiatorID))
 	builder.WriteString(", ")
+	if v := _m.ParentRequestID; v != nil {
+		builder.WriteString("parent_request_id=")
+		builder.WriteString(fmt.Sprintf("%v", *v))
+	}
+	builder.WriteString(", ")
 	builder.WriteString("entity_id=")
 	builder.WriteString(fmt.Sprintf("%v", _m.EntityID))
 	builder.WriteString(", ")
 	builder.WriteString("entity_type=")
 	builder.WriteString(_m.EntityType)
+	builder.WriteString(", ")
+	builder.WriteString("request_type=")
+	builder.WriteString(_m.RequestType)
+	builder.WriteString(", ")
+	builder.WriteString("kind=")
+	builder.WriteString(_m.Kind)
+	builder.WriteString(", ")
+	if v := _m.AssignedHrID; v != nil {
+		builder.WriteString("assigned_hr_id=")
+		builder.WriteString(fmt.Sprintf("%v", *v))
+	}
+	builder.WriteString(", ")
+	if v := _m.TargetDzoID; v != nil {
+		builder.WriteString("target_dzo_id=")
+		builder.WriteString(fmt.Sprintf("%v", *v))
+	}
+	builder.WriteString(", ")
+	if v := _m.Title; v != nil {
+		builder.WriteString("title=")
+		builder.WriteString(*v)
+	}
+	builder.WriteString(", ")
+	if v := _m.Category; v != nil {
+		builder.WriteString("category=")
+		builder.WriteString(*v)
+	}
+	builder.WriteString(", ")
+	if v := _m.Format; v != nil {
+		builder.WriteString("format=")
+		builder.WriteString(*v)
+	}
+	builder.WriteString(", ")
+	if v := _m.ResponsibleAdminID; v != nil {
+		builder.WriteString("responsible_admin_id=")
+		builder.WriteString(fmt.Sprintf("%v", *v))
+	}
+	builder.WriteString(", ")
+	if v := _m.TrainingDate; v != nil {
+		builder.WriteString("training_date=")
+		builder.WriteString(v.Format(time.ANSIC))
+	}
+	builder.WriteString(", ")
+	if v := _m.DeadlineAt; v != nil {
+		builder.WriteString("deadline_at=")
+		builder.WriteString(v.Format(time.ANSIC))
+	}
+	builder.WriteString(", ")
+	if v := _m.CostAmount; v != nil {
+		builder.WriteString("cost_amount=")
+		builder.WriteString(fmt.Sprintf("%v", *v))
+	}
+	builder.WriteString(", ")
+	if v := _m.CostMode; v != nil {
+		builder.WriteString("cost_mode=")
+		builder.WriteString(*v)
+	}
 	builder.WriteString(", ")
 	builder.WriteString("step=")
 	builder.WriteString(fmt.Sprintf("%v", _m.Step))
@@ -183,8 +433,24 @@ func (_m *Request) String() string {
 	builder.WriteString("created_at=")
 	builder.WriteString(_m.CreatedAt.Format(time.ANSIC))
 	builder.WriteString(", ")
+	builder.WriteString("updated_at=")
+	builder.WriteString(_m.UpdatedAt.Format(time.ANSIC))
+	builder.WriteString(", ")
+	if v := _m.CompletedAt; v != nil {
+		builder.WriteString("completed_at=")
+		builder.WriteString(v.Format(time.ANSIC))
+	}
+	builder.WriteString(", ")
 	builder.WriteString("status=")
 	builder.WriteString(_m.Status)
+	builder.WriteString(", ")
+	if v := _m.ReplacedByRequestID; v != nil {
+		builder.WriteString("replaced_by_request_id=")
+		builder.WriteString(fmt.Sprintf("%v", *v))
+	}
+	builder.WriteString(", ")
+	builder.WriteString("is_blocked=")
+	builder.WriteString(fmt.Sprintf("%v", _m.IsBlocked))
 	builder.WriteByte(')')
 	return builder.String()
 }
