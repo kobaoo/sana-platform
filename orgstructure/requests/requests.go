@@ -481,6 +481,46 @@ func GetRequestBudgetHistory(ctx context.Context, id encoreuuid.UUID) (*GetReque
 	return &GetRequestBudgetHistoryResponse{Items: items}, nil
 }
 
+// ApproveAdminRequest approves a main HR request by admin.
+//
+//encore:api auth method=POST path=/requests/admin/:id/approve
+func ApproveAdminRequest(ctx context.Context, id encoreuuid.UUID) (*GetRequestResponse, error) {
+	actor, err := resolveCurrentActor(ctx)
+	if err != nil {
+		return nil, err
+	}
+	if !canManageAdminRequests(actor.Role) {
+		return nil, errs.B().Code(errs.PermissionDenied).Msg("insufficient permissions").Err()
+	}
+
+	detail, err := approveAdminRequest(ctx, actor, uuid.UUID(id))
+	if err != nil {
+		return nil, err
+	}
+
+	return &GetRequestResponse{Detail: *detail}, nil
+}
+
+// RejectAdminRequest rejects a main HR request by admin.
+//
+//encore:api auth method=POST path=/requests/admin/:id/reject
+func RejectAdminRequest(ctx context.Context, id encoreuuid.UUID) (*GetRequestResponse, error) {
+	actor, err := resolveCurrentActor(ctx)
+	if err != nil {
+		return nil, err
+	}
+	if !canManageAdminRequests(actor.Role) {
+		return nil, errs.B().Code(errs.PermissionDenied).Msg("insufficient permissions").Err()
+	}
+
+	detail, err := rejectAdminRequest(ctx, actor, uuid.UUID(id))
+	if err != nil {
+		return nil, err
+	}
+
+	return &GetRequestResponse{Detail: *detail}, nil
+}
+
 // ════ INTERNAL ════
 
 type rowScanner interface {
@@ -764,7 +804,7 @@ func createHRRequest(ctx context.Context, actor *actor, req *CreateHRRequestRequ
 		)
 		VALUES ($1, $2, $3, 'HR_REQUEST', 'MAIN',
 			$4, $5, $6,
-			0, 'PENDING', NOW(), NOW())
+			0, 'IN_PROGRESS', NOW(), NOW())
 	`,
 		requestID,
 		actor.ID,
@@ -2574,4 +2614,62 @@ func checkAvailableBudgetTx(ctx context.Context, tx *sqldb.Tx, requestID uuid.UU
 	}
 
 	return nil
+}
+
+// approveAdminRequest approves a main HR request and changes its status to APPROVED.
+func approveAdminRequest(ctx context.Context, actor *actor, requestID uuid.UUID) (*RequestDetail, error) {
+	mainRequest, err := queryRequestSummaryByID(ctx, requestID)
+	if err != nil {
+		return nil, err
+	}
+
+	// Verify it's a main request from HR
+	if mainRequest.RequestType != RequestTypeMain {
+		return nil, errs.B().Code(errs.InvalidArgument).Msg("only main requests can be approved").Err()
+	}
+
+	// Verify it's in IN_PROGRESS status
+	if mainRequest.Status != RequestStatusInProgress {
+		return nil, errs.B().Code(errs.InvalidArgument).Msg("only IN_PROGRESS requests can be approved").Err()
+	}
+
+	// Update request status to APPROVED
+	if _, err := db.Exec(ctx, `
+		UPDATE requests
+		SET status = 'APPROVED', updated_at = NOW()
+		WHERE id = $1
+	`, requestID); err != nil {
+		return nil, errs.B().Code(errs.Internal).Msg("failed to approve request").Cause(err).Err()
+	}
+
+	return buildRequestDetail(ctx, requestID)
+}
+
+// rejectAdminRequest rejects a main HR request and changes its status to REJECTED.
+func rejectAdminRequest(ctx context.Context, actor *actor, requestID uuid.UUID) (*RequestDetail, error) {
+	mainRequest, err := queryRequestSummaryByID(ctx, requestID)
+	if err != nil {
+		return nil, err
+	}
+
+	// Verify it's a main request from HR
+	if mainRequest.RequestType != RequestTypeMain {
+		return nil, errs.B().Code(errs.InvalidArgument).Msg("only main requests can be rejected").Err()
+	}
+
+	// Verify it's in IN_PROGRESS status
+	if mainRequest.Status != RequestStatusInProgress {
+		return nil, errs.B().Code(errs.InvalidArgument).Msg("only IN_PROGRESS requests can be rejected").Err()
+	}
+
+	// Update request status to REJECTED
+	if _, err := db.Exec(ctx, `
+		UPDATE requests
+		SET status = 'REJECTED', updated_at = NOW()
+		WHERE id = $1
+	`, requestID); err != nil {
+		return nil, errs.B().Code(errs.Internal).Msg("failed to reject request").Cause(err).Err()
+	}
+
+	return buildRequestDetail(ctx, requestID)
 }
