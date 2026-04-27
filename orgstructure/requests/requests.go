@@ -282,7 +282,16 @@ func GetHRRequest(ctx context.Context, id encoreuuid.UUID) (*GetRequestResponse,
 	if err != nil {
 		return nil, err
 	}
-	if requestSummary.RequestType != RequestTypeSubrequest || requestSummary.AssignedHRID == nil || *requestSummary.AssignedHRID != actor.ID.String() {
+
+	isAuthorizedHRRequest := false
+
+	if requestSummary.RequestType == RequestTypeSubrequest {
+		isAuthorizedHRRequest = requestSummary.AssignedHRID != nil && *requestSummary.AssignedHRID == actor.ID.String()
+	} else if requestSummary.RequestType == RequestTypeMain {
+		isAuthorizedHRRequest = requestSummary.InitiatorID == actor.ID.String() && requestSummary.EntityType == "HR_REQUEST"
+	}
+
+	if !isAuthorizedHRRequest {
 		return nil, errs.B().Code(errs.NotFound).Msg("request not found").Err()
 	}
 
