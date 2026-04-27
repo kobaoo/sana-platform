@@ -626,9 +626,6 @@ func autoProvisionActor(ctx context.Context, ad *authhandler.AuthData) (*actor, 
 
 	newUser, err := builder.Save(ctx)
 	if err != nil {
-		if dbent.IsConstraintError(err) {
-			return nil, errs.B().Code(errs.AlreadyExists).Msg("user with this keycloak_user_id already exists").Err()
-		}
 		return nil, errs.B().Code(errs.Internal).Msg("failed to create user").Cause(err).Err()
 	}
 

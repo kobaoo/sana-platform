@@ -325,11 +325,6 @@ var (
 				Columns: []*schema.Column{RequestsColumns[3]},
 			},
 			{
-				Name:    "request_kind",
-				Unique:  false,
-				Columns: []*schema.Column{RequestsColumns[4]},
-			},
-			{
 				Name:    "request_assigned_hr_id",
 				Unique:  false,
 				Columns: []*schema.Column{RequestsColumns[5]},
