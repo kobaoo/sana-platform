@@ -157,3 +157,39 @@ type ImportResponse struct {
 	Failed   int      `json:"failed"`
 	Errors   []string `json:"errors,omitempty"`
 }
+
+// ════ IMPORT (UPLOAD + PREVIEW) ════
+
+// UploadContractsRequest — загрузка файла для предпросмотра
+type UploadContractsRequest struct {
+	FileName string `json:"file_name"`
+	FileData []byte `json:"file_data"`
+}
+
+// UploadContractRow — строка предпросмотра
+type UploadContractRow struct {
+	RowNumber      int      `json:"row_number"`
+	SupplierID     string   `json:"supplier_id"`
+	ContractNumber string   `json:"contract_number"`
+	Amount         *float64 `json:"amount,omitempty"`
+	IsValid        bool     `json:"is_valid"`
+	Include        bool     `json:"include"`
+	Errors         []string `json:"errors"`
+}
+
+// UploadContractsResponse — ответ предпросмотра
+type UploadContractsResponse struct {
+	IsValid     bool                `json:"is_valid"`
+	TotalRows   int                 `json:"total_rows"`
+	ValidRows   int                 `json:"valid_rows"`
+	InvalidRows int                 `json:"invalid_rows"`
+	Errors      []string            `json:"errors"`
+	Rows        []UploadContractRow `json:"rows"`
+}
+
+// ImportContractsRequest — импорт с выбором строк
+type ImportContractsRequest struct {
+	FileName     string `json:"file_name"`
+	FileData     []byte `json:"file_data"`
+	SelectedRows []int  `json:"selected_rows,omitempty"`
+}
