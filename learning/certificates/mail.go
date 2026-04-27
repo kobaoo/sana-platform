@@ -11,16 +11,6 @@ import (
 	"encore.app/learning/certificates/certutil"
 )
 
-// Encore loads these from .secrets.local.cue (local) or encore secret set (prod).
-var secrets struct {
-	MailServer   string
-	MailPort     string
-	MailUsername string
-	MailPassword string
-	MailFrom     string
-	AppURL       string
-}
-
 // ────────────────────────────────────────────────────
 // Data types (mirrors send_html_email.go)
 // ────────────────────────────────────────────────────
