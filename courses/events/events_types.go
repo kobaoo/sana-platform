@@ -154,7 +154,7 @@ type ListAttendanceResponse struct {
 
 // ListMyRegistrationsParams are the query params for GET /my-event-registrations.
 // Filter accepts upcoming|past|all and defaults to upcoming.
-// Limit defaults to 6 (sidebar page size); offset defaults to 0.
+// Limit defaults to 4 (sidebar page size); offset defaults to 0.
 type ListMyRegistrationsParams struct {
 	Filter string `query:"filter"`
 	Limit  int    `query:"limit"`

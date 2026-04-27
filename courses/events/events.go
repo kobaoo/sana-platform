@@ -499,7 +499,7 @@ func ListMyRegistrations(ctx context.Context, params *ListMyRegistrationsParams)
 
 func normalizeMyRegistrationsPagination(limit, offset int) (int, int) {
 	const (
-		defaultLimit = 6
+		defaultLimit = 4
 		maxLimit     = 50
 	)
 	if limit <= 0 {

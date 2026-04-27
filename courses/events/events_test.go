@@ -1382,11 +1382,11 @@ func TestListMyRegistrations_PermissionDenied(t *testing.T) {
 	}
 }
 
-func TestListMyRegistrations_PaginationDefaultsToSix(t *testing.T) {
+func TestListMyRegistrations_PaginationDefaultsToFour(t *testing.T) {
 	f := setup(t)
 	empID, empCtx := makeEmployeeUser(t, f.ClientID, f.DzoID)
 
-	for i := range 8 {
+	for i := range 6 {
 		ev := makeEventWithDate(t, f, time.Now().Add(time.Duration(24+i)*time.Hour))
 		if _, err := Client.EventParticipant.
 			Create().
@@ -1401,14 +1401,14 @@ func TestListMyRegistrations_PaginationDefaultsToSix(t *testing.T) {
 	if err != nil {
 		t.Fatalf("ListMyRegistrations: %v", err)
 	}
-	if resp.Total != 8 {
-		t.Errorf("expected total=8, got %d", resp.Total)
+	if resp.Total != 6 {
+		t.Errorf("expected total=6, got %d", resp.Total)
 	}
-	if len(resp.Registrations) != 6 {
-		t.Errorf("expected page size=6, got %d", len(resp.Registrations))
+	if len(resp.Registrations) != 4 {
+		t.Errorf("expected page size=4, got %d", len(resp.Registrations))
 	}
-	if resp.Limit != 6 || resp.Offset != 0 {
-		t.Errorf("expected limit=6 offset=0, got limit=%d offset=%d", resp.Limit, resp.Offset)
+	if resp.Limit != 4 || resp.Offset != 0 {
+		t.Errorf("expected limit=4 offset=0, got limit=%d offset=%d", resp.Limit, resp.Offset)
 	}
 	if !resp.HasMore {
 		t.Errorf("expected has_more=true")
@@ -1419,7 +1419,7 @@ func TestListMyRegistrations_PaginationOffsetSecondPage(t *testing.T) {
 	f := setup(t)
 	empID, empCtx := makeEmployeeUser(t, f.ClientID, f.DzoID)
 
-	for i := range 8 {
+	for i := range 6 {
 		ev := makeEventWithDate(t, f, time.Now().Add(time.Duration(24+i)*time.Hour))
 		if _, err := Client.EventParticipant.
 			Create().
@@ -1430,12 +1430,12 @@ func TestListMyRegistrations_PaginationOffsetSecondPage(t *testing.T) {
 		}
 	}
 
-	resp, err := ListMyRegistrations(empCtx, &ListMyRegistrationsParams{Offset: 6})
+	resp, err := ListMyRegistrations(empCtx, &ListMyRegistrationsParams{Offset: 4})
 	if err != nil {
 		t.Fatalf("ListMyRegistrations: %v", err)
 	}
-	if resp.Total != 8 {
-		t.Errorf("expected total=8, got %d", resp.Total)
+	if resp.Total != 6 {
+		t.Errorf("expected total=6, got %d", resp.Total)
 	}
 	if len(resp.Registrations) != 2 {
 		t.Errorf("expected 2 items on second page, got %d", len(resp.Registrations))
