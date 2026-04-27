@@ -5,6 +5,7 @@ package ent
 import (
 	"time"
 
+	"encore.app/db/ent/category"
 	"encore.app/db/ent/certificate"
 	"encore.app/db/ent/company"
 	"encore.app/db/ent/contractsupplier"
@@ -13,9 +14,13 @@ import (
 	"encore.app/db/ent/employee"
 	"encore.app/db/ent/event"
 	"encore.app/db/ent/eventparticipant"
+	"encore.app/db/ent/externaltrainingevent"
 	"encore.app/db/ent/notification"
 	"encore.app/db/ent/organization"
 	"encore.app/db/ent/request"
+	"encore.app/db/ent/requestdzocontract"
+	"encore.app/db/ent/requestparticipant"
+	"encore.app/db/ent/requesttargetdzo"
 	"encore.app/db/ent/schema"
 	"encore.app/db/ent/supplier"
 	"encore.app/db/ent/trainingevent"
@@ -28,6 +33,16 @@ import (
 // (default values, validators, hooks and policies) and stitches it
 // to their package variables.
 func init() {
+	categoryFields := schema.Category{}.Fields()
+	_ = categoryFields
+	// categoryDescName is the schema descriptor for name field.
+	categoryDescName := categoryFields[1].Descriptor()
+	// category.NameValidator is a validator for the "name" field. It is called by the builders before save.
+	category.NameValidator = categoryDescName.Validators[0].(func(string) error)
+	// categoryDescID is the schema descriptor for id field.
+	categoryDescID := categoryFields[0].Descriptor()
+	// category.DefaultID holds the default value on creation for the id field.
+	category.DefaultID = categoryDescID.Default.(func() uuid.UUID)
 	certificateFields := schema.Certificate{}.Fields()
 	_ = certificateFields
 	// certificateDescTitle is the schema descriptor for title field.
@@ -129,7 +144,23 @@ func init() {
 	// contractsupplierDescVatFlag is the schema descriptor for vat_flag field.
 	contractsupplierDescVatFlag := contractsupplierFields[3].Descriptor()
 	// contractsupplier.DefaultVatFlag holds the default value on creation for the vat_flag field.
-	contractsupplier.DefaultVatFlag = contractsupplierDescVatFlag.Default.(bool)
+	contractsupplier.DefaultVatFlag = contractsupplierDescVatFlag.Default.(int)
+	// contractsupplier.VatFlagValidator is a validator for the "vat_flag" field. It is called by the builders before save.
+	contractsupplier.VatFlagValidator = func() func(int) error {
+		validators := contractsupplierDescVatFlag.Validators
+		fns := [...]func(int) error{
+			validators[0].(func(int) error),
+			validators[1].(func(int) error),
+		}
+		return func(vat_flag int) error {
+			for _, fn := range fns {
+				if err := fn(vat_flag); err != nil {
+					return err
+				}
+			}
+			return nil
+		}
+	}()
 	// contractsupplierDescCurrency is the schema descriptor for currency field.
 	contractsupplierDescCurrency := contractsupplierFields[8].Descriptor()
 	// contractsupplier.CurrencyValidator is a validator for the "currency" field. It is called by the builders before save.
@@ -356,6 +387,28 @@ func init() {
 	eventparticipantDescID := eventparticipantFields[0].Descriptor()
 	// eventparticipant.DefaultID holds the default value on creation for the id field.
 	eventparticipant.DefaultID = eventparticipantDescID.Default.(func() uuid.UUID)
+	externaltrainingeventFields := schema.ExternalTrainingEvent{}.Fields()
+	_ = externaltrainingeventFields
+	// externaltrainingeventDescName is the schema descriptor for name field.
+	externaltrainingeventDescName := externaltrainingeventFields[1].Descriptor()
+	// externaltrainingevent.NameValidator is a validator for the "name" field. It is called by the builders before save.
+	externaltrainingevent.NameValidator = externaltrainingeventDescName.Validators[0].(func(string) error)
+	// externaltrainingeventDescIsActive is the schema descriptor for is_active field.
+	externaltrainingeventDescIsActive := externaltrainingeventFields[6].Descriptor()
+	// externaltrainingevent.DefaultIsActive holds the default value on creation for the is_active field.
+	externaltrainingevent.DefaultIsActive = externaltrainingeventDescIsActive.Default.(bool)
+	// externaltrainingeventDescCreatedAt is the schema descriptor for created_at field.
+	externaltrainingeventDescCreatedAt := externaltrainingeventFields[7].Descriptor()
+	// externaltrainingevent.DefaultCreatedAt holds the default value on creation for the created_at field.
+	externaltrainingevent.DefaultCreatedAt = externaltrainingeventDescCreatedAt.Default.(func() time.Time)
+	// externaltrainingeventDescIsDeleted is the schema descriptor for is_deleted field.
+	externaltrainingeventDescIsDeleted := externaltrainingeventFields[9].Descriptor()
+	// externaltrainingevent.DefaultIsDeleted holds the default value on creation for the is_deleted field.
+	externaltrainingevent.DefaultIsDeleted = externaltrainingeventDescIsDeleted.Default.(bool)
+	// externaltrainingeventDescID is the schema descriptor for id field.
+	externaltrainingeventDescID := externaltrainingeventFields[0].Descriptor()
+	// externaltrainingevent.DefaultID holds the default value on creation for the id field.
+	externaltrainingevent.DefaultID = externaltrainingeventDescID.Default.(func() uuid.UUID)
 	notificationFields := schema.Notification{}.Fields()
 	_ = notificationFields
 	// notificationDescCreatedAt is the schema descriptor for created_at field.
@@ -445,7 +498,9 @@ func init() {
 	requestFields := schema.Request{}.Fields()
 	_ = requestFields
 	// requestDescEntityType is the schema descriptor for entity_type field.
-	requestDescEntityType := requestFields[3].Descriptor()
+	requestDescEntityType := requestFields[4].Descriptor()
+	// request.DefaultEntityType holds the default value on creation for the entity_type field.
+	request.DefaultEntityType = requestDescEntityType.Default.(string)
 	// request.EntityTypeValidator is a validator for the "entity_type" field. It is called by the builders before save.
 	request.EntityTypeValidator = func() func(string) error {
 		validators := requestDescEntityType.Validators
@@ -462,16 +517,78 @@ func init() {
 			return nil
 		}
 	}()
+	// requestDescRequestType is the schema descriptor for request_type field.
+	requestDescRequestType := requestFields[5].Descriptor()
+	// request.DefaultRequestType holds the default value on creation for the request_type field.
+	request.DefaultRequestType = requestDescRequestType.Default.(string)
+	// request.RequestTypeValidator is a validator for the "request_type" field. It is called by the builders before save.
+	request.RequestTypeValidator = func() func(string) error {
+		validators := requestDescRequestType.Validators
+		fns := [...]func(string) error{
+			validators[0].(func(string) error),
+			validators[1].(func(string) error),
+		}
+		return func(request_type string) error {
+			for _, fn := range fns {
+				if err := fn(request_type); err != nil {
+					return err
+				}
+			}
+			return nil
+		}
+	}()
+	// requestDescKind is the schema descriptor for kind field.
+	requestDescKind := requestFields[6].Descriptor()
+	// request.DefaultKind holds the default value on creation for the kind field.
+	request.DefaultKind = requestDescKind.Default.(string)
+	// request.KindValidator is a validator for the "kind" field. It is called by the builders before save.
+	request.KindValidator = func() func(string) error {
+		validators := requestDescKind.Validators
+		fns := [...]func(string) error{
+			validators[0].(func(string) error),
+			validators[1].(func(string) error),
+		}
+		return func(kind string) error {
+			for _, fn := range fns {
+				if err := fn(kind); err != nil {
+					return err
+				}
+			}
+			return nil
+		}
+	}()
+	// requestDescTitle is the schema descriptor for title field.
+	requestDescTitle := requestFields[9].Descriptor()
+	// request.TitleValidator is a validator for the "title" field. It is called by the builders before save.
+	request.TitleValidator = requestDescTitle.Validators[0].(func(string) error)
+	// requestDescCategory is the schema descriptor for category field.
+	requestDescCategory := requestFields[10].Descriptor()
+	// request.CategoryValidator is a validator for the "category" field. It is called by the builders before save.
+	request.CategoryValidator = requestDescCategory.Validators[0].(func(string) error)
+	// requestDescFormat is the schema descriptor for format field.
+	requestDescFormat := requestFields[11].Descriptor()
+	// request.FormatValidator is a validator for the "format" field. It is called by the builders before save.
+	request.FormatValidator = requestDescFormat.Validators[0].(func(string) error)
+	// requestDescCostMode is the schema descriptor for cost_mode field.
+	requestDescCostMode := requestFields[16].Descriptor()
+	// request.CostModeValidator is a validator for the "cost_mode" field. It is called by the builders before save.
+	request.CostModeValidator = requestDescCostMode.Validators[0].(func(string) error)
 	// requestDescStep is the schema descriptor for step field.
-	requestDescStep := requestFields[4].Descriptor()
+	requestDescStep := requestFields[17].Descriptor()
 	// request.DefaultStep holds the default value on creation for the step field.
 	request.DefaultStep = requestDescStep.Default.(int)
 	// requestDescCreatedAt is the schema descriptor for created_at field.
-	requestDescCreatedAt := requestFields[5].Descriptor()
+	requestDescCreatedAt := requestFields[18].Descriptor()
 	// request.DefaultCreatedAt holds the default value on creation for the created_at field.
 	request.DefaultCreatedAt = requestDescCreatedAt.Default.(func() time.Time)
+	// requestDescUpdatedAt is the schema descriptor for updated_at field.
+	requestDescUpdatedAt := requestFields[19].Descriptor()
+	// request.DefaultUpdatedAt holds the default value on creation for the updated_at field.
+	request.DefaultUpdatedAt = requestDescUpdatedAt.Default.(func() time.Time)
+	// request.UpdateDefaultUpdatedAt holds the default value on update for the updated_at field.
+	request.UpdateDefaultUpdatedAt = requestDescUpdatedAt.UpdateDefault.(func() time.Time)
 	// requestDescStatus is the schema descriptor for status field.
-	requestDescStatus := requestFields[6].Descriptor()
+	requestDescStatus := requestFields[21].Descriptor()
 	// request.DefaultStatus holds the default value on creation for the status field.
 	request.DefaultStatus = requestDescStatus.Default.(string)
 	// request.StatusValidator is a validator for the "status" field. It is called by the builders before save.
@@ -490,10 +607,80 @@ func init() {
 			return nil
 		}
 	}()
+	// requestDescIsBlocked is the schema descriptor for is_blocked field.
+	requestDescIsBlocked := requestFields[23].Descriptor()
+	// request.DefaultIsBlocked holds the default value on creation for the is_blocked field.
+	request.DefaultIsBlocked = requestDescIsBlocked.Default.(bool)
 	// requestDescID is the schema descriptor for id field.
 	requestDescID := requestFields[0].Descriptor()
 	// request.DefaultID holds the default value on creation for the id field.
 	request.DefaultID = requestDescID.Default.(func() uuid.UUID)
+	requestdzocontractFields := schema.RequestDzoContract{}.Fields()
+	_ = requestdzocontractFields
+	// requestdzocontractDescFileName is the schema descriptor for file_name field.
+	requestdzocontractDescFileName := requestdzocontractFields[3].Descriptor()
+	// requestdzocontract.FileNameValidator is a validator for the "file_name" field. It is called by the builders before save.
+	requestdzocontract.FileNameValidator = func() func(string) error {
+		validators := requestdzocontractDescFileName.Validators
+		fns := [...]func(string) error{
+			validators[0].(func(string) error),
+			validators[1].(func(string) error),
+		}
+		return func(file_name string) error {
+			for _, fn := range fns {
+				if err := fn(file_name); err != nil {
+					return err
+				}
+			}
+			return nil
+		}
+	}()
+	// requestdzocontractDescFileURL is the schema descriptor for file_url field.
+	requestdzocontractDescFileURL := requestdzocontractFields[4].Descriptor()
+	// requestdzocontract.FileURLValidator is a validator for the "file_url" field. It is called by the builders before save.
+	requestdzocontract.FileURLValidator = func() func(string) error {
+		validators := requestdzocontractDescFileURL.Validators
+		fns := [...]func(string) error{
+			validators[0].(func(string) error),
+			validators[1].(func(string) error),
+		}
+		return func(file_url string) error {
+			for _, fn := range fns {
+				if err := fn(file_url); err != nil {
+					return err
+				}
+			}
+			return nil
+		}
+	}()
+	// requestdzocontractDescCreatedAt is the schema descriptor for created_at field.
+	requestdzocontractDescCreatedAt := requestdzocontractFields[5].Descriptor()
+	// requestdzocontract.DefaultCreatedAt holds the default value on creation for the created_at field.
+	requestdzocontract.DefaultCreatedAt = requestdzocontractDescCreatedAt.Default.(func() time.Time)
+	// requestdzocontractDescID is the schema descriptor for id field.
+	requestdzocontractDescID := requestdzocontractFields[0].Descriptor()
+	// requestdzocontract.DefaultID holds the default value on creation for the id field.
+	requestdzocontract.DefaultID = requestdzocontractDescID.Default.(func() uuid.UUID)
+	requestparticipantFields := schema.RequestParticipant{}.Fields()
+	_ = requestparticipantFields
+	// requestparticipantDescCreatedAt is the schema descriptor for created_at field.
+	requestparticipantDescCreatedAt := requestparticipantFields[3].Descriptor()
+	// requestparticipant.DefaultCreatedAt holds the default value on creation for the created_at field.
+	requestparticipant.DefaultCreatedAt = requestparticipantDescCreatedAt.Default.(func() time.Time)
+	// requestparticipantDescID is the schema descriptor for id field.
+	requestparticipantDescID := requestparticipantFields[0].Descriptor()
+	// requestparticipant.DefaultID holds the default value on creation for the id field.
+	requestparticipant.DefaultID = requestparticipantDescID.Default.(func() uuid.UUID)
+	requesttargetdzoFields := schema.RequestTargetDzo{}.Fields()
+	_ = requesttargetdzoFields
+	// requesttargetdzoDescCreatedAt is the schema descriptor for created_at field.
+	requesttargetdzoDescCreatedAt := requesttargetdzoFields[3].Descriptor()
+	// requesttargetdzo.DefaultCreatedAt holds the default value on creation for the created_at field.
+	requesttargetdzo.DefaultCreatedAt = requesttargetdzoDescCreatedAt.Default.(func() time.Time)
+	// requesttargetdzoDescID is the schema descriptor for id field.
+	requesttargetdzoDescID := requesttargetdzoFields[0].Descriptor()
+	// requesttargetdzo.DefaultID holds the default value on creation for the id field.
+	requesttargetdzo.DefaultID = requesttargetdzoDescID.Default.(func() uuid.UUID)
 	supplierFields := schema.Supplier{}.Fields()
 	_ = supplierFields
 	// supplierDescName is the schema descriptor for name field.

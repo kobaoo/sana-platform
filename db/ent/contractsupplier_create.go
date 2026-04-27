@@ -9,6 +9,7 @@ import (
 	"time"
 
 	"encore.app/db/ent/contractsupplier"
+	"encore.app/db/ent/externaltrainingevent"
 	"entgo.io/ent/dialect/sql/sqlgraph"
 	"entgo.io/ent/schema/field"
 	"github.com/google/uuid"
@@ -34,13 +35,13 @@ func (_c *ContractSupplierCreate) SetContractNumber(v string) *ContractSupplierC
 }
 
 // SetVatFlag sets the "vat_flag" field.
-func (_c *ContractSupplierCreate) SetVatFlag(v bool) *ContractSupplierCreate {
+func (_c *ContractSupplierCreate) SetVatFlag(v int) *ContractSupplierCreate {
 	_c.mutation.SetVatFlag(v)
 	return _c
 }
 
 // SetNillableVatFlag sets the "vat_flag" field if the given value is not nil.
-func (_c *ContractSupplierCreate) SetNillableVatFlag(v *bool) *ContractSupplierCreate {
+func (_c *ContractSupplierCreate) SetNillableVatFlag(v *int) *ContractSupplierCreate {
 	if v != nil {
 		_c.SetVatFlag(*v)
 	}
@@ -281,6 +282,21 @@ func (_c *ContractSupplierCreate) SetNillableID(v *uuid.UUID) *ContractSupplierC
 	return _c
 }
 
+// AddExternalTrainingEventIDs adds the "external_training_events" edge to the ExternalTrainingEvent entity by IDs.
+func (_c *ContractSupplierCreate) AddExternalTrainingEventIDs(ids ...uuid.UUID) *ContractSupplierCreate {
+	_c.mutation.AddExternalTrainingEventIDs(ids...)
+	return _c
+}
+
+// AddExternalTrainingEvents adds the "external_training_events" edges to the ExternalTrainingEvent entity.
+func (_c *ContractSupplierCreate) AddExternalTrainingEvents(v ...*ExternalTrainingEvent) *ContractSupplierCreate {
+	ids := make([]uuid.UUID, len(v))
+	for i := range v {
+		ids[i] = v[i].ID
+	}
+	return _c.AddExternalTrainingEventIDs(ids...)
+}
+
 // Mutation returns the ContractSupplierMutation object of the builder.
 func (_c *ContractSupplierCreate) Mutation() *ContractSupplierMutation {
 	return _c.mutation
@@ -353,6 +369,11 @@ func (_c *ContractSupplierCreate) check() error {
 	}
 	if _, ok := _c.mutation.VatFlag(); !ok {
 		return &ValidationError{Name: "vat_flag", err: errors.New(`ent: missing required field "ContractSupplier.vat_flag"`)}
+	}
+	if v, ok := _c.mutation.VatFlag(); ok {
+		if err := contractsupplier.VatFlagValidator(v); err != nil {
+			return &ValidationError{Name: "vat_flag", err: fmt.Errorf(`ent: validator failed for field "ContractSupplier.vat_flag": %w`, err)}
+		}
 	}
 	if _, ok := _c.mutation.SignedDate(); !ok {
 		return &ValidationError{Name: "signed_date", err: errors.New(`ent: missing required field "ContractSupplier.signed_date"`)}
@@ -444,7 +465,7 @@ func (_c *ContractSupplierCreate) createSpec() (*ContractSupplier, *sqlgraph.Cre
 		_node.ContractNumber = value
 	}
 	if value, ok := _c.mutation.VatFlag(); ok {
-		_spec.SetField(contractsupplier.FieldVatFlag, field.TypeBool, value)
+		_spec.SetField(contractsupplier.FieldVatFlag, field.TypeInt, value)
 		_node.VatFlag = value
 	}
 	if value, ok := _c.mutation.SignedDate(); ok {
@@ -518,6 +539,22 @@ func (_c *ContractSupplierCreate) createSpec() (*ContractSupplier, *sqlgraph.Cre
 	if value, ok := _c.mutation.UpdatedAt(); ok {
 		_spec.SetField(contractsupplier.FieldUpdatedAt, field.TypeTime, value)
 		_node.UpdatedAt = value
+	}
+	if nodes := _c.mutation.ExternalTrainingEventsIDs(); len(nodes) > 0 {
+		edge := &sqlgraph.EdgeSpec{
+			Rel:     sqlgraph.O2M,
+			Inverse: false,
+			Table:   contractsupplier.ExternalTrainingEventsTable,
+			Columns: []string{contractsupplier.ExternalTrainingEventsColumn},
+			Bidi:    false,
+			Target: &sqlgraph.EdgeTarget{
+				IDSpec: sqlgraph.NewFieldSpec(externaltrainingevent.FieldID, field.TypeUUID),
+			},
+		}
+		for _, k := range nodes {
+			edge.Target.Nodes = append(edge.Target.Nodes, k)
+		}
+		_spec.Edges = append(_spec.Edges, edge)
 	}
 	return _node, _spec
 }

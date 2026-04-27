@@ -53,9 +53,11 @@ type UserEdges struct {
 	HostedEvents []*Event `json:"hosted_events,omitempty"`
 	// ReviewedParticipations holds the value of the reviewed_participations edge.
 	ReviewedParticipations []*EventParticipant `json:"reviewed_participations,omitempty"`
+	// ResponsibleExternalTrainingEvents holds the value of the responsible_external_training_events edge.
+	ResponsibleExternalTrainingEvents []*ExternalTrainingEvent `json:"responsible_external_training_events,omitempty"`
 	// loadedTypes holds the information for reporting if a
 	// type was loaded (or requested) in eager-loading or not.
-	loadedTypes [4]bool
+	loadedTypes [5]bool
 }
 
 // ClientOrErr returns the Client value or an error if the edge
@@ -94,6 +96,15 @@ func (e UserEdges) ReviewedParticipationsOrErr() ([]*EventParticipant, error) {
 		return e.ReviewedParticipations, nil
 	}
 	return nil, &NotLoadedError{edge: "reviewed_participations"}
+}
+
+// ResponsibleExternalTrainingEventsOrErr returns the ResponsibleExternalTrainingEvents value or an error if the edge
+// was not loaded in eager-loading.
+func (e UserEdges) ResponsibleExternalTrainingEventsOrErr() ([]*ExternalTrainingEvent, error) {
+	if e.loadedTypes[4] {
+		return e.ResponsibleExternalTrainingEvents, nil
+	}
+	return nil, &NotLoadedError{edge: "responsible_external_training_events"}
 }
 
 // scanValues returns the types for scanning values from sql.Rows.
@@ -218,6 +229,11 @@ func (_m *User) QueryHostedEvents() *EventQuery {
 // QueryReviewedParticipations queries the "reviewed_participations" edge of the User entity.
 func (_m *User) QueryReviewedParticipations() *EventParticipantQuery {
 	return NewUserClient(_m.config).QueryReviewedParticipations(_m)
+}
+
+// QueryResponsibleExternalTrainingEvents queries the "responsible_external_training_events" edge of the User entity.
+func (_m *User) QueryResponsibleExternalTrainingEvents() *ExternalTrainingEventQuery {
+	return NewUserClient(_m.config).QueryResponsibleExternalTrainingEvents(_m)
 }
 
 // Update returns a builder for updating this User.

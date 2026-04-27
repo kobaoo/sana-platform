@@ -7,6 +7,7 @@ import (
 	"errors"
 	"fmt"
 
+	"encore.app/db/ent/externaltrainingevent"
 	"encore.app/db/ent/supplier"
 	"entgo.io/ent/dialect/sql/sqlgraph"
 	"entgo.io/ent/schema/field"
@@ -92,6 +93,21 @@ func (_c *SupplierCreate) SetNillableID(v *uuid.UUID) *SupplierCreate {
 		_c.SetID(*v)
 	}
 	return _c
+}
+
+// AddExternalTrainingEventIDs adds the "external_training_events" edge to the ExternalTrainingEvent entity by IDs.
+func (_c *SupplierCreate) AddExternalTrainingEventIDs(ids ...uuid.UUID) *SupplierCreate {
+	_c.mutation.AddExternalTrainingEventIDs(ids...)
+	return _c
+}
+
+// AddExternalTrainingEvents adds the "external_training_events" edges to the ExternalTrainingEvent entity.
+func (_c *SupplierCreate) AddExternalTrainingEvents(v ...*ExternalTrainingEvent) *SupplierCreate {
+	ids := make([]uuid.UUID, len(v))
+	for i := range v {
+		ids[i] = v[i].ID
+	}
+	return _c.AddExternalTrainingEventIDs(ids...)
 }
 
 // Mutation returns the SupplierMutation object of the builder.
@@ -226,6 +242,22 @@ func (_c *SupplierCreate) createSpec() (*Supplier, *sqlgraph.CreateSpec) {
 	if value, ok := _c.mutation.IsActive(); ok {
 		_spec.SetField(supplier.FieldIsActive, field.TypeBool, value)
 		_node.IsActive = value
+	}
+	if nodes := _c.mutation.ExternalTrainingEventsIDs(); len(nodes) > 0 {
+		edge := &sqlgraph.EdgeSpec{
+			Rel:     sqlgraph.O2M,
+			Inverse: false,
+			Table:   supplier.ExternalTrainingEventsTable,
+			Columns: []string{supplier.ExternalTrainingEventsColumn},
+			Bidi:    false,
+			Target: &sqlgraph.EdgeTarget{
+				IDSpec: sqlgraph.NewFieldSpec(externaltrainingevent.FieldID, field.TypeUUID),
+			},
+		}
+		for _, k := range nodes {
+			edge.Target.Nodes = append(edge.Target.Nodes, k)
+		}
+		_spec.Edges = append(_spec.Edges, edge)
 	}
 	return _node, _spec
 }

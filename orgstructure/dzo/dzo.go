@@ -51,9 +51,6 @@ func CreateDZO(ctx context.Context, req *CreateDZORequest) (*GetDZOResponse, err
 	}
 	if strings.TrimSpace(req.ClientID) == "" {
 		return nil, errs.B().Code(errs.InvalidArgument).Msg("client_id is required").Err()
-	} // ADM can only create DZO within their own client.
-	if ad.Role == authhandler.RoleADM && req.ClientID != ad.CompanyID {
-		return nil, errs.B().Code(errs.PermissionDenied).Msg("admin can only create DZO within their own client").Err()
 	}
 
 	// ADM can only create DZO within their own client.

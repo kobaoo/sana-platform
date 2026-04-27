@@ -28,8 +28,29 @@ type Supplier struct {
 	// LocalContentPct holds the value of the "local_content_pct" field.
 	LocalContentPct *float64 `json:"local_content_pct,omitempty"`
 	// IsActive holds the value of the "is_active" field.
-	IsActive     bool `json:"is_active,omitempty"`
+	IsActive bool `json:"is_active,omitempty"`
+	// Edges holds the relations/edges for other nodes in the graph.
+	// The values are being populated by the SupplierQuery when eager-loading is set.
+	Edges        SupplierEdges `json:"edges"`
 	selectValues sql.SelectValues
+}
+
+// SupplierEdges holds the relations/edges for other nodes in the graph.
+type SupplierEdges struct {
+	// ExternalTrainingEvents holds the value of the external_training_events edge.
+	ExternalTrainingEvents []*ExternalTrainingEvent `json:"external_training_events,omitempty"`
+	// loadedTypes holds the information for reporting if a
+	// type was loaded (or requested) in eager-loading or not.
+	loadedTypes [1]bool
+}
+
+// ExternalTrainingEventsOrErr returns the ExternalTrainingEvents value or an error if the edge
+// was not loaded in eager-loading.
+func (e SupplierEdges) ExternalTrainingEventsOrErr() ([]*ExternalTrainingEvent, error) {
+	if e.loadedTypes[0] {
+		return e.ExternalTrainingEvents, nil
+	}
+	return nil, &NotLoadedError{edge: "external_training_events"}
 }
 
 // scanValues returns the types for scanning values from sql.Rows.
@@ -115,6 +136,11 @@ func (_m *Supplier) assignValues(columns []string, values []any) error {
 // This includes values selected through modifiers, order, etc.
 func (_m *Supplier) Value(name string) (ent.Value, error) {
 	return _m.selectValues.Get(name)
+}
+
+// QueryExternalTrainingEvents queries the "external_training_events" edge of the Supplier entity.
+func (_m *Supplier) QueryExternalTrainingEvents() *ExternalTrainingEventQuery {
+	return NewSupplierClient(_m.config).QueryExternalTrainingEvents(_m)
 }
 
 // Update returns a builder for updating this Supplier.

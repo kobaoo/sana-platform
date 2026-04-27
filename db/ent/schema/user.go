@@ -71,6 +71,7 @@ func (User) Edges() []ent.Edge {
 		edge.To("requests", Request.Type),
 		edge.To("hosted_events", Event.Type),
 		edge.To("reviewed_participations", EventParticipant.Type),
+		edge.To("responsible_external_training_events", ExternalTrainingEvent.Type),
 	}
 }
 
