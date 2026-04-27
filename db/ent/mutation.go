@@ -1359,7 +1359,8 @@ type ContractSupplierMutation struct {
 	id                              *uuid.UUID
 	supplier_id                     *uuid.UUID
 	contract_number                 *string
-	vat_flag                        *bool
+	vat_flag                        *int
+	addvat_flag                     *int
 	signed_date                     *time.Time
 	end_date                        *time.Time
 	amount                          *float64
@@ -1571,12 +1572,13 @@ func (m *ContractSupplierMutation) ResetContractNumber() {
 }
 
 // SetVatFlag sets the "vat_flag" field.
-func (m *ContractSupplierMutation) SetVatFlag(b bool) {
-	m.vat_flag = &b
+func (m *ContractSupplierMutation) SetVatFlag(i int) {
+	m.vat_flag = &i
+	m.addvat_flag = nil
 }
 
 // VatFlag returns the value of the "vat_flag" field in the mutation.
-func (m *ContractSupplierMutation) VatFlag() (r bool, exists bool) {
+func (m *ContractSupplierMutation) VatFlag() (r int, exists bool) {
 	v := m.vat_flag
 	if v == nil {
 		return
@@ -1587,7 +1589,7 @@ func (m *ContractSupplierMutation) VatFlag() (r bool, exists bool) {
 // OldVatFlag returns the old "vat_flag" field's value of the ContractSupplier entity.
 // If the ContractSupplier object wasn't provided to the builder, the object is fetched from the database.
 // An error is returned if the mutation operation is not UpdateOne, or the database query fails.
-func (m *ContractSupplierMutation) OldVatFlag(ctx context.Context) (v bool, err error) {
+func (m *ContractSupplierMutation) OldVatFlag(ctx context.Context) (v int, err error) {
 	if !m.op.Is(OpUpdateOne) {
 		return v, errors.New("OldVatFlag is only allowed on UpdateOne operations")
 	}
@@ -1601,9 +1603,28 @@ func (m *ContractSupplierMutation) OldVatFlag(ctx context.Context) (v bool, err 
 	return oldValue.VatFlag, nil
 }
 
+// AddVatFlag adds i to the "vat_flag" field.
+func (m *ContractSupplierMutation) AddVatFlag(i int) {
+	if m.addvat_flag != nil {
+		*m.addvat_flag += i
+	} else {
+		m.addvat_flag = &i
+	}
+}
+
+// AddedVatFlag returns the value that was added to the "vat_flag" field in this mutation.
+func (m *ContractSupplierMutation) AddedVatFlag() (r int, exists bool) {
+	v := m.addvat_flag
+	if v == nil {
+		return
+	}
+	return *v, true
+}
+
 // ResetVatFlag resets all changes to the "vat_flag" field.
 func (m *ContractSupplierMutation) ResetVatFlag() {
 	m.vat_flag = nil
+	m.addvat_flag = nil
 }
 
 // SetSignedDate sets the "signed_date" field.
@@ -2818,7 +2839,7 @@ func (m *ContractSupplierMutation) SetField(name string, value ent.Value) error 
 		m.SetContractNumber(v)
 		return nil
 	case contractsupplier.FieldVatFlag:
-		v, ok := value.(bool)
+		v, ok := value.(int)
 		if !ok {
 			return fmt.Errorf("unexpected type %T for field %s", value, name)
 		}
@@ -2958,6 +2979,9 @@ func (m *ContractSupplierMutation) SetField(name string, value ent.Value) error 
 // this mutation.
 func (m *ContractSupplierMutation) AddedFields() []string {
 	var fields []string
+	if m.addvat_flag != nil {
+		fields = append(fields, contractsupplier.FieldVatFlag)
+	}
 	if m.addamount != nil {
 		fields = append(fields, contractsupplier.FieldAmount)
 	}
@@ -2987,6 +3011,8 @@ func (m *ContractSupplierMutation) AddedFields() []string {
 // was not set, or was not defined in the schema.
 func (m *ContractSupplierMutation) AddedField(name string) (ent.Value, bool) {
 	switch name {
+	case contractsupplier.FieldVatFlag:
+		return m.AddedVatFlag()
 	case contractsupplier.FieldAmount:
 		return m.AddedAmount()
 	case contractsupplier.FieldAmountCurrency:
@@ -3010,6 +3036,13 @@ func (m *ContractSupplierMutation) AddedField(name string) (ent.Value, bool) {
 // type.
 func (m *ContractSupplierMutation) AddField(name string, value ent.Value) error {
 	switch name {
+	case contractsupplier.FieldVatFlag:
+		v, ok := value.(int)
+		if !ok {
+			return fmt.Errorf("unexpected type %T for field %s", value, name)
+		}
+		m.AddVatFlag(v)
+		return nil
 	case contractsupplier.FieldAmount:
 		v, ok := value.(float64)
 		if !ok {
@@ -8083,41 +8116,43 @@ func (m *OrganizationMutation) ResetEdge(name string) error {
 // RequestMutation represents an operation that mutates the Request nodes in the graph.
 type RequestMutation struct {
 	config
-	op                   Op
-	typ                  string
-	id                   *uuid.UUID
-	entity_id            *uuid.UUID
-	entity_type          *string
-	request_type         *string
-	kind                 *string
-	assigned_hr_id       *uuid.UUID
-	target_dzo_id        *uuid.UUID
-	title                *string
-	category             *string
-	format               *string
-	responsible_admin_id *uuid.UUID
-	training_date        *time.Time
-	deadline_at          *time.Time
-	cost_amount          *float64
-	addcost_amount       *float64
-	cost_mode            *string
-	step                 *int
-	addstep              *int
-	created_at           *time.Time
-	updated_at           *time.Time
-	completed_at         *time.Time
-	status               *string
-	clearedFields        map[string]struct{}
-	initiator            *uuid.UUID
-	clearedinitiator     bool
-	parent               *uuid.UUID
-	clearedparent        bool
-	children             map[uuid.UUID]struct{}
-	removedchildren      map[uuid.UUID]struct{}
-	clearedchildren      bool
-	done                 bool
-	oldValue             func(context.Context) (*Request, error)
-	predicates           []predicate.Request
+	op                     Op
+	typ                    string
+	id                     *uuid.UUID
+	entity_id              *uuid.UUID
+	entity_type            *string
+	request_type           *string
+	kind                   *string
+	assigned_hr_id         *uuid.UUID
+	target_dzo_id          *uuid.UUID
+	title                  *string
+	category               *string
+	format                 *string
+	responsible_admin_id   *uuid.UUID
+	training_date          *time.Time
+	deadline_at            *time.Time
+	cost_amount            *float64
+	addcost_amount         *float64
+	cost_mode              *string
+	step                   *int
+	addstep                *int
+	created_at             *time.Time
+	updated_at             *time.Time
+	completed_at           *time.Time
+	status                 *string
+	replaced_by_request_id *uuid.UUID
+	is_blocked             *bool
+	clearedFields          map[string]struct{}
+	initiator              *uuid.UUID
+	clearedinitiator       bool
+	parent                 *uuid.UUID
+	clearedparent          bool
+	children               map[uuid.UUID]struct{}
+	removedchildren        map[uuid.UUID]struct{}
+	clearedchildren        bool
+	done                   bool
+	oldValue               func(context.Context) (*Request, error)
+	predicates             []predicate.Request
 }
 
 var _ ent.Mutation = (*RequestMutation)(nil)
@@ -9177,6 +9212,91 @@ func (m *RequestMutation) ResetStatus() {
 	m.status = nil
 }
 
+// SetReplacedByRequestID sets the "replaced_by_request_id" field.
+func (m *RequestMutation) SetReplacedByRequestID(u uuid.UUID) {
+	m.replaced_by_request_id = &u
+}
+
+// ReplacedByRequestID returns the value of the "replaced_by_request_id" field in the mutation.
+func (m *RequestMutation) ReplacedByRequestID() (r uuid.UUID, exists bool) {
+	v := m.replaced_by_request_id
+	if v == nil {
+		return
+	}
+	return *v, true
+}
+
+// OldReplacedByRequestID returns the old "replaced_by_request_id" field's value of the Request entity.
+// If the Request object wasn't provided to the builder, the object is fetched from the database.
+// An error is returned if the mutation operation is not UpdateOne, or the database query fails.
+func (m *RequestMutation) OldReplacedByRequestID(ctx context.Context) (v *uuid.UUID, err error) {
+	if !m.op.Is(OpUpdateOne) {
+		return v, errors.New("OldReplacedByRequestID is only allowed on UpdateOne operations")
+	}
+	if m.id == nil || m.oldValue == nil {
+		return v, errors.New("OldReplacedByRequestID requires an ID field in the mutation")
+	}
+	oldValue, err := m.oldValue(ctx)
+	if err != nil {
+		return v, fmt.Errorf("querying old value for OldReplacedByRequestID: %w", err)
+	}
+	return oldValue.ReplacedByRequestID, nil
+}
+
+// ClearReplacedByRequestID clears the value of the "replaced_by_request_id" field.
+func (m *RequestMutation) ClearReplacedByRequestID() {
+	m.replaced_by_request_id = nil
+	m.clearedFields[request.FieldReplacedByRequestID] = struct{}{}
+}
+
+// ReplacedByRequestIDCleared returns if the "replaced_by_request_id" field was cleared in this mutation.
+func (m *RequestMutation) ReplacedByRequestIDCleared() bool {
+	_, ok := m.clearedFields[request.FieldReplacedByRequestID]
+	return ok
+}
+
+// ResetReplacedByRequestID resets all changes to the "replaced_by_request_id" field.
+func (m *RequestMutation) ResetReplacedByRequestID() {
+	m.replaced_by_request_id = nil
+	delete(m.clearedFields, request.FieldReplacedByRequestID)
+}
+
+// SetIsBlocked sets the "is_blocked" field.
+func (m *RequestMutation) SetIsBlocked(b bool) {
+	m.is_blocked = &b
+}
+
+// IsBlocked returns the value of the "is_blocked" field in the mutation.
+func (m *RequestMutation) IsBlocked() (r bool, exists bool) {
+	v := m.is_blocked
+	if v == nil {
+		return
+	}
+	return *v, true
+}
+
+// OldIsBlocked returns the old "is_blocked" field's value of the Request entity.
+// If the Request object wasn't provided to the builder, the object is fetched from the database.
+// An error is returned if the mutation operation is not UpdateOne, or the database query fails.
+func (m *RequestMutation) OldIsBlocked(ctx context.Context) (v bool, err error) {
+	if !m.op.Is(OpUpdateOne) {
+		return v, errors.New("OldIsBlocked is only allowed on UpdateOne operations")
+	}
+	if m.id == nil || m.oldValue == nil {
+		return v, errors.New("OldIsBlocked requires an ID field in the mutation")
+	}
+	oldValue, err := m.oldValue(ctx)
+	if err != nil {
+		return v, fmt.Errorf("querying old value for OldIsBlocked: %w", err)
+	}
+	return oldValue.IsBlocked, nil
+}
+
+// ResetIsBlocked resets all changes to the "is_blocked" field.
+func (m *RequestMutation) ResetIsBlocked() {
+	m.is_blocked = nil
+}
+
 // ClearInitiator clears the "initiator" edge to the User entity.
 func (m *RequestMutation) ClearInitiator() {
 	m.clearedinitiator = true
@@ -9332,7 +9452,7 @@ func (m *RequestMutation) Type() string {
 // order to get all numeric fields that were incremented/decremented, call
 // AddedFields().
 func (m *RequestMutation) Fields() []string {
-	fields := make([]string, 0, 21)
+	fields := make([]string, 0, 23)
 	if m.initiator != nil {
 		fields = append(fields, request.FieldInitiatorID)
 	}
@@ -9396,6 +9516,12 @@ func (m *RequestMutation) Fields() []string {
 	if m.status != nil {
 		fields = append(fields, request.FieldStatus)
 	}
+	if m.replaced_by_request_id != nil {
+		fields = append(fields, request.FieldReplacedByRequestID)
+	}
+	if m.is_blocked != nil {
+		fields = append(fields, request.FieldIsBlocked)
+	}
 	return fields
 }
 
@@ -9446,6 +9572,10 @@ func (m *RequestMutation) Field(name string) (ent.Value, bool) {
 		return m.CompletedAt()
 	case request.FieldStatus:
 		return m.Status()
+	case request.FieldReplacedByRequestID:
+		return m.ReplacedByRequestID()
+	case request.FieldIsBlocked:
+		return m.IsBlocked()
 	}
 	return nil, false
 }
@@ -9497,6 +9627,10 @@ func (m *RequestMutation) OldField(ctx context.Context, name string) (ent.Value,
 		return m.OldCompletedAt(ctx)
 	case request.FieldStatus:
 		return m.OldStatus(ctx)
+	case request.FieldReplacedByRequestID:
+		return m.OldReplacedByRequestID(ctx)
+	case request.FieldIsBlocked:
+		return m.OldIsBlocked(ctx)
 	}
 	return nil, fmt.Errorf("unknown Request field %s", name)
 }
@@ -9653,6 +9787,20 @@ func (m *RequestMutation) SetField(name string, value ent.Value) error {
 		}
 		m.SetStatus(v)
 		return nil
+	case request.FieldReplacedByRequestID:
+		v, ok := value.(uuid.UUID)
+		if !ok {
+			return fmt.Errorf("unexpected type %T for field %s", value, name)
+		}
+		m.SetReplacedByRequestID(v)
+		return nil
+	case request.FieldIsBlocked:
+		v, ok := value.(bool)
+		if !ok {
+			return fmt.Errorf("unexpected type %T for field %s", value, name)
+		}
+		m.SetIsBlocked(v)
+		return nil
 	}
 	return fmt.Errorf("unknown Request field %s", name)
 }
@@ -9746,6 +9894,9 @@ func (m *RequestMutation) ClearedFields() []string {
 	if m.FieldCleared(request.FieldCompletedAt) {
 		fields = append(fields, request.FieldCompletedAt)
 	}
+	if m.FieldCleared(request.FieldReplacedByRequestID) {
+		fields = append(fields, request.FieldReplacedByRequestID)
+	}
 	return fields
 }
 
@@ -9795,6 +9946,9 @@ func (m *RequestMutation) ClearField(name string) error {
 		return nil
 	case request.FieldCompletedAt:
 		m.ClearCompletedAt()
+		return nil
+	case request.FieldReplacedByRequestID:
+		m.ClearReplacedByRequestID()
 		return nil
 	}
 	return fmt.Errorf("unknown Request nullable field %s", name)
@@ -9866,6 +10020,12 @@ func (m *RequestMutation) ResetField(name string) error {
 		return nil
 	case request.FieldStatus:
 		m.ResetStatus()
+		return nil
+	case request.FieldReplacedByRequestID:
+		m.ResetReplacedByRequestID()
+		return nil
+	case request.FieldIsBlocked:
+		m.ResetIsBlocked()
 		return nil
 	}
 	return fmt.Errorf("unknown Request field %s", name)

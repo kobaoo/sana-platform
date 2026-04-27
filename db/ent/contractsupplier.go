@@ -23,7 +23,7 @@ type ContractSupplier struct {
 	// ContractNumber holds the value of the "contract_number" field.
 	ContractNumber string `json:"contract_number,omitempty"`
 	// VatFlag holds the value of the "vat_flag" field.
-	VatFlag bool `json:"vat_flag,omitempty"`
+	VatFlag int `json:"vat_flag,omitempty"`
 	// SignedDate holds the value of the "signed_date" field.
 	SignedDate time.Time `json:"signed_date,omitempty"`
 	// EndDate holds the value of the "end_date" field.
@@ -89,11 +89,11 @@ func (*ContractSupplier) scanValues(columns []string) ([]any, error) {
 	values := make([]any, len(columns))
 	for i := range columns {
 		switch columns[i] {
-		case contractsupplier.FieldVatFlag, contractsupplier.FieldIsActive:
+		case contractsupplier.FieldIsActive:
 			values[i] = new(sql.NullBool)
 		case contractsupplier.FieldAmount, contractsupplier.FieldAmountCurrency, contractsupplier.FieldBalanceAtYearEnd, contractsupplier.FieldAmendmentAmount, contractsupplier.FieldTotalWithAmendment, contractsupplier.FieldRemainingAmount:
 			values[i] = new(sql.NullFloat64)
-		case contractsupplier.FieldFileSize:
+		case contractsupplier.FieldVatFlag, contractsupplier.FieldFileSize:
 			values[i] = new(sql.NullInt64)
 		case contractsupplier.FieldContractNumber, contractsupplier.FieldCurrency, contractsupplier.FieldAmendmentNumber, contractsupplier.FieldFileKey, contractsupplier.FieldFileName, contractsupplier.FieldFileMimeType:
 			values[i] = new(sql.NullString)
@@ -135,10 +135,10 @@ func (_m *ContractSupplier) assignValues(columns []string, values []any) error {
 				_m.ContractNumber = value.String
 			}
 		case contractsupplier.FieldVatFlag:
-			if value, ok := values[i].(*sql.NullBool); !ok {
+			if value, ok := values[i].(*sql.NullInt64); !ok {
 				return fmt.Errorf("unexpected type %T for field vat_flag", values[i])
 			} else if value.Valid {
-				_m.VatFlag = value.Bool
+				_m.VatFlag = int(value.Int64)
 			}
 		case contractsupplier.FieldSignedDate:
 			if value, ok := values[i].(*sql.NullTime); !ok {

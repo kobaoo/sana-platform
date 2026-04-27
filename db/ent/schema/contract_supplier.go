@@ -26,8 +26,10 @@ func (ContractSupplier) Fields() []ent.Field {
 		field.String("contract_number").
 			MaxLen(100).
 			NotEmpty(),
-		field.Bool("vat_flag").
-			Default(false),
+		field.Int("vat_flag").
+			Default(0).
+			Min(0).
+			Max(100),
 		field.Time("signed_date").
 			SchemaType(map[string]string{
 				dialect.Postgres: "date",

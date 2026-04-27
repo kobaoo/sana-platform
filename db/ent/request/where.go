@@ -161,6 +161,16 @@ func Status(v string) predicate.Request {
 	return predicate.Request(sql.FieldEQ(FieldStatus, v))
 }
 
+// ReplacedByRequestID applies equality check predicate on the "replaced_by_request_id" field. It's identical to ReplacedByRequestIDEQ.
+func ReplacedByRequestID(v uuid.UUID) predicate.Request {
+	return predicate.Request(sql.FieldEQ(FieldReplacedByRequestID, v))
+}
+
+// IsBlocked applies equality check predicate on the "is_blocked" field. It's identical to IsBlockedEQ.
+func IsBlocked(v bool) predicate.Request {
+	return predicate.Request(sql.FieldEQ(FieldIsBlocked, v))
+}
+
 // InitiatorIDEQ applies the EQ predicate on the "initiator_id" field.
 func InitiatorIDEQ(v uuid.UUID) predicate.Request {
 	return predicate.Request(sql.FieldEQ(FieldInitiatorID, v))
@@ -1279,6 +1289,66 @@ func StatusEqualFold(v string) predicate.Request {
 // StatusContainsFold applies the ContainsFold predicate on the "status" field.
 func StatusContainsFold(v string) predicate.Request {
 	return predicate.Request(sql.FieldContainsFold(FieldStatus, v))
+}
+
+// ReplacedByRequestIDEQ applies the EQ predicate on the "replaced_by_request_id" field.
+func ReplacedByRequestIDEQ(v uuid.UUID) predicate.Request {
+	return predicate.Request(sql.FieldEQ(FieldReplacedByRequestID, v))
+}
+
+// ReplacedByRequestIDNEQ applies the NEQ predicate on the "replaced_by_request_id" field.
+func ReplacedByRequestIDNEQ(v uuid.UUID) predicate.Request {
+	return predicate.Request(sql.FieldNEQ(FieldReplacedByRequestID, v))
+}
+
+// ReplacedByRequestIDIn applies the In predicate on the "replaced_by_request_id" field.
+func ReplacedByRequestIDIn(vs ...uuid.UUID) predicate.Request {
+	return predicate.Request(sql.FieldIn(FieldReplacedByRequestID, vs...))
+}
+
+// ReplacedByRequestIDNotIn applies the NotIn predicate on the "replaced_by_request_id" field.
+func ReplacedByRequestIDNotIn(vs ...uuid.UUID) predicate.Request {
+	return predicate.Request(sql.FieldNotIn(FieldReplacedByRequestID, vs...))
+}
+
+// ReplacedByRequestIDGT applies the GT predicate on the "replaced_by_request_id" field.
+func ReplacedByRequestIDGT(v uuid.UUID) predicate.Request {
+	return predicate.Request(sql.FieldGT(FieldReplacedByRequestID, v))
+}
+
+// ReplacedByRequestIDGTE applies the GTE predicate on the "replaced_by_request_id" field.
+func ReplacedByRequestIDGTE(v uuid.UUID) predicate.Request {
+	return predicate.Request(sql.FieldGTE(FieldReplacedByRequestID, v))
+}
+
+// ReplacedByRequestIDLT applies the LT predicate on the "replaced_by_request_id" field.
+func ReplacedByRequestIDLT(v uuid.UUID) predicate.Request {
+	return predicate.Request(sql.FieldLT(FieldReplacedByRequestID, v))
+}
+
+// ReplacedByRequestIDLTE applies the LTE predicate on the "replaced_by_request_id" field.
+func ReplacedByRequestIDLTE(v uuid.UUID) predicate.Request {
+	return predicate.Request(sql.FieldLTE(FieldReplacedByRequestID, v))
+}
+
+// ReplacedByRequestIDIsNil applies the IsNil predicate on the "replaced_by_request_id" field.
+func ReplacedByRequestIDIsNil() predicate.Request {
+	return predicate.Request(sql.FieldIsNull(FieldReplacedByRequestID))
+}
+
+// ReplacedByRequestIDNotNil applies the NotNil predicate on the "replaced_by_request_id" field.
+func ReplacedByRequestIDNotNil() predicate.Request {
+	return predicate.Request(sql.FieldNotNull(FieldReplacedByRequestID))
+}
+
+// IsBlockedEQ applies the EQ predicate on the "is_blocked" field.
+func IsBlockedEQ(v bool) predicate.Request {
+	return predicate.Request(sql.FieldEQ(FieldIsBlocked, v))
+}
+
+// IsBlockedNEQ applies the NEQ predicate on the "is_blocked" field.
+func IsBlockedNEQ(v bool) predicate.Request {
+	return predicate.Request(sql.FieldNEQ(FieldIsBlocked, v))
 }
 
 // HasInitiator applies the HasEdge predicate on the "initiator" edge.

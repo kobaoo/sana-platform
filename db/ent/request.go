@@ -61,6 +61,10 @@ type Request struct {
 	CompletedAt *time.Time `json:"completed_at,omitempty"`
 	// Status holds the value of the "status" field.
 	Status string `json:"status,omitempty"`
+	// ID новой заявки, которая заменила эту отклоненную
+	ReplacedByRequestID *uuid.UUID `json:"replaced_by_request_id,omitempty"`
+	// Заблокирована ли заявка после пересоздания
+	IsBlocked bool `json:"is_blocked,omitempty"`
 	// Edges holds the relations/edges for other nodes in the graph.
 	// The values are being populated by the RequestQuery when eager-loading is set.
 	Edges        RequestEdges `json:"edges"`
@@ -116,8 +120,10 @@ func (*Request) scanValues(columns []string) ([]any, error) {
 	values := make([]any, len(columns))
 	for i := range columns {
 		switch columns[i] {
-		case request.FieldParentRequestID, request.FieldAssignedHrID, request.FieldTargetDzoID, request.FieldResponsibleAdminID:
+		case request.FieldParentRequestID, request.FieldAssignedHrID, request.FieldTargetDzoID, request.FieldResponsibleAdminID, request.FieldReplacedByRequestID:
 			values[i] = &sql.NullScanner{S: new(uuid.UUID)}
+		case request.FieldIsBlocked:
+			values[i] = new(sql.NullBool)
 		case request.FieldCostAmount:
 			values[i] = new(sql.NullFloat64)
 		case request.FieldStep:
@@ -287,6 +293,19 @@ func (_m *Request) assignValues(columns []string, values []any) error {
 			} else if value.Valid {
 				_m.Status = value.String
 			}
+		case request.FieldReplacedByRequestID:
+			if value, ok := values[i].(*sql.NullScanner); !ok {
+				return fmt.Errorf("unexpected type %T for field replaced_by_request_id", values[i])
+			} else if value.Valid {
+				_m.ReplacedByRequestID = new(uuid.UUID)
+				*_m.ReplacedByRequestID = *value.S.(*uuid.UUID)
+			}
+		case request.FieldIsBlocked:
+			if value, ok := values[i].(*sql.NullBool); !ok {
+				return fmt.Errorf("unexpected type %T for field is_blocked", values[i])
+			} else if value.Valid {
+				_m.IsBlocked = value.Bool
+			}
 		default:
 			_m.selectValues.Set(columns[i], values[i])
 		}
@@ -424,6 +443,14 @@ func (_m *Request) String() string {
 	builder.WriteString(", ")
 	builder.WriteString("status=")
 	builder.WriteString(_m.Status)
+	builder.WriteString(", ")
+	if v := _m.ReplacedByRequestID; v != nil {
+		builder.WriteString("replaced_by_request_id=")
+		builder.WriteString(fmt.Sprintf("%v", *v))
+	}
+	builder.WriteString(", ")
+	builder.WriteString("is_blocked=")
+	builder.WriteString(fmt.Sprintf("%v", _m.IsBlocked))
 	builder.WriteByte(')')
 	return builder.String()
 }

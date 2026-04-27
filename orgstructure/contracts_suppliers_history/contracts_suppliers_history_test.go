@@ -26,7 +26,7 @@ func validContract() *ContractSupplier {
 		ID:                 "00000000-0000-0000-0000-000000000001",
 		SupplierID:         "00000000-0000-0000-0000-000000000002",
 		ContractNumber:     "№123/2025/1",
-		VatFlag:            true,
+		VatFlag:            12,
 		SignedDate:         time.Date(2025, 11, 10, 0, 0, 0, 0, time.UTC),
 		Amount:             1000000,
 		TotalWithAmendment: 1000000,
@@ -234,7 +234,7 @@ func TestBuildDiff_AmountChanged(t *testing.T) {
 func TestBuildDiff_VatFlagChanged(t *testing.T) {
 	old := validContract()
 	new_ := validContract()
-	new_.VatFlag = false
+	new_.VatFlag = 50
 
 	diff := buildDiff(old, new_)
 	if _, ok := diff["vat_flag"]; !ok {
@@ -246,7 +246,7 @@ func TestBuildDiff_MultipleFieldsChanged(t *testing.T) {
 	old := validContract()
 	new_ := validContract()
 	new_.Amount = 2000000
-	new_.VatFlag = false
+	new_.VatFlag = 50
 	new_.ContractNumber = "№456/2025/2"
 
 	diff := buildDiff(old, new_)

@@ -300,6 +300,34 @@ func (_c *RequestCreate) SetNillableStatus(v *string) *RequestCreate {
 	return _c
 }
 
+// SetReplacedByRequestID sets the "replaced_by_request_id" field.
+func (_c *RequestCreate) SetReplacedByRequestID(v uuid.UUID) *RequestCreate {
+	_c.mutation.SetReplacedByRequestID(v)
+	return _c
+}
+
+// SetNillableReplacedByRequestID sets the "replaced_by_request_id" field if the given value is not nil.
+func (_c *RequestCreate) SetNillableReplacedByRequestID(v *uuid.UUID) *RequestCreate {
+	if v != nil {
+		_c.SetReplacedByRequestID(*v)
+	}
+	return _c
+}
+
+// SetIsBlocked sets the "is_blocked" field.
+func (_c *RequestCreate) SetIsBlocked(v bool) *RequestCreate {
+	_c.mutation.SetIsBlocked(v)
+	return _c
+}
+
+// SetNillableIsBlocked sets the "is_blocked" field if the given value is not nil.
+func (_c *RequestCreate) SetNillableIsBlocked(v *bool) *RequestCreate {
+	if v != nil {
+		_c.SetIsBlocked(*v)
+	}
+	return _c
+}
+
 // SetID sets the "id" field.
 func (_c *RequestCreate) SetID(v uuid.UUID) *RequestCreate {
 	_c.mutation.SetID(v)
@@ -416,6 +444,10 @@ func (_c *RequestCreate) defaults() {
 		v := request.DefaultStatus
 		_c.mutation.SetStatus(v)
 	}
+	if _, ok := _c.mutation.IsBlocked(); !ok {
+		v := request.DefaultIsBlocked
+		_c.mutation.SetIsBlocked(v)
+	}
 	if _, ok := _c.mutation.ID(); !ok {
 		v := request.DefaultID()
 		_c.mutation.SetID(v)
@@ -454,9 +486,6 @@ func (_c *RequestCreate) check() error {
 			return &ValidationError{Name: "kind", err: fmt.Errorf(`ent: validator failed for field "Request.kind": %w`, err)}
 		}
 	}
-	if _, ok := _c.mutation.Title(); !ok {
-		return &ValidationError{Name: "title", err: errors.New(`ent: missing required field "Request.title"`)}
-	}
 	if v, ok := _c.mutation.Title(); ok {
 		if err := request.TitleValidator(v); err != nil {
 			return &ValidationError{Name: "title", err: fmt.Errorf(`ent: validator failed for field "Request.title": %w`, err)}
@@ -493,6 +522,9 @@ func (_c *RequestCreate) check() error {
 		if err := request.StatusValidator(v); err != nil {
 			return &ValidationError{Name: "status", err: fmt.Errorf(`ent: validator failed for field "Request.status": %w`, err)}
 		}
+	}
+	if _, ok := _c.mutation.IsBlocked(); !ok {
+		return &ValidationError{Name: "is_blocked", err: errors.New(`ent: missing required field "Request.is_blocked"`)}
 	}
 	if len(_c.mutation.InitiatorIDs()) == 0 {
 		return &ValidationError{Name: "initiator", err: errors.New(`ent: missing required edge "Request.initiator"`)}
@@ -607,6 +639,14 @@ func (_c *RequestCreate) createSpec() (*Request, *sqlgraph.CreateSpec) {
 	if value, ok := _c.mutation.Status(); ok {
 		_spec.SetField(request.FieldStatus, field.TypeString, value)
 		_node.Status = value
+	}
+	if value, ok := _c.mutation.ReplacedByRequestID(); ok {
+		_spec.SetField(request.FieldReplacedByRequestID, field.TypeUUID, value)
+		_node.ReplacedByRequestID = &value
+	}
+	if value, ok := _c.mutation.IsBlocked(); ok {
+		_spec.SetField(request.FieldIsBlocked, field.TypeBool, value)
+		_node.IsBlocked = value
 	}
 	if nodes := _c.mutation.InitiatorIDs(); len(nodes) > 0 {
 		edge := &sqlgraph.EdgeSpec{

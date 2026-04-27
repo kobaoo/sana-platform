@@ -42,7 +42,7 @@ var (
 		{Name: "id", Type: field.TypeUUID, Unique: true},
 		{Name: "supplier_id", Type: field.TypeUUID},
 		{Name: "contract_number", Type: field.TypeString, Size: 100},
-		{Name: "vat_flag", Type: field.TypeBool, Default: false},
+		{Name: "vat_flag", Type: field.TypeInt, Default: 0},
 		{Name: "signed_date", Type: field.TypeTime, SchemaType: map[string]string{"postgres": "date"}},
 		{Name: "end_date", Type: field.TypeTime, Nullable: true, SchemaType: map[string]string{"postgres": "date"}},
 		{Name: "amount", Type: field.TypeFloat64, SchemaType: map[string]string{"postgres": "decimal(14,2)"}},
@@ -264,6 +264,8 @@ var (
 		{Name: "updated_at", Type: field.TypeTime, SchemaType: map[string]string{"postgres": "timestamptz"}},
 		{Name: "completed_at", Type: field.TypeTime, Nullable: true, SchemaType: map[string]string{"postgres": "timestamptz"}},
 		{Name: "status", Type: field.TypeString, Size: 50, Default: "DRAFT"},
+		{Name: "replaced_by_request_id", Type: field.TypeUUID, Nullable: true},
+		{Name: "is_blocked", Type: field.TypeBool, Default: false},
 		{Name: "parent_request_id", Type: field.TypeUUID, Nullable: true},
 		{Name: "initiator_id", Type: field.TypeUUID},
 	}
@@ -275,13 +277,13 @@ var (
 		ForeignKeys: []*schema.ForeignKey{
 			{
 				Symbol:     "requests_requests_children",
-				Columns:    []*schema.Column{RequestsColumns[20]},
+				Columns:    []*schema.Column{RequestsColumns[22]},
 				RefColumns: []*schema.Column{RequestsColumns[0]},
 				OnDelete:   schema.SetNull,
 			},
 			{
 				Symbol:     "requests_users_requests",
-				Columns:    []*schema.Column{RequestsColumns[21]},
+				Columns:    []*schema.Column{RequestsColumns[23]},
 				RefColumns: []*schema.Column{UsersColumns[0]},
 				OnDelete:   schema.NoAction,
 			},
@@ -290,7 +292,7 @@ var (
 			{
 				Name:    "request_initiator_id",
 				Unique:  false,
-				Columns: []*schema.Column{RequestsColumns[21]},
+				Columns: []*schema.Column{RequestsColumns[23]},
 			},
 			{
 				Name:    "request_entity_id",
@@ -315,7 +317,7 @@ var (
 			{
 				Name:    "request_parent_request_id",
 				Unique:  false,
-				Columns: []*schema.Column{RequestsColumns[20]},
+				Columns: []*schema.Column{RequestsColumns[22]},
 			},
 			{
 				Name:    "request_request_type",
@@ -325,10 +327,15 @@ var (
 			{
 				Name:    "request_kind",
 				Unique:  false,
-				Columns: []*schema.Column{RequestsColumns[5]},
+				Columns: []*schema.Column{RequestsColumns[4]},
 			},
 			{
 				Name:    "request_assigned_hr_id",
+				Unique:  false,
+				Columns: []*schema.Column{RequestsColumns[5]},
+			},
+			{
+				Name:    "request_target_dzo_id",
 				Unique:  false,
 				Columns: []*schema.Column{RequestsColumns[6]},
 			},

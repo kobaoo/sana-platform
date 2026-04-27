@@ -57,6 +57,10 @@ const (
 	FieldCompletedAt = "completed_at"
 	// FieldStatus holds the string denoting the status field in the database.
 	FieldStatus = "status"
+	// FieldReplacedByRequestID holds the string denoting the replaced_by_request_id field in the database.
+	FieldReplacedByRequestID = "replaced_by_request_id"
+	// FieldIsBlocked holds the string denoting the is_blocked field in the database.
+	FieldIsBlocked = "is_blocked"
 	// EdgeInitiator holds the string denoting the initiator edge name in mutations.
 	EdgeInitiator = "initiator"
 	// EdgeParent holds the string denoting the parent edge name in mutations.
@@ -106,6 +110,8 @@ var Columns = []string{
 	FieldUpdatedAt,
 	FieldCompletedAt,
 	FieldStatus,
+	FieldReplacedByRequestID,
+	FieldIsBlocked,
 }
 
 // ValidColumn reports if the column name is valid (part of the table columns).
@@ -151,6 +157,8 @@ var (
 	DefaultStatus string
 	// StatusValidator is a validator for the "status" field. It is called by the builders before save.
 	StatusValidator func(string) error
+	// DefaultIsBlocked holds the default value on creation for the "is_blocked" field.
+	DefaultIsBlocked bool
 	// DefaultID holds the default value on creation for the "id" field.
 	DefaultID func() uuid.UUID
 )
@@ -266,6 +274,16 @@ func ByCompletedAt(opts ...sql.OrderTermOption) OrderOption {
 // ByStatus orders the results by the status field.
 func ByStatus(opts ...sql.OrderTermOption) OrderOption {
 	return sql.OrderByField(FieldStatus, opts...).ToFunc()
+}
+
+// ByReplacedByRequestID orders the results by the replaced_by_request_id field.
+func ByReplacedByRequestID(opts ...sql.OrderTermOption) OrderOption {
+	return sql.OrderByField(FieldReplacedByRequestID, opts...).ToFunc()
+}
+
+// ByIsBlocked orders the results by the is_blocked field.
+func ByIsBlocked(opts ...sql.OrderTermOption) OrderOption {
+	return sql.OrderByField(FieldIsBlocked, opts...).ToFunc()
 }
 
 // ByInitiatorField orders the results by initiator field.

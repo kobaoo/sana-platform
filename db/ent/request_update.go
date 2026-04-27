@@ -388,6 +388,40 @@ func (_u *RequestUpdate) SetNillableStatus(v *string) *RequestUpdate {
 	return _u
 }
 
+// SetReplacedByRequestID sets the "replaced_by_request_id" field.
+func (_u *RequestUpdate) SetReplacedByRequestID(v uuid.UUID) *RequestUpdate {
+	_u.mutation.SetReplacedByRequestID(v)
+	return _u
+}
+
+// SetNillableReplacedByRequestID sets the "replaced_by_request_id" field if the given value is not nil.
+func (_u *RequestUpdate) SetNillableReplacedByRequestID(v *uuid.UUID) *RequestUpdate {
+	if v != nil {
+		_u.SetReplacedByRequestID(*v)
+	}
+	return _u
+}
+
+// ClearReplacedByRequestID clears the value of the "replaced_by_request_id" field.
+func (_u *RequestUpdate) ClearReplacedByRequestID() *RequestUpdate {
+	_u.mutation.ClearReplacedByRequestID()
+	return _u
+}
+
+// SetIsBlocked sets the "is_blocked" field.
+func (_u *RequestUpdate) SetIsBlocked(v bool) *RequestUpdate {
+	_u.mutation.SetIsBlocked(v)
+	return _u
+}
+
+// SetNillableIsBlocked sets the "is_blocked" field if the given value is not nil.
+func (_u *RequestUpdate) SetNillableIsBlocked(v *bool) *RequestUpdate {
+	if v != nil {
+		_u.SetIsBlocked(*v)
+	}
+	return _u
+}
+
 // SetInitiator sets the "initiator" edge to the User entity.
 func (_u *RequestUpdate) SetInitiator(v *User) *RequestUpdate {
 	return _u.SetInitiatorID(v.ID)
@@ -653,6 +687,15 @@ func (_u *RequestUpdate) sqlSave(ctx context.Context) (_node int, err error) {
 	}
 	if value, ok := _u.mutation.Status(); ok {
 		_spec.SetField(request.FieldStatus, field.TypeString, value)
+	}
+	if value, ok := _u.mutation.ReplacedByRequestID(); ok {
+		_spec.SetField(request.FieldReplacedByRequestID, field.TypeUUID, value)
+	}
+	if _u.mutation.ReplacedByRequestIDCleared() {
+		_spec.ClearField(request.FieldReplacedByRequestID, field.TypeUUID)
+	}
+	if value, ok := _u.mutation.IsBlocked(); ok {
+		_spec.SetField(request.FieldIsBlocked, field.TypeBool, value)
 	}
 	if _u.mutation.InitiatorCleared() {
 		edge := &sqlgraph.EdgeSpec{
@@ -1135,6 +1178,40 @@ func (_u *RequestUpdateOne) SetNillableStatus(v *string) *RequestUpdateOne {
 	return _u
 }
 
+// SetReplacedByRequestID sets the "replaced_by_request_id" field.
+func (_u *RequestUpdateOne) SetReplacedByRequestID(v uuid.UUID) *RequestUpdateOne {
+	_u.mutation.SetReplacedByRequestID(v)
+	return _u
+}
+
+// SetNillableReplacedByRequestID sets the "replaced_by_request_id" field if the given value is not nil.
+func (_u *RequestUpdateOne) SetNillableReplacedByRequestID(v *uuid.UUID) *RequestUpdateOne {
+	if v != nil {
+		_u.SetReplacedByRequestID(*v)
+	}
+	return _u
+}
+
+// ClearReplacedByRequestID clears the value of the "replaced_by_request_id" field.
+func (_u *RequestUpdateOne) ClearReplacedByRequestID() *RequestUpdateOne {
+	_u.mutation.ClearReplacedByRequestID()
+	return _u
+}
+
+// SetIsBlocked sets the "is_blocked" field.
+func (_u *RequestUpdateOne) SetIsBlocked(v bool) *RequestUpdateOne {
+	_u.mutation.SetIsBlocked(v)
+	return _u
+}
+
+// SetNillableIsBlocked sets the "is_blocked" field if the given value is not nil.
+func (_u *RequestUpdateOne) SetNillableIsBlocked(v *bool) *RequestUpdateOne {
+	if v != nil {
+		_u.SetIsBlocked(*v)
+	}
+	return _u
+}
+
 // SetInitiator sets the "initiator" edge to the User entity.
 func (_u *RequestUpdateOne) SetInitiator(v *User) *RequestUpdateOne {
 	return _u.SetInitiatorID(v.ID)
@@ -1430,6 +1507,15 @@ func (_u *RequestUpdateOne) sqlSave(ctx context.Context) (_node *Request, err er
 	}
 	if value, ok := _u.mutation.Status(); ok {
 		_spec.SetField(request.FieldStatus, field.TypeString, value)
+	}
+	if value, ok := _u.mutation.ReplacedByRequestID(); ok {
+		_spec.SetField(request.FieldReplacedByRequestID, field.TypeUUID, value)
+	}
+	if _u.mutation.ReplacedByRequestIDCleared() {
+		_spec.ClearField(request.FieldReplacedByRequestID, field.TypeUUID)
+	}
+	if value, ok := _u.mutation.IsBlocked(); ok {
+		_spec.SetField(request.FieldIsBlocked, field.TypeBool, value)
 	}
 	if _u.mutation.InitiatorCleared() {
 		edge := &sqlgraph.EdgeSpec{

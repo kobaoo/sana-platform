@@ -102,7 +102,23 @@ func init() {
 	// contractsupplierDescVatFlag is the schema descriptor for vat_flag field.
 	contractsupplierDescVatFlag := contractsupplierFields[3].Descriptor()
 	// contractsupplier.DefaultVatFlag holds the default value on creation for the vat_flag field.
-	contractsupplier.DefaultVatFlag = contractsupplierDescVatFlag.Default.(bool)
+	contractsupplier.DefaultVatFlag = contractsupplierDescVatFlag.Default.(int)
+	// contractsupplier.VatFlagValidator is a validator for the "vat_flag" field. It is called by the builders before save.
+	contractsupplier.VatFlagValidator = func() func(int) error {
+		validators := contractsupplierDescVatFlag.Validators
+		fns := [...]func(int) error{
+			validators[0].(func(int) error),
+			validators[1].(func(int) error),
+		}
+		return func(vat_flag int) error {
+			for _, fn := range fns {
+				if err := fn(vat_flag); err != nil {
+					return err
+				}
+			}
+			return nil
+		}
+	}()
 	// contractsupplierDescCurrency is the schema descriptor for currency field.
 	contractsupplierDescCurrency := contractsupplierFields[8].Descriptor()
 	// contractsupplier.CurrencyValidator is a validator for the "currency" field. It is called by the builders before save.
@@ -495,6 +511,10 @@ func init() {
 			return nil
 		}
 	}()
+	// requestDescIsBlocked is the schema descriptor for is_blocked field.
+	requestDescIsBlocked := requestFields[23].Descriptor()
+	// request.DefaultIsBlocked holds the default value on creation for the is_blocked field.
+	request.DefaultIsBlocked = requestDescIsBlocked.Default.(bool)
 	// requestDescID is the schema descriptor for id field.
 	requestDescID := requestFields[0].Descriptor()
 	// request.DefaultID holds the default value on creation for the id field.
