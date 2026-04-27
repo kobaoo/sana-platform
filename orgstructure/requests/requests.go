@@ -1236,10 +1236,24 @@ func loadTrainingEvent(ctx context.Context, rawID string) (*trainingEventRecord,
 
 	var event trainingEventRecord
 	if err := row.Scan(&event.ID, &event.Title, &event.StartDate, &event.LocationType); err != nil {
-		if errors.Is(err, sqldb.ErrNoRows) {
-			return nil, errs.B().Code(errs.NotFound).Msg("training event not found").Err()
+		if !errors.Is(err, sqldb.ErrNoRows) {
+			return nil, errs.B().Code(errs.Internal).Msg("failed to load training event").Cause(err).Err()
 		}
-		return nil, errs.B().Code(errs.Internal).Msg("failed to load training event").Cause(err).Err()
+		extRow := db.QueryRow(ctx, `
+			SELECT id, name, start_date
+			FROM external_training_events
+			WHERE id = $1
+				AND COALESCE(is_deleted, false) = false
+				AND COALESCE(is_active, true) = true
+		`, trainingID)
+		if err := extRow.Scan(&event.ID, &event.Title, &event.StartDate); err != nil {
+			if errors.Is(err, sqldb.ErrNoRows) {
+				return nil, errs.B().Code(errs.NotFound).Msg("training event not found").Err()
+			}
+			return nil, errs.B().Code(errs.Internal).Msg("failed to load external training event").Cause(err).Err()
+		}
+		event.LocationType = sql.NullString{}
+		return &event, nil
 	}
 	return &event, nil
 }
@@ -2224,9 +2238,11 @@ func queryRequestBudgetAndSupplier(ctx context.Context, requestID uuid.UUID) (*R
 			s.name,
 			s.bin_or_iin
 		FROM requests r
-		JOIN training_events te ON te.id = r.entity_id
-		LEFT JOIN contract_suppliers cs ON cs.id = te.supplier_contract_id
-		LEFT JOIN suppliers s ON s.id = te.supplier_id
+		LEFT JOIN training_events te ON te.id = r.entity_id
+		LEFT JOIN external_training_events ete ON ete.id = r.entity_id
+			AND COALESCE(ete.is_deleted, false) = false
+		LEFT JOIN contract_suppliers cs ON cs.id = COALESCE(te.supplier_contract_id, ete.contract_id)
+		LEFT JOIN suppliers s ON s.id = COALESCE(te.supplier_id, ete.supplier_id)
 		WHERE r.id = $1
 	`, requestID)
 
@@ -2282,22 +2298,33 @@ func queryRequestBudgetAndSupplier(ctx context.Context, requestID uuid.UUID) (*R
 
 func getRequestBudgetSource(ctx context.Context, requestID uuid.UUID) (uuid.UUID, float64, error) {
 	row := db.QueryRow(ctx, `
-		SELECT te.supplier_contract_id, r.cost_amount
+		SELECT COALESCE(te.supplier_contract_id, ete.contract_id), r.cost_amount
 		FROM requests r
-		JOIN training_events te ON te.id = r.entity_id
+		LEFT JOIN training_events te ON te.id = r.entity_id
+		LEFT JOIN external_training_events ete ON ete.id = r.entity_id
+			AND COALESCE(ete.is_deleted, false) = false
 		WHERE r.id = $1
 	`, requestID)
 
 	var (
-		contractID uuid.UUID
-		costAmount sql.NullFloat64
+		contractIDRaw sql.NullString
+		costAmount    sql.NullFloat64
 	)
 
-	if err := row.Scan(&contractID, &costAmount); err != nil {
+	if err := row.Scan(&contractIDRaw, &costAmount); err != nil {
 		if errors.Is(err, sqldb.ErrNoRows) {
 			return uuid.Nil, 0, errs.B().Code(errs.NotFound).Msg("request budget source not found").Err()
 		}
 		return uuid.Nil, 0, errs.B().Code(errs.Internal).Msg("failed to load request budget source").Cause(err).Err()
+	}
+
+	var contractID uuid.UUID
+	if contractIDRaw.Valid && strings.TrimSpace(contractIDRaw.String) != "" {
+		parsed, err := uuid.Parse(strings.TrimSpace(contractIDRaw.String))
+		if err != nil {
+			return uuid.Nil, 0, errs.B().Code(errs.Internal).Msg("invalid supplier contract on request").Cause(err).Err()
+		}
+		contractID = parsed
 	}
 
 	if !costAmount.Valid || costAmount.Float64 <= 0 {
