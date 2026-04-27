@@ -3,6 +3,7 @@ package courses
 import (
 	"context"
 	"fmt"
+	"log"
 	"path/filepath"
 	"strings"
 	"time"
@@ -144,6 +145,7 @@ func ListCourses(ctx context.Context) (*ListCoursesResponse, error) {
 	if err != nil {
 		return nil, err
 	}
+
 	clientUID, err := uuid.Parse(ad.CompanyID)
 	if err != nil {
 		return nil, errs.B().Code(errs.InvalidArgument).Msg("invalid company_id in token").Err()
@@ -164,6 +166,7 @@ func GetCourse(ctx context.Context, id string) (*GetCourseResponse, error) {
 	if err != nil {
 		return nil, err
 	}
+
 	clientUID, err := uuid.Parse(ad.CompanyID)
 	if err != nil {
 		return nil, errs.B().Code(errs.InvalidArgument).Msg("invalid company_id in token").Err()
@@ -173,13 +176,20 @@ func GetCourse(ctx context.Context, id string) (*GetCourseResponse, error) {
 		return nil, err
 	}
 	if course.ImageURL != nil {
-		signed, err := generateSignedURL(ctx, *course.ImageURL)
+		signed, err := generatePublicURL(*course.ImageURL)
 		if err == nil {
 			course.ImageURL = &signed
 		} else {
 			return nil, err
 		}
 	}
+	signed, err := generateSignedURL(ctx, course.ScormURL)
+	if err == nil {
+		course.ScormURL = signed
+	} else {
+		return nil, err
+	}
+
 	return &GetCourseResponse{
 		Course: course,
 	}, nil
@@ -237,11 +247,11 @@ func DeleteCourse(ctx context.Context, id string) error {
 
 // INTERNAL
 
-func sanitizeFileName(name string) string {
-	name = filepath.Base(name)
-	name = strings.ReplaceAll(name, " ", "_")
-	return name
-}
+// func sanitizeFileName(name string) string {
+// 	name = filepath.Base(name)
+// 	name = strings.ReplaceAll(name, " ", "_")
+// 	return name
+// }
 
 func validateUploadSCORMRequest(fileName string, fileData []byte) error {
 	if strings.TrimSpace(fileName) == "" {
@@ -296,9 +306,11 @@ func validateUploadCourseImageRequest(fileName string, fileData []byte) error {
 }
 
 func uploadSCORMToStorage(ctx context.Context, fileName string, fileData []byte) (string, error) {
+	ext := filepath.Ext(fileName)
 	objectKey := fmt.Sprintf(
-		"scorm/uploads/%s",
-		sanitizeFileName(fileName),
+		"scorm/uploads/%s%s",
+		uuid.NewString(),
+		ext,
 	)
 
 	writer := scormBucket.Upload(ctx, objectKey)
@@ -321,17 +333,15 @@ func uploadSCORMToStorage(ctx context.Context, fileName string, fileData []byte)
 			Cause(err).
 			Err()
 	}
-	url, err := generateSignedURL(ctx, objectKey)
-	if err != nil {
-		return "", err
-	}
-	return url, nil
+	return objectKey, nil
 }
 
 func uploadCourseImageToStorage(ctx context.Context, fileName string, fileData []byte) (string, error) {
+	ext := filepath.Ext(fileName)
 	objectKey := fmt.Sprintf(
-		"course-images/%s",
-		sanitizeFileName(fileName),
+		"course-images/%s%s",
+		uuid.NewString(),
+		ext,
 	)
 
 	writer := publicAssets.Upload(ctx, objectKey)
@@ -354,12 +364,7 @@ func uploadCourseImageToStorage(ctx context.Context, fileName string, fileData [
 			Cause(err).
 			Err()
 	}
-	url, err := generatePublicURL(objectKey)
-	if err != nil {
-		return "", err
-	}
-
-	return url, nil
+	return objectKey, nil
 }
 
 func generateSignedURL(ctx context.Context, key string) (string, error) {
@@ -382,12 +387,15 @@ func generatePublicURL(key string) (string, error) {
 	if strings.TrimSpace(key) == "" {
 		return "", errs.B().Code(errs.NotFound).Msg("object key not found").Err()
 	}
+	log.Printf("key raw      = %q", key)
+	log.Printf("key bytes    = % x", []byte(key))
 
-	signedURL := publicAssets.PublicURL(key)
+	publicURL := publicAssets.PublicURL(key)
 
-	return signedURL.String(), nil
+	log.Printf("public url   = %s", publicURL.String())
+	log.Printf("url path     = %q", publicURL.EscapedPath())
+	return publicURL.String(), nil
 }
-
 func insertCourse(ctx context.Context, clientUID uuid.UUID, req *CreateCourseRequest) (*Course, error) {
 	if strings.TrimSpace(req.Title) == "" {
 		return nil, errs.B().
