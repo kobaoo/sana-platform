@@ -649,6 +649,8 @@ func autoProvisionActor(ctx context.Context, ad *authhandler.AuthData) (*actor, 
 		role = authhandler.RoleSA
 	} else if ad.Role == authhandler.RoleADM {
 		role = authhandler.RoleADM
+	} else if ad.Role == authhandler.RoleHR {
+		role = authhandler.RoleHR
 	}
 
 	builder := Client.User.
@@ -898,7 +900,7 @@ func submitRequest(ctx context.Context, actor *actor, requestID uuid.UUID) (*Req
 				target_dzo_id, title, category, format, responsible_admin_id, training_date,
 				deadline_at, cost_amount, cost_mode, step, status, created_at, updated_at
 			)
-			VALUES ($1, $2, $3, $4, $5, 'SUBREQUEST', 'REGULAR', $6, $7, $8, $9, $10, $11, $12, $13, $14, $15, 0, 'PENDING', NOW(), NOW())
+			VALUES ($1, $2, $3, $4, $5, 'SUBREQUEST', 'REGULAR', $6, $7, $8, $9, $10, $11, $12, $13, $14, $15, 0, 'IN_PROGRESS', NOW(), NOW())
 		`,
 			childID,
 			actor.ID,
@@ -950,7 +952,7 @@ func updateHRRequestEmployees(ctx context.Context, actor *actor, requestID uuid.
 	if requestSummary.Kind != RequestKindRegular {
 		return nil, errs.B().Code(errs.InvalidArgument).Msg("archive requests cannot be edited by HR").Err()
 	}
-	if requestSummary.Status != RequestStatusPending {
+	if requestSummary.Status != RequestStatusInProgress && requestSummary.Status != RequestStatusPending {
 		return nil, errs.B().Code(errs.InvalidArgument).Msg("request is already finalized").Err()
 	}
 	if requestSummary.TargetDzoID == nil {
@@ -1005,7 +1007,7 @@ func finalizeHRRequest(ctx context.Context, actor *actor, requestID uuid.UUID, s
 	if requestSummary.Kind != RequestKindRegular {
 		return nil, errs.B().Code(errs.InvalidArgument).Msg("archive requests cannot be finalized by HR").Err()
 	}
-	if requestSummary.Status != RequestStatusPending {
+	if requestSummary.Status != RequestStatusInProgress && requestSummary.Status != RequestStatusPending {
 		return nil, errs.B().Code(errs.InvalidArgument).Msg("request is already finalized").Err()
 	}
 
@@ -1145,7 +1147,7 @@ func queryRequestSummaries(ctx context.Context, query string, args ...interface{
 
 func queryRequestEmployees(ctx context.Context, requestID uuid.UUID) ([]RequestEmployee, error) {
 	rows, err := db.Query(ctx, `
-		SELECT e.id, e.full_name, e.dzo_id, d.name
+		SELECT e.id, e.full_name, e.dzo_id, d.name, e.is_active
 		FROM request_participants rp
 		JOIN employees e ON e.id = rp.employee_id
 		JOIN dzo_organizations d ON d.id = e.dzo_id
@@ -1164,8 +1166,9 @@ func queryRequestEmployees(ctx context.Context, requestID uuid.UUID) ([]RequestE
 			fullName string
 			dzoID    uuid.UUID
 			dzoName  string
+			isActive bool
 		)
-		if err := rows.Scan(&id, &fullName, &dzoID, &dzoName); err != nil {
+		if err := rows.Scan(&id, &fullName, &dzoID, &dzoName, &isActive); err != nil {
 			return nil, errs.B().Code(errs.Internal).Msg("failed to scan request employee").Cause(err).Err()
 		}
 		employees = append(employees, RequestEmployee{
@@ -1173,6 +1176,7 @@ func queryRequestEmployees(ctx context.Context, requestID uuid.UUID) ([]RequestE
 			FullName: fullName,
 			DzoID:    dzoID.String(),
 			DzoName:  dzoName,
+			IsActive: isActive,
 		})
 	}
 	if err := rows.Err(); err != nil {
@@ -1511,7 +1515,7 @@ func syncParentRequestStatusTx(ctx context.Context, tx *sqldb.Tx, parentID uuid.
 	row := tx.QueryRow(ctx, `
 		SELECT
 			COUNT(*) AS total_children,
-			COUNT(*) FILTER (WHERE status = 'PENDING') AS pending_children,
+			COUNT(*) FILTER (WHERE status IN ('IN_PROGRESS','PENDING')) AS pending_children,
 			COUNT(*) FILTER (WHERE status = 'APPROVED') AS approved_children
 		FROM requests
 		WHERE parent_request_id = $1
@@ -1691,7 +1695,7 @@ func finalizeAdminRequest(ctx context.Context, actor *actor, requestID uuid.UUID
 	if err := tx.QueryRow(ctx, `
 		SELECT COUNT(*)
 		FROM requests
-		WHERE parent_request_id = $1 AND status = 'PENDING'
+		WHERE parent_request_id = $1 AND status IN ('IN_PROGRESS','PENDING')
 	`, requestID).Scan(&pendingChildren); err != nil {
 		return nil, errs.B().Code(errs.Internal).Msg("failed to check pending subrequests").Cause(err).Err()
 	}
@@ -1788,7 +1792,7 @@ func cancelAdminRequest(ctx context.Context, actor *actor, requestID uuid.UUID) 
 	if _, err := tx.Exec(ctx, `
 		UPDATE requests
 		SET status = 'REJECTED', updated_at = NOW()
-		WHERE parent_request_id = $1 AND status = 'PENDING'
+		WHERE parent_request_id = $1 AND status IN ('IN_PROGRESS','PENDING')
 	`, requestID); err != nil {
 		return nil, errs.B().Code(errs.Internal).Msg("failed to cancel child requests").Cause(err).Err()
 	}
@@ -2628,9 +2632,9 @@ func approveAdminRequest(ctx context.Context, actor *actor, requestID uuid.UUID)
 		return nil, errs.B().Code(errs.InvalidArgument).Msg("only main requests can be approved").Err()
 	}
 
-	// Verify it's in IN_PROGRESS status
-	if mainRequest.Status != RequestStatusInProgress {
-		return nil, errs.B().Code(errs.InvalidArgument).Msg("only IN_PROGRESS requests can be approved").Err()
+	// Allow approving DRAFT requests; also accept IN_PROGRESS and legacy PENDING for compatibility
+	if mainRequest.Status != RequestStatusInProgress && mainRequest.Status != RequestStatusPending && mainRequest.Status != RequestStatusDraft {
+		return nil, errs.B().Code(errs.InvalidArgument).Msg("only DRAFT, IN_PROGRESS or PENDING requests can be approved").Err()
 	}
 
 	// Update request status to APPROVED
@@ -2657,9 +2661,9 @@ func rejectAdminRequest(ctx context.Context, actor *actor, requestID uuid.UUID) 
 		return nil, errs.B().Code(errs.InvalidArgument).Msg("only main requests can be rejected").Err()
 	}
 
-	// Verify it's in IN_PROGRESS status
-	if mainRequest.Status != RequestStatusInProgress {
-		return nil, errs.B().Code(errs.InvalidArgument).Msg("only IN_PROGRESS requests can be rejected").Err()
+	// Verify it's in IN_PROGRESS status (accept legacy PENDING for compatibility)
+	if mainRequest.Status != RequestStatusInProgress && mainRequest.Status != RequestStatusPending {
+		return nil, errs.B().Code(errs.InvalidArgument).Msg("only IN_PROGRESS or PENDING requests can be rejected").Err()
 	}
 
 	// Update request status to REJECTED
