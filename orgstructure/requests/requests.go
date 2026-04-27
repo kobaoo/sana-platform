@@ -235,7 +235,7 @@ func CancelAdminRequest(ctx context.Context, id encoreuuid.UUID) (*GetRequestRes
 	return &GetRequestResponse{Detail: *detail}, nil
 }
 
-// ListHRRequests returns subrequests assigned to the current HR.
+// ListHRRequests returns requests visible to the current HR.
 //
 //encore:api auth method=GET path=/requests/hr
 func ListHRRequests(ctx context.Context) (*ListRequestsResponse, error) {
@@ -256,7 +256,10 @@ func ListHRRequests(ctx context.Context) (*ListRequestsResponse, error) {
 			0 AS approved_children,
 			0 AS total_children
 		FROM requests r
-		WHERE r.request_type = 'SUBREQUEST' AND r.assigned_hr_id = $1
+		WHERE
+			(r.request_type = 'SUBREQUEST' AND r.assigned_hr_id = $1)
+			OR
+			(r.request_type = 'MAIN' AND r.initiator_id = $1 AND r.entity_type = 'HR_REQUEST')
 		ORDER BY r.created_at DESC
 	`, actor.ID)
 	if err != nil {
