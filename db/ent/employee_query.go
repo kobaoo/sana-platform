@@ -4,11 +4,13 @@ package ent
 
 import (
 	"context"
+	"database/sql/driver"
 	"fmt"
 	"math"
 
 	"encore.app/db/ent/dzoorganization"
 	"encore.app/db/ent/employee"
+	"encore.app/db/ent/eventparticipant"
 	"encore.app/db/ent/predicate"
 	"entgo.io/ent"
 	"entgo.io/ent/dialect/sql"
@@ -20,11 +22,12 @@ import (
 // EmployeeQuery is the builder for querying Employee entities.
 type EmployeeQuery struct {
 	config
-	ctx        *QueryContext
-	order      []employee.OrderOption
-	inters     []Interceptor
-	predicates []predicate.Employee
-	withDzo    *DzoOrganizationQuery
+	ctx                     *QueryContext
+	order                   []employee.OrderOption
+	inters                  []Interceptor
+	predicates              []predicate.Employee
+	withDzo                 *DzoOrganizationQuery
+	withEventParticipations *EventParticipantQuery
 	// intermediate query (i.e. traversal path).
 	sql  *sql.Selector
 	path func(context.Context) (*sql.Selector, error)
@@ -76,6 +79,28 @@ func (_q *EmployeeQuery) QueryDzo() *DzoOrganizationQuery {
 			sqlgraph.From(employee.Table, employee.FieldID, selector),
 			sqlgraph.To(dzoorganization.Table, dzoorganization.FieldID),
 			sqlgraph.Edge(sqlgraph.M2O, true, employee.DzoTable, employee.DzoColumn),
+		)
+		fromU = sqlgraph.SetNeighbors(_q.driver.Dialect(), step)
+		return fromU, nil
+	}
+	return query
+}
+
+// QueryEventParticipations chains the current query on the "event_participations" edge.
+func (_q *EmployeeQuery) QueryEventParticipations() *EventParticipantQuery {
+	query := (&EventParticipantClient{config: _q.config}).Query()
+	query.path = func(ctx context.Context) (fromU *sql.Selector, err error) {
+		if err := _q.prepareQuery(ctx); err != nil {
+			return nil, err
+		}
+		selector := _q.sqlQuery(ctx)
+		if err := selector.Err(); err != nil {
+			return nil, err
+		}
+		step := sqlgraph.NewStep(
+			sqlgraph.From(employee.Table, employee.FieldID, selector),
+			sqlgraph.To(eventparticipant.Table, eventparticipant.FieldID),
+			sqlgraph.Edge(sqlgraph.O2M, false, employee.EventParticipationsTable, employee.EventParticipationsColumn),
 		)
 		fromU = sqlgraph.SetNeighbors(_q.driver.Dialect(), step)
 		return fromU, nil
@@ -270,12 +295,13 @@ func (_q *EmployeeQuery) Clone() *EmployeeQuery {
 		return nil
 	}
 	return &EmployeeQuery{
-		config:     _q.config,
-		ctx:        _q.ctx.Clone(),
-		order:      append([]employee.OrderOption{}, _q.order...),
-		inters:     append([]Interceptor{}, _q.inters...),
-		predicates: append([]predicate.Employee{}, _q.predicates...),
-		withDzo:    _q.withDzo.Clone(),
+		config:                  _q.config,
+		ctx:                     _q.ctx.Clone(),
+		order:                   append([]employee.OrderOption{}, _q.order...),
+		inters:                  append([]Interceptor{}, _q.inters...),
+		predicates:              append([]predicate.Employee{}, _q.predicates...),
+		withDzo:                 _q.withDzo.Clone(),
+		withEventParticipations: _q.withEventParticipations.Clone(),
 		// clone intermediate query.
 		sql:  _q.sql.Clone(),
 		path: _q.path,
@@ -290,6 +316,17 @@ func (_q *EmployeeQuery) WithDzo(opts ...func(*DzoOrganizationQuery)) *EmployeeQ
 		opt(query)
 	}
 	_q.withDzo = query
+	return _q
+}
+
+// WithEventParticipations tells the query-builder to eager-load the nodes that are connected to
+// the "event_participations" edge. The optional arguments are used to configure the query builder of the edge.
+func (_q *EmployeeQuery) WithEventParticipations(opts ...func(*EventParticipantQuery)) *EmployeeQuery {
+	query := (&EventParticipantClient{config: _q.config}).Query()
+	for _, opt := range opts {
+		opt(query)
+	}
+	_q.withEventParticipations = query
 	return _q
 }
 
@@ -371,8 +408,9 @@ func (_q *EmployeeQuery) sqlAll(ctx context.Context, hooks ...queryHook) ([]*Emp
 	var (
 		nodes       = []*Employee{}
 		_spec       = _q.querySpec()
-		loadedTypes = [1]bool{
+		loadedTypes = [2]bool{
 			_q.withDzo != nil,
+			_q.withEventParticipations != nil,
 		}
 	)
 	_spec.ScanValues = func(columns []string) ([]any, error) {
@@ -396,6 +434,15 @@ func (_q *EmployeeQuery) sqlAll(ctx context.Context, hooks ...queryHook) ([]*Emp
 	if query := _q.withDzo; query != nil {
 		if err := _q.loadDzo(ctx, query, nodes, nil,
 			func(n *Employee, e *DzoOrganization) { n.Edges.Dzo = e }); err != nil {
+			return nil, err
+		}
+	}
+	if query := _q.withEventParticipations; query != nil {
+		if err := _q.loadEventParticipations(ctx, query, nodes,
+			func(n *Employee) { n.Edges.EventParticipations = []*EventParticipant{} },
+			func(n *Employee, e *EventParticipant) {
+				n.Edges.EventParticipations = append(n.Edges.EventParticipations, e)
+			}); err != nil {
 			return nil, err
 		}
 	}
@@ -428,6 +475,36 @@ func (_q *EmployeeQuery) loadDzo(ctx context.Context, query *DzoOrganizationQuer
 		for i := range nodes {
 			assign(nodes[i], n)
 		}
+	}
+	return nil
+}
+func (_q *EmployeeQuery) loadEventParticipations(ctx context.Context, query *EventParticipantQuery, nodes []*Employee, init func(*Employee), assign func(*Employee, *EventParticipant)) error {
+	fks := make([]driver.Value, 0, len(nodes))
+	nodeids := make(map[uuid.UUID]*Employee)
+	for i := range nodes {
+		fks = append(fks, nodes[i].ID)
+		nodeids[nodes[i].ID] = nodes[i]
+		if init != nil {
+			init(nodes[i])
+		}
+	}
+	if len(query.ctx.Fields) > 0 {
+		query.ctx.AppendFieldOnce(eventparticipant.FieldEmployeeID)
+	}
+	query.Where(predicate.EventParticipant(func(s *sql.Selector) {
+		s.Where(sql.InValues(s.C(employee.EventParticipationsColumn), fks...))
+	}))
+	neighbors, err := query.All(ctx)
+	if err != nil {
+		return err
+	}
+	for _, n := range neighbors {
+		fk := n.EmployeeID
+		node, ok := nodeids[fk]
+		if !ok {
+			return fmt.Errorf(`unexpected referenced foreign-key "employee_id" returned %v for node %v`, fk, n.ID)
+		}
+		assign(node, n)
 	}
 	return nil
 }

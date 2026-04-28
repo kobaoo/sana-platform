@@ -961,6 +961,36 @@ func TestCreateHRRequest_Success(t *testing.T) {
 	}
 }
 
+func TestGetHRRequest_AllowsHRMainRequestOwner(t *testing.T) {
+	fx := newFixture(t)
+
+	deadline := time.Now().Add(48 * time.Hour).UTC().Format(time.RFC3339)
+
+	created, err := CreateHRRequest(
+		authCtxFor(fx.hrOneKC, authhandler.RoleHR, &fx.dzoOneID),
+		&CreateHRRequestRequest{
+			Title:       "HR my own request",
+			EmployeeIDs: []string{fx.empOneID.String()},
+			DeadlineAt:  &deadline,
+		},
+	)
+	if err != nil {
+		t.Fatalf("create hr request: %v", err)
+	}
+
+	fetched, err := GetHRRequest(
+		authCtxFor(fx.hrOneKC, authhandler.RoleHR, &fx.dzoOneID),
+		toEncoreUUID(uuid.MustParse(created.Detail.Request.ID)),
+	)
+	if err != nil {
+		t.Fatalf("fetch hr request: %v", err)
+	}
+
+	if fetched.Detail.Request.ID != created.Detail.Request.ID {
+		t.Fatalf("expected fetched request id %s, got %s", created.Detail.Request.ID, fetched.Detail.Request.ID)
+	}
+}
+
 func TestCreateHRRequest_RejectsEmployeeFromAnotherDZO(t *testing.T) {
 	fx := newFixture(t)
 

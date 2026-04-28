@@ -249,19 +249,26 @@ func ListEmployees(ctx context.Context, params *ListEmployeesParams) (*ListEmplo
 		clientFilter = ad.CompanyID
 	}
 
-	page := params.Page
-	if page <= 0 {
-		page = 1
-	}
-
 	limit := params.Limit
 	if limit <= 0 {
 		limit = 20
 	}
-
 	if limit > 100 {
 		limit = 100
 	}
+
+	// Support both pagination styles:
+	//   - page-based (params.Page): 1-indexed
+	//   - offset-based (params.Offset): 0-indexed, used for lazy-load scroll
+	// If only offset is provided, derive the corresponding page.
+	page := params.Page
+	if page <= 0 && params.Offset > 0 {
+		page = params.Offset/limit + 1
+	}
+	if page <= 0 {
+		page = 1
+	}
+	offset := (page - 1) * limit
 
 	emps, total, err := queryActiveEmployees(
 		ctx,
@@ -280,6 +287,9 @@ func ListEmployees(ctx context.Context, params *ListEmployeesParams) (*ListEmplo
 	return &ListEmployeesResponse{
 		Employees:  emps,
 		Total:      total,
+		Limit:      limit,
+		Offset:     offset,
+		HasMore:    offset+len(emps) < total,
 		Page:       page,
 		TotalPages: totalPages,
 	}, nil
