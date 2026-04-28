@@ -1,0 +1,32 @@
+{
+  "$schema": "https://encore.dev/schemas/infra.schema.json",
+  "metadata": {
+    "app_id": "sana-platform",
+    "env_name": "production",
+    "env_type": "production",
+    "cloud": "self_hosted",
+    "base_url": "${INFRA_BASE_URL}"
+  },
+  "sql_servers": [
+    {
+      "host": "${INFRA_POSTGRES_HOST}:5432",
+      "databases": {
+        "lms": {
+          "username": "${INFRA_POSTGRES_USER}",
+          "password": { "$env": "DB_PASSWORD" }
+        }
+      }
+    }
+  ],
+  "secrets": {
+    "KeycloakIssuerURL":         { "$env": "KEYCLOAK_ISSUER_URL" },
+    "KeycloakAudience":          { "$env": "KEYCLOAK_AUDIENCE" },
+    "KeycloakAdminUser":         { "$env": "KEYCLOAK_ADMIN_USER" },
+    "KeycloakAdminPassword":     { "$env": "KEYCLOAK_ADMIN_PASSWORD" },
+    "KeycloakAdminClientID":     { "$env": "KEYCLOAK_ADMIN_CLIENT_ID" },
+    "KeycloakAdminClientSecret": { "$env": "KEYCLOAK_ADMIN_CLIENT_SECRET" }
+  },
+  "graceful_shutdown": {
+    "total": 30
+  }
+}
