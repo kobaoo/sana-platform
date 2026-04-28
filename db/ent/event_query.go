@@ -8,10 +8,11 @@ import (
 	"fmt"
 	"math"
 
-	"encore.app/db/ent/dzoorganization"
-	"encore.app/db/ent/employee"
+	"encore.app/db/ent/company"
+	"encore.app/db/ent/event"
 	"encore.app/db/ent/eventparticipant"
 	"encore.app/db/ent/predicate"
+	"encore.app/db/ent/user"
 	"entgo.io/ent"
 	"entgo.io/ent/dialect/sql"
 	"entgo.io/ent/dialect/sql/sqlgraph"
@@ -19,54 +20,55 @@ import (
 	"github.com/google/uuid"
 )
 
-// EmployeeQuery is the builder for querying Employee entities.
-type EmployeeQuery struct {
+// EventQuery is the builder for querying Event entities.
+type EventQuery struct {
 	config
-	ctx                     *QueryContext
-	order                   []employee.OrderOption
-	inters                  []Interceptor
-	predicates              []predicate.Employee
-	withDzo                 *DzoOrganizationQuery
-	withEventParticipations *EventParticipantQuery
+	ctx              *QueryContext
+	order            []event.OrderOption
+	inters           []Interceptor
+	predicates       []predicate.Event
+	withClients      *CompanyQuery
+	withHost         *UserQuery
+	withParticipants *EventParticipantQuery
 	// intermediate query (i.e. traversal path).
 	sql  *sql.Selector
 	path func(context.Context) (*sql.Selector, error)
 }
 
-// Where adds a new predicate for the EmployeeQuery builder.
-func (_q *EmployeeQuery) Where(ps ...predicate.Employee) *EmployeeQuery {
+// Where adds a new predicate for the EventQuery builder.
+func (_q *EventQuery) Where(ps ...predicate.Event) *EventQuery {
 	_q.predicates = append(_q.predicates, ps...)
 	return _q
 }
 
 // Limit the number of records to be returned by this query.
-func (_q *EmployeeQuery) Limit(limit int) *EmployeeQuery {
+func (_q *EventQuery) Limit(limit int) *EventQuery {
 	_q.ctx.Limit = &limit
 	return _q
 }
 
 // Offset to start from.
-func (_q *EmployeeQuery) Offset(offset int) *EmployeeQuery {
+func (_q *EventQuery) Offset(offset int) *EventQuery {
 	_q.ctx.Offset = &offset
 	return _q
 }
 
 // Unique configures the query builder to filter duplicate records on query.
 // By default, unique is set to true, and can be disabled using this method.
-func (_q *EmployeeQuery) Unique(unique bool) *EmployeeQuery {
+func (_q *EventQuery) Unique(unique bool) *EventQuery {
 	_q.ctx.Unique = &unique
 	return _q
 }
 
 // Order specifies how the records should be ordered.
-func (_q *EmployeeQuery) Order(o ...employee.OrderOption) *EmployeeQuery {
+func (_q *EventQuery) Order(o ...event.OrderOption) *EventQuery {
 	_q.order = append(_q.order, o...)
 	return _q
 }
 
-// QueryDzo chains the current query on the "dzo" edge.
-func (_q *EmployeeQuery) QueryDzo() *DzoOrganizationQuery {
-	query := (&DzoOrganizationClient{config: _q.config}).Query()
+// QueryClients chains the current query on the "clients" edge.
+func (_q *EventQuery) QueryClients() *CompanyQuery {
+	query := (&CompanyClient{config: _q.config}).Query()
 	query.path = func(ctx context.Context) (fromU *sql.Selector, err error) {
 		if err := _q.prepareQuery(ctx); err != nil {
 			return nil, err
@@ -76,9 +78,9 @@ func (_q *EmployeeQuery) QueryDzo() *DzoOrganizationQuery {
 			return nil, err
 		}
 		step := sqlgraph.NewStep(
-			sqlgraph.From(employee.Table, employee.FieldID, selector),
-			sqlgraph.To(dzoorganization.Table, dzoorganization.FieldID),
-			sqlgraph.Edge(sqlgraph.M2O, true, employee.DzoTable, employee.DzoColumn),
+			sqlgraph.From(event.Table, event.FieldID, selector),
+			sqlgraph.To(company.Table, company.FieldID),
+			sqlgraph.Edge(sqlgraph.M2O, true, event.ClientsTable, event.ClientsColumn),
 		)
 		fromU = sqlgraph.SetNeighbors(_q.driver.Dialect(), step)
 		return fromU, nil
@@ -86,8 +88,30 @@ func (_q *EmployeeQuery) QueryDzo() *DzoOrganizationQuery {
 	return query
 }
 
-// QueryEventParticipations chains the current query on the "event_participations" edge.
-func (_q *EmployeeQuery) QueryEventParticipations() *EventParticipantQuery {
+// QueryHost chains the current query on the "host" edge.
+func (_q *EventQuery) QueryHost() *UserQuery {
+	query := (&UserClient{config: _q.config}).Query()
+	query.path = func(ctx context.Context) (fromU *sql.Selector, err error) {
+		if err := _q.prepareQuery(ctx); err != nil {
+			return nil, err
+		}
+		selector := _q.sqlQuery(ctx)
+		if err := selector.Err(); err != nil {
+			return nil, err
+		}
+		step := sqlgraph.NewStep(
+			sqlgraph.From(event.Table, event.FieldID, selector),
+			sqlgraph.To(user.Table, user.FieldID),
+			sqlgraph.Edge(sqlgraph.M2O, true, event.HostTable, event.HostColumn),
+		)
+		fromU = sqlgraph.SetNeighbors(_q.driver.Dialect(), step)
+		return fromU, nil
+	}
+	return query
+}
+
+// QueryParticipants chains the current query on the "participants" edge.
+func (_q *EventQuery) QueryParticipants() *EventParticipantQuery {
 	query := (&EventParticipantClient{config: _q.config}).Query()
 	query.path = func(ctx context.Context) (fromU *sql.Selector, err error) {
 		if err := _q.prepareQuery(ctx); err != nil {
@@ -98,9 +122,9 @@ func (_q *EmployeeQuery) QueryEventParticipations() *EventParticipantQuery {
 			return nil, err
 		}
 		step := sqlgraph.NewStep(
-			sqlgraph.From(employee.Table, employee.FieldID, selector),
+			sqlgraph.From(event.Table, event.FieldID, selector),
 			sqlgraph.To(eventparticipant.Table, eventparticipant.FieldID),
-			sqlgraph.Edge(sqlgraph.O2M, false, employee.EventParticipationsTable, employee.EventParticipationsColumn),
+			sqlgraph.Edge(sqlgraph.O2M, false, event.ParticipantsTable, event.ParticipantsColumn),
 		)
 		fromU = sqlgraph.SetNeighbors(_q.driver.Dialect(), step)
 		return fromU, nil
@@ -108,21 +132,21 @@ func (_q *EmployeeQuery) QueryEventParticipations() *EventParticipantQuery {
 	return query
 }
 
-// First returns the first Employee entity from the query.
-// Returns a *NotFoundError when no Employee was found.
-func (_q *EmployeeQuery) First(ctx context.Context) (*Employee, error) {
+// First returns the first Event entity from the query.
+// Returns a *NotFoundError when no Event was found.
+func (_q *EventQuery) First(ctx context.Context) (*Event, error) {
 	nodes, err := _q.Limit(1).All(setContextOp(ctx, _q.ctx, ent.OpQueryFirst))
 	if err != nil {
 		return nil, err
 	}
 	if len(nodes) == 0 {
-		return nil, &NotFoundError{employee.Label}
+		return nil, &NotFoundError{event.Label}
 	}
 	return nodes[0], nil
 }
 
 // FirstX is like First, but panics if an error occurs.
-func (_q *EmployeeQuery) FirstX(ctx context.Context) *Employee {
+func (_q *EventQuery) FirstX(ctx context.Context) *Event {
 	node, err := _q.First(ctx)
 	if err != nil && !IsNotFound(err) {
 		panic(err)
@@ -130,22 +154,22 @@ func (_q *EmployeeQuery) FirstX(ctx context.Context) *Employee {
 	return node
 }
 
-// FirstID returns the first Employee ID from the query.
-// Returns a *NotFoundError when no Employee ID was found.
-func (_q *EmployeeQuery) FirstID(ctx context.Context) (id uuid.UUID, err error) {
+// FirstID returns the first Event ID from the query.
+// Returns a *NotFoundError when no Event ID was found.
+func (_q *EventQuery) FirstID(ctx context.Context) (id uuid.UUID, err error) {
 	var ids []uuid.UUID
 	if ids, err = _q.Limit(1).IDs(setContextOp(ctx, _q.ctx, ent.OpQueryFirstID)); err != nil {
 		return
 	}
 	if len(ids) == 0 {
-		err = &NotFoundError{employee.Label}
+		err = &NotFoundError{event.Label}
 		return
 	}
 	return ids[0], nil
 }
 
 // FirstIDX is like FirstID, but panics if an error occurs.
-func (_q *EmployeeQuery) FirstIDX(ctx context.Context) uuid.UUID {
+func (_q *EventQuery) FirstIDX(ctx context.Context) uuid.UUID {
 	id, err := _q.FirstID(ctx)
 	if err != nil && !IsNotFound(err) {
 		panic(err)
@@ -153,10 +177,10 @@ func (_q *EmployeeQuery) FirstIDX(ctx context.Context) uuid.UUID {
 	return id
 }
 
-// Only returns a single Employee entity found by the query, ensuring it only returns one.
-// Returns a *NotSingularError when more than one Employee entity is found.
-// Returns a *NotFoundError when no Employee entities are found.
-func (_q *EmployeeQuery) Only(ctx context.Context) (*Employee, error) {
+// Only returns a single Event entity found by the query, ensuring it only returns one.
+// Returns a *NotSingularError when more than one Event entity is found.
+// Returns a *NotFoundError when no Event entities are found.
+func (_q *EventQuery) Only(ctx context.Context) (*Event, error) {
 	nodes, err := _q.Limit(2).All(setContextOp(ctx, _q.ctx, ent.OpQueryOnly))
 	if err != nil {
 		return nil, err
@@ -165,14 +189,14 @@ func (_q *EmployeeQuery) Only(ctx context.Context) (*Employee, error) {
 	case 1:
 		return nodes[0], nil
 	case 0:
-		return nil, &NotFoundError{employee.Label}
+		return nil, &NotFoundError{event.Label}
 	default:
-		return nil, &NotSingularError{employee.Label}
+		return nil, &NotSingularError{event.Label}
 	}
 }
 
 // OnlyX is like Only, but panics if an error occurs.
-func (_q *EmployeeQuery) OnlyX(ctx context.Context) *Employee {
+func (_q *EventQuery) OnlyX(ctx context.Context) *Event {
 	node, err := _q.Only(ctx)
 	if err != nil {
 		panic(err)
@@ -180,10 +204,10 @@ func (_q *EmployeeQuery) OnlyX(ctx context.Context) *Employee {
 	return node
 }
 
-// OnlyID is like Only, but returns the only Employee ID in the query.
-// Returns a *NotSingularError when more than one Employee ID is found.
+// OnlyID is like Only, but returns the only Event ID in the query.
+// Returns a *NotSingularError when more than one Event ID is found.
 // Returns a *NotFoundError when no entities are found.
-func (_q *EmployeeQuery) OnlyID(ctx context.Context) (id uuid.UUID, err error) {
+func (_q *EventQuery) OnlyID(ctx context.Context) (id uuid.UUID, err error) {
 	var ids []uuid.UUID
 	if ids, err = _q.Limit(2).IDs(setContextOp(ctx, _q.ctx, ent.OpQueryOnlyID)); err != nil {
 		return
@@ -192,15 +216,15 @@ func (_q *EmployeeQuery) OnlyID(ctx context.Context) (id uuid.UUID, err error) {
 	case 1:
 		id = ids[0]
 	case 0:
-		err = &NotFoundError{employee.Label}
+		err = &NotFoundError{event.Label}
 	default:
-		err = &NotSingularError{employee.Label}
+		err = &NotSingularError{event.Label}
 	}
 	return
 }
 
 // OnlyIDX is like OnlyID, but panics if an error occurs.
-func (_q *EmployeeQuery) OnlyIDX(ctx context.Context) uuid.UUID {
+func (_q *EventQuery) OnlyIDX(ctx context.Context) uuid.UUID {
 	id, err := _q.OnlyID(ctx)
 	if err != nil {
 		panic(err)
@@ -208,18 +232,18 @@ func (_q *EmployeeQuery) OnlyIDX(ctx context.Context) uuid.UUID {
 	return id
 }
 
-// All executes the query and returns a list of Employees.
-func (_q *EmployeeQuery) All(ctx context.Context) ([]*Employee, error) {
+// All executes the query and returns a list of Events.
+func (_q *EventQuery) All(ctx context.Context) ([]*Event, error) {
 	ctx = setContextOp(ctx, _q.ctx, ent.OpQueryAll)
 	if err := _q.prepareQuery(ctx); err != nil {
 		return nil, err
 	}
-	qr := querierAll[[]*Employee, *EmployeeQuery]()
-	return withInterceptors[[]*Employee](ctx, _q, qr, _q.inters)
+	qr := querierAll[[]*Event, *EventQuery]()
+	return withInterceptors[[]*Event](ctx, _q, qr, _q.inters)
 }
 
 // AllX is like All, but panics if an error occurs.
-func (_q *EmployeeQuery) AllX(ctx context.Context) []*Employee {
+func (_q *EventQuery) AllX(ctx context.Context) []*Event {
 	nodes, err := _q.All(ctx)
 	if err != nil {
 		panic(err)
@@ -227,20 +251,20 @@ func (_q *EmployeeQuery) AllX(ctx context.Context) []*Employee {
 	return nodes
 }
 
-// IDs executes the query and returns a list of Employee IDs.
-func (_q *EmployeeQuery) IDs(ctx context.Context) (ids []uuid.UUID, err error) {
+// IDs executes the query and returns a list of Event IDs.
+func (_q *EventQuery) IDs(ctx context.Context) (ids []uuid.UUID, err error) {
 	if _q.ctx.Unique == nil && _q.path != nil {
 		_q.Unique(true)
 	}
 	ctx = setContextOp(ctx, _q.ctx, ent.OpQueryIDs)
-	if err = _q.Select(employee.FieldID).Scan(ctx, &ids); err != nil {
+	if err = _q.Select(event.FieldID).Scan(ctx, &ids); err != nil {
 		return nil, err
 	}
 	return ids, nil
 }
 
 // IDsX is like IDs, but panics if an error occurs.
-func (_q *EmployeeQuery) IDsX(ctx context.Context) []uuid.UUID {
+func (_q *EventQuery) IDsX(ctx context.Context) []uuid.UUID {
 	ids, err := _q.IDs(ctx)
 	if err != nil {
 		panic(err)
@@ -249,16 +273,16 @@ func (_q *EmployeeQuery) IDsX(ctx context.Context) []uuid.UUID {
 }
 
 // Count returns the count of the given query.
-func (_q *EmployeeQuery) Count(ctx context.Context) (int, error) {
+func (_q *EventQuery) Count(ctx context.Context) (int, error) {
 	ctx = setContextOp(ctx, _q.ctx, ent.OpQueryCount)
 	if err := _q.prepareQuery(ctx); err != nil {
 		return 0, err
 	}
-	return withInterceptors[int](ctx, _q, querierCount[*EmployeeQuery](), _q.inters)
+	return withInterceptors[int](ctx, _q, querierCount[*EventQuery](), _q.inters)
 }
 
 // CountX is like Count, but panics if an error occurs.
-func (_q *EmployeeQuery) CountX(ctx context.Context) int {
+func (_q *EventQuery) CountX(ctx context.Context) int {
 	count, err := _q.Count(ctx)
 	if err != nil {
 		panic(err)
@@ -267,7 +291,7 @@ func (_q *EmployeeQuery) CountX(ctx context.Context) int {
 }
 
 // Exist returns true if the query has elements in the graph.
-func (_q *EmployeeQuery) Exist(ctx context.Context) (bool, error) {
+func (_q *EventQuery) Exist(ctx context.Context) (bool, error) {
 	ctx = setContextOp(ctx, _q.ctx, ent.OpQueryExist)
 	switch _, err := _q.FirstID(ctx); {
 	case IsNotFound(err):
@@ -280,7 +304,7 @@ func (_q *EmployeeQuery) Exist(ctx context.Context) (bool, error) {
 }
 
 // ExistX is like Exist, but panics if an error occurs.
-func (_q *EmployeeQuery) ExistX(ctx context.Context) bool {
+func (_q *EventQuery) ExistX(ctx context.Context) bool {
 	exist, err := _q.Exist(ctx)
 	if err != nil {
 		panic(err)
@@ -288,45 +312,57 @@ func (_q *EmployeeQuery) ExistX(ctx context.Context) bool {
 	return exist
 }
 
-// Clone returns a duplicate of the EmployeeQuery builder, including all associated steps. It can be
+// Clone returns a duplicate of the EventQuery builder, including all associated steps. It can be
 // used to prepare common query builders and use them differently after the clone is made.
-func (_q *EmployeeQuery) Clone() *EmployeeQuery {
+func (_q *EventQuery) Clone() *EventQuery {
 	if _q == nil {
 		return nil
 	}
-	return &EmployeeQuery{
-		config:                  _q.config,
-		ctx:                     _q.ctx.Clone(),
-		order:                   append([]employee.OrderOption{}, _q.order...),
-		inters:                  append([]Interceptor{}, _q.inters...),
-		predicates:              append([]predicate.Employee{}, _q.predicates...),
-		withDzo:                 _q.withDzo.Clone(),
-		withEventParticipations: _q.withEventParticipations.Clone(),
+	return &EventQuery{
+		config:           _q.config,
+		ctx:              _q.ctx.Clone(),
+		order:            append([]event.OrderOption{}, _q.order...),
+		inters:           append([]Interceptor{}, _q.inters...),
+		predicates:       append([]predicate.Event{}, _q.predicates...),
+		withClients:      _q.withClients.Clone(),
+		withHost:         _q.withHost.Clone(),
+		withParticipants: _q.withParticipants.Clone(),
 		// clone intermediate query.
 		sql:  _q.sql.Clone(),
 		path: _q.path,
 	}
 }
 
-// WithDzo tells the query-builder to eager-load the nodes that are connected to
-// the "dzo" edge. The optional arguments are used to configure the query builder of the edge.
-func (_q *EmployeeQuery) WithDzo(opts ...func(*DzoOrganizationQuery)) *EmployeeQuery {
-	query := (&DzoOrganizationClient{config: _q.config}).Query()
+// WithClients tells the query-builder to eager-load the nodes that are connected to
+// the "clients" edge. The optional arguments are used to configure the query builder of the edge.
+func (_q *EventQuery) WithClients(opts ...func(*CompanyQuery)) *EventQuery {
+	query := (&CompanyClient{config: _q.config}).Query()
 	for _, opt := range opts {
 		opt(query)
 	}
-	_q.withDzo = query
+	_q.withClients = query
 	return _q
 }
 
-// WithEventParticipations tells the query-builder to eager-load the nodes that are connected to
-// the "event_participations" edge. The optional arguments are used to configure the query builder of the edge.
-func (_q *EmployeeQuery) WithEventParticipations(opts ...func(*EventParticipantQuery)) *EmployeeQuery {
+// WithHost tells the query-builder to eager-load the nodes that are connected to
+// the "host" edge. The optional arguments are used to configure the query builder of the edge.
+func (_q *EventQuery) WithHost(opts ...func(*UserQuery)) *EventQuery {
+	query := (&UserClient{config: _q.config}).Query()
+	for _, opt := range opts {
+		opt(query)
+	}
+	_q.withHost = query
+	return _q
+}
+
+// WithParticipants tells the query-builder to eager-load the nodes that are connected to
+// the "participants" edge. The optional arguments are used to configure the query builder of the edge.
+func (_q *EventQuery) WithParticipants(opts ...func(*EventParticipantQuery)) *EventQuery {
 	query := (&EventParticipantClient{config: _q.config}).Query()
 	for _, opt := range opts {
 		opt(query)
 	}
-	_q.withEventParticipations = query
+	_q.withParticipants = query
 	return _q
 }
 
@@ -340,15 +376,15 @@ func (_q *EmployeeQuery) WithEventParticipations(opts ...func(*EventParticipantQ
 //		Count int `json:"count,omitempty"`
 //	}
 //
-//	client.Employee.Query().
-//		GroupBy(employee.FieldClientID).
+//	client.Event.Query().
+//		GroupBy(event.FieldClientID).
 //		Aggregate(ent.Count()).
 //		Scan(ctx, &v)
-func (_q *EmployeeQuery) GroupBy(field string, fields ...string) *EmployeeGroupBy {
+func (_q *EventQuery) GroupBy(field string, fields ...string) *EventGroupBy {
 	_q.ctx.Fields = append([]string{field}, fields...)
-	grbuild := &EmployeeGroupBy{build: _q}
+	grbuild := &EventGroupBy{build: _q}
 	grbuild.flds = &_q.ctx.Fields
-	grbuild.label = employee.Label
+	grbuild.label = event.Label
 	grbuild.scan = grbuild.Scan
 	return grbuild
 }
@@ -362,23 +398,23 @@ func (_q *EmployeeQuery) GroupBy(field string, fields ...string) *EmployeeGroupB
 //		ClientID uuid.UUID `json:"client_id,omitempty"`
 //	}
 //
-//	client.Employee.Query().
-//		Select(employee.FieldClientID).
+//	client.Event.Query().
+//		Select(event.FieldClientID).
 //		Scan(ctx, &v)
-func (_q *EmployeeQuery) Select(fields ...string) *EmployeeSelect {
+func (_q *EventQuery) Select(fields ...string) *EventSelect {
 	_q.ctx.Fields = append(_q.ctx.Fields, fields...)
-	sbuild := &EmployeeSelect{EmployeeQuery: _q}
-	sbuild.label = employee.Label
+	sbuild := &EventSelect{EventQuery: _q}
+	sbuild.label = event.Label
 	sbuild.flds, sbuild.scan = &_q.ctx.Fields, sbuild.Scan
 	return sbuild
 }
 
-// Aggregate returns a EmployeeSelect configured with the given aggregations.
-func (_q *EmployeeQuery) Aggregate(fns ...AggregateFunc) *EmployeeSelect {
+// Aggregate returns a EventSelect configured with the given aggregations.
+func (_q *EventQuery) Aggregate(fns ...AggregateFunc) *EventSelect {
 	return _q.Select().Aggregate(fns...)
 }
 
-func (_q *EmployeeQuery) prepareQuery(ctx context.Context) error {
+func (_q *EventQuery) prepareQuery(ctx context.Context) error {
 	for _, inter := range _q.inters {
 		if inter == nil {
 			return fmt.Errorf("ent: uninitialized interceptor (forgotten import ent/runtime?)")
@@ -390,7 +426,7 @@ func (_q *EmployeeQuery) prepareQuery(ctx context.Context) error {
 		}
 	}
 	for _, f := range _q.ctx.Fields {
-		if !employee.ValidColumn(f) {
+		if !event.ValidColumn(f) {
 			return &ValidationError{Name: f, err: fmt.Errorf("ent: invalid field %q for query", f)}
 		}
 	}
@@ -404,20 +440,21 @@ func (_q *EmployeeQuery) prepareQuery(ctx context.Context) error {
 	return nil
 }
 
-func (_q *EmployeeQuery) sqlAll(ctx context.Context, hooks ...queryHook) ([]*Employee, error) {
+func (_q *EventQuery) sqlAll(ctx context.Context, hooks ...queryHook) ([]*Event, error) {
 	var (
-		nodes       = []*Employee{}
+		nodes       = []*Event{}
 		_spec       = _q.querySpec()
-		loadedTypes = [2]bool{
-			_q.withDzo != nil,
-			_q.withEventParticipations != nil,
+		loadedTypes = [3]bool{
+			_q.withClients != nil,
+			_q.withHost != nil,
+			_q.withParticipants != nil,
 		}
 	)
 	_spec.ScanValues = func(columns []string) ([]any, error) {
-		return (*Employee).scanValues(nil, columns)
+		return (*Event).scanValues(nil, columns)
 	}
 	_spec.Assign = func(columns []string, values []any) error {
-		node := &Employee{config: _q.config}
+		node := &Event{config: _q.config}
 		nodes = append(nodes, node)
 		node.Edges.loadedTypes = loadedTypes
 		return node.assignValues(columns, values)
@@ -431,29 +468,33 @@ func (_q *EmployeeQuery) sqlAll(ctx context.Context, hooks ...queryHook) ([]*Emp
 	if len(nodes) == 0 {
 		return nodes, nil
 	}
-	if query := _q.withDzo; query != nil {
-		if err := _q.loadDzo(ctx, query, nodes, nil,
-			func(n *Employee, e *DzoOrganization) { n.Edges.Dzo = e }); err != nil {
+	if query := _q.withClients; query != nil {
+		if err := _q.loadClients(ctx, query, nodes, nil,
+			func(n *Event, e *Company) { n.Edges.Clients = e }); err != nil {
 			return nil, err
 		}
 	}
-	if query := _q.withEventParticipations; query != nil {
-		if err := _q.loadEventParticipations(ctx, query, nodes,
-			func(n *Employee) { n.Edges.EventParticipations = []*EventParticipant{} },
-			func(n *Employee, e *EventParticipant) {
-				n.Edges.EventParticipations = append(n.Edges.EventParticipations, e)
-			}); err != nil {
+	if query := _q.withHost; query != nil {
+		if err := _q.loadHost(ctx, query, nodes, nil,
+			func(n *Event, e *User) { n.Edges.Host = e }); err != nil {
+			return nil, err
+		}
+	}
+	if query := _q.withParticipants; query != nil {
+		if err := _q.loadParticipants(ctx, query, nodes,
+			func(n *Event) { n.Edges.Participants = []*EventParticipant{} },
+			func(n *Event, e *EventParticipant) { n.Edges.Participants = append(n.Edges.Participants, e) }); err != nil {
 			return nil, err
 		}
 	}
 	return nodes, nil
 }
 
-func (_q *EmployeeQuery) loadDzo(ctx context.Context, query *DzoOrganizationQuery, nodes []*Employee, init func(*Employee), assign func(*Employee, *DzoOrganization)) error {
+func (_q *EventQuery) loadClients(ctx context.Context, query *CompanyQuery, nodes []*Event, init func(*Event), assign func(*Event, *Company)) error {
 	ids := make([]uuid.UUID, 0, len(nodes))
-	nodeids := make(map[uuid.UUID][]*Employee)
+	nodeids := make(map[uuid.UUID][]*Event)
 	for i := range nodes {
-		fk := nodes[i].DzoID
+		fk := nodes[i].ClientID
 		if _, ok := nodeids[fk]; !ok {
 			ids = append(ids, fk)
 		}
@@ -462,7 +503,7 @@ func (_q *EmployeeQuery) loadDzo(ctx context.Context, query *DzoOrganizationQuer
 	if len(ids) == 0 {
 		return nil
 	}
-	query.Where(dzoorganization.IDIn(ids...))
+	query.Where(company.IDIn(ids...))
 	neighbors, err := query.All(ctx)
 	if err != nil {
 		return err
@@ -470,7 +511,7 @@ func (_q *EmployeeQuery) loadDzo(ctx context.Context, query *DzoOrganizationQuer
 	for _, n := range neighbors {
 		nodes, ok := nodeids[n.ID]
 		if !ok {
-			return fmt.Errorf(`unexpected foreign-key "dzo_id" returned %v`, n.ID)
+			return fmt.Errorf(`unexpected foreign-key "client_id" returned %v`, n.ID)
 		}
 		for i := range nodes {
 			assign(nodes[i], n)
@@ -478,9 +519,38 @@ func (_q *EmployeeQuery) loadDzo(ctx context.Context, query *DzoOrganizationQuer
 	}
 	return nil
 }
-func (_q *EmployeeQuery) loadEventParticipations(ctx context.Context, query *EventParticipantQuery, nodes []*Employee, init func(*Employee), assign func(*Employee, *EventParticipant)) error {
+func (_q *EventQuery) loadHost(ctx context.Context, query *UserQuery, nodes []*Event, init func(*Event), assign func(*Event, *User)) error {
+	ids := make([]uuid.UUID, 0, len(nodes))
+	nodeids := make(map[uuid.UUID][]*Event)
+	for i := range nodes {
+		fk := nodes[i].HostID
+		if _, ok := nodeids[fk]; !ok {
+			ids = append(ids, fk)
+		}
+		nodeids[fk] = append(nodeids[fk], nodes[i])
+	}
+	if len(ids) == 0 {
+		return nil
+	}
+	query.Where(user.IDIn(ids...))
+	neighbors, err := query.All(ctx)
+	if err != nil {
+		return err
+	}
+	for _, n := range neighbors {
+		nodes, ok := nodeids[n.ID]
+		if !ok {
+			return fmt.Errorf(`unexpected foreign-key "host_id" returned %v`, n.ID)
+		}
+		for i := range nodes {
+			assign(nodes[i], n)
+		}
+	}
+	return nil
+}
+func (_q *EventQuery) loadParticipants(ctx context.Context, query *EventParticipantQuery, nodes []*Event, init func(*Event), assign func(*Event, *EventParticipant)) error {
 	fks := make([]driver.Value, 0, len(nodes))
-	nodeids := make(map[uuid.UUID]*Employee)
+	nodeids := make(map[uuid.UUID]*Event)
 	for i := range nodes {
 		fks = append(fks, nodes[i].ID)
 		nodeids[nodes[i].ID] = nodes[i]
@@ -489,27 +559,27 @@ func (_q *EmployeeQuery) loadEventParticipations(ctx context.Context, query *Eve
 		}
 	}
 	if len(query.ctx.Fields) > 0 {
-		query.ctx.AppendFieldOnce(eventparticipant.FieldEmployeeID)
+		query.ctx.AppendFieldOnce(eventparticipant.FieldEventID)
 	}
 	query.Where(predicate.EventParticipant(func(s *sql.Selector) {
-		s.Where(sql.InValues(s.C(employee.EventParticipationsColumn), fks...))
+		s.Where(sql.InValues(s.C(event.ParticipantsColumn), fks...))
 	}))
 	neighbors, err := query.All(ctx)
 	if err != nil {
 		return err
 	}
 	for _, n := range neighbors {
-		fk := n.EmployeeID
+		fk := n.EventID
 		node, ok := nodeids[fk]
 		if !ok {
-			return fmt.Errorf(`unexpected referenced foreign-key "employee_id" returned %v for node %v`, fk, n.ID)
+			return fmt.Errorf(`unexpected referenced foreign-key "event_id" returned %v for node %v`, fk, n.ID)
 		}
 		assign(node, n)
 	}
 	return nil
 }
 
-func (_q *EmployeeQuery) sqlCount(ctx context.Context) (int, error) {
+func (_q *EventQuery) sqlCount(ctx context.Context) (int, error) {
 	_spec := _q.querySpec()
 	_spec.Node.Columns = _q.ctx.Fields
 	if len(_q.ctx.Fields) > 0 {
@@ -518,8 +588,8 @@ func (_q *EmployeeQuery) sqlCount(ctx context.Context) (int, error) {
 	return sqlgraph.CountNodes(ctx, _q.driver, _spec)
 }
 
-func (_q *EmployeeQuery) querySpec() *sqlgraph.QuerySpec {
-	_spec := sqlgraph.NewQuerySpec(employee.Table, employee.Columns, sqlgraph.NewFieldSpec(employee.FieldID, field.TypeUUID))
+func (_q *EventQuery) querySpec() *sqlgraph.QuerySpec {
+	_spec := sqlgraph.NewQuerySpec(event.Table, event.Columns, sqlgraph.NewFieldSpec(event.FieldID, field.TypeUUID))
 	_spec.From = _q.sql
 	if unique := _q.ctx.Unique; unique != nil {
 		_spec.Unique = *unique
@@ -528,14 +598,17 @@ func (_q *EmployeeQuery) querySpec() *sqlgraph.QuerySpec {
 	}
 	if fields := _q.ctx.Fields; len(fields) > 0 {
 		_spec.Node.Columns = make([]string, 0, len(fields))
-		_spec.Node.Columns = append(_spec.Node.Columns, employee.FieldID)
+		_spec.Node.Columns = append(_spec.Node.Columns, event.FieldID)
 		for i := range fields {
-			if fields[i] != employee.FieldID {
+			if fields[i] != event.FieldID {
 				_spec.Node.Columns = append(_spec.Node.Columns, fields[i])
 			}
 		}
-		if _q.withDzo != nil {
-			_spec.Node.AddColumnOnce(employee.FieldDzoID)
+		if _q.withClients != nil {
+			_spec.Node.AddColumnOnce(event.FieldClientID)
+		}
+		if _q.withHost != nil {
+			_spec.Node.AddColumnOnce(event.FieldHostID)
 		}
 	}
 	if ps := _q.predicates; len(ps) > 0 {
@@ -561,12 +634,12 @@ func (_q *EmployeeQuery) querySpec() *sqlgraph.QuerySpec {
 	return _spec
 }
 
-func (_q *EmployeeQuery) sqlQuery(ctx context.Context) *sql.Selector {
+func (_q *EventQuery) sqlQuery(ctx context.Context) *sql.Selector {
 	builder := sql.Dialect(_q.driver.Dialect())
-	t1 := builder.Table(employee.Table)
+	t1 := builder.Table(event.Table)
 	columns := _q.ctx.Fields
 	if len(columns) == 0 {
-		columns = employee.Columns
+		columns = event.Columns
 	}
 	selector := builder.Select(t1.Columns(columns...)...).From(t1)
 	if _q.sql != nil {
@@ -593,28 +666,28 @@ func (_q *EmployeeQuery) sqlQuery(ctx context.Context) *sql.Selector {
 	return selector
 }
 
-// EmployeeGroupBy is the group-by builder for Employee entities.
-type EmployeeGroupBy struct {
+// EventGroupBy is the group-by builder for Event entities.
+type EventGroupBy struct {
 	selector
-	build *EmployeeQuery
+	build *EventQuery
 }
 
 // Aggregate adds the given aggregation functions to the group-by query.
-func (_g *EmployeeGroupBy) Aggregate(fns ...AggregateFunc) *EmployeeGroupBy {
+func (_g *EventGroupBy) Aggregate(fns ...AggregateFunc) *EventGroupBy {
 	_g.fns = append(_g.fns, fns...)
 	return _g
 }
 
 // Scan applies the selector query and scans the result into the given value.
-func (_g *EmployeeGroupBy) Scan(ctx context.Context, v any) error {
+func (_g *EventGroupBy) Scan(ctx context.Context, v any) error {
 	ctx = setContextOp(ctx, _g.build.ctx, ent.OpQueryGroupBy)
 	if err := _g.build.prepareQuery(ctx); err != nil {
 		return err
 	}
-	return scanWithInterceptors[*EmployeeQuery, *EmployeeGroupBy](ctx, _g.build, _g, _g.build.inters, v)
+	return scanWithInterceptors[*EventQuery, *EventGroupBy](ctx, _g.build, _g, _g.build.inters, v)
 }
 
-func (_g *EmployeeGroupBy) sqlScan(ctx context.Context, root *EmployeeQuery, v any) error {
+func (_g *EventGroupBy) sqlScan(ctx context.Context, root *EventQuery, v any) error {
 	selector := root.sqlQuery(ctx).Select()
 	aggregation := make([]string, 0, len(_g.fns))
 	for _, fn := range _g.fns {
@@ -641,28 +714,28 @@ func (_g *EmployeeGroupBy) sqlScan(ctx context.Context, root *EmployeeQuery, v a
 	return sql.ScanSlice(rows, v)
 }
 
-// EmployeeSelect is the builder for selecting fields of Employee entities.
-type EmployeeSelect struct {
-	*EmployeeQuery
+// EventSelect is the builder for selecting fields of Event entities.
+type EventSelect struct {
+	*EventQuery
 	selector
 }
 
 // Aggregate adds the given aggregation functions to the selector query.
-func (_s *EmployeeSelect) Aggregate(fns ...AggregateFunc) *EmployeeSelect {
+func (_s *EventSelect) Aggregate(fns ...AggregateFunc) *EventSelect {
 	_s.fns = append(_s.fns, fns...)
 	return _s
 }
 
 // Scan applies the selector query and scans the result into the given value.
-func (_s *EmployeeSelect) Scan(ctx context.Context, v any) error {
+func (_s *EventSelect) Scan(ctx context.Context, v any) error {
 	ctx = setContextOp(ctx, _s.ctx, ent.OpQuerySelect)
 	if err := _s.prepareQuery(ctx); err != nil {
 		return err
 	}
-	return scanWithInterceptors[*EmployeeQuery, *EmployeeSelect](ctx, _s.EmployeeQuery, _s, _s.inters, v)
+	return scanWithInterceptors[*EventQuery, *EventSelect](ctx, _s.EventQuery, _s, _s.inters, v)
 }
 
-func (_s *EmployeeSelect) sqlScan(ctx context.Context, root *EmployeeQuery, v any) error {
+func (_s *EventSelect) sqlScan(ctx context.Context, root *EventQuery, v any) error {
 	selector := root.sqlQuery(ctx)
 	aggregation := make([]string, 0, len(_s.fns))
 	for _, fn := range _s.fns {
