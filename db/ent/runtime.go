@@ -22,6 +22,8 @@ import (
 	"encore.app/db/ent/requestparticipant"
 	"encore.app/db/ent/requesttargetdzo"
 	"encore.app/db/ent/schema"
+	"encore.app/db/ent/scormcourse"
+	"encore.app/db/ent/scormprogress"
 	"encore.app/db/ent/supplier"
 	"encore.app/db/ent/trainingevent"
 	"encore.app/db/ent/trainingparticipant"
@@ -681,6 +683,38 @@ func init() {
 	requesttargetdzoDescID := requesttargetdzoFields[0].Descriptor()
 	// requesttargetdzo.DefaultID holds the default value on creation for the id field.
 	requesttargetdzo.DefaultID = requesttargetdzoDescID.Default.(func() uuid.UUID)
+	scormcourseFields := schema.ScormCourse{}.Fields()
+	_ = scormcourseFields
+	// scormcourseDescTitle is the schema descriptor for title field.
+	scormcourseDescTitle := scormcourseFields[2].Descriptor()
+	// scormcourse.TitleValidator is a validator for the "title" field. It is called by the builders before save.
+	scormcourse.TitleValidator = scormcourseDescTitle.Validators[0].(func(string) error)
+	// scormcourseDescLecturer is the schema descriptor for lecturer field.
+	scormcourseDescLecturer := scormcourseFields[5].Descriptor()
+	// scormcourse.LecturerValidator is a validator for the "lecturer" field. It is called by the builders before save.
+	scormcourse.LecturerValidator = scormcourseDescLecturer.Validators[0].(func(string) error)
+	// scormcourseDescScormURL is the schema descriptor for scorm_url field.
+	scormcourseDescScormURL := scormcourseFields[6].Descriptor()
+	// scormcourse.ScormURLValidator is a validator for the "scorm_url" field. It is called by the builders before save.
+	scormcourse.ScormURLValidator = scormcourseDescScormURL.Validators[0].(func(string) error)
+	// scormcourseDescIsActive is the schema descriptor for is_active field.
+	scormcourseDescIsActive := scormcourseFields[7].Descriptor()
+	// scormcourse.DefaultIsActive holds the default value on creation for the is_active field.
+	scormcourse.DefaultIsActive = scormcourseDescIsActive.Default.(bool)
+	// scormcourseDescImageURL is the schema descriptor for image_url field.
+	scormcourseDescImageURL := scormcourseFields[8].Descriptor()
+	// scormcourse.ImageURLValidator is a validator for the "image_url" field. It is called by the builders before save.
+	scormcourse.ImageURLValidator = scormcourseDescImageURL.Validators[0].(func(string) error)
+	// scormcourseDescID is the schema descriptor for id field.
+	scormcourseDescID := scormcourseFields[0].Descriptor()
+	// scormcourse.DefaultID holds the default value on creation for the id field.
+	scormcourse.DefaultID = scormcourseDescID.Default.(func() uuid.UUID)
+	scormprogressFields := schema.ScormProgress{}.Fields()
+	_ = scormprogressFields
+	// scormprogressDescID is the schema descriptor for id field.
+	scormprogressDescID := scormprogressFields[0].Descriptor()
+	// scormprogress.DefaultID holds the default value on creation for the id field.
+	scormprogress.DefaultID = scormprogressDescID.Default.(func() uuid.UUID)
 	supplierFields := schema.Supplier{}.Fields()
 	_ = supplierFields
 	// supplierDescName is the schema descriptor for name field.

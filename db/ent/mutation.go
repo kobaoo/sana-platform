@@ -26,6 +26,8 @@ import (
 	"encore.app/db/ent/requestdzocontract"
 	"encore.app/db/ent/requestparticipant"
 	"encore.app/db/ent/requesttargetdzo"
+	"encore.app/db/ent/scormcourse"
+	"encore.app/db/ent/scormprogress"
 	"encore.app/db/ent/supplier"
 	"encore.app/db/ent/trainingevent"
 	"encore.app/db/ent/trainingparticipant"
@@ -60,6 +62,8 @@ const (
 	TypeRequestDzoContract      = "RequestDzoContract"
 	TypeRequestParticipant      = "RequestParticipant"
 	TypeRequestTargetDzo        = "RequestTargetDzo"
+	TypeScormCourse             = "ScormCourse"
+	TypeScormProgress           = "ScormProgress"
 	TypeSupplier                = "Supplier"
 	TypeTrainingEvent           = "TrainingEvent"
 	TypeTrainingParticipant     = "TrainingParticipant"
@@ -15493,6 +15497,1651 @@ func (m *RequestTargetDzoMutation) ClearEdge(name string) error {
 // It returns an error if the edge is not defined in the schema.
 func (m *RequestTargetDzoMutation) ResetEdge(name string) error {
 	return fmt.Errorf("unknown RequestTargetDzo edge %s", name)
+}
+
+// ScormCourseMutation represents an operation that mutates the ScormCourse nodes in the graph.
+type ScormCourseMutation struct {
+	config
+	op                     Op
+	typ                    string
+	id                     *uuid.UUID
+	client_id              *uuid.UUID
+	title                  *string
+	category_ids           *[]uuid.UUID
+	appendcategory_ids     []uuid.UUID
+	description            *string
+	lecturer               *string
+	scorm_url              *string
+	is_active              *bool
+	image_url              *string
+	clearedFields          map[string]struct{}
+	course_progress        map[uuid.UUID]struct{}
+	removedcourse_progress map[uuid.UUID]struct{}
+	clearedcourse_progress bool
+	done                   bool
+	oldValue               func(context.Context) (*ScormCourse, error)
+	predicates             []predicate.ScormCourse
+}
+
+var _ ent.Mutation = (*ScormCourseMutation)(nil)
+
+// scormcourseOption allows management of the mutation configuration using functional options.
+type scormcourseOption func(*ScormCourseMutation)
+
+// newScormCourseMutation creates new mutation for the ScormCourse entity.
+func newScormCourseMutation(c config, op Op, opts ...scormcourseOption) *ScormCourseMutation {
+	m := &ScormCourseMutation{
+		config:        c,
+		op:            op,
+		typ:           TypeScormCourse,
+		clearedFields: make(map[string]struct{}),
+	}
+	for _, opt := range opts {
+		opt(m)
+	}
+	return m
+}
+
+// withScormCourseID sets the ID field of the mutation.
+func withScormCourseID(id uuid.UUID) scormcourseOption {
+	return func(m *ScormCourseMutation) {
+		var (
+			err   error
+			once  sync.Once
+			value *ScormCourse
+		)
+		m.oldValue = func(ctx context.Context) (*ScormCourse, error) {
+			once.Do(func() {
+				if m.done {
+					err = errors.New("querying old values post mutation is not allowed")
+				} else {
+					value, err = m.Client().ScormCourse.Get(ctx, id)
+				}
+			})
+			return value, err
+		}
+		m.id = &id
+	}
+}
+
+// withScormCourse sets the old ScormCourse of the mutation.
+func withScormCourse(node *ScormCourse) scormcourseOption {
+	return func(m *ScormCourseMutation) {
+		m.oldValue = func(context.Context) (*ScormCourse, error) {
+			return node, nil
+		}
+		m.id = &node.ID
+	}
+}
+
+// Client returns a new `ent.Client` from the mutation. If the mutation was
+// executed in a transaction (ent.Tx), a transactional client is returned.
+func (m ScormCourseMutation) Client() *Client {
+	client := &Client{config: m.config}
+	client.init()
+	return client
+}
+
+// Tx returns an `ent.Tx` for mutations that were executed in transactions;
+// it returns an error otherwise.
+func (m ScormCourseMutation) Tx() (*Tx, error) {
+	if _, ok := m.driver.(*txDriver); !ok {
+		return nil, errors.New("ent: mutation is not running in a transaction")
+	}
+	tx := &Tx{config: m.config}
+	tx.init()
+	return tx, nil
+}
+
+// SetID sets the value of the id field. Note that this
+// operation is only accepted on creation of ScormCourse entities.
+func (m *ScormCourseMutation) SetID(id uuid.UUID) {
+	m.id = &id
+}
+
+// ID returns the ID value in the mutation. Note that the ID is only available
+// if it was provided to the builder or after it was returned from the database.
+func (m *ScormCourseMutation) ID() (id uuid.UUID, exists bool) {
+	if m.id == nil {
+		return
+	}
+	return *m.id, true
+}
+
+// IDs queries the database and returns the entity ids that match the mutation's predicate.
+// That means, if the mutation is applied within a transaction with an isolation level such
+// as sql.LevelSerializable, the returned ids match the ids of the rows that will be updated
+// or updated by the mutation.
+func (m *ScormCourseMutation) IDs(ctx context.Context) ([]uuid.UUID, error) {
+	switch {
+	case m.op.Is(OpUpdateOne | OpDeleteOne):
+		id, exists := m.ID()
+		if exists {
+			return []uuid.UUID{id}, nil
+		}
+		fallthrough
+	case m.op.Is(OpUpdate | OpDelete):
+		return m.Client().ScormCourse.Query().Where(m.predicates...).IDs(ctx)
+	default:
+		return nil, fmt.Errorf("IDs is not allowed on %s operations", m.op)
+	}
+}
+
+// SetClientID sets the "client_id" field.
+func (m *ScormCourseMutation) SetClientID(u uuid.UUID) {
+	m.client_id = &u
+}
+
+// ClientID returns the value of the "client_id" field in the mutation.
+func (m *ScormCourseMutation) ClientID() (r uuid.UUID, exists bool) {
+	v := m.client_id
+	if v == nil {
+		return
+	}
+	return *v, true
+}
+
+// OldClientID returns the old "client_id" field's value of the ScormCourse entity.
+// If the ScormCourse object wasn't provided to the builder, the object is fetched from the database.
+// An error is returned if the mutation operation is not UpdateOne, or the database query fails.
+func (m *ScormCourseMutation) OldClientID(ctx context.Context) (v uuid.UUID, err error) {
+	if !m.op.Is(OpUpdateOne) {
+		return v, errors.New("OldClientID is only allowed on UpdateOne operations")
+	}
+	if m.id == nil || m.oldValue == nil {
+		return v, errors.New("OldClientID requires an ID field in the mutation")
+	}
+	oldValue, err := m.oldValue(ctx)
+	if err != nil {
+		return v, fmt.Errorf("querying old value for OldClientID: %w", err)
+	}
+	return oldValue.ClientID, nil
+}
+
+// ResetClientID resets all changes to the "client_id" field.
+func (m *ScormCourseMutation) ResetClientID() {
+	m.client_id = nil
+}
+
+// SetTitle sets the "title" field.
+func (m *ScormCourseMutation) SetTitle(s string) {
+	m.title = &s
+}
+
+// Title returns the value of the "title" field in the mutation.
+func (m *ScormCourseMutation) Title() (r string, exists bool) {
+	v := m.title
+	if v == nil {
+		return
+	}
+	return *v, true
+}
+
+// OldTitle returns the old "title" field's value of the ScormCourse entity.
+// If the ScormCourse object wasn't provided to the builder, the object is fetched from the database.
+// An error is returned if the mutation operation is not UpdateOne, or the database query fails.
+func (m *ScormCourseMutation) OldTitle(ctx context.Context) (v string, err error) {
+	if !m.op.Is(OpUpdateOne) {
+		return v, errors.New("OldTitle is only allowed on UpdateOne operations")
+	}
+	if m.id == nil || m.oldValue == nil {
+		return v, errors.New("OldTitle requires an ID field in the mutation")
+	}
+	oldValue, err := m.oldValue(ctx)
+	if err != nil {
+		return v, fmt.Errorf("querying old value for OldTitle: %w", err)
+	}
+	return oldValue.Title, nil
+}
+
+// ResetTitle resets all changes to the "title" field.
+func (m *ScormCourseMutation) ResetTitle() {
+	m.title = nil
+}
+
+// SetCategoryIds sets the "category_ids" field.
+func (m *ScormCourseMutation) SetCategoryIds(u []uuid.UUID) {
+	m.category_ids = &u
+	m.appendcategory_ids = nil
+}
+
+// CategoryIds returns the value of the "category_ids" field in the mutation.
+func (m *ScormCourseMutation) CategoryIds() (r []uuid.UUID, exists bool) {
+	v := m.category_ids
+	if v == nil {
+		return
+	}
+	return *v, true
+}
+
+// OldCategoryIds returns the old "category_ids" field's value of the ScormCourse entity.
+// If the ScormCourse object wasn't provided to the builder, the object is fetched from the database.
+// An error is returned if the mutation operation is not UpdateOne, or the database query fails.
+func (m *ScormCourseMutation) OldCategoryIds(ctx context.Context) (v []uuid.UUID, err error) {
+	if !m.op.Is(OpUpdateOne) {
+		return v, errors.New("OldCategoryIds is only allowed on UpdateOne operations")
+	}
+	if m.id == nil || m.oldValue == nil {
+		return v, errors.New("OldCategoryIds requires an ID field in the mutation")
+	}
+	oldValue, err := m.oldValue(ctx)
+	if err != nil {
+		return v, fmt.Errorf("querying old value for OldCategoryIds: %w", err)
+	}
+	return oldValue.CategoryIds, nil
+}
+
+// AppendCategoryIds adds u to the "category_ids" field.
+func (m *ScormCourseMutation) AppendCategoryIds(u []uuid.UUID) {
+	m.appendcategory_ids = append(m.appendcategory_ids, u...)
+}
+
+// AppendedCategoryIds returns the list of values that were appended to the "category_ids" field in this mutation.
+func (m *ScormCourseMutation) AppendedCategoryIds() ([]uuid.UUID, bool) {
+	if len(m.appendcategory_ids) == 0 {
+		return nil, false
+	}
+	return m.appendcategory_ids, true
+}
+
+// ResetCategoryIds resets all changes to the "category_ids" field.
+func (m *ScormCourseMutation) ResetCategoryIds() {
+	m.category_ids = nil
+	m.appendcategory_ids = nil
+}
+
+// SetDescription sets the "description" field.
+func (m *ScormCourseMutation) SetDescription(s string) {
+	m.description = &s
+}
+
+// Description returns the value of the "description" field in the mutation.
+func (m *ScormCourseMutation) Description() (r string, exists bool) {
+	v := m.description
+	if v == nil {
+		return
+	}
+	return *v, true
+}
+
+// OldDescription returns the old "description" field's value of the ScormCourse entity.
+// If the ScormCourse object wasn't provided to the builder, the object is fetched from the database.
+// An error is returned if the mutation operation is not UpdateOne, or the database query fails.
+func (m *ScormCourseMutation) OldDescription(ctx context.Context) (v *string, err error) {
+	if !m.op.Is(OpUpdateOne) {
+		return v, errors.New("OldDescription is only allowed on UpdateOne operations")
+	}
+	if m.id == nil || m.oldValue == nil {
+		return v, errors.New("OldDescription requires an ID field in the mutation")
+	}
+	oldValue, err := m.oldValue(ctx)
+	if err != nil {
+		return v, fmt.Errorf("querying old value for OldDescription: %w", err)
+	}
+	return oldValue.Description, nil
+}
+
+// ClearDescription clears the value of the "description" field.
+func (m *ScormCourseMutation) ClearDescription() {
+	m.description = nil
+	m.clearedFields[scormcourse.FieldDescription] = struct{}{}
+}
+
+// DescriptionCleared returns if the "description" field was cleared in this mutation.
+func (m *ScormCourseMutation) DescriptionCleared() bool {
+	_, ok := m.clearedFields[scormcourse.FieldDescription]
+	return ok
+}
+
+// ResetDescription resets all changes to the "description" field.
+func (m *ScormCourseMutation) ResetDescription() {
+	m.description = nil
+	delete(m.clearedFields, scormcourse.FieldDescription)
+}
+
+// SetLecturer sets the "lecturer" field.
+func (m *ScormCourseMutation) SetLecturer(s string) {
+	m.lecturer = &s
+}
+
+// Lecturer returns the value of the "lecturer" field in the mutation.
+func (m *ScormCourseMutation) Lecturer() (r string, exists bool) {
+	v := m.lecturer
+	if v == nil {
+		return
+	}
+	return *v, true
+}
+
+// OldLecturer returns the old "lecturer" field's value of the ScormCourse entity.
+// If the ScormCourse object wasn't provided to the builder, the object is fetched from the database.
+// An error is returned if the mutation operation is not UpdateOne, or the database query fails.
+func (m *ScormCourseMutation) OldLecturer(ctx context.Context) (v *string, err error) {
+	if !m.op.Is(OpUpdateOne) {
+		return v, errors.New("OldLecturer is only allowed on UpdateOne operations")
+	}
+	if m.id == nil || m.oldValue == nil {
+		return v, errors.New("OldLecturer requires an ID field in the mutation")
+	}
+	oldValue, err := m.oldValue(ctx)
+	if err != nil {
+		return v, fmt.Errorf("querying old value for OldLecturer: %w", err)
+	}
+	return oldValue.Lecturer, nil
+}
+
+// ClearLecturer clears the value of the "lecturer" field.
+func (m *ScormCourseMutation) ClearLecturer() {
+	m.lecturer = nil
+	m.clearedFields[scormcourse.FieldLecturer] = struct{}{}
+}
+
+// LecturerCleared returns if the "lecturer" field was cleared in this mutation.
+func (m *ScormCourseMutation) LecturerCleared() bool {
+	_, ok := m.clearedFields[scormcourse.FieldLecturer]
+	return ok
+}
+
+// ResetLecturer resets all changes to the "lecturer" field.
+func (m *ScormCourseMutation) ResetLecturer() {
+	m.lecturer = nil
+	delete(m.clearedFields, scormcourse.FieldLecturer)
+}
+
+// SetScormURL sets the "scorm_url" field.
+func (m *ScormCourseMutation) SetScormURL(s string) {
+	m.scorm_url = &s
+}
+
+// ScormURL returns the value of the "scorm_url" field in the mutation.
+func (m *ScormCourseMutation) ScormURL() (r string, exists bool) {
+	v := m.scorm_url
+	if v == nil {
+		return
+	}
+	return *v, true
+}
+
+// OldScormURL returns the old "scorm_url" field's value of the ScormCourse entity.
+// If the ScormCourse object wasn't provided to the builder, the object is fetched from the database.
+// An error is returned if the mutation operation is not UpdateOne, or the database query fails.
+func (m *ScormCourseMutation) OldScormURL(ctx context.Context) (v string, err error) {
+	if !m.op.Is(OpUpdateOne) {
+		return v, errors.New("OldScormURL is only allowed on UpdateOne operations")
+	}
+	if m.id == nil || m.oldValue == nil {
+		return v, errors.New("OldScormURL requires an ID field in the mutation")
+	}
+	oldValue, err := m.oldValue(ctx)
+	if err != nil {
+		return v, fmt.Errorf("querying old value for OldScormURL: %w", err)
+	}
+	return oldValue.ScormURL, nil
+}
+
+// ResetScormURL resets all changes to the "scorm_url" field.
+func (m *ScormCourseMutation) ResetScormURL() {
+	m.scorm_url = nil
+}
+
+// SetIsActive sets the "is_active" field.
+func (m *ScormCourseMutation) SetIsActive(b bool) {
+	m.is_active = &b
+}
+
+// IsActive returns the value of the "is_active" field in the mutation.
+func (m *ScormCourseMutation) IsActive() (r bool, exists bool) {
+	v := m.is_active
+	if v == nil {
+		return
+	}
+	return *v, true
+}
+
+// OldIsActive returns the old "is_active" field's value of the ScormCourse entity.
+// If the ScormCourse object wasn't provided to the builder, the object is fetched from the database.
+// An error is returned if the mutation operation is not UpdateOne, or the database query fails.
+func (m *ScormCourseMutation) OldIsActive(ctx context.Context) (v bool, err error) {
+	if !m.op.Is(OpUpdateOne) {
+		return v, errors.New("OldIsActive is only allowed on UpdateOne operations")
+	}
+	if m.id == nil || m.oldValue == nil {
+		return v, errors.New("OldIsActive requires an ID field in the mutation")
+	}
+	oldValue, err := m.oldValue(ctx)
+	if err != nil {
+		return v, fmt.Errorf("querying old value for OldIsActive: %w", err)
+	}
+	return oldValue.IsActive, nil
+}
+
+// ResetIsActive resets all changes to the "is_active" field.
+func (m *ScormCourseMutation) ResetIsActive() {
+	m.is_active = nil
+}
+
+// SetImageURL sets the "image_url" field.
+func (m *ScormCourseMutation) SetImageURL(s string) {
+	m.image_url = &s
+}
+
+// ImageURL returns the value of the "image_url" field in the mutation.
+func (m *ScormCourseMutation) ImageURL() (r string, exists bool) {
+	v := m.image_url
+	if v == nil {
+		return
+	}
+	return *v, true
+}
+
+// OldImageURL returns the old "image_url" field's value of the ScormCourse entity.
+// If the ScormCourse object wasn't provided to the builder, the object is fetched from the database.
+// An error is returned if the mutation operation is not UpdateOne, or the database query fails.
+func (m *ScormCourseMutation) OldImageURL(ctx context.Context) (v *string, err error) {
+	if !m.op.Is(OpUpdateOne) {
+		return v, errors.New("OldImageURL is only allowed on UpdateOne operations")
+	}
+	if m.id == nil || m.oldValue == nil {
+		return v, errors.New("OldImageURL requires an ID field in the mutation")
+	}
+	oldValue, err := m.oldValue(ctx)
+	if err != nil {
+		return v, fmt.Errorf("querying old value for OldImageURL: %w", err)
+	}
+	return oldValue.ImageURL, nil
+}
+
+// ClearImageURL clears the value of the "image_url" field.
+func (m *ScormCourseMutation) ClearImageURL() {
+	m.image_url = nil
+	m.clearedFields[scormcourse.FieldImageURL] = struct{}{}
+}
+
+// ImageURLCleared returns if the "image_url" field was cleared in this mutation.
+func (m *ScormCourseMutation) ImageURLCleared() bool {
+	_, ok := m.clearedFields[scormcourse.FieldImageURL]
+	return ok
+}
+
+// ResetImageURL resets all changes to the "image_url" field.
+func (m *ScormCourseMutation) ResetImageURL() {
+	m.image_url = nil
+	delete(m.clearedFields, scormcourse.FieldImageURL)
+}
+
+// AddCourseProgresIDs adds the "course_progress" edge to the ScormProgress entity by ids.
+func (m *ScormCourseMutation) AddCourseProgresIDs(ids ...uuid.UUID) {
+	if m.course_progress == nil {
+		m.course_progress = make(map[uuid.UUID]struct{})
+	}
+	for i := range ids {
+		m.course_progress[ids[i]] = struct{}{}
+	}
+}
+
+// ClearCourseProgress clears the "course_progress" edge to the ScormProgress entity.
+func (m *ScormCourseMutation) ClearCourseProgress() {
+	m.clearedcourse_progress = true
+}
+
+// CourseProgressCleared reports if the "course_progress" edge to the ScormProgress entity was cleared.
+func (m *ScormCourseMutation) CourseProgressCleared() bool {
+	return m.clearedcourse_progress
+}
+
+// RemoveCourseProgresIDs removes the "course_progress" edge to the ScormProgress entity by IDs.
+func (m *ScormCourseMutation) RemoveCourseProgresIDs(ids ...uuid.UUID) {
+	if m.removedcourse_progress == nil {
+		m.removedcourse_progress = make(map[uuid.UUID]struct{})
+	}
+	for i := range ids {
+		delete(m.course_progress, ids[i])
+		m.removedcourse_progress[ids[i]] = struct{}{}
+	}
+}
+
+// RemovedCourseProgress returns the removed IDs of the "course_progress" edge to the ScormProgress entity.
+func (m *ScormCourseMutation) RemovedCourseProgressIDs() (ids []uuid.UUID) {
+	for id := range m.removedcourse_progress {
+		ids = append(ids, id)
+	}
+	return
+}
+
+// CourseProgressIDs returns the "course_progress" edge IDs in the mutation.
+func (m *ScormCourseMutation) CourseProgressIDs() (ids []uuid.UUID) {
+	for id := range m.course_progress {
+		ids = append(ids, id)
+	}
+	return
+}
+
+// ResetCourseProgress resets all changes to the "course_progress" edge.
+func (m *ScormCourseMutation) ResetCourseProgress() {
+	m.course_progress = nil
+	m.clearedcourse_progress = false
+	m.removedcourse_progress = nil
+}
+
+// Where appends a list predicates to the ScormCourseMutation builder.
+func (m *ScormCourseMutation) Where(ps ...predicate.ScormCourse) {
+	m.predicates = append(m.predicates, ps...)
+}
+
+// WhereP appends storage-level predicates to the ScormCourseMutation builder. Using this method,
+// users can use type-assertion to append predicates that do not depend on any generated package.
+func (m *ScormCourseMutation) WhereP(ps ...func(*sql.Selector)) {
+	p := make([]predicate.ScormCourse, len(ps))
+	for i := range ps {
+		p[i] = ps[i]
+	}
+	m.Where(p...)
+}
+
+// Op returns the operation name.
+func (m *ScormCourseMutation) Op() Op {
+	return m.op
+}
+
+// SetOp allows setting the mutation operation.
+func (m *ScormCourseMutation) SetOp(op Op) {
+	m.op = op
+}
+
+// Type returns the node type of this mutation (ScormCourse).
+func (m *ScormCourseMutation) Type() string {
+	return m.typ
+}
+
+// Fields returns all fields that were changed during this mutation. Note that in
+// order to get all numeric fields that were incremented/decremented, call
+// AddedFields().
+func (m *ScormCourseMutation) Fields() []string {
+	fields := make([]string, 0, 8)
+	if m.client_id != nil {
+		fields = append(fields, scormcourse.FieldClientID)
+	}
+	if m.title != nil {
+		fields = append(fields, scormcourse.FieldTitle)
+	}
+	if m.category_ids != nil {
+		fields = append(fields, scormcourse.FieldCategoryIds)
+	}
+	if m.description != nil {
+		fields = append(fields, scormcourse.FieldDescription)
+	}
+	if m.lecturer != nil {
+		fields = append(fields, scormcourse.FieldLecturer)
+	}
+	if m.scorm_url != nil {
+		fields = append(fields, scormcourse.FieldScormURL)
+	}
+	if m.is_active != nil {
+		fields = append(fields, scormcourse.FieldIsActive)
+	}
+	if m.image_url != nil {
+		fields = append(fields, scormcourse.FieldImageURL)
+	}
+	return fields
+}
+
+// Field returns the value of a field with the given name. The second boolean
+// return value indicates that this field was not set, or was not defined in the
+// schema.
+func (m *ScormCourseMutation) Field(name string) (ent.Value, bool) {
+	switch name {
+	case scormcourse.FieldClientID:
+		return m.ClientID()
+	case scormcourse.FieldTitle:
+		return m.Title()
+	case scormcourse.FieldCategoryIds:
+		return m.CategoryIds()
+	case scormcourse.FieldDescription:
+		return m.Description()
+	case scormcourse.FieldLecturer:
+		return m.Lecturer()
+	case scormcourse.FieldScormURL:
+		return m.ScormURL()
+	case scormcourse.FieldIsActive:
+		return m.IsActive()
+	case scormcourse.FieldImageURL:
+		return m.ImageURL()
+	}
+	return nil, false
+}
+
+// OldField returns the old value of the field from the database. An error is
+// returned if the mutation operation is not UpdateOne, or the query to the
+// database failed.
+func (m *ScormCourseMutation) OldField(ctx context.Context, name string) (ent.Value, error) {
+	switch name {
+	case scormcourse.FieldClientID:
+		return m.OldClientID(ctx)
+	case scormcourse.FieldTitle:
+		return m.OldTitle(ctx)
+	case scormcourse.FieldCategoryIds:
+		return m.OldCategoryIds(ctx)
+	case scormcourse.FieldDescription:
+		return m.OldDescription(ctx)
+	case scormcourse.FieldLecturer:
+		return m.OldLecturer(ctx)
+	case scormcourse.FieldScormURL:
+		return m.OldScormURL(ctx)
+	case scormcourse.FieldIsActive:
+		return m.OldIsActive(ctx)
+	case scormcourse.FieldImageURL:
+		return m.OldImageURL(ctx)
+	}
+	return nil, fmt.Errorf("unknown ScormCourse field %s", name)
+}
+
+// SetField sets the value of a field with the given name. It returns an error if
+// the field is not defined in the schema, or if the type mismatched the field
+// type.
+func (m *ScormCourseMutation) SetField(name string, value ent.Value) error {
+	switch name {
+	case scormcourse.FieldClientID:
+		v, ok := value.(uuid.UUID)
+		if !ok {
+			return fmt.Errorf("unexpected type %T for field %s", value, name)
+		}
+		m.SetClientID(v)
+		return nil
+	case scormcourse.FieldTitle:
+		v, ok := value.(string)
+		if !ok {
+			return fmt.Errorf("unexpected type %T for field %s", value, name)
+		}
+		m.SetTitle(v)
+		return nil
+	case scormcourse.FieldCategoryIds:
+		v, ok := value.([]uuid.UUID)
+		if !ok {
+			return fmt.Errorf("unexpected type %T for field %s", value, name)
+		}
+		m.SetCategoryIds(v)
+		return nil
+	case scormcourse.FieldDescription:
+		v, ok := value.(string)
+		if !ok {
+			return fmt.Errorf("unexpected type %T for field %s", value, name)
+		}
+		m.SetDescription(v)
+		return nil
+	case scormcourse.FieldLecturer:
+		v, ok := value.(string)
+		if !ok {
+			return fmt.Errorf("unexpected type %T for field %s", value, name)
+		}
+		m.SetLecturer(v)
+		return nil
+	case scormcourse.FieldScormURL:
+		v, ok := value.(string)
+		if !ok {
+			return fmt.Errorf("unexpected type %T for field %s", value, name)
+		}
+		m.SetScormURL(v)
+		return nil
+	case scormcourse.FieldIsActive:
+		v, ok := value.(bool)
+		if !ok {
+			return fmt.Errorf("unexpected type %T for field %s", value, name)
+		}
+		m.SetIsActive(v)
+		return nil
+	case scormcourse.FieldImageURL:
+		v, ok := value.(string)
+		if !ok {
+			return fmt.Errorf("unexpected type %T for field %s", value, name)
+		}
+		m.SetImageURL(v)
+		return nil
+	}
+	return fmt.Errorf("unknown ScormCourse field %s", name)
+}
+
+// AddedFields returns all numeric fields that were incremented/decremented during
+// this mutation.
+func (m *ScormCourseMutation) AddedFields() []string {
+	return nil
+}
+
+// AddedField returns the numeric value that was incremented/decremented on a field
+// with the given name. The second boolean return value indicates that this field
+// was not set, or was not defined in the schema.
+func (m *ScormCourseMutation) AddedField(name string) (ent.Value, bool) {
+	return nil, false
+}
+
+// AddField adds the value to the field with the given name. It returns an error if
+// the field is not defined in the schema, or if the type mismatched the field
+// type.
+func (m *ScormCourseMutation) AddField(name string, value ent.Value) error {
+	switch name {
+	}
+	return fmt.Errorf("unknown ScormCourse numeric field %s", name)
+}
+
+// ClearedFields returns all nullable fields that were cleared during this
+// mutation.
+func (m *ScormCourseMutation) ClearedFields() []string {
+	var fields []string
+	if m.FieldCleared(scormcourse.FieldDescription) {
+		fields = append(fields, scormcourse.FieldDescription)
+	}
+	if m.FieldCleared(scormcourse.FieldLecturer) {
+		fields = append(fields, scormcourse.FieldLecturer)
+	}
+	if m.FieldCleared(scormcourse.FieldImageURL) {
+		fields = append(fields, scormcourse.FieldImageURL)
+	}
+	return fields
+}
+
+// FieldCleared returns a boolean indicating if a field with the given name was
+// cleared in this mutation.
+func (m *ScormCourseMutation) FieldCleared(name string) bool {
+	_, ok := m.clearedFields[name]
+	return ok
+}
+
+// ClearField clears the value of the field with the given name. It returns an
+// error if the field is not defined in the schema.
+func (m *ScormCourseMutation) ClearField(name string) error {
+	switch name {
+	case scormcourse.FieldDescription:
+		m.ClearDescription()
+		return nil
+	case scormcourse.FieldLecturer:
+		m.ClearLecturer()
+		return nil
+	case scormcourse.FieldImageURL:
+		m.ClearImageURL()
+		return nil
+	}
+	return fmt.Errorf("unknown ScormCourse nullable field %s", name)
+}
+
+// ResetField resets all changes in the mutation for the field with the given name.
+// It returns an error if the field is not defined in the schema.
+func (m *ScormCourseMutation) ResetField(name string) error {
+	switch name {
+	case scormcourse.FieldClientID:
+		m.ResetClientID()
+		return nil
+	case scormcourse.FieldTitle:
+		m.ResetTitle()
+		return nil
+	case scormcourse.FieldCategoryIds:
+		m.ResetCategoryIds()
+		return nil
+	case scormcourse.FieldDescription:
+		m.ResetDescription()
+		return nil
+	case scormcourse.FieldLecturer:
+		m.ResetLecturer()
+		return nil
+	case scormcourse.FieldScormURL:
+		m.ResetScormURL()
+		return nil
+	case scormcourse.FieldIsActive:
+		m.ResetIsActive()
+		return nil
+	case scormcourse.FieldImageURL:
+		m.ResetImageURL()
+		return nil
+	}
+	return fmt.Errorf("unknown ScormCourse field %s", name)
+}
+
+// AddedEdges returns all edge names that were set/added in this mutation.
+func (m *ScormCourseMutation) AddedEdges() []string {
+	edges := make([]string, 0, 1)
+	if m.course_progress != nil {
+		edges = append(edges, scormcourse.EdgeCourseProgress)
+	}
+	return edges
+}
+
+// AddedIDs returns all IDs (to other nodes) that were added for the given edge
+// name in this mutation.
+func (m *ScormCourseMutation) AddedIDs(name string) []ent.Value {
+	switch name {
+	case scormcourse.EdgeCourseProgress:
+		ids := make([]ent.Value, 0, len(m.course_progress))
+		for id := range m.course_progress {
+			ids = append(ids, id)
+		}
+		return ids
+	}
+	return nil
+}
+
+// RemovedEdges returns all edge names that were removed in this mutation.
+func (m *ScormCourseMutation) RemovedEdges() []string {
+	edges := make([]string, 0, 1)
+	if m.removedcourse_progress != nil {
+		edges = append(edges, scormcourse.EdgeCourseProgress)
+	}
+	return edges
+}
+
+// RemovedIDs returns all IDs (to other nodes) that were removed for the edge with
+// the given name in this mutation.
+func (m *ScormCourseMutation) RemovedIDs(name string) []ent.Value {
+	switch name {
+	case scormcourse.EdgeCourseProgress:
+		ids := make([]ent.Value, 0, len(m.removedcourse_progress))
+		for id := range m.removedcourse_progress {
+			ids = append(ids, id)
+		}
+		return ids
+	}
+	return nil
+}
+
+// ClearedEdges returns all edge names that were cleared in this mutation.
+func (m *ScormCourseMutation) ClearedEdges() []string {
+	edges := make([]string, 0, 1)
+	if m.clearedcourse_progress {
+		edges = append(edges, scormcourse.EdgeCourseProgress)
+	}
+	return edges
+}
+
+// EdgeCleared returns a boolean which indicates if the edge with the given name
+// was cleared in this mutation.
+func (m *ScormCourseMutation) EdgeCleared(name string) bool {
+	switch name {
+	case scormcourse.EdgeCourseProgress:
+		return m.clearedcourse_progress
+	}
+	return false
+}
+
+// ClearEdge clears the value of the edge with the given name. It returns an error
+// if that edge is not defined in the schema.
+func (m *ScormCourseMutation) ClearEdge(name string) error {
+	switch name {
+	}
+	return fmt.Errorf("unknown ScormCourse unique edge %s", name)
+}
+
+// ResetEdge resets all changes to the edge with the given name in this mutation.
+// It returns an error if the edge is not defined in the schema.
+func (m *ScormCourseMutation) ResetEdge(name string) error {
+	switch name {
+	case scormcourse.EdgeCourseProgress:
+		m.ResetCourseProgress()
+		return nil
+	}
+	return fmt.Errorf("unknown ScormCourse edge %s", name)
+}
+
+// ScormProgressMutation represents an operation that mutates the ScormProgress nodes in the graph.
+type ScormProgressMutation struct {
+	config
+	op              Op
+	typ             string
+	id              *uuid.UUID
+	employee_id     *uuid.UUID
+	status          *scormprogress.Status
+	score           *int
+	addscore        *int
+	completed_at    *time.Time
+	suspend_data    *string
+	clearedFields   map[string]struct{}
+	progress        *uuid.UUID
+	clearedprogress bool
+	done            bool
+	oldValue        func(context.Context) (*ScormProgress, error)
+	predicates      []predicate.ScormProgress
+}
+
+var _ ent.Mutation = (*ScormProgressMutation)(nil)
+
+// scormprogressOption allows management of the mutation configuration using functional options.
+type scormprogressOption func(*ScormProgressMutation)
+
+// newScormProgressMutation creates new mutation for the ScormProgress entity.
+func newScormProgressMutation(c config, op Op, opts ...scormprogressOption) *ScormProgressMutation {
+	m := &ScormProgressMutation{
+		config:        c,
+		op:            op,
+		typ:           TypeScormProgress,
+		clearedFields: make(map[string]struct{}),
+	}
+	for _, opt := range opts {
+		opt(m)
+	}
+	return m
+}
+
+// withScormProgressID sets the ID field of the mutation.
+func withScormProgressID(id uuid.UUID) scormprogressOption {
+	return func(m *ScormProgressMutation) {
+		var (
+			err   error
+			once  sync.Once
+			value *ScormProgress
+		)
+		m.oldValue = func(ctx context.Context) (*ScormProgress, error) {
+			once.Do(func() {
+				if m.done {
+					err = errors.New("querying old values post mutation is not allowed")
+				} else {
+					value, err = m.Client().ScormProgress.Get(ctx, id)
+				}
+			})
+			return value, err
+		}
+		m.id = &id
+	}
+}
+
+// withScormProgress sets the old ScormProgress of the mutation.
+func withScormProgress(node *ScormProgress) scormprogressOption {
+	return func(m *ScormProgressMutation) {
+		m.oldValue = func(context.Context) (*ScormProgress, error) {
+			return node, nil
+		}
+		m.id = &node.ID
+	}
+}
+
+// Client returns a new `ent.Client` from the mutation. If the mutation was
+// executed in a transaction (ent.Tx), a transactional client is returned.
+func (m ScormProgressMutation) Client() *Client {
+	client := &Client{config: m.config}
+	client.init()
+	return client
+}
+
+// Tx returns an `ent.Tx` for mutations that were executed in transactions;
+// it returns an error otherwise.
+func (m ScormProgressMutation) Tx() (*Tx, error) {
+	if _, ok := m.driver.(*txDriver); !ok {
+		return nil, errors.New("ent: mutation is not running in a transaction")
+	}
+	tx := &Tx{config: m.config}
+	tx.init()
+	return tx, nil
+}
+
+// SetID sets the value of the id field. Note that this
+// operation is only accepted on creation of ScormProgress entities.
+func (m *ScormProgressMutation) SetID(id uuid.UUID) {
+	m.id = &id
+}
+
+// ID returns the ID value in the mutation. Note that the ID is only available
+// if it was provided to the builder or after it was returned from the database.
+func (m *ScormProgressMutation) ID() (id uuid.UUID, exists bool) {
+	if m.id == nil {
+		return
+	}
+	return *m.id, true
+}
+
+// IDs queries the database and returns the entity ids that match the mutation's predicate.
+// That means, if the mutation is applied within a transaction with an isolation level such
+// as sql.LevelSerializable, the returned ids match the ids of the rows that will be updated
+// or updated by the mutation.
+func (m *ScormProgressMutation) IDs(ctx context.Context) ([]uuid.UUID, error) {
+	switch {
+	case m.op.Is(OpUpdateOne | OpDeleteOne):
+		id, exists := m.ID()
+		if exists {
+			return []uuid.UUID{id}, nil
+		}
+		fallthrough
+	case m.op.Is(OpUpdate | OpDelete):
+		return m.Client().ScormProgress.Query().Where(m.predicates...).IDs(ctx)
+	default:
+		return nil, fmt.Errorf("IDs is not allowed on %s operations", m.op)
+	}
+}
+
+// SetCourseID sets the "course_id" field.
+func (m *ScormProgressMutation) SetCourseID(u uuid.UUID) {
+	m.progress = &u
+}
+
+// CourseID returns the value of the "course_id" field in the mutation.
+func (m *ScormProgressMutation) CourseID() (r uuid.UUID, exists bool) {
+	v := m.progress
+	if v == nil {
+		return
+	}
+	return *v, true
+}
+
+// OldCourseID returns the old "course_id" field's value of the ScormProgress entity.
+// If the ScormProgress object wasn't provided to the builder, the object is fetched from the database.
+// An error is returned if the mutation operation is not UpdateOne, or the database query fails.
+func (m *ScormProgressMutation) OldCourseID(ctx context.Context) (v uuid.UUID, err error) {
+	if !m.op.Is(OpUpdateOne) {
+		return v, errors.New("OldCourseID is only allowed on UpdateOne operations")
+	}
+	if m.id == nil || m.oldValue == nil {
+		return v, errors.New("OldCourseID requires an ID field in the mutation")
+	}
+	oldValue, err := m.oldValue(ctx)
+	if err != nil {
+		return v, fmt.Errorf("querying old value for OldCourseID: %w", err)
+	}
+	return oldValue.CourseID, nil
+}
+
+// ResetCourseID resets all changes to the "course_id" field.
+func (m *ScormProgressMutation) ResetCourseID() {
+	m.progress = nil
+}
+
+// SetEmployeeID sets the "employee_id" field.
+func (m *ScormProgressMutation) SetEmployeeID(u uuid.UUID) {
+	m.employee_id = &u
+}
+
+// EmployeeID returns the value of the "employee_id" field in the mutation.
+func (m *ScormProgressMutation) EmployeeID() (r uuid.UUID, exists bool) {
+	v := m.employee_id
+	if v == nil {
+		return
+	}
+	return *v, true
+}
+
+// OldEmployeeID returns the old "employee_id" field's value of the ScormProgress entity.
+// If the ScormProgress object wasn't provided to the builder, the object is fetched from the database.
+// An error is returned if the mutation operation is not UpdateOne, or the database query fails.
+func (m *ScormProgressMutation) OldEmployeeID(ctx context.Context) (v uuid.UUID, err error) {
+	if !m.op.Is(OpUpdateOne) {
+		return v, errors.New("OldEmployeeID is only allowed on UpdateOne operations")
+	}
+	if m.id == nil || m.oldValue == nil {
+		return v, errors.New("OldEmployeeID requires an ID field in the mutation")
+	}
+	oldValue, err := m.oldValue(ctx)
+	if err != nil {
+		return v, fmt.Errorf("querying old value for OldEmployeeID: %w", err)
+	}
+	return oldValue.EmployeeID, nil
+}
+
+// ResetEmployeeID resets all changes to the "employee_id" field.
+func (m *ScormProgressMutation) ResetEmployeeID() {
+	m.employee_id = nil
+}
+
+// SetStatus sets the "status" field.
+func (m *ScormProgressMutation) SetStatus(s scormprogress.Status) {
+	m.status = &s
+}
+
+// Status returns the value of the "status" field in the mutation.
+func (m *ScormProgressMutation) Status() (r scormprogress.Status, exists bool) {
+	v := m.status
+	if v == nil {
+		return
+	}
+	return *v, true
+}
+
+// OldStatus returns the old "status" field's value of the ScormProgress entity.
+// If the ScormProgress object wasn't provided to the builder, the object is fetched from the database.
+// An error is returned if the mutation operation is not UpdateOne, or the database query fails.
+func (m *ScormProgressMutation) OldStatus(ctx context.Context) (v scormprogress.Status, err error) {
+	if !m.op.Is(OpUpdateOne) {
+		return v, errors.New("OldStatus is only allowed on UpdateOne operations")
+	}
+	if m.id == nil || m.oldValue == nil {
+		return v, errors.New("OldStatus requires an ID field in the mutation")
+	}
+	oldValue, err := m.oldValue(ctx)
+	if err != nil {
+		return v, fmt.Errorf("querying old value for OldStatus: %w", err)
+	}
+	return oldValue.Status, nil
+}
+
+// ResetStatus resets all changes to the "status" field.
+func (m *ScormProgressMutation) ResetStatus() {
+	m.status = nil
+}
+
+// SetScore sets the "score" field.
+func (m *ScormProgressMutation) SetScore(i int) {
+	m.score = &i
+	m.addscore = nil
+}
+
+// Score returns the value of the "score" field in the mutation.
+func (m *ScormProgressMutation) Score() (r int, exists bool) {
+	v := m.score
+	if v == nil {
+		return
+	}
+	return *v, true
+}
+
+// OldScore returns the old "score" field's value of the ScormProgress entity.
+// If the ScormProgress object wasn't provided to the builder, the object is fetched from the database.
+// An error is returned if the mutation operation is not UpdateOne, or the database query fails.
+func (m *ScormProgressMutation) OldScore(ctx context.Context) (v *int, err error) {
+	if !m.op.Is(OpUpdateOne) {
+		return v, errors.New("OldScore is only allowed on UpdateOne operations")
+	}
+	if m.id == nil || m.oldValue == nil {
+		return v, errors.New("OldScore requires an ID field in the mutation")
+	}
+	oldValue, err := m.oldValue(ctx)
+	if err != nil {
+		return v, fmt.Errorf("querying old value for OldScore: %w", err)
+	}
+	return oldValue.Score, nil
+}
+
+// AddScore adds i to the "score" field.
+func (m *ScormProgressMutation) AddScore(i int) {
+	if m.addscore != nil {
+		*m.addscore += i
+	} else {
+		m.addscore = &i
+	}
+}
+
+// AddedScore returns the value that was added to the "score" field in this mutation.
+func (m *ScormProgressMutation) AddedScore() (r int, exists bool) {
+	v := m.addscore
+	if v == nil {
+		return
+	}
+	return *v, true
+}
+
+// ClearScore clears the value of the "score" field.
+func (m *ScormProgressMutation) ClearScore() {
+	m.score = nil
+	m.addscore = nil
+	m.clearedFields[scormprogress.FieldScore] = struct{}{}
+}
+
+// ScoreCleared returns if the "score" field was cleared in this mutation.
+func (m *ScormProgressMutation) ScoreCleared() bool {
+	_, ok := m.clearedFields[scormprogress.FieldScore]
+	return ok
+}
+
+// ResetScore resets all changes to the "score" field.
+func (m *ScormProgressMutation) ResetScore() {
+	m.score = nil
+	m.addscore = nil
+	delete(m.clearedFields, scormprogress.FieldScore)
+}
+
+// SetCompletedAt sets the "completed_at" field.
+func (m *ScormProgressMutation) SetCompletedAt(t time.Time) {
+	m.completed_at = &t
+}
+
+// CompletedAt returns the value of the "completed_at" field in the mutation.
+func (m *ScormProgressMutation) CompletedAt() (r time.Time, exists bool) {
+	v := m.completed_at
+	if v == nil {
+		return
+	}
+	return *v, true
+}
+
+// OldCompletedAt returns the old "completed_at" field's value of the ScormProgress entity.
+// If the ScormProgress object wasn't provided to the builder, the object is fetched from the database.
+// An error is returned if the mutation operation is not UpdateOne, or the database query fails.
+func (m *ScormProgressMutation) OldCompletedAt(ctx context.Context) (v *time.Time, err error) {
+	if !m.op.Is(OpUpdateOne) {
+		return v, errors.New("OldCompletedAt is only allowed on UpdateOne operations")
+	}
+	if m.id == nil || m.oldValue == nil {
+		return v, errors.New("OldCompletedAt requires an ID field in the mutation")
+	}
+	oldValue, err := m.oldValue(ctx)
+	if err != nil {
+		return v, fmt.Errorf("querying old value for OldCompletedAt: %w", err)
+	}
+	return oldValue.CompletedAt, nil
+}
+
+// ClearCompletedAt clears the value of the "completed_at" field.
+func (m *ScormProgressMutation) ClearCompletedAt() {
+	m.completed_at = nil
+	m.clearedFields[scormprogress.FieldCompletedAt] = struct{}{}
+}
+
+// CompletedAtCleared returns if the "completed_at" field was cleared in this mutation.
+func (m *ScormProgressMutation) CompletedAtCleared() bool {
+	_, ok := m.clearedFields[scormprogress.FieldCompletedAt]
+	return ok
+}
+
+// ResetCompletedAt resets all changes to the "completed_at" field.
+func (m *ScormProgressMutation) ResetCompletedAt() {
+	m.completed_at = nil
+	delete(m.clearedFields, scormprogress.FieldCompletedAt)
+}
+
+// SetSuspendData sets the "suspend_data" field.
+func (m *ScormProgressMutation) SetSuspendData(s string) {
+	m.suspend_data = &s
+}
+
+// SuspendData returns the value of the "suspend_data" field in the mutation.
+func (m *ScormProgressMutation) SuspendData() (r string, exists bool) {
+	v := m.suspend_data
+	if v == nil {
+		return
+	}
+	return *v, true
+}
+
+// OldSuspendData returns the old "suspend_data" field's value of the ScormProgress entity.
+// If the ScormProgress object wasn't provided to the builder, the object is fetched from the database.
+// An error is returned if the mutation operation is not UpdateOne, or the database query fails.
+func (m *ScormProgressMutation) OldSuspendData(ctx context.Context) (v *string, err error) {
+	if !m.op.Is(OpUpdateOne) {
+		return v, errors.New("OldSuspendData is only allowed on UpdateOne operations")
+	}
+	if m.id == nil || m.oldValue == nil {
+		return v, errors.New("OldSuspendData requires an ID field in the mutation")
+	}
+	oldValue, err := m.oldValue(ctx)
+	if err != nil {
+		return v, fmt.Errorf("querying old value for OldSuspendData: %w", err)
+	}
+	return oldValue.SuspendData, nil
+}
+
+// ClearSuspendData clears the value of the "suspend_data" field.
+func (m *ScormProgressMutation) ClearSuspendData() {
+	m.suspend_data = nil
+	m.clearedFields[scormprogress.FieldSuspendData] = struct{}{}
+}
+
+// SuspendDataCleared returns if the "suspend_data" field was cleared in this mutation.
+func (m *ScormProgressMutation) SuspendDataCleared() bool {
+	_, ok := m.clearedFields[scormprogress.FieldSuspendData]
+	return ok
+}
+
+// ResetSuspendData resets all changes to the "suspend_data" field.
+func (m *ScormProgressMutation) ResetSuspendData() {
+	m.suspend_data = nil
+	delete(m.clearedFields, scormprogress.FieldSuspendData)
+}
+
+// SetProgressID sets the "progress" edge to the ScormCourse entity by id.
+func (m *ScormProgressMutation) SetProgressID(id uuid.UUID) {
+	m.progress = &id
+}
+
+// ClearProgress clears the "progress" edge to the ScormCourse entity.
+func (m *ScormProgressMutation) ClearProgress() {
+	m.clearedprogress = true
+	m.clearedFields[scormprogress.FieldCourseID] = struct{}{}
+}
+
+// ProgressCleared reports if the "progress" edge to the ScormCourse entity was cleared.
+func (m *ScormProgressMutation) ProgressCleared() bool {
+	return m.clearedprogress
+}
+
+// ProgressID returns the "progress" edge ID in the mutation.
+func (m *ScormProgressMutation) ProgressID() (id uuid.UUID, exists bool) {
+	if m.progress != nil {
+		return *m.progress, true
+	}
+	return
+}
+
+// ProgressIDs returns the "progress" edge IDs in the mutation.
+// Note that IDs always returns len(IDs) <= 1 for unique edges, and you should use
+// ProgressID instead. It exists only for internal usage by the builders.
+func (m *ScormProgressMutation) ProgressIDs() (ids []uuid.UUID) {
+	if id := m.progress; id != nil {
+		ids = append(ids, *id)
+	}
+	return
+}
+
+// ResetProgress resets all changes to the "progress" edge.
+func (m *ScormProgressMutation) ResetProgress() {
+	m.progress = nil
+	m.clearedprogress = false
+}
+
+// Where appends a list predicates to the ScormProgressMutation builder.
+func (m *ScormProgressMutation) Where(ps ...predicate.ScormProgress) {
+	m.predicates = append(m.predicates, ps...)
+}
+
+// WhereP appends storage-level predicates to the ScormProgressMutation builder. Using this method,
+// users can use type-assertion to append predicates that do not depend on any generated package.
+func (m *ScormProgressMutation) WhereP(ps ...func(*sql.Selector)) {
+	p := make([]predicate.ScormProgress, len(ps))
+	for i := range ps {
+		p[i] = ps[i]
+	}
+	m.Where(p...)
+}
+
+// Op returns the operation name.
+func (m *ScormProgressMutation) Op() Op {
+	return m.op
+}
+
+// SetOp allows setting the mutation operation.
+func (m *ScormProgressMutation) SetOp(op Op) {
+	m.op = op
+}
+
+// Type returns the node type of this mutation (ScormProgress).
+func (m *ScormProgressMutation) Type() string {
+	return m.typ
+}
+
+// Fields returns all fields that were changed during this mutation. Note that in
+// order to get all numeric fields that were incremented/decremented, call
+// AddedFields().
+func (m *ScormProgressMutation) Fields() []string {
+	fields := make([]string, 0, 6)
+	if m.progress != nil {
+		fields = append(fields, scormprogress.FieldCourseID)
+	}
+	if m.employee_id != nil {
+		fields = append(fields, scormprogress.FieldEmployeeID)
+	}
+	if m.status != nil {
+		fields = append(fields, scormprogress.FieldStatus)
+	}
+	if m.score != nil {
+		fields = append(fields, scormprogress.FieldScore)
+	}
+	if m.completed_at != nil {
+		fields = append(fields, scormprogress.FieldCompletedAt)
+	}
+	if m.suspend_data != nil {
+		fields = append(fields, scormprogress.FieldSuspendData)
+	}
+	return fields
+}
+
+// Field returns the value of a field with the given name. The second boolean
+// return value indicates that this field was not set, or was not defined in the
+// schema.
+func (m *ScormProgressMutation) Field(name string) (ent.Value, bool) {
+	switch name {
+	case scormprogress.FieldCourseID:
+		return m.CourseID()
+	case scormprogress.FieldEmployeeID:
+		return m.EmployeeID()
+	case scormprogress.FieldStatus:
+		return m.Status()
+	case scormprogress.FieldScore:
+		return m.Score()
+	case scormprogress.FieldCompletedAt:
+		return m.CompletedAt()
+	case scormprogress.FieldSuspendData:
+		return m.SuspendData()
+	}
+	return nil, false
+}
+
+// OldField returns the old value of the field from the database. An error is
+// returned if the mutation operation is not UpdateOne, or the query to the
+// database failed.
+func (m *ScormProgressMutation) OldField(ctx context.Context, name string) (ent.Value, error) {
+	switch name {
+	case scormprogress.FieldCourseID:
+		return m.OldCourseID(ctx)
+	case scormprogress.FieldEmployeeID:
+		return m.OldEmployeeID(ctx)
+	case scormprogress.FieldStatus:
+		return m.OldStatus(ctx)
+	case scormprogress.FieldScore:
+		return m.OldScore(ctx)
+	case scormprogress.FieldCompletedAt:
+		return m.OldCompletedAt(ctx)
+	case scormprogress.FieldSuspendData:
+		return m.OldSuspendData(ctx)
+	}
+	return nil, fmt.Errorf("unknown ScormProgress field %s", name)
+}
+
+// SetField sets the value of a field with the given name. It returns an error if
+// the field is not defined in the schema, or if the type mismatched the field
+// type.
+func (m *ScormProgressMutation) SetField(name string, value ent.Value) error {
+	switch name {
+	case scormprogress.FieldCourseID:
+		v, ok := value.(uuid.UUID)
+		if !ok {
+			return fmt.Errorf("unexpected type %T for field %s", value, name)
+		}
+		m.SetCourseID(v)
+		return nil
+	case scormprogress.FieldEmployeeID:
+		v, ok := value.(uuid.UUID)
+		if !ok {
+			return fmt.Errorf("unexpected type %T for field %s", value, name)
+		}
+		m.SetEmployeeID(v)
+		return nil
+	case scormprogress.FieldStatus:
+		v, ok := value.(scormprogress.Status)
+		if !ok {
+			return fmt.Errorf("unexpected type %T for field %s", value, name)
+		}
+		m.SetStatus(v)
+		return nil
+	case scormprogress.FieldScore:
+		v, ok := value.(int)
+		if !ok {
+			return fmt.Errorf("unexpected type %T for field %s", value, name)
+		}
+		m.SetScore(v)
+		return nil
+	case scormprogress.FieldCompletedAt:
+		v, ok := value.(time.Time)
+		if !ok {
+			return fmt.Errorf("unexpected type %T for field %s", value, name)
+		}
+		m.SetCompletedAt(v)
+		return nil
+	case scormprogress.FieldSuspendData:
+		v, ok := value.(string)
+		if !ok {
+			return fmt.Errorf("unexpected type %T for field %s", value, name)
+		}
+		m.SetSuspendData(v)
+		return nil
+	}
+	return fmt.Errorf("unknown ScormProgress field %s", name)
+}
+
+// AddedFields returns all numeric fields that were incremented/decremented during
+// this mutation.
+func (m *ScormProgressMutation) AddedFields() []string {
+	var fields []string
+	if m.addscore != nil {
+		fields = append(fields, scormprogress.FieldScore)
+	}
+	return fields
+}
+
+// AddedField returns the numeric value that was incremented/decremented on a field
+// with the given name. The second boolean return value indicates that this field
+// was not set, or was not defined in the schema.
+func (m *ScormProgressMutation) AddedField(name string) (ent.Value, bool) {
+	switch name {
+	case scormprogress.FieldScore:
+		return m.AddedScore()
+	}
+	return nil, false
+}
+
+// AddField adds the value to the field with the given name. It returns an error if
+// the field is not defined in the schema, or if the type mismatched the field
+// type.
+func (m *ScormProgressMutation) AddField(name string, value ent.Value) error {
+	switch name {
+	case scormprogress.FieldScore:
+		v, ok := value.(int)
+		if !ok {
+			return fmt.Errorf("unexpected type %T for field %s", value, name)
+		}
+		m.AddScore(v)
+		return nil
+	}
+	return fmt.Errorf("unknown ScormProgress numeric field %s", name)
+}
+
+// ClearedFields returns all nullable fields that were cleared during this
+// mutation.
+func (m *ScormProgressMutation) ClearedFields() []string {
+	var fields []string
+	if m.FieldCleared(scormprogress.FieldScore) {
+		fields = append(fields, scormprogress.FieldScore)
+	}
+	if m.FieldCleared(scormprogress.FieldCompletedAt) {
+		fields = append(fields, scormprogress.FieldCompletedAt)
+	}
+	if m.FieldCleared(scormprogress.FieldSuspendData) {
+		fields = append(fields, scormprogress.FieldSuspendData)
+	}
+	return fields
+}
+
+// FieldCleared returns a boolean indicating if a field with the given name was
+// cleared in this mutation.
+func (m *ScormProgressMutation) FieldCleared(name string) bool {
+	_, ok := m.clearedFields[name]
+	return ok
+}
+
+// ClearField clears the value of the field with the given name. It returns an
+// error if the field is not defined in the schema.
+func (m *ScormProgressMutation) ClearField(name string) error {
+	switch name {
+	case scormprogress.FieldScore:
+		m.ClearScore()
+		return nil
+	case scormprogress.FieldCompletedAt:
+		m.ClearCompletedAt()
+		return nil
+	case scormprogress.FieldSuspendData:
+		m.ClearSuspendData()
+		return nil
+	}
+	return fmt.Errorf("unknown ScormProgress nullable field %s", name)
+}
+
+// ResetField resets all changes in the mutation for the field with the given name.
+// It returns an error if the field is not defined in the schema.
+func (m *ScormProgressMutation) ResetField(name string) error {
+	switch name {
+	case scormprogress.FieldCourseID:
+		m.ResetCourseID()
+		return nil
+	case scormprogress.FieldEmployeeID:
+		m.ResetEmployeeID()
+		return nil
+	case scormprogress.FieldStatus:
+		m.ResetStatus()
+		return nil
+	case scormprogress.FieldScore:
+		m.ResetScore()
+		return nil
+	case scormprogress.FieldCompletedAt:
+		m.ResetCompletedAt()
+		return nil
+	case scormprogress.FieldSuspendData:
+		m.ResetSuspendData()
+		return nil
+	}
+	return fmt.Errorf("unknown ScormProgress field %s", name)
+}
+
+// AddedEdges returns all edge names that were set/added in this mutation.
+func (m *ScormProgressMutation) AddedEdges() []string {
+	edges := make([]string, 0, 1)
+	if m.progress != nil {
+		edges = append(edges, scormprogress.EdgeProgress)
+	}
+	return edges
+}
+
+// AddedIDs returns all IDs (to other nodes) that were added for the given edge
+// name in this mutation.
+func (m *ScormProgressMutation) AddedIDs(name string) []ent.Value {
+	switch name {
+	case scormprogress.EdgeProgress:
+		if id := m.progress; id != nil {
+			return []ent.Value{*id}
+		}
+	}
+	return nil
+}
+
+// RemovedEdges returns all edge names that were removed in this mutation.
+func (m *ScormProgressMutation) RemovedEdges() []string {
+	edges := make([]string, 0, 1)
+	return edges
+}
+
+// RemovedIDs returns all IDs (to other nodes) that were removed for the edge with
+// the given name in this mutation.
+func (m *ScormProgressMutation) RemovedIDs(name string) []ent.Value {
+	return nil
+}
+
+// ClearedEdges returns all edge names that were cleared in this mutation.
+func (m *ScormProgressMutation) ClearedEdges() []string {
+	edges := make([]string, 0, 1)
+	if m.clearedprogress {
+		edges = append(edges, scormprogress.EdgeProgress)
+	}
+	return edges
+}
+
+// EdgeCleared returns a boolean which indicates if the edge with the given name
+// was cleared in this mutation.
+func (m *ScormProgressMutation) EdgeCleared(name string) bool {
+	switch name {
+	case scormprogress.EdgeProgress:
+		return m.clearedprogress
+	}
+	return false
+}
+
+// ClearEdge clears the value of the edge with the given name. It returns an error
+// if that edge is not defined in the schema.
+func (m *ScormProgressMutation) ClearEdge(name string) error {
+	switch name {
+	case scormprogress.EdgeProgress:
+		m.ClearProgress()
+		return nil
+	}
+	return fmt.Errorf("unknown ScormProgress unique edge %s", name)
+}
+
+// ResetEdge resets all changes to the edge with the given name in this mutation.
+// It returns an error if the edge is not defined in the schema.
+func (m *ScormProgressMutation) ResetEdge(name string) error {
+	switch name {
+	case scormprogress.EdgeProgress:
+		m.ResetProgress()
+		return nil
+	}
+	return fmt.Errorf("unknown ScormProgress edge %s", name)
 }
 
 // SupplierMutation represents an operation that mutates the Supplier nodes in the graph.

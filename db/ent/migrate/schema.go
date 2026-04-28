@@ -581,6 +581,48 @@ var (
 			},
 		},
 	}
+	// ScormCoursesColumns holds the columns for the "scorm_courses" table.
+	ScormCoursesColumns = []*schema.Column{
+		{Name: "id", Type: field.TypeUUID},
+		{Name: "client_id", Type: field.TypeUUID},
+		{Name: "title", Type: field.TypeString},
+		{Name: "category_ids", Type: field.TypeJSON},
+		{Name: "description", Type: field.TypeString, Nullable: true, Size: 2147483647},
+		{Name: "lecturer", Type: field.TypeString, Nullable: true, Size: 255},
+		{Name: "scorm_url", Type: field.TypeString, Size: 2147483647},
+		{Name: "is_active", Type: field.TypeBool, Default: true},
+		{Name: "image_url", Type: field.TypeString, Nullable: true, Size: 512},
+	}
+	// ScormCoursesTable holds the schema information for the "scorm_courses" table.
+	ScormCoursesTable = &schema.Table{
+		Name:       "scorm_courses",
+		Columns:    ScormCoursesColumns,
+		PrimaryKey: []*schema.Column{ScormCoursesColumns[0]},
+	}
+	// ScormProgressesColumns holds the columns for the "scorm_progresses" table.
+	ScormProgressesColumns = []*schema.Column{
+		{Name: "id", Type: field.TypeUUID},
+		{Name: "employee_id", Type: field.TypeUUID},
+		{Name: "status", Type: field.TypeEnum, Enums: []string{"NOT_STARTED", "IN_PROGRESS", "COMPLETED"}, Default: "NOT_STARTED"},
+		{Name: "score", Type: field.TypeInt, Nullable: true},
+		{Name: "completed_at", Type: field.TypeTime, Nullable: true},
+		{Name: "suspend_data", Type: field.TypeString, Nullable: true, Size: 2147483647},
+		{Name: "course_id", Type: field.TypeUUID},
+	}
+	// ScormProgressesTable holds the schema information for the "scorm_progresses" table.
+	ScormProgressesTable = &schema.Table{
+		Name:       "scorm_progresses",
+		Columns:    ScormProgressesColumns,
+		PrimaryKey: []*schema.Column{ScormProgressesColumns[0]},
+		ForeignKeys: []*schema.ForeignKey{
+			{
+				Symbol:     "scorm_progresses_scorm_courses_course_progress",
+				Columns:    []*schema.Column{ScormProgressesColumns[6]},
+				RefColumns: []*schema.Column{ScormCoursesColumns[0]},
+				OnDelete:   schema.NoAction,
+			},
+		},
+	}
 	// SuppliersColumns holds the columns for the "suppliers" table.
 	SuppliersColumns = []*schema.Column{
 		{Name: "id", Type: field.TypeUUID, Unique: true},
@@ -714,6 +756,8 @@ var (
 		RequestDzoContractsTable,
 		RequestParticipantsTable,
 		RequestTargetDzosTable,
+		ScormCoursesTable,
+		ScormProgressesTable,
 		SuppliersTable,
 		TrainingEventsTable,
 		TrainingParticipantsTable,
@@ -747,5 +791,6 @@ func init() {
 	OrganizationsTable.ForeignKeys[0].RefTable = OrganizationsTable
 	RequestsTable.ForeignKeys[0].RefTable = RequestsTable
 	RequestsTable.ForeignKeys[1].RefTable = UsersTable
+	ScormProgressesTable.ForeignKeys[0].RefTable = ScormCoursesTable
 	UsersTable.ForeignKeys[0].RefTable = ClientsTable
 }
