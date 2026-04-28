@@ -1,0 +1,107 @@
+stages:
+  - test
+  - build
+  - deploy
+
+variables:
+  IMAGE_TAG: $CI_REGISTRY_IMAGE:$CI_COMMIT_SHORT_SHA
+  IMAGE_LATEST: $CI_REGISTRY_IMAGE:latest
+
+test:
+  stage: test
+  image: golang:1.26-alpine
+  services:
+    - docker:27-dind
+  variables:
+    DOCKER_TLS_CERTDIR: "/certs"
+  before_script:
+    - apk add --no-cache docker-cli curl git
+    - curl -L https://encore.dev/install.sh | bash
+    - export PATH="$HOME/.encore/bin:$PATH"
+  script:
+    - encore test ./...
+  only:
+    - dev
+    - feat/gitlab_ci
+
+# test-with-db:
+#   stage: test
+#   image: golang:1.26-alpine
+#   services:
+#     - docker:27-dind
+#     - name: postgres:16
+#       alias: postgres
+#   variables:
+#     DOCKER_TLS_CERTDIR: "/certs"
+#     POSTGRES_DB: lms
+#     POSTGRES_USER: $INFRA_POSTGRES_USER
+#     POSTGRES_PASSWORD: $INFRA_DB_PASSWORD
+#   before_script:
+#     - apk add --no-cache docker-cli curl git
+#     - curl -L https://encore.dev/install.sh | bash
+#     - export PATH="$HOME/.encore/bin:$PATH"
+#   script:
+#     - encore test ./...
+#   only:
+#     - dev
+#     - feat/gitlab_ci
+
+build:
+  stage: build
+  image: golang:1.26-alpine
+  services:
+    - docker:27-dind
+  variables:
+    DOCKER_TLS_CERTDIR: "/certs"
+  before_script:
+    - apk add --no-cache docker-cli curl git gettext
+    - curl -L https://encore.dev/install.sh | bash
+    - export PATH="$HOME/.encore/bin:$PATH"
+    - encore version
+    - docker login -u "$CI_REGISTRY_USER" -p "$CI_REGISTRY_PASSWORD" "$CI_REGISTRY"
+    - |
+      envsubst '${INFRA_BASE_URL}${INFRA_POSTGRES_HOST}${INFRA_POSTGRES_USER}' \
+        < infra.config.json.tmpl > infra.config.json
+  script:
+    - echo "IMAGE_TAG=$IMAGE_TAG"
+    - encore build docker --config infra.config.json "sana-platform:$CI_COMMIT_SHORT_SHA"
+    - docker tag "sana-platform:$CI_COMMIT_SHORT_SHA" "$IMAGE_TAG"
+    - docker tag "sana-platform:$CI_COMMIT_SHORT_SHA" "$IMAGE_LATEST"
+    - docker push "$IMAGE_TAG"
+    - docker push "$IMAGE_LATEST"
+  only:
+    - dev
+    - feat/gitlab_ci
+
+deploy:
+  stage: deploy
+  image: bitnami/kubectl:latest
+  before_script:
+    - |
+      kubectl create secret docker-registry gitlab-registry \
+        --namespace=sana-lms \
+        --docker-server="$CI_REGISTRY" \
+        --docker-username="$CI_REGISTRY_USER" \
+        --docker-password="$CI_REGISTRY_PASSWORD" \
+        --dry-run=client -o yaml | kubectl apply -f -
+    - |
+      kubectl create secret generic sana-secrets \
+        --namespace=sana-lms \
+        --from-literal=DB_PASSWORD="$INFRA_DB_PASSWORD" \
+        --from-literal=KEYCLOAK_ISSUER_URL="$INFRA_KEYCLOAK_ISSUER_URL" \
+        --from-literal=KEYCLOAK_AUDIENCE="$INFRA_KEYCLOAK_AUDIENCE" \
+        --from-literal=KEYCLOAK_ADMIN_USER="$INFRA_KEYCLOAK_ADMIN_USER" \
+        --from-literal=KEYCLOAK_ADMIN_PASSWORD="$INFRA_KEYCLOAK_ADMIN_PASSWORD" \
+        --from-literal=KEYCLOAK_ADMIN_CLIENT_ID="$INFRA_KEYCLOAK_ADMIN_CLIENT_ID" \
+        --from-literal=KEYCLOAK_ADMIN_CLIENT_SECRET="$INFRA_KEYCLOAK_ADMIN_CLIENT_SECRET" \
+        --save-config \
+        --dry-run=client -o yaml | kubectl apply -f -
+  script:
+    - echo "IMAGE_TAG=$IMAGE_TAG"
+    - envsubst < k8s/deployment.yaml | kubectl apply -f - -n sana-lms
+    - kubectl apply -f k8s/service.yaml -n sana-lms
+    - kubectl apply -f k8s/ingress.yaml -n sana-lms
+    - kubectl rollout status deployment/sana-lms-backend -n sana-lms --timeout=120s
+  only:
+    - dev
+    - feat/gitlab_ci

@@ -1,0 +1,47 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: sana-lms-backend
+  namespace: sana-lms
+  labels:
+    app: sana-lms-backend
+spec:
+  replicas: 2
+  selector:
+    matchLabels:
+      app: sana-lms-backend
+  template:
+    metadata:
+      labels:
+        app: sana-lms-backend
+    spec:
+      containers:
+        - name: sana-lms-backend
+          image: ${IMAGE_TAG}
+          imagePullPolicy: Always
+          ports:
+            - containerPort: 8080
+          envFrom:
+            - secretRef:
+                name: sana-secrets
+          resources:
+            requests:
+              cpu: 100m
+              memory: 256Mi
+            limits:
+              cpu: 500m
+              memory: 512Mi
+          readinessProbe:
+            httpGet:
+              path: /
+              port: 8080
+            initialDelaySeconds: 15
+            periodSeconds: 5
+          livenessProbe:
+            httpGet:
+              path: /
+              port: 8080
+            initialDelaySeconds: 30
+            periodSeconds: 10
+      imagePullSecrets:
+        - name: gitlab-registry
