@@ -9,6 +9,9 @@ import (
 	"time"
 
 	"encore.app/db/ent/company"
+	"encore.app/db/ent/event"
+	"encore.app/db/ent/eventparticipant"
+	"encore.app/db/ent/externaltrainingevent"
 	"encore.app/db/ent/predicate"
 	"encore.app/db/ent/request"
 	"encore.app/db/ent/user"
@@ -167,6 +170,51 @@ func (_u *UserUpdate) AddRequests(v ...*Request) *UserUpdate {
 	return _u.AddRequestIDs(ids...)
 }
 
+// AddHostedEventIDs adds the "hosted_events" edge to the Event entity by IDs.
+func (_u *UserUpdate) AddHostedEventIDs(ids ...uuid.UUID) *UserUpdate {
+	_u.mutation.AddHostedEventIDs(ids...)
+	return _u
+}
+
+// AddHostedEvents adds the "hosted_events" edges to the Event entity.
+func (_u *UserUpdate) AddHostedEvents(v ...*Event) *UserUpdate {
+	ids := make([]uuid.UUID, len(v))
+	for i := range v {
+		ids[i] = v[i].ID
+	}
+	return _u.AddHostedEventIDs(ids...)
+}
+
+// AddReviewedParticipationIDs adds the "reviewed_participations" edge to the EventParticipant entity by IDs.
+func (_u *UserUpdate) AddReviewedParticipationIDs(ids ...uuid.UUID) *UserUpdate {
+	_u.mutation.AddReviewedParticipationIDs(ids...)
+	return _u
+}
+
+// AddReviewedParticipations adds the "reviewed_participations" edges to the EventParticipant entity.
+func (_u *UserUpdate) AddReviewedParticipations(v ...*EventParticipant) *UserUpdate {
+	ids := make([]uuid.UUID, len(v))
+	for i := range v {
+		ids[i] = v[i].ID
+	}
+	return _u.AddReviewedParticipationIDs(ids...)
+}
+
+// AddResponsibleExternalTrainingEventIDs adds the "responsible_external_training_events" edge to the ExternalTrainingEvent entity by IDs.
+func (_u *UserUpdate) AddResponsibleExternalTrainingEventIDs(ids ...uuid.UUID) *UserUpdate {
+	_u.mutation.AddResponsibleExternalTrainingEventIDs(ids...)
+	return _u
+}
+
+// AddResponsibleExternalTrainingEvents adds the "responsible_external_training_events" edges to the ExternalTrainingEvent entity.
+func (_u *UserUpdate) AddResponsibleExternalTrainingEvents(v ...*ExternalTrainingEvent) *UserUpdate {
+	ids := make([]uuid.UUID, len(v))
+	for i := range v {
+		ids[i] = v[i].ID
+	}
+	return _u.AddResponsibleExternalTrainingEventIDs(ids...)
+}
+
 // Mutation returns the UserMutation object of the builder.
 func (_u *UserUpdate) Mutation() *UserMutation {
 	return _u.mutation
@@ -197,6 +245,69 @@ func (_u *UserUpdate) RemoveRequests(v ...*Request) *UserUpdate {
 		ids[i] = v[i].ID
 	}
 	return _u.RemoveRequestIDs(ids...)
+}
+
+// ClearHostedEvents clears all "hosted_events" edges to the Event entity.
+func (_u *UserUpdate) ClearHostedEvents() *UserUpdate {
+	_u.mutation.ClearHostedEvents()
+	return _u
+}
+
+// RemoveHostedEventIDs removes the "hosted_events" edge to Event entities by IDs.
+func (_u *UserUpdate) RemoveHostedEventIDs(ids ...uuid.UUID) *UserUpdate {
+	_u.mutation.RemoveHostedEventIDs(ids...)
+	return _u
+}
+
+// RemoveHostedEvents removes "hosted_events" edges to Event entities.
+func (_u *UserUpdate) RemoveHostedEvents(v ...*Event) *UserUpdate {
+	ids := make([]uuid.UUID, len(v))
+	for i := range v {
+		ids[i] = v[i].ID
+	}
+	return _u.RemoveHostedEventIDs(ids...)
+}
+
+// ClearReviewedParticipations clears all "reviewed_participations" edges to the EventParticipant entity.
+func (_u *UserUpdate) ClearReviewedParticipations() *UserUpdate {
+	_u.mutation.ClearReviewedParticipations()
+	return _u
+}
+
+// RemoveReviewedParticipationIDs removes the "reviewed_participations" edge to EventParticipant entities by IDs.
+func (_u *UserUpdate) RemoveReviewedParticipationIDs(ids ...uuid.UUID) *UserUpdate {
+	_u.mutation.RemoveReviewedParticipationIDs(ids...)
+	return _u
+}
+
+// RemoveReviewedParticipations removes "reviewed_participations" edges to EventParticipant entities.
+func (_u *UserUpdate) RemoveReviewedParticipations(v ...*EventParticipant) *UserUpdate {
+	ids := make([]uuid.UUID, len(v))
+	for i := range v {
+		ids[i] = v[i].ID
+	}
+	return _u.RemoveReviewedParticipationIDs(ids...)
+}
+
+// ClearResponsibleExternalTrainingEvents clears all "responsible_external_training_events" edges to the ExternalTrainingEvent entity.
+func (_u *UserUpdate) ClearResponsibleExternalTrainingEvents() *UserUpdate {
+	_u.mutation.ClearResponsibleExternalTrainingEvents()
+	return _u
+}
+
+// RemoveResponsibleExternalTrainingEventIDs removes the "responsible_external_training_events" edge to ExternalTrainingEvent entities by IDs.
+func (_u *UserUpdate) RemoveResponsibleExternalTrainingEventIDs(ids ...uuid.UUID) *UserUpdate {
+	_u.mutation.RemoveResponsibleExternalTrainingEventIDs(ids...)
+	return _u
+}
+
+// RemoveResponsibleExternalTrainingEvents removes "responsible_external_training_events" edges to ExternalTrainingEvent entities.
+func (_u *UserUpdate) RemoveResponsibleExternalTrainingEvents(v ...*ExternalTrainingEvent) *UserUpdate {
+	ids := make([]uuid.UUID, len(v))
+	for i := range v {
+		ids[i] = v[i].ID
+	}
+	return _u.RemoveResponsibleExternalTrainingEventIDs(ids...)
 }
 
 // Save executes the query and returns the number of nodes affected by the update operation.
@@ -365,6 +476,141 @@ func (_u *UserUpdate) sqlSave(ctx context.Context) (_node int, err error) {
 		}
 		_spec.Edges.Add = append(_spec.Edges.Add, edge)
 	}
+	if _u.mutation.HostedEventsCleared() {
+		edge := &sqlgraph.EdgeSpec{
+			Rel:     sqlgraph.O2M,
+			Inverse: false,
+			Table:   user.HostedEventsTable,
+			Columns: []string{user.HostedEventsColumn},
+			Bidi:    false,
+			Target: &sqlgraph.EdgeTarget{
+				IDSpec: sqlgraph.NewFieldSpec(event.FieldID, field.TypeUUID),
+			},
+		}
+		_spec.Edges.Clear = append(_spec.Edges.Clear, edge)
+	}
+	if nodes := _u.mutation.RemovedHostedEventsIDs(); len(nodes) > 0 && !_u.mutation.HostedEventsCleared() {
+		edge := &sqlgraph.EdgeSpec{
+			Rel:     sqlgraph.O2M,
+			Inverse: false,
+			Table:   user.HostedEventsTable,
+			Columns: []string{user.HostedEventsColumn},
+			Bidi:    false,
+			Target: &sqlgraph.EdgeTarget{
+				IDSpec: sqlgraph.NewFieldSpec(event.FieldID, field.TypeUUID),
+			},
+		}
+		for _, k := range nodes {
+			edge.Target.Nodes = append(edge.Target.Nodes, k)
+		}
+		_spec.Edges.Clear = append(_spec.Edges.Clear, edge)
+	}
+	if nodes := _u.mutation.HostedEventsIDs(); len(nodes) > 0 {
+		edge := &sqlgraph.EdgeSpec{
+			Rel:     sqlgraph.O2M,
+			Inverse: false,
+			Table:   user.HostedEventsTable,
+			Columns: []string{user.HostedEventsColumn},
+			Bidi:    false,
+			Target: &sqlgraph.EdgeTarget{
+				IDSpec: sqlgraph.NewFieldSpec(event.FieldID, field.TypeUUID),
+			},
+		}
+		for _, k := range nodes {
+			edge.Target.Nodes = append(edge.Target.Nodes, k)
+		}
+		_spec.Edges.Add = append(_spec.Edges.Add, edge)
+	}
+	if _u.mutation.ReviewedParticipationsCleared() {
+		edge := &sqlgraph.EdgeSpec{
+			Rel:     sqlgraph.O2M,
+			Inverse: false,
+			Table:   user.ReviewedParticipationsTable,
+			Columns: []string{user.ReviewedParticipationsColumn},
+			Bidi:    false,
+			Target: &sqlgraph.EdgeTarget{
+				IDSpec: sqlgraph.NewFieldSpec(eventparticipant.FieldID, field.TypeUUID),
+			},
+		}
+		_spec.Edges.Clear = append(_spec.Edges.Clear, edge)
+	}
+	if nodes := _u.mutation.RemovedReviewedParticipationsIDs(); len(nodes) > 0 && !_u.mutation.ReviewedParticipationsCleared() {
+		edge := &sqlgraph.EdgeSpec{
+			Rel:     sqlgraph.O2M,
+			Inverse: false,
+			Table:   user.ReviewedParticipationsTable,
+			Columns: []string{user.ReviewedParticipationsColumn},
+			Bidi:    false,
+			Target: &sqlgraph.EdgeTarget{
+				IDSpec: sqlgraph.NewFieldSpec(eventparticipant.FieldID, field.TypeUUID),
+			},
+		}
+		for _, k := range nodes {
+			edge.Target.Nodes = append(edge.Target.Nodes, k)
+		}
+		_spec.Edges.Clear = append(_spec.Edges.Clear, edge)
+	}
+	if nodes := _u.mutation.ReviewedParticipationsIDs(); len(nodes) > 0 {
+		edge := &sqlgraph.EdgeSpec{
+			Rel:     sqlgraph.O2M,
+			Inverse: false,
+			Table:   user.ReviewedParticipationsTable,
+			Columns: []string{user.ReviewedParticipationsColumn},
+			Bidi:    false,
+			Target: &sqlgraph.EdgeTarget{
+				IDSpec: sqlgraph.NewFieldSpec(eventparticipant.FieldID, field.TypeUUID),
+			},
+		}
+		for _, k := range nodes {
+			edge.Target.Nodes = append(edge.Target.Nodes, k)
+		}
+		_spec.Edges.Add = append(_spec.Edges.Add, edge)
+	}
+	if _u.mutation.ResponsibleExternalTrainingEventsCleared() {
+		edge := &sqlgraph.EdgeSpec{
+			Rel:     sqlgraph.O2M,
+			Inverse: false,
+			Table:   user.ResponsibleExternalTrainingEventsTable,
+			Columns: []string{user.ResponsibleExternalTrainingEventsColumn},
+			Bidi:    false,
+			Target: &sqlgraph.EdgeTarget{
+				IDSpec: sqlgraph.NewFieldSpec(externaltrainingevent.FieldID, field.TypeUUID),
+			},
+		}
+		_spec.Edges.Clear = append(_spec.Edges.Clear, edge)
+	}
+	if nodes := _u.mutation.RemovedResponsibleExternalTrainingEventsIDs(); len(nodes) > 0 && !_u.mutation.ResponsibleExternalTrainingEventsCleared() {
+		edge := &sqlgraph.EdgeSpec{
+			Rel:     sqlgraph.O2M,
+			Inverse: false,
+			Table:   user.ResponsibleExternalTrainingEventsTable,
+			Columns: []string{user.ResponsibleExternalTrainingEventsColumn},
+			Bidi:    false,
+			Target: &sqlgraph.EdgeTarget{
+				IDSpec: sqlgraph.NewFieldSpec(externaltrainingevent.FieldID, field.TypeUUID),
+			},
+		}
+		for _, k := range nodes {
+			edge.Target.Nodes = append(edge.Target.Nodes, k)
+		}
+		_spec.Edges.Clear = append(_spec.Edges.Clear, edge)
+	}
+	if nodes := _u.mutation.ResponsibleExternalTrainingEventsIDs(); len(nodes) > 0 {
+		edge := &sqlgraph.EdgeSpec{
+			Rel:     sqlgraph.O2M,
+			Inverse: false,
+			Table:   user.ResponsibleExternalTrainingEventsTable,
+			Columns: []string{user.ResponsibleExternalTrainingEventsColumn},
+			Bidi:    false,
+			Target: &sqlgraph.EdgeTarget{
+				IDSpec: sqlgraph.NewFieldSpec(externaltrainingevent.FieldID, field.TypeUUID),
+			},
+		}
+		for _, k := range nodes {
+			edge.Target.Nodes = append(edge.Target.Nodes, k)
+		}
+		_spec.Edges.Add = append(_spec.Edges.Add, edge)
+	}
 	if _node, err = sqlgraph.UpdateNodes(ctx, _u.driver, _spec); err != nil {
 		if _, ok := err.(*sqlgraph.NotFoundError); ok {
 			err = &NotFoundError{user.Label}
@@ -521,6 +767,51 @@ func (_u *UserUpdateOne) AddRequests(v ...*Request) *UserUpdateOne {
 	return _u.AddRequestIDs(ids...)
 }
 
+// AddHostedEventIDs adds the "hosted_events" edge to the Event entity by IDs.
+func (_u *UserUpdateOne) AddHostedEventIDs(ids ...uuid.UUID) *UserUpdateOne {
+	_u.mutation.AddHostedEventIDs(ids...)
+	return _u
+}
+
+// AddHostedEvents adds the "hosted_events" edges to the Event entity.
+func (_u *UserUpdateOne) AddHostedEvents(v ...*Event) *UserUpdateOne {
+	ids := make([]uuid.UUID, len(v))
+	for i := range v {
+		ids[i] = v[i].ID
+	}
+	return _u.AddHostedEventIDs(ids...)
+}
+
+// AddReviewedParticipationIDs adds the "reviewed_participations" edge to the EventParticipant entity by IDs.
+func (_u *UserUpdateOne) AddReviewedParticipationIDs(ids ...uuid.UUID) *UserUpdateOne {
+	_u.mutation.AddReviewedParticipationIDs(ids...)
+	return _u
+}
+
+// AddReviewedParticipations adds the "reviewed_participations" edges to the EventParticipant entity.
+func (_u *UserUpdateOne) AddReviewedParticipations(v ...*EventParticipant) *UserUpdateOne {
+	ids := make([]uuid.UUID, len(v))
+	for i := range v {
+		ids[i] = v[i].ID
+	}
+	return _u.AddReviewedParticipationIDs(ids...)
+}
+
+// AddResponsibleExternalTrainingEventIDs adds the "responsible_external_training_events" edge to the ExternalTrainingEvent entity by IDs.
+func (_u *UserUpdateOne) AddResponsibleExternalTrainingEventIDs(ids ...uuid.UUID) *UserUpdateOne {
+	_u.mutation.AddResponsibleExternalTrainingEventIDs(ids...)
+	return _u
+}
+
+// AddResponsibleExternalTrainingEvents adds the "responsible_external_training_events" edges to the ExternalTrainingEvent entity.
+func (_u *UserUpdateOne) AddResponsibleExternalTrainingEvents(v ...*ExternalTrainingEvent) *UserUpdateOne {
+	ids := make([]uuid.UUID, len(v))
+	for i := range v {
+		ids[i] = v[i].ID
+	}
+	return _u.AddResponsibleExternalTrainingEventIDs(ids...)
+}
+
 // Mutation returns the UserMutation object of the builder.
 func (_u *UserUpdateOne) Mutation() *UserMutation {
 	return _u.mutation
@@ -551,6 +842,69 @@ func (_u *UserUpdateOne) RemoveRequests(v ...*Request) *UserUpdateOne {
 		ids[i] = v[i].ID
 	}
 	return _u.RemoveRequestIDs(ids...)
+}
+
+// ClearHostedEvents clears all "hosted_events" edges to the Event entity.
+func (_u *UserUpdateOne) ClearHostedEvents() *UserUpdateOne {
+	_u.mutation.ClearHostedEvents()
+	return _u
+}
+
+// RemoveHostedEventIDs removes the "hosted_events" edge to Event entities by IDs.
+func (_u *UserUpdateOne) RemoveHostedEventIDs(ids ...uuid.UUID) *UserUpdateOne {
+	_u.mutation.RemoveHostedEventIDs(ids...)
+	return _u
+}
+
+// RemoveHostedEvents removes "hosted_events" edges to Event entities.
+func (_u *UserUpdateOne) RemoveHostedEvents(v ...*Event) *UserUpdateOne {
+	ids := make([]uuid.UUID, len(v))
+	for i := range v {
+		ids[i] = v[i].ID
+	}
+	return _u.RemoveHostedEventIDs(ids...)
+}
+
+// ClearReviewedParticipations clears all "reviewed_participations" edges to the EventParticipant entity.
+func (_u *UserUpdateOne) ClearReviewedParticipations() *UserUpdateOne {
+	_u.mutation.ClearReviewedParticipations()
+	return _u
+}
+
+// RemoveReviewedParticipationIDs removes the "reviewed_participations" edge to EventParticipant entities by IDs.
+func (_u *UserUpdateOne) RemoveReviewedParticipationIDs(ids ...uuid.UUID) *UserUpdateOne {
+	_u.mutation.RemoveReviewedParticipationIDs(ids...)
+	return _u
+}
+
+// RemoveReviewedParticipations removes "reviewed_participations" edges to EventParticipant entities.
+func (_u *UserUpdateOne) RemoveReviewedParticipations(v ...*EventParticipant) *UserUpdateOne {
+	ids := make([]uuid.UUID, len(v))
+	for i := range v {
+		ids[i] = v[i].ID
+	}
+	return _u.RemoveReviewedParticipationIDs(ids...)
+}
+
+// ClearResponsibleExternalTrainingEvents clears all "responsible_external_training_events" edges to the ExternalTrainingEvent entity.
+func (_u *UserUpdateOne) ClearResponsibleExternalTrainingEvents() *UserUpdateOne {
+	_u.mutation.ClearResponsibleExternalTrainingEvents()
+	return _u
+}
+
+// RemoveResponsibleExternalTrainingEventIDs removes the "responsible_external_training_events" edge to ExternalTrainingEvent entities by IDs.
+func (_u *UserUpdateOne) RemoveResponsibleExternalTrainingEventIDs(ids ...uuid.UUID) *UserUpdateOne {
+	_u.mutation.RemoveResponsibleExternalTrainingEventIDs(ids...)
+	return _u
+}
+
+// RemoveResponsibleExternalTrainingEvents removes "responsible_external_training_events" edges to ExternalTrainingEvent entities.
+func (_u *UserUpdateOne) RemoveResponsibleExternalTrainingEvents(v ...*ExternalTrainingEvent) *UserUpdateOne {
+	ids := make([]uuid.UUID, len(v))
+	for i := range v {
+		ids[i] = v[i].ID
+	}
+	return _u.RemoveResponsibleExternalTrainingEventIDs(ids...)
 }
 
 // Where appends a list predicates to the UserUpdate builder.
@@ -742,6 +1096,141 @@ func (_u *UserUpdateOne) sqlSave(ctx context.Context) (_node *User, err error) {
 			Bidi:    false,
 			Target: &sqlgraph.EdgeTarget{
 				IDSpec: sqlgraph.NewFieldSpec(request.FieldID, field.TypeUUID),
+			},
+		}
+		for _, k := range nodes {
+			edge.Target.Nodes = append(edge.Target.Nodes, k)
+		}
+		_spec.Edges.Add = append(_spec.Edges.Add, edge)
+	}
+	if _u.mutation.HostedEventsCleared() {
+		edge := &sqlgraph.EdgeSpec{
+			Rel:     sqlgraph.O2M,
+			Inverse: false,
+			Table:   user.HostedEventsTable,
+			Columns: []string{user.HostedEventsColumn},
+			Bidi:    false,
+			Target: &sqlgraph.EdgeTarget{
+				IDSpec: sqlgraph.NewFieldSpec(event.FieldID, field.TypeUUID),
+			},
+		}
+		_spec.Edges.Clear = append(_spec.Edges.Clear, edge)
+	}
+	if nodes := _u.mutation.RemovedHostedEventsIDs(); len(nodes) > 0 && !_u.mutation.HostedEventsCleared() {
+		edge := &sqlgraph.EdgeSpec{
+			Rel:     sqlgraph.O2M,
+			Inverse: false,
+			Table:   user.HostedEventsTable,
+			Columns: []string{user.HostedEventsColumn},
+			Bidi:    false,
+			Target: &sqlgraph.EdgeTarget{
+				IDSpec: sqlgraph.NewFieldSpec(event.FieldID, field.TypeUUID),
+			},
+		}
+		for _, k := range nodes {
+			edge.Target.Nodes = append(edge.Target.Nodes, k)
+		}
+		_spec.Edges.Clear = append(_spec.Edges.Clear, edge)
+	}
+	if nodes := _u.mutation.HostedEventsIDs(); len(nodes) > 0 {
+		edge := &sqlgraph.EdgeSpec{
+			Rel:     sqlgraph.O2M,
+			Inverse: false,
+			Table:   user.HostedEventsTable,
+			Columns: []string{user.HostedEventsColumn},
+			Bidi:    false,
+			Target: &sqlgraph.EdgeTarget{
+				IDSpec: sqlgraph.NewFieldSpec(event.FieldID, field.TypeUUID),
+			},
+		}
+		for _, k := range nodes {
+			edge.Target.Nodes = append(edge.Target.Nodes, k)
+		}
+		_spec.Edges.Add = append(_spec.Edges.Add, edge)
+	}
+	if _u.mutation.ReviewedParticipationsCleared() {
+		edge := &sqlgraph.EdgeSpec{
+			Rel:     sqlgraph.O2M,
+			Inverse: false,
+			Table:   user.ReviewedParticipationsTable,
+			Columns: []string{user.ReviewedParticipationsColumn},
+			Bidi:    false,
+			Target: &sqlgraph.EdgeTarget{
+				IDSpec: sqlgraph.NewFieldSpec(eventparticipant.FieldID, field.TypeUUID),
+			},
+		}
+		_spec.Edges.Clear = append(_spec.Edges.Clear, edge)
+	}
+	if nodes := _u.mutation.RemovedReviewedParticipationsIDs(); len(nodes) > 0 && !_u.mutation.ReviewedParticipationsCleared() {
+		edge := &sqlgraph.EdgeSpec{
+			Rel:     sqlgraph.O2M,
+			Inverse: false,
+			Table:   user.ReviewedParticipationsTable,
+			Columns: []string{user.ReviewedParticipationsColumn},
+			Bidi:    false,
+			Target: &sqlgraph.EdgeTarget{
+				IDSpec: sqlgraph.NewFieldSpec(eventparticipant.FieldID, field.TypeUUID),
+			},
+		}
+		for _, k := range nodes {
+			edge.Target.Nodes = append(edge.Target.Nodes, k)
+		}
+		_spec.Edges.Clear = append(_spec.Edges.Clear, edge)
+	}
+	if nodes := _u.mutation.ReviewedParticipationsIDs(); len(nodes) > 0 {
+		edge := &sqlgraph.EdgeSpec{
+			Rel:     sqlgraph.O2M,
+			Inverse: false,
+			Table:   user.ReviewedParticipationsTable,
+			Columns: []string{user.ReviewedParticipationsColumn},
+			Bidi:    false,
+			Target: &sqlgraph.EdgeTarget{
+				IDSpec: sqlgraph.NewFieldSpec(eventparticipant.FieldID, field.TypeUUID),
+			},
+		}
+		for _, k := range nodes {
+			edge.Target.Nodes = append(edge.Target.Nodes, k)
+		}
+		_spec.Edges.Add = append(_spec.Edges.Add, edge)
+	}
+	if _u.mutation.ResponsibleExternalTrainingEventsCleared() {
+		edge := &sqlgraph.EdgeSpec{
+			Rel:     sqlgraph.O2M,
+			Inverse: false,
+			Table:   user.ResponsibleExternalTrainingEventsTable,
+			Columns: []string{user.ResponsibleExternalTrainingEventsColumn},
+			Bidi:    false,
+			Target: &sqlgraph.EdgeTarget{
+				IDSpec: sqlgraph.NewFieldSpec(externaltrainingevent.FieldID, field.TypeUUID),
+			},
+		}
+		_spec.Edges.Clear = append(_spec.Edges.Clear, edge)
+	}
+	if nodes := _u.mutation.RemovedResponsibleExternalTrainingEventsIDs(); len(nodes) > 0 && !_u.mutation.ResponsibleExternalTrainingEventsCleared() {
+		edge := &sqlgraph.EdgeSpec{
+			Rel:     sqlgraph.O2M,
+			Inverse: false,
+			Table:   user.ResponsibleExternalTrainingEventsTable,
+			Columns: []string{user.ResponsibleExternalTrainingEventsColumn},
+			Bidi:    false,
+			Target: &sqlgraph.EdgeTarget{
+				IDSpec: sqlgraph.NewFieldSpec(externaltrainingevent.FieldID, field.TypeUUID),
+			},
+		}
+		for _, k := range nodes {
+			edge.Target.Nodes = append(edge.Target.Nodes, k)
+		}
+		_spec.Edges.Clear = append(_spec.Edges.Clear, edge)
+	}
+	if nodes := _u.mutation.ResponsibleExternalTrainingEventsIDs(); len(nodes) > 0 {
+		edge := &sqlgraph.EdgeSpec{
+			Rel:     sqlgraph.O2M,
+			Inverse: false,
+			Table:   user.ResponsibleExternalTrainingEventsTable,
+			Columns: []string{user.ResponsibleExternalTrainingEventsColumn},
+			Bidi:    false,
+			Target: &sqlgraph.EdgeTarget{
+				IDSpec: sqlgraph.NewFieldSpec(externaltrainingevent.FieldID, field.TypeUUID),
 			},
 		}
 		for _, k := range nodes {

@@ -12,6 +12,8 @@ import (
 // Tx is a transactional client that is created by calling Client.Tx().
 type Tx struct {
 	config
+	// Category is the client for interacting with the Category builders.
+	Category *CategoryClient
 	// Certificate is the client for interacting with the Certificate builders.
 	Certificate *CertificateClient
 	// Company is the client for interacting with the Company builders.
@@ -24,12 +26,24 @@ type Tx struct {
 	DzoOrganization *DzoOrganizationClient
 	// Employee is the client for interacting with the Employee builders.
 	Employee *EmployeeClient
+	// Event is the client for interacting with the Event builders.
+	Event *EventClient
+	// EventParticipant is the client for interacting with the EventParticipant builders.
+	EventParticipant *EventParticipantClient
+	// ExternalTrainingEvent is the client for interacting with the ExternalTrainingEvent builders.
+	ExternalTrainingEvent *ExternalTrainingEventClient
 	// Notification is the client for interacting with the Notification builders.
 	Notification *NotificationClient
 	// Organization is the client for interacting with the Organization builders.
 	Organization *OrganizationClient
 	// Request is the client for interacting with the Request builders.
 	Request *RequestClient
+	// RequestDzoContract is the client for interacting with the RequestDzoContract builders.
+	RequestDzoContract *RequestDzoContractClient
+	// RequestParticipant is the client for interacting with the RequestParticipant builders.
+	RequestParticipant *RequestParticipantClient
+	// RequestTargetDzo is the client for interacting with the RequestTargetDzo builders.
+	RequestTargetDzo *RequestTargetDzoClient
 	// Supplier is the client for interacting with the Supplier builders.
 	Supplier *SupplierClient
 	// TrainingEvent is the client for interacting with the TrainingEvent builders.
@@ -169,15 +183,22 @@ func (tx *Tx) Client() *Client {
 }
 
 func (tx *Tx) init() {
+	tx.Category = NewCategoryClient(tx.config)
 	tx.Certificate = NewCertificateClient(tx.config)
 	tx.Company = NewCompanyClient(tx.config)
 	tx.ContractSupplier = NewContractSupplierClient(tx.config)
 	tx.ContractSupplierHistory = NewContractSupplierHistoryClient(tx.config)
 	tx.DzoOrganization = NewDzoOrganizationClient(tx.config)
 	tx.Employee = NewEmployeeClient(tx.config)
+	tx.Event = NewEventClient(tx.config)
+	tx.EventParticipant = NewEventParticipantClient(tx.config)
+	tx.ExternalTrainingEvent = NewExternalTrainingEventClient(tx.config)
 	tx.Notification = NewNotificationClient(tx.config)
 	tx.Organization = NewOrganizationClient(tx.config)
 	tx.Request = NewRequestClient(tx.config)
+	tx.RequestDzoContract = NewRequestDzoContractClient(tx.config)
+	tx.RequestParticipant = NewRequestParticipantClient(tx.config)
+	tx.RequestTargetDzo = NewRequestTargetDzoClient(tx.config)
 	tx.Supplier = NewSupplierClient(tx.config)
 	tx.TrainingEvent = NewTrainingEventClient(tx.config)
 	tx.TrainingParticipant = NewTrainingParticipantClient(tx.config)
@@ -191,7 +212,7 @@ func (tx *Tx) init() {
 // of them in order to commit or rollback the transaction.
 //
 // If a closed transaction is embedded in one of the generated entities, and the entity
-// applies a query, for example: Certificate.QueryXXX(), the query will be executed
+// applies a query, for example: Category.QueryXXX(), the query will be executed
 // through the driver which created this transaction.
 //
 // Note that txDriver is not goroutine safe.

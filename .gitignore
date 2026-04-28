@@ -13,4 +13,6 @@ AGENTS.md
 
 .secrets.local.cue
 
+.env.secrets.local.cue
+
 .claude/

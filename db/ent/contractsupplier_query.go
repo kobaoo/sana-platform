@@ -4,10 +4,12 @@ package ent
 
 import (
 	"context"
+	"database/sql/driver"
 	"fmt"
 	"math"
 
 	"encore.app/db/ent/contractsupplier"
+	"encore.app/db/ent/externaltrainingevent"
 	"encore.app/db/ent/predicate"
 	"entgo.io/ent"
 	"entgo.io/ent/dialect/sql"
@@ -19,10 +21,11 @@ import (
 // ContractSupplierQuery is the builder for querying ContractSupplier entities.
 type ContractSupplierQuery struct {
 	config
-	ctx        *QueryContext
-	order      []contractsupplier.OrderOption
-	inters     []Interceptor
-	predicates []predicate.ContractSupplier
+	ctx                        *QueryContext
+	order                      []contractsupplier.OrderOption
+	inters                     []Interceptor
+	predicates                 []predicate.ContractSupplier
+	withExternalTrainingEvents *ExternalTrainingEventQuery
 	// intermediate query (i.e. traversal path).
 	sql  *sql.Selector
 	path func(context.Context) (*sql.Selector, error)
@@ -57,6 +60,28 @@ func (_q *ContractSupplierQuery) Unique(unique bool) *ContractSupplierQuery {
 func (_q *ContractSupplierQuery) Order(o ...contractsupplier.OrderOption) *ContractSupplierQuery {
 	_q.order = append(_q.order, o...)
 	return _q
+}
+
+// QueryExternalTrainingEvents chains the current query on the "external_training_events" edge.
+func (_q *ContractSupplierQuery) QueryExternalTrainingEvents() *ExternalTrainingEventQuery {
+	query := (&ExternalTrainingEventClient{config: _q.config}).Query()
+	query.path = func(ctx context.Context) (fromU *sql.Selector, err error) {
+		if err := _q.prepareQuery(ctx); err != nil {
+			return nil, err
+		}
+		selector := _q.sqlQuery(ctx)
+		if err := selector.Err(); err != nil {
+			return nil, err
+		}
+		step := sqlgraph.NewStep(
+			sqlgraph.From(contractsupplier.Table, contractsupplier.FieldID, selector),
+			sqlgraph.To(externaltrainingevent.Table, externaltrainingevent.FieldID),
+			sqlgraph.Edge(sqlgraph.O2M, false, contractsupplier.ExternalTrainingEventsTable, contractsupplier.ExternalTrainingEventsColumn),
+		)
+		fromU = sqlgraph.SetNeighbors(_q.driver.Dialect(), step)
+		return fromU, nil
+	}
+	return query
 }
 
 // First returns the first ContractSupplier entity from the query.
@@ -246,15 +271,27 @@ func (_q *ContractSupplierQuery) Clone() *ContractSupplierQuery {
 		return nil
 	}
 	return &ContractSupplierQuery{
-		config:     _q.config,
-		ctx:        _q.ctx.Clone(),
-		order:      append([]contractsupplier.OrderOption{}, _q.order...),
-		inters:     append([]Interceptor{}, _q.inters...),
-		predicates: append([]predicate.ContractSupplier{}, _q.predicates...),
+		config:                     _q.config,
+		ctx:                        _q.ctx.Clone(),
+		order:                      append([]contractsupplier.OrderOption{}, _q.order...),
+		inters:                     append([]Interceptor{}, _q.inters...),
+		predicates:                 append([]predicate.ContractSupplier{}, _q.predicates...),
+		withExternalTrainingEvents: _q.withExternalTrainingEvents.Clone(),
 		// clone intermediate query.
 		sql:  _q.sql.Clone(),
 		path: _q.path,
 	}
+}
+
+// WithExternalTrainingEvents tells the query-builder to eager-load the nodes that are connected to
+// the "external_training_events" edge. The optional arguments are used to configure the query builder of the edge.
+func (_q *ContractSupplierQuery) WithExternalTrainingEvents(opts ...func(*ExternalTrainingEventQuery)) *ContractSupplierQuery {
+	query := (&ExternalTrainingEventClient{config: _q.config}).Query()
+	for _, opt := range opts {
+		opt(query)
+	}
+	_q.withExternalTrainingEvents = query
+	return _q
 }
 
 // GroupBy is used to group vertices by one or more fields/columns.
@@ -333,8 +370,11 @@ func (_q *ContractSupplierQuery) prepareQuery(ctx context.Context) error {
 
 func (_q *ContractSupplierQuery) sqlAll(ctx context.Context, hooks ...queryHook) ([]*ContractSupplier, error) {
 	var (
-		nodes = []*ContractSupplier{}
-		_spec = _q.querySpec()
+		nodes       = []*ContractSupplier{}
+		_spec       = _q.querySpec()
+		loadedTypes = [1]bool{
+			_q.withExternalTrainingEvents != nil,
+		}
 	)
 	_spec.ScanValues = func(columns []string) ([]any, error) {
 		return (*ContractSupplier).scanValues(nil, columns)
@@ -342,6 +382,7 @@ func (_q *ContractSupplierQuery) sqlAll(ctx context.Context, hooks ...queryHook)
 	_spec.Assign = func(columns []string, values []any) error {
 		node := &ContractSupplier{config: _q.config}
 		nodes = append(nodes, node)
+		node.Edges.loadedTypes = loadedTypes
 		return node.assignValues(columns, values)
 	}
 	for i := range hooks {
@@ -353,7 +394,47 @@ func (_q *ContractSupplierQuery) sqlAll(ctx context.Context, hooks ...queryHook)
 	if len(nodes) == 0 {
 		return nodes, nil
 	}
+	if query := _q.withExternalTrainingEvents; query != nil {
+		if err := _q.loadExternalTrainingEvents(ctx, query, nodes,
+			func(n *ContractSupplier) { n.Edges.ExternalTrainingEvents = []*ExternalTrainingEvent{} },
+			func(n *ContractSupplier, e *ExternalTrainingEvent) {
+				n.Edges.ExternalTrainingEvents = append(n.Edges.ExternalTrainingEvents, e)
+			}); err != nil {
+			return nil, err
+		}
+	}
 	return nodes, nil
+}
+
+func (_q *ContractSupplierQuery) loadExternalTrainingEvents(ctx context.Context, query *ExternalTrainingEventQuery, nodes []*ContractSupplier, init func(*ContractSupplier), assign func(*ContractSupplier, *ExternalTrainingEvent)) error {
+	fks := make([]driver.Value, 0, len(nodes))
+	nodeids := make(map[uuid.UUID]*ContractSupplier)
+	for i := range nodes {
+		fks = append(fks, nodes[i].ID)
+		nodeids[nodes[i].ID] = nodes[i]
+		if init != nil {
+			init(nodes[i])
+		}
+	}
+	if len(query.ctx.Fields) > 0 {
+		query.ctx.AppendFieldOnce(externaltrainingevent.FieldContractID)
+	}
+	query.Where(predicate.ExternalTrainingEvent(func(s *sql.Selector) {
+		s.Where(sql.InValues(s.C(contractsupplier.ExternalTrainingEventsColumn), fks...))
+	}))
+	neighbors, err := query.All(ctx)
+	if err != nil {
+		return err
+	}
+	for _, n := range neighbors {
+		fk := n.ContractID
+		node, ok := nodeids[fk]
+		if !ok {
+			return fmt.Errorf(`unexpected referenced foreign-key "contract_id" returned %v for node %v`, fk, n.ID)
+		}
+		assign(node, n)
+	}
+	return nil
 }
 
 func (_q *ContractSupplierQuery) sqlCount(ctx context.Context) (int, error) {

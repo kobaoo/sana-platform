@@ -4,13 +4,24 @@ import (
 	"context"
 	"testing"
 
+	"encore.app/auth/authhandler"
+	"encore.dev/beta/auth"
 	"encore.dev/beta/errs"
 )
 
 // ════ HELPERS ════
 
+const testClientID = "11111111-1111-1111-1111-111111111111"
+
 func ctx() context.Context {
-	return context.Background()
+	return auth.WithContext(
+		context.Background(),
+		auth.UID("test-user"),
+		&authhandler.AuthData{
+			Role:      authhandler.RoleSA,
+			CompanyID: testClientID,
+		},
+	)
 }
 
 func makeOrg(t *testing.T, name, code string, orgType OrgType) *Organization {

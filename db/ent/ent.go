@@ -9,15 +9,22 @@ import (
 	"reflect"
 	"sync"
 
+	"encore.app/db/ent/category"
 	"encore.app/db/ent/certificate"
 	"encore.app/db/ent/company"
 	"encore.app/db/ent/contractsupplier"
 	"encore.app/db/ent/contractsupplierhistory"
 	"encore.app/db/ent/dzoorganization"
 	"encore.app/db/ent/employee"
+	"encore.app/db/ent/event"
+	"encore.app/db/ent/eventparticipant"
+	"encore.app/db/ent/externaltrainingevent"
 	"encore.app/db/ent/notification"
 	"encore.app/db/ent/organization"
 	"encore.app/db/ent/request"
+	"encore.app/db/ent/requestdzocontract"
+	"encore.app/db/ent/requestparticipant"
+	"encore.app/db/ent/requesttargetdzo"
 	"encore.app/db/ent/supplier"
 	"encore.app/db/ent/trainingevent"
 	"encore.app/db/ent/trainingparticipant"
@@ -85,15 +92,22 @@ var (
 func checkColumn(t, c string) error {
 	initCheck.Do(func() {
 		columnCheck = sql.NewColumnCheck(map[string]func(string) bool{
+			category.Table:                category.ValidColumn,
 			certificate.Table:             certificate.ValidColumn,
 			company.Table:                 company.ValidColumn,
 			contractsupplier.Table:        contractsupplier.ValidColumn,
 			contractsupplierhistory.Table: contractsupplierhistory.ValidColumn,
 			dzoorganization.Table:         dzoorganization.ValidColumn,
 			employee.Table:                employee.ValidColumn,
+			event.Table:                   event.ValidColumn,
+			eventparticipant.Table:        eventparticipant.ValidColumn,
+			externaltrainingevent.Table:   externaltrainingevent.ValidColumn,
 			notification.Table:            notification.ValidColumn,
 			organization.Table:            organization.ValidColumn,
 			request.Table:                 request.ValidColumn,
+			requestdzocontract.Table:      requestdzocontract.ValidColumn,
+			requestparticipant.Table:      requestparticipant.ValidColumn,
+			requesttargetdzo.Table:        requesttargetdzo.ValidColumn,
 			supplier.Table:                supplier.ValidColumn,
 			trainingevent.Table:           trainingevent.ValidColumn,
 			trainingparticipant.Table:     trainingparticipant.ValidColumn,

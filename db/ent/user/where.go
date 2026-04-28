@@ -522,6 +522,75 @@ func HasRequestsWith(preds ...predicate.Request) predicate.User {
 	})
 }
 
+// HasHostedEvents applies the HasEdge predicate on the "hosted_events" edge.
+func HasHostedEvents() predicate.User {
+	return predicate.User(func(s *sql.Selector) {
+		step := sqlgraph.NewStep(
+			sqlgraph.From(Table, FieldID),
+			sqlgraph.Edge(sqlgraph.O2M, false, HostedEventsTable, HostedEventsColumn),
+		)
+		sqlgraph.HasNeighbors(s, step)
+	})
+}
+
+// HasHostedEventsWith applies the HasEdge predicate on the "hosted_events" edge with a given conditions (other predicates).
+func HasHostedEventsWith(preds ...predicate.Event) predicate.User {
+	return predicate.User(func(s *sql.Selector) {
+		step := newHostedEventsStep()
+		sqlgraph.HasNeighborsWith(s, step, func(s *sql.Selector) {
+			for _, p := range preds {
+				p(s)
+			}
+		})
+	})
+}
+
+// HasReviewedParticipations applies the HasEdge predicate on the "reviewed_participations" edge.
+func HasReviewedParticipations() predicate.User {
+	return predicate.User(func(s *sql.Selector) {
+		step := sqlgraph.NewStep(
+			sqlgraph.From(Table, FieldID),
+			sqlgraph.Edge(sqlgraph.O2M, false, ReviewedParticipationsTable, ReviewedParticipationsColumn),
+		)
+		sqlgraph.HasNeighbors(s, step)
+	})
+}
+
+// HasReviewedParticipationsWith applies the HasEdge predicate on the "reviewed_participations" edge with a given conditions (other predicates).
+func HasReviewedParticipationsWith(preds ...predicate.EventParticipant) predicate.User {
+	return predicate.User(func(s *sql.Selector) {
+		step := newReviewedParticipationsStep()
+		sqlgraph.HasNeighborsWith(s, step, func(s *sql.Selector) {
+			for _, p := range preds {
+				p(s)
+			}
+		})
+	})
+}
+
+// HasResponsibleExternalTrainingEvents applies the HasEdge predicate on the "responsible_external_training_events" edge.
+func HasResponsibleExternalTrainingEvents() predicate.User {
+	return predicate.User(func(s *sql.Selector) {
+		step := sqlgraph.NewStep(
+			sqlgraph.From(Table, FieldID),
+			sqlgraph.Edge(sqlgraph.O2M, false, ResponsibleExternalTrainingEventsTable, ResponsibleExternalTrainingEventsColumn),
+		)
+		sqlgraph.HasNeighbors(s, step)
+	})
+}
+
+// HasResponsibleExternalTrainingEventsWith applies the HasEdge predicate on the "responsible_external_training_events" edge with a given conditions (other predicates).
+func HasResponsibleExternalTrainingEventsWith(preds ...predicate.ExternalTrainingEvent) predicate.User {
+	return predicate.User(func(s *sql.Selector) {
+		step := newResponsibleExternalTrainingEventsStep()
+		sqlgraph.HasNeighborsWith(s, step, func(s *sql.Selector) {
+			for _, p := range preds {
+				p(s)
+			}
+		})
+	})
+}
+
 // And groups predicates with the AND operator between them.
 func And(predicates ...predicate.User) predicate.User {
 	return predicate.User(sql.AndPredicates(predicates...))

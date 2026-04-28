@@ -67,8 +67,12 @@ type Type string
 
 // Type values.
 const (
-	TypeCERT_EXPIRING Type = "CERT_EXPIRING"
-	TypeCERT_EXPIRED  Type = "CERT_EXPIRED"
+	TypeCERT_EXPIRING        Type = "CERT_EXPIRING"
+	TypeCERT_EXPIRED         Type = "CERT_EXPIRED"
+	TypeREQUEST_CREATED      Type = "REQUEST_CREATED"
+	TypeREQUEST_STEP_UPDATED Type = "REQUEST_STEP_UPDATED"
+	TypeREQUEST_APPROVED     Type = "REQUEST_APPROVED"
+	TypeREQUEST_CANCELLED    Type = "REQUEST_CANCELLED"
 )
 
 func (_type Type) String() string {
@@ -78,7 +82,7 @@ func (_type Type) String() string {
 // TypeValidator is a validator for the "type" field enum values. It is called by the builders before save.
 func TypeValidator(_type Type) error {
 	switch _type {
-	case TypeCERT_EXPIRING, TypeCERT_EXPIRED:
+	case TypeCERT_EXPIRING, TypeCERT_EXPIRED, TypeREQUEST_CREATED, TypeREQUEST_STEP_UPDATED, TypeREQUEST_APPROVED, TypeREQUEST_CANCELLED:
 		return nil
 	default:
 		return fmt.Errorf("notification: invalid enum value for type field: %q", _type)
@@ -91,6 +95,7 @@ type EntityType string
 // EntityType values.
 const (
 	EntityTypeCERTIFICATE EntityType = "CERTIFICATE"
+	EntityTypeREQUEST     EntityType = "REQUEST"
 )
 
 func (et EntityType) String() string {
@@ -100,7 +105,7 @@ func (et EntityType) String() string {
 // EntityTypeValidator is a validator for the "entity_type" field enum values. It is called by the builders before save.
 func EntityTypeValidator(et EntityType) error {
 	switch et {
-	case EntityTypeCERTIFICATE:
+	case EntityTypeCERTIFICATE, EntityTypeREQUEST:
 		return nil
 	default:
 		return fmt.Errorf("notification: invalid enum value for entity_type field: %q", et)

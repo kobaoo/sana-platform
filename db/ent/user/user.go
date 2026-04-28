@@ -37,6 +37,12 @@ const (
 	EdgeClient = "client"
 	// EdgeRequests holds the string denoting the requests edge name in mutations.
 	EdgeRequests = "requests"
+	// EdgeHostedEvents holds the string denoting the hosted_events edge name in mutations.
+	EdgeHostedEvents = "hosted_events"
+	// EdgeReviewedParticipations holds the string denoting the reviewed_participations edge name in mutations.
+	EdgeReviewedParticipations = "reviewed_participations"
+	// EdgeResponsibleExternalTrainingEvents holds the string denoting the responsible_external_training_events edge name in mutations.
+	EdgeResponsibleExternalTrainingEvents = "responsible_external_training_events"
 	// Table holds the table name of the user in the database.
 	Table = "users"
 	// ClientTable is the table that holds the client relation/edge.
@@ -53,6 +59,27 @@ const (
 	RequestsInverseTable = "requests"
 	// RequestsColumn is the table column denoting the requests relation/edge.
 	RequestsColumn = "initiator_id"
+	// HostedEventsTable is the table that holds the hosted_events relation/edge.
+	HostedEventsTable = "events"
+	// HostedEventsInverseTable is the table name for the Event entity.
+	// It exists in this package in order to avoid circular dependency with the "event" package.
+	HostedEventsInverseTable = "events"
+	// HostedEventsColumn is the table column denoting the hosted_events relation/edge.
+	HostedEventsColumn = "host_id"
+	// ReviewedParticipationsTable is the table that holds the reviewed_participations relation/edge.
+	ReviewedParticipationsTable = "event_participants"
+	// ReviewedParticipationsInverseTable is the table name for the EventParticipant entity.
+	// It exists in this package in order to avoid circular dependency with the "eventparticipant" package.
+	ReviewedParticipationsInverseTable = "event_participants"
+	// ReviewedParticipationsColumn is the table column denoting the reviewed_participations relation/edge.
+	ReviewedParticipationsColumn = "reviewed_by"
+	// ResponsibleExternalTrainingEventsTable is the table that holds the responsible_external_training_events relation/edge.
+	ResponsibleExternalTrainingEventsTable = "external_training_events"
+	// ResponsibleExternalTrainingEventsInverseTable is the table name for the ExternalTrainingEvent entity.
+	// It exists in this package in order to avoid circular dependency with the "externaltrainingevent" package.
+	ResponsibleExternalTrainingEventsInverseTable = "external_training_events"
+	// ResponsibleExternalTrainingEventsColumn is the table column denoting the responsible_external_training_events relation/edge.
+	ResponsibleExternalTrainingEventsColumn = "responsible_user_id"
 )
 
 // Columns holds all SQL columns for user fields.
@@ -175,6 +202,48 @@ func ByRequests(term sql.OrderTerm, terms ...sql.OrderTerm) OrderOption {
 		sqlgraph.OrderByNeighborTerms(s, newRequestsStep(), append([]sql.OrderTerm{term}, terms...)...)
 	}
 }
+
+// ByHostedEventsCount orders the results by hosted_events count.
+func ByHostedEventsCount(opts ...sql.OrderTermOption) OrderOption {
+	return func(s *sql.Selector) {
+		sqlgraph.OrderByNeighborsCount(s, newHostedEventsStep(), opts...)
+	}
+}
+
+// ByHostedEvents orders the results by hosted_events terms.
+func ByHostedEvents(term sql.OrderTerm, terms ...sql.OrderTerm) OrderOption {
+	return func(s *sql.Selector) {
+		sqlgraph.OrderByNeighborTerms(s, newHostedEventsStep(), append([]sql.OrderTerm{term}, terms...)...)
+	}
+}
+
+// ByReviewedParticipationsCount orders the results by reviewed_participations count.
+func ByReviewedParticipationsCount(opts ...sql.OrderTermOption) OrderOption {
+	return func(s *sql.Selector) {
+		sqlgraph.OrderByNeighborsCount(s, newReviewedParticipationsStep(), opts...)
+	}
+}
+
+// ByReviewedParticipations orders the results by reviewed_participations terms.
+func ByReviewedParticipations(term sql.OrderTerm, terms ...sql.OrderTerm) OrderOption {
+	return func(s *sql.Selector) {
+		sqlgraph.OrderByNeighborTerms(s, newReviewedParticipationsStep(), append([]sql.OrderTerm{term}, terms...)...)
+	}
+}
+
+// ByResponsibleExternalTrainingEventsCount orders the results by responsible_external_training_events count.
+func ByResponsibleExternalTrainingEventsCount(opts ...sql.OrderTermOption) OrderOption {
+	return func(s *sql.Selector) {
+		sqlgraph.OrderByNeighborsCount(s, newResponsibleExternalTrainingEventsStep(), opts...)
+	}
+}
+
+// ByResponsibleExternalTrainingEvents orders the results by responsible_external_training_events terms.
+func ByResponsibleExternalTrainingEvents(term sql.OrderTerm, terms ...sql.OrderTerm) OrderOption {
+	return func(s *sql.Selector) {
+		sqlgraph.OrderByNeighborTerms(s, newResponsibleExternalTrainingEventsStep(), append([]sql.OrderTerm{term}, terms...)...)
+	}
+}
 func newClientStep() *sqlgraph.Step {
 	return sqlgraph.NewStep(
 		sqlgraph.From(Table, FieldID),
@@ -187,5 +256,26 @@ func newRequestsStep() *sqlgraph.Step {
 		sqlgraph.From(Table, FieldID),
 		sqlgraph.To(RequestsInverseTable, FieldID),
 		sqlgraph.Edge(sqlgraph.O2M, false, RequestsTable, RequestsColumn),
+	)
+}
+func newHostedEventsStep() *sqlgraph.Step {
+	return sqlgraph.NewStep(
+		sqlgraph.From(Table, FieldID),
+		sqlgraph.To(HostedEventsInverseTable, FieldID),
+		sqlgraph.Edge(sqlgraph.O2M, false, HostedEventsTable, HostedEventsColumn),
+	)
+}
+func newReviewedParticipationsStep() *sqlgraph.Step {
+	return sqlgraph.NewStep(
+		sqlgraph.From(Table, FieldID),
+		sqlgraph.To(ReviewedParticipationsInverseTable, FieldID),
+		sqlgraph.Edge(sqlgraph.O2M, false, ReviewedParticipationsTable, ReviewedParticipationsColumn),
+	)
+}
+func newResponsibleExternalTrainingEventsStep() *sqlgraph.Step {
+	return sqlgraph.NewStep(
+		sqlgraph.From(Table, FieldID),
+		sqlgraph.To(ResponsibleExternalTrainingEventsInverseTable, FieldID),
+		sqlgraph.Edge(sqlgraph.O2M, false, ResponsibleExternalTrainingEventsTable, ResponsibleExternalTrainingEventsColumn),
 	)
 }

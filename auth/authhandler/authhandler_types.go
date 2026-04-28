@@ -62,3 +62,18 @@ func RequirePermission() (*AuthData, error) {
 	}
 	return ad, nil
 }
+func RequireMinRole(minRole UserRole) (*AuthData, error) {
+	ad, err := RequirePermission()
+	if err != nil {
+		return nil, err
+	}
+
+	if ad.Role.Priority() < minRole.Priority() {
+		return nil, errs.B().
+			Code(errs.PermissionDenied).
+			Msg("Недостаточно прав").
+			Err()
+	}
+
+	return ad, nil
+}

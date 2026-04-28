@@ -9,6 +9,7 @@ import (
 	"time"
 
 	"encore.app/db/ent/contractsupplier"
+	"encore.app/db/ent/externaltrainingevent"
 	"encore.app/db/ent/predicate"
 	"entgo.io/ent/dialect/sql"
 	"entgo.io/ent/dialect/sql/sqlgraph"
@@ -58,16 +59,23 @@ func (_u *ContractSupplierUpdate) SetNillableContractNumber(v *string) *Contract
 }
 
 // SetVatFlag sets the "vat_flag" field.
-func (_u *ContractSupplierUpdate) SetVatFlag(v bool) *ContractSupplierUpdate {
+func (_u *ContractSupplierUpdate) SetVatFlag(v int) *ContractSupplierUpdate {
+	_u.mutation.ResetVatFlag()
 	_u.mutation.SetVatFlag(v)
 	return _u
 }
 
 // SetNillableVatFlag sets the "vat_flag" field if the given value is not nil.
-func (_u *ContractSupplierUpdate) SetNillableVatFlag(v *bool) *ContractSupplierUpdate {
+func (_u *ContractSupplierUpdate) SetNillableVatFlag(v *int) *ContractSupplierUpdate {
 	if v != nil {
 		_u.SetVatFlag(*v)
 	}
+	return _u
+}
+
+// AddVatFlag adds value to the "vat_flag" field.
+func (_u *ContractSupplierUpdate) AddVatFlag(v int) *ContractSupplierUpdate {
+	_u.mutation.AddVatFlag(v)
 	return _u
 }
 
@@ -416,9 +424,45 @@ func (_u *ContractSupplierUpdate) SetUpdatedAt(v time.Time) *ContractSupplierUpd
 	return _u
 }
 
+// AddExternalTrainingEventIDs adds the "external_training_events" edge to the ExternalTrainingEvent entity by IDs.
+func (_u *ContractSupplierUpdate) AddExternalTrainingEventIDs(ids ...uuid.UUID) *ContractSupplierUpdate {
+	_u.mutation.AddExternalTrainingEventIDs(ids...)
+	return _u
+}
+
+// AddExternalTrainingEvents adds the "external_training_events" edges to the ExternalTrainingEvent entity.
+func (_u *ContractSupplierUpdate) AddExternalTrainingEvents(v ...*ExternalTrainingEvent) *ContractSupplierUpdate {
+	ids := make([]uuid.UUID, len(v))
+	for i := range v {
+		ids[i] = v[i].ID
+	}
+	return _u.AddExternalTrainingEventIDs(ids...)
+}
+
 // Mutation returns the ContractSupplierMutation object of the builder.
 func (_u *ContractSupplierUpdate) Mutation() *ContractSupplierMutation {
 	return _u.mutation
+}
+
+// ClearExternalTrainingEvents clears all "external_training_events" edges to the ExternalTrainingEvent entity.
+func (_u *ContractSupplierUpdate) ClearExternalTrainingEvents() *ContractSupplierUpdate {
+	_u.mutation.ClearExternalTrainingEvents()
+	return _u
+}
+
+// RemoveExternalTrainingEventIDs removes the "external_training_events" edge to ExternalTrainingEvent entities by IDs.
+func (_u *ContractSupplierUpdate) RemoveExternalTrainingEventIDs(ids ...uuid.UUID) *ContractSupplierUpdate {
+	_u.mutation.RemoveExternalTrainingEventIDs(ids...)
+	return _u
+}
+
+// RemoveExternalTrainingEvents removes "external_training_events" edges to ExternalTrainingEvent entities.
+func (_u *ContractSupplierUpdate) RemoveExternalTrainingEvents(v ...*ExternalTrainingEvent) *ContractSupplierUpdate {
+	ids := make([]uuid.UUID, len(v))
+	for i := range v {
+		ids[i] = v[i].ID
+	}
+	return _u.RemoveExternalTrainingEventIDs(ids...)
 }
 
 // Save executes the query and returns the number of nodes affected by the update operation.
@@ -462,6 +506,11 @@ func (_u *ContractSupplierUpdate) check() error {
 	if v, ok := _u.mutation.ContractNumber(); ok {
 		if err := contractsupplier.ContractNumberValidator(v); err != nil {
 			return &ValidationError{Name: "contract_number", err: fmt.Errorf(`ent: validator failed for field "ContractSupplier.contract_number": %w`, err)}
+		}
+	}
+	if v, ok := _u.mutation.VatFlag(); ok {
+		if err := contractsupplier.VatFlagValidator(v); err != nil {
+			return &ValidationError{Name: "vat_flag", err: fmt.Errorf(`ent: validator failed for field "ContractSupplier.vat_flag": %w`, err)}
 		}
 	}
 	if v, ok := _u.mutation.Currency(); ok {
@@ -511,7 +560,10 @@ func (_u *ContractSupplierUpdate) sqlSave(ctx context.Context) (_node int, err e
 		_spec.SetField(contractsupplier.FieldContractNumber, field.TypeString, value)
 	}
 	if value, ok := _u.mutation.VatFlag(); ok {
-		_spec.SetField(contractsupplier.FieldVatFlag, field.TypeBool, value)
+		_spec.SetField(contractsupplier.FieldVatFlag, field.TypeInt, value)
+	}
+	if value, ok := _u.mutation.AddedVatFlag(); ok {
+		_spec.AddField(contractsupplier.FieldVatFlag, field.TypeInt, value)
 	}
 	if value, ok := _u.mutation.SignedDate(); ok {
 		_spec.SetField(contractsupplier.FieldSignedDate, field.TypeTime, value)
@@ -618,6 +670,51 @@ func (_u *ContractSupplierUpdate) sqlSave(ctx context.Context) (_node int, err e
 	if value, ok := _u.mutation.UpdatedAt(); ok {
 		_spec.SetField(contractsupplier.FieldUpdatedAt, field.TypeTime, value)
 	}
+	if _u.mutation.ExternalTrainingEventsCleared() {
+		edge := &sqlgraph.EdgeSpec{
+			Rel:     sqlgraph.O2M,
+			Inverse: false,
+			Table:   contractsupplier.ExternalTrainingEventsTable,
+			Columns: []string{contractsupplier.ExternalTrainingEventsColumn},
+			Bidi:    false,
+			Target: &sqlgraph.EdgeTarget{
+				IDSpec: sqlgraph.NewFieldSpec(externaltrainingevent.FieldID, field.TypeUUID),
+			},
+		}
+		_spec.Edges.Clear = append(_spec.Edges.Clear, edge)
+	}
+	if nodes := _u.mutation.RemovedExternalTrainingEventsIDs(); len(nodes) > 0 && !_u.mutation.ExternalTrainingEventsCleared() {
+		edge := &sqlgraph.EdgeSpec{
+			Rel:     sqlgraph.O2M,
+			Inverse: false,
+			Table:   contractsupplier.ExternalTrainingEventsTable,
+			Columns: []string{contractsupplier.ExternalTrainingEventsColumn},
+			Bidi:    false,
+			Target: &sqlgraph.EdgeTarget{
+				IDSpec: sqlgraph.NewFieldSpec(externaltrainingevent.FieldID, field.TypeUUID),
+			},
+		}
+		for _, k := range nodes {
+			edge.Target.Nodes = append(edge.Target.Nodes, k)
+		}
+		_spec.Edges.Clear = append(_spec.Edges.Clear, edge)
+	}
+	if nodes := _u.mutation.ExternalTrainingEventsIDs(); len(nodes) > 0 {
+		edge := &sqlgraph.EdgeSpec{
+			Rel:     sqlgraph.O2M,
+			Inverse: false,
+			Table:   contractsupplier.ExternalTrainingEventsTable,
+			Columns: []string{contractsupplier.ExternalTrainingEventsColumn},
+			Bidi:    false,
+			Target: &sqlgraph.EdgeTarget{
+				IDSpec: sqlgraph.NewFieldSpec(externaltrainingevent.FieldID, field.TypeUUID),
+			},
+		}
+		for _, k := range nodes {
+			edge.Target.Nodes = append(edge.Target.Nodes, k)
+		}
+		_spec.Edges.Add = append(_spec.Edges.Add, edge)
+	}
 	if _node, err = sqlgraph.UpdateNodes(ctx, _u.driver, _spec); err != nil {
 		if _, ok := err.(*sqlgraph.NotFoundError); ok {
 			err = &NotFoundError{contractsupplier.Label}
@@ -667,16 +764,23 @@ func (_u *ContractSupplierUpdateOne) SetNillableContractNumber(v *string) *Contr
 }
 
 // SetVatFlag sets the "vat_flag" field.
-func (_u *ContractSupplierUpdateOne) SetVatFlag(v bool) *ContractSupplierUpdateOne {
+func (_u *ContractSupplierUpdateOne) SetVatFlag(v int) *ContractSupplierUpdateOne {
+	_u.mutation.ResetVatFlag()
 	_u.mutation.SetVatFlag(v)
 	return _u
 }
 
 // SetNillableVatFlag sets the "vat_flag" field if the given value is not nil.
-func (_u *ContractSupplierUpdateOne) SetNillableVatFlag(v *bool) *ContractSupplierUpdateOne {
+func (_u *ContractSupplierUpdateOne) SetNillableVatFlag(v *int) *ContractSupplierUpdateOne {
 	if v != nil {
 		_u.SetVatFlag(*v)
 	}
+	return _u
+}
+
+// AddVatFlag adds value to the "vat_flag" field.
+func (_u *ContractSupplierUpdateOne) AddVatFlag(v int) *ContractSupplierUpdateOne {
+	_u.mutation.AddVatFlag(v)
 	return _u
 }
 
@@ -1025,9 +1129,45 @@ func (_u *ContractSupplierUpdateOne) SetUpdatedAt(v time.Time) *ContractSupplier
 	return _u
 }
 
+// AddExternalTrainingEventIDs adds the "external_training_events" edge to the ExternalTrainingEvent entity by IDs.
+func (_u *ContractSupplierUpdateOne) AddExternalTrainingEventIDs(ids ...uuid.UUID) *ContractSupplierUpdateOne {
+	_u.mutation.AddExternalTrainingEventIDs(ids...)
+	return _u
+}
+
+// AddExternalTrainingEvents adds the "external_training_events" edges to the ExternalTrainingEvent entity.
+func (_u *ContractSupplierUpdateOne) AddExternalTrainingEvents(v ...*ExternalTrainingEvent) *ContractSupplierUpdateOne {
+	ids := make([]uuid.UUID, len(v))
+	for i := range v {
+		ids[i] = v[i].ID
+	}
+	return _u.AddExternalTrainingEventIDs(ids...)
+}
+
 // Mutation returns the ContractSupplierMutation object of the builder.
 func (_u *ContractSupplierUpdateOne) Mutation() *ContractSupplierMutation {
 	return _u.mutation
+}
+
+// ClearExternalTrainingEvents clears all "external_training_events" edges to the ExternalTrainingEvent entity.
+func (_u *ContractSupplierUpdateOne) ClearExternalTrainingEvents() *ContractSupplierUpdateOne {
+	_u.mutation.ClearExternalTrainingEvents()
+	return _u
+}
+
+// RemoveExternalTrainingEventIDs removes the "external_training_events" edge to ExternalTrainingEvent entities by IDs.
+func (_u *ContractSupplierUpdateOne) RemoveExternalTrainingEventIDs(ids ...uuid.UUID) *ContractSupplierUpdateOne {
+	_u.mutation.RemoveExternalTrainingEventIDs(ids...)
+	return _u
+}
+
+// RemoveExternalTrainingEvents removes "external_training_events" edges to ExternalTrainingEvent entities.
+func (_u *ContractSupplierUpdateOne) RemoveExternalTrainingEvents(v ...*ExternalTrainingEvent) *ContractSupplierUpdateOne {
+	ids := make([]uuid.UUID, len(v))
+	for i := range v {
+		ids[i] = v[i].ID
+	}
+	return _u.RemoveExternalTrainingEventIDs(ids...)
 }
 
 // Where appends a list predicates to the ContractSupplierUpdate builder.
@@ -1084,6 +1224,11 @@ func (_u *ContractSupplierUpdateOne) check() error {
 	if v, ok := _u.mutation.ContractNumber(); ok {
 		if err := contractsupplier.ContractNumberValidator(v); err != nil {
 			return &ValidationError{Name: "contract_number", err: fmt.Errorf(`ent: validator failed for field "ContractSupplier.contract_number": %w`, err)}
+		}
+	}
+	if v, ok := _u.mutation.VatFlag(); ok {
+		if err := contractsupplier.VatFlagValidator(v); err != nil {
+			return &ValidationError{Name: "vat_flag", err: fmt.Errorf(`ent: validator failed for field "ContractSupplier.vat_flag": %w`, err)}
 		}
 	}
 	if v, ok := _u.mutation.Currency(); ok {
@@ -1150,7 +1295,10 @@ func (_u *ContractSupplierUpdateOne) sqlSave(ctx context.Context) (_node *Contra
 		_spec.SetField(contractsupplier.FieldContractNumber, field.TypeString, value)
 	}
 	if value, ok := _u.mutation.VatFlag(); ok {
-		_spec.SetField(contractsupplier.FieldVatFlag, field.TypeBool, value)
+		_spec.SetField(contractsupplier.FieldVatFlag, field.TypeInt, value)
+	}
+	if value, ok := _u.mutation.AddedVatFlag(); ok {
+		_spec.AddField(contractsupplier.FieldVatFlag, field.TypeInt, value)
 	}
 	if value, ok := _u.mutation.SignedDate(); ok {
 		_spec.SetField(contractsupplier.FieldSignedDate, field.TypeTime, value)
@@ -1256,6 +1404,51 @@ func (_u *ContractSupplierUpdateOne) sqlSave(ctx context.Context) (_node *Contra
 	}
 	if value, ok := _u.mutation.UpdatedAt(); ok {
 		_spec.SetField(contractsupplier.FieldUpdatedAt, field.TypeTime, value)
+	}
+	if _u.mutation.ExternalTrainingEventsCleared() {
+		edge := &sqlgraph.EdgeSpec{
+			Rel:     sqlgraph.O2M,
+			Inverse: false,
+			Table:   contractsupplier.ExternalTrainingEventsTable,
+			Columns: []string{contractsupplier.ExternalTrainingEventsColumn},
+			Bidi:    false,
+			Target: &sqlgraph.EdgeTarget{
+				IDSpec: sqlgraph.NewFieldSpec(externaltrainingevent.FieldID, field.TypeUUID),
+			},
+		}
+		_spec.Edges.Clear = append(_spec.Edges.Clear, edge)
+	}
+	if nodes := _u.mutation.RemovedExternalTrainingEventsIDs(); len(nodes) > 0 && !_u.mutation.ExternalTrainingEventsCleared() {
+		edge := &sqlgraph.EdgeSpec{
+			Rel:     sqlgraph.O2M,
+			Inverse: false,
+			Table:   contractsupplier.ExternalTrainingEventsTable,
+			Columns: []string{contractsupplier.ExternalTrainingEventsColumn},
+			Bidi:    false,
+			Target: &sqlgraph.EdgeTarget{
+				IDSpec: sqlgraph.NewFieldSpec(externaltrainingevent.FieldID, field.TypeUUID),
+			},
+		}
+		for _, k := range nodes {
+			edge.Target.Nodes = append(edge.Target.Nodes, k)
+		}
+		_spec.Edges.Clear = append(_spec.Edges.Clear, edge)
+	}
+	if nodes := _u.mutation.ExternalTrainingEventsIDs(); len(nodes) > 0 {
+		edge := &sqlgraph.EdgeSpec{
+			Rel:     sqlgraph.O2M,
+			Inverse: false,
+			Table:   contractsupplier.ExternalTrainingEventsTable,
+			Columns: []string{contractsupplier.ExternalTrainingEventsColumn},
+			Bidi:    false,
+			Target: &sqlgraph.EdgeTarget{
+				IDSpec: sqlgraph.NewFieldSpec(externaltrainingevent.FieldID, field.TypeUUID),
+			},
+		}
+		for _, k := range nodes {
+			edge.Target.Nodes = append(edge.Target.Nodes, k)
+		}
+		_spec.Edges.Add = append(_spec.Edges.Add, edge)
 	}
 	_node = &ContractSupplier{config: _u.config}
 	_spec.Assign = _node.assignValues
