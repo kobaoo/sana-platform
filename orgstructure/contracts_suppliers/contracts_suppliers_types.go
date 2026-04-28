@@ -168,13 +168,19 @@ type UploadContractsRequest struct {
 
 // UploadContractRow — строка предпросмотра
 type UploadContractRow struct {
-	RowNumber      int      `json:"row_number"`
-	SupplierID     string   `json:"supplier_id"`
-	ContractNumber string   `json:"contract_number"`
-	Amount         *float64 `json:"amount,omitempty"`
-	IsValid        bool     `json:"is_valid"`
-	Include        bool     `json:"include"`
-	Errors         []string `json:"errors"`
+	RowNumber        int        `json:"row_number"`
+	SupplierID       string     `json:"supplier_id"`
+	ContractNumber   string     `json:"contract_number"`
+	VatFlag          *int       `json:"vat_flag,omitempty"`
+	SignedDate       *time.Time `json:"signed_date,omitempty"`
+	EndDate          *time.Time `json:"end_date,omitempty"`
+	Amount           *float64   `json:"amount,omitempty"`
+	AmountCurrency   *float64   `json:"amount_currency,omitempty"`
+	Currency         *string    `json:"currency,omitempty"`
+	BalanceAtYearEnd *float64   `json:"balance_at_year_end,omitempty"`
+	IsValid          bool       `json:"is_valid"`
+	Include          bool       `json:"include"`
+	Errors           []string   `json:"errors"`
 }
 
 // UploadContractsResponse — ответ предпросмотра

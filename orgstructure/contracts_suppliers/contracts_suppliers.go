@@ -2,6 +2,7 @@ package contractssuppliers
 
 import (
 	"context"
+	"fmt"
 	"net/http"
 	"path/filepath"
 	"strings"
@@ -12,6 +13,7 @@ import (
 	"encore.app/auth/authhandler"
 	"encore.app/db/ent"
 	"encore.app/db/ent/contractsupplier"
+	"encore.app/db/ent/supplier"
 	csh "encore.app/orgstructure/contracts_suppliers_history"
 	"encore.dev/beta/errs"
 	"encore.dev/rlog"
@@ -321,8 +323,16 @@ func GetFileURL(ctx context.Context, id string) (*FileURLResponse, error) {
 //
 //encore:api auth method=POST path=/contracts-suppliers/import
 func ImportContracts(ctx context.Context, req *ImportContractsRequest) (*ImportResponse, error) {
-	if _, err := requirePermission(); err != nil {
+	ad, err := requirePermission()
+	if err != nil {
 		return nil, err
+	}
+	if req == nil {
+		return nil, errs.B().Code(errs.InvalidArgument).Msg("request body is required").Err()
+	}
+	clientID, err := uuid.Parse(ad.CompanyID)
+	if err != nil {
+		return nil, errs.B().Code(errs.InvalidArgument).Msg("invalid company_id in token").Err()
 	}
 
 	if err := validateUploadFileRequest(&UploadFileRequest{
@@ -332,62 +342,75 @@ func ImportContracts(ctx context.Context, req *ImportContractsRequest) (*ImportR
 		return nil, err
 	}
 
-	ext := strings.ToLower(filepath.Ext(req.FileName))
-
-	var supplierIDs []string
-	var rows []CreateContractRequest
-	var err error
-
-	switch ext {
-	case ".csv":
-		supplierIDs, rows, err = parseCSVContracts(req.FileData)
-	case ".xlsx":
-		supplierIDs, rows, err = parseXLSXContracts(req.FileData)
-	default:
-		return nil, errs.B().
-			Code(errs.InvalidArgument).
-			Msg("only .csv and .xlsx are supported").
-			Err()
+	rows, previewRows, _, _, err := parseAndValidateContractFile(req.FileData, req.FileName)
+	if err != nil {
+		return nil, err
 	}
-
+	rows, previewRows, _, err = applyContractBusinessRules(ctx, clientID, rows, previewRows, []string{})
 	if err != nil {
 		return nil, err
 	}
 
-	selectedMap := make(map[int]struct{})
-	for _, idx := range req.SelectedRows {
-		selectedMap[idx] = struct{}{}
+	selectedMap := make(map[int]struct{}, len(req.SelectedRows))
+	for _, rowNumber := range req.SelectedRows {
+		selectedMap[rowNumber] = struct{}{}
+	}
+
+	parsedByRow := make(map[int]parsedContractRow, len(rows))
+	for _, row := range rows {
+		parsedByRow[row.RowNumber] = row
 	}
 
 	imported := 0
 	failed := 0
-	var errorsList []string
+	errorsList := []string{}
 
-	for i := range rows {
+	for _, previewRow := range previewRows {
 		// если есть выбор строк — фильтруем
 		if len(selectedMap) > 0 {
-			if _, ok := selectedMap[i+1]; !ok {
+			if _, ok := selectedMap[previewRow.RowNumber]; !ok {
 				continue
 			}
 		}
 
-		r := rows[i]
-		supplierID := supplierIDs[i]
-
-		if err := validateCreateRequest(&r); err != nil {
+		if !previewRow.IsValid {
 			failed++
-			errorsList = append(errorsList, formatImportError(i, err))
+			if len(previewRow.Errors) == 0 {
+				errorsList = append(errorsList, fmt.Sprintf("row %d: invalid row", previewRow.RowNumber))
+			} else {
+				for _, rowError := range previewRow.Errors {
+					errorsList = append(errorsList, fmt.Sprintf("row %d: %s", previewRow.RowNumber, rowError))
+				}
+			}
 			continue
 		}
 
-		_, err := insertContract(ctx, supplierID, &r)
+		row, ok := parsedByRow[previewRow.RowNumber]
+		if !ok {
+			failed++
+			errorsList = append(errorsList, fmt.Sprintf("row %d: row not found in parsed data", previewRow.RowNumber))
+			continue
+		}
+
+		reqCopy := row.Request
+		if err := validateCreateRequest(&reqCopy); err != nil {
+			failed++
+			errorsList = append(errorsList, fmt.Sprintf("row %d: %s", previewRow.RowNumber, err.Error()))
+			continue
+		}
+
+		_, err := insertContract(ctx, row.SupplierID, &reqCopy)
 		if err != nil {
 			failed++
-			errorsList = append(errorsList, formatImportError(i, err))
+			errorsList = append(errorsList, fmt.Sprintf("row %d: %s", previewRow.RowNumber, err.Error()))
 			continue
 		}
 
 		imported++
+	}
+
+	if len(selectedMap) > 0 && imported == 0 && failed == 0 {
+		return nil, errs.B().Code(errs.InvalidArgument).Msg("no rows selected for import").Err()
 	}
 
 	return &ImportResponse{
@@ -401,8 +424,16 @@ func ImportContracts(ctx context.Context, req *ImportContractsRequest) (*ImportR
 //
 //encore:api auth method=POST path=/contracts-suppliers/upload
 func UploadContracts(ctx context.Context, req *UploadContractsRequest) (*UploadContractsResponse, error) {
-	if _, err := requirePermission(); err != nil {
+	ad, err := requirePermission()
+	if err != nil {
 		return nil, err
+	}
+	if req == nil {
+		return nil, errs.B().Code(errs.InvalidArgument).Msg("request body is required").Err()
+	}
+	clientID, err := uuid.Parse(ad.CompanyID)
+	if err != nil {
+		return nil, errs.B().Code(errs.InvalidArgument).Msg("invalid company_id in token").Err()
 	}
 
 	if err := validateUploadFileRequest(&UploadFileRequest{
@@ -412,68 +443,33 @@ func UploadContracts(ctx context.Context, req *UploadContractsRequest) (*UploadC
 		return nil, err
 	}
 
-	ext := strings.ToLower(filepath.Ext(req.FileName))
-
-	var supplierIDs []string
-	var parsed []CreateContractRequest
-	var err error
-
-	switch ext {
-	case ".csv":
-		supplierIDs, parsed, err = parseCSVContracts(req.FileData)
-	case ".xlsx":
-		supplierIDs, parsed, err = parseXLSXContracts(req.FileData)
-	default:
-		return nil, errs.B().
-			Code(errs.InvalidArgument).
-			Msg("only .csv and .xlsx are supported").
-			Err()
+	rows, previewRows, validationErrors, totalRows, err := parseAndValidateContractFile(req.FileData, req.FileName)
+	if err != nil {
+		return nil, err
 	}
-
+	rows, previewRows, validationErrors, err = applyContractBusinessRules(ctx, clientID, rows, previewRows, validationErrors)
 	if err != nil {
 		return nil, err
 	}
 
-	rows := make([]UploadContractRow, 0, len(parsed))
-
 	validCount := 0
 	invalidCount := 0
 
-	for i := range parsed {
-		r := parsed[i]
-		supplierID := supplierIDs[i]
-
-		rowErrors := []string{}
-
-		if err := validateCreateRequest(&r); err != nil {
-			rowErrors = append(rowErrors, err.Error())
-		}
-
-		isValid := len(rowErrors) == 0
-
-		if isValid {
+	for _, row := range previewRows {
+		if row.IsValid {
 			validCount++
 		} else {
 			invalidCount++
 		}
-
-		rows = append(rows, UploadContractRow{
-			RowNumber:      i + 1,
-			SupplierID:     supplierID,
-			ContractNumber: r.ContractNumber,
-			Amount:         &r.Amount,
-			IsValid:        isValid,
-			Include:        isValid,
-			Errors:         rowErrors,
-		})
 	}
 
 	return &UploadContractsResponse{
 		IsValid:     invalidCount == 0,
-		TotalRows:   len(rows),
+		TotalRows:   totalRows,
 		ValidRows:   validCount,
 		InvalidRows: invalidCount,
-		Rows:        rows,
+		Errors:      validationErrors,
+		Rows:        previewRows,
 	}, nil
 }
 
@@ -483,10 +479,59 @@ const (
 	defaultPage  = 1
 	defaultLimit = 20
 	maxLimit     = 100
+	defaultContractCurrency = "KZT"
 
 	// expiringSoonWindow is the threshold for marking a contract EXPIRING_SOON.
 	expiringSoonWindow = 30 * 24 * time.Hour
 )
+
+var contractRequiredHeaders = []string{
+	"supplier_id",
+	"contract_number",
+	"vat_flag",
+	"signed_date",
+	"amount",
+}
+
+var contractHeaderAliases = map[string]string{
+	"supplier_id":                   "supplier_id",
+	"supplierid":                    "supplier_id",
+	"contract_number":               "contract_number",
+	"contractnumber":                "contract_number",
+	"vat_flag":                      "vat_flag",
+	"vat":                           "vat_flag",
+	"percent_nds":                   "vat_flag",
+	"signed_date":                   "signed_date",
+	"signeddate":                    "signed_date",
+	"amount":                        "amount",
+	"amount_currency":               "amount_currency",
+	"amountcurrency":                "amount_currency",
+	"currency":                      "currency",
+	"balance_at_year_end":           "balance_at_year_end",
+	"balanceatyearend":              "balance_at_year_end",
+	"end_date":                      "end_date",
+	"enddate":                       "end_date",
+	"номер_договора":                "contract_number",
+	"процент_ндс":                   "vat_flag",
+	"дата_договора":                 "signed_date",
+	"сумма":                         "amount",
+	"сумма_в_иностранной_валюте":    "amount_currency",
+	"валюта":                        "currency",
+	"остаток_на_конец_года":         "balance_at_year_end",
+	"дата_окончания":                "end_date",
+}
+
+var allowedContractCurrencies = map[string]struct{}{
+	"KZT": {},
+	"USD": {},
+	"EUR": {},
+}
+
+type parsedContractRow struct {
+	RowNumber  int
+	SupplierID string
+	Request    CreateContractRequest
+}
 
 // computeStatus derives the lifecycle status from end_date.
 // Contracts without end_date are treated as ACTIVE.
@@ -610,6 +655,15 @@ func validateUpdateRequest(req *UpdateContractRequest) error {
 	if req.Amount != nil && *req.Amount < 0 {
 		return errs.B().Code(errs.InvalidArgument).Msg("amount must be >= 0").Err()
 	}
+	if req.AmountCurrency != nil && *req.AmountCurrency < 0 {
+		return errs.B().Code(errs.InvalidArgument).Msg("amount_currency must be >= 0").Err()
+	}
+	if req.Currency != nil {
+		currency := normalizeContractCurrencyValue(req.Currency)
+		if !isAllowedContractCurrency(currency) {
+			return errs.B().Code(errs.InvalidArgument).Msg("currency must be one of KZT, USD, EUR").Err()
+		}
+	}
 
 	return nil
 }
@@ -646,7 +700,8 @@ func updateContract(ctx context.Context, row *ent.ContractSupplier, req *UpdateC
 		upd.SetAmountCurrency(*req.AmountCurrency)
 	}
 	if req.Currency != nil {
-		upd.SetCurrency(*req.Currency)
+		normalizedCurrency := normalizeContractCurrencyValue(req.Currency)
+		upd.SetCurrency(normalizedCurrency)
 	}
 	if req.BalanceAtYearEnd != nil {
 		upd.SetBalanceAtYearEnd(*req.BalanceAtYearEnd)
@@ -793,11 +848,21 @@ func validateCreateRequest(req *CreateContractRequest) error {
 	if req.Amount < 0 {
 		return errs.B().Code(errs.InvalidArgument).Msg("amount must be >= 0").Err()
 	}
+	if req.AmountCurrency != nil && *req.AmountCurrency < 0 {
+		return errs.B().Code(errs.InvalidArgument).Msg("amount_currency must be >= 0").Err()
+	}
 	if req.VatFlag < 0 || req.VatFlag > 100 {
 		return errs.B().Code(errs.InvalidArgument).Msg("vat_flag must be between 0 and 100").Err()
 	}
 	if req.SignedDate.IsZero() {
 		return errs.B().Code(errs.InvalidArgument).Msg("signed_date is required").Err()
+	}
+	currency := normalizeContractCurrencyValue(req.Currency)
+	if !isAllowedContractCurrency(currency) {
+		return errs.B().Code(errs.InvalidArgument).Msg("currency must be one of KZT, USD, EUR").Err()
+	}
+	if currency != defaultContractCurrency && req.AmountCurrency == nil {
+		return errs.B().Code(errs.InvalidArgument).Msg("amount_currency is required for USD/EUR contracts").Err()
 	}
 	if req.EndDate != nil && !req.EndDate.After(req.SignedDate) {
 		return errs.B().Code(errs.InvalidArgument).Msg("end_date must be after signed_date").Err()
@@ -811,18 +876,22 @@ func insertContract(ctx context.Context, supplierID string, req *CreateContractR
 		return nil, errs.B().Code(errs.InvalidArgument).Msg("invalid supplier_id format").Err()
 	}
 
+	normalizedCurrency := normalizeContractCurrencyValue(req.Currency)
+	normalizedReq := *req
+	normalizedReq.Currency = strPtr(normalizedCurrency)
+
 	row, err := Client.ContractSupplier.Create().
 		SetSupplierID(sid).
-		SetContractNumber(strings.TrimSpace(req.ContractNumber)).
-		SetVatFlag(req.VatFlag).
-		SetSignedDate(req.SignedDate).
-		SetNillableEndDate(req.EndDate).
-		SetAmount(req.Amount).
-		SetNillableAmountCurrency(req.AmountCurrency).
-		SetNillableCurrency(req.Currency).
-		SetNillableBalanceAtYearEnd(req.BalanceAtYearEnd).
-		SetTotalWithAmendment(req.Amount).
-		SetRemainingAmount(req.Amount).
+		SetContractNumber(strings.TrimSpace(normalizedReq.ContractNumber)).
+		SetVatFlag(normalizedReq.VatFlag).
+		SetSignedDate(normalizedReq.SignedDate).
+		SetNillableEndDate(normalizedReq.EndDate).
+		SetAmount(normalizedReq.Amount).
+		SetNillableAmountCurrency(normalizedReq.AmountCurrency).
+		SetNillableCurrency(normalizedReq.Currency).
+		SetNillableBalanceAtYearEnd(normalizedReq.BalanceAtYearEnd).
+		SetTotalWithAmendment(normalizedReq.Amount).
+		SetRemainingAmount(normalizedReq.Amount).
 		SetIsActive(true).
 		Save(ctx)
 	if err != nil {
@@ -859,122 +928,410 @@ func entToContract(e *ent.ContractSupplier) *ContractSupplier {
 	}
 }
 
-func parseCSVContracts(data []byte) ([]string, []CreateContractRequest, error) {
-	reader := csv.NewReader(bytes.NewReader(data))
-	reader.Comma = ','
+func parseAndValidateContractFile(fileData []byte, fileName string) ([]parsedContractRow, []UploadContractRow, []string, int, error) {
+	ext := strings.ToLower(filepath.Ext(fileName))
 
-	records, err := reader.ReadAll()
+	var rawRows [][]string
+	var err error
+
+	switch ext {
+	case ".csv":
+		rawRows, err = parseContractCSV(fileData)
+	case ".xlsx":
+		rawRows, err = parseContractXLSX(fileData)
+	default:
+		return nil, nil, nil, 0, errs.B().Code(errs.InvalidArgument).Msg("only .csv and .xlsx are supported").Err()
+	}
 	if err != nil {
-		return nil, nil, errs.B().Code(errs.InvalidArgument).Msg("invalid CSV").Cause(err).Err()
+		return nil, nil, nil, 0, errs.B().Code(errs.InvalidArgument).Msg("failed to parse file").Cause(err).Err()
+	}
+	if len(rawRows) < 2 {
+		return nil, []UploadContractRow{}, []string{"file is empty or has only headers"}, 0, nil
 	}
 
-	if len(records) < 2 {
-		return nil, nil, errs.B().Code(errs.InvalidArgument).Msg("CSV must have header + data").Err()
+	headerIndex, globalErr := buildContractHeaderIndex(rawRows[0])
+	if globalErr != "" {
+		return nil, []UploadContractRow{}, []string{globalErr}, 0, nil
 	}
 
-	var supplierIDs []string
-	var result []CreateContractRequest
+	parsedRows := []parsedContractRow{}
+	previewRows := []UploadContractRow{}
+	validationErrors := []string{}
+	totalRows := 0
 
-	for i, row := range records[1:] {
-		if len(row) < 5 {
-			return nil, nil, errs.B().Code(errs.InvalidArgument).
-				Msgf("row %d: not enough columns", i+1).Err()
+	for i, row := range rawRows[1:] {
+		if isContractRowEmpty(row) {
+			continue
 		}
 
-		supplierID := strings.TrimSpace(row[0])
-		if supplierID == "" {
-			return nil, nil, errs.B().Msgf("row %d: supplier_id is required", i+1).Err()
+		totalRows++
+		rowNumber := i + 1
+
+		parsed, previewRow, rowErrors := parseContractRow(rowNumber, row, headerIndex)
+		previewRow.Errors = rowErrors
+		previewRow.IsValid = len(rowErrors) == 0
+		previewRow.Include = previewRow.IsValid
+		previewRows = append(previewRows, previewRow)
+
+		if len(rowErrors) > 0 {
+			for _, rowError := range rowErrors {
+				validationErrors = append(validationErrors, fmt.Sprintf("row %d: %s", rowNumber, rowError))
+			}
+			continue
 		}
 
-		amount, err := strconv.ParseFloat(row[2], 64)
-		if err != nil {
-			return nil, nil, errs.B().Msgf("row %d: invalid amount", i+1).Err()
-		}
-
-		vat, err := strconv.Atoi(row[3])
-		if err != nil {
-			return nil, nil, errs.B().Msgf("row %d: invalid vat_flag", i+1).Err()
-		}
-
-		signedDate, err := time.Parse("2006-01-02", row[4])
-		if err != nil {
-			return nil, nil, errs.B().Msgf("row %d: invalid date format", i+1).Err()
-		}
-
-		req := CreateContractRequest{
-			ContractNumber: row[1],
-			Amount:         amount,
-			VatFlag:        vat,
-			SignedDate:     signedDate,
-		}
-
-		supplierIDs = append(supplierIDs, supplierID)
-		result = append(result, req)
+		parsedRows = append(parsedRows, parsed)
 	}
 
-	return supplierIDs, result, nil
+	if totalRows == 0 {
+		return nil, previewRows, []string{"file has no data rows"}, 0, nil
+	}
+
+	return parsedRows, previewRows, validationErrors, totalRows, nil
 }
 
-func parseXLSXContracts(data []byte) ([]string, []CreateContractRequest, error) {
+func buildContractHeaderIndex(headers []string) (map[string]int, string) {
+	index := map[string]int{}
+	for i, header := range headers {
+		normalized := normalizeContractHeader(header)
+		internalName, ok := contractHeaderAliases[normalized]
+		if !ok {
+			continue
+		}
+		if _, exists := index[internalName]; !exists {
+			index[internalName] = i
+		}
+	}
+
+	missing := []string{}
+	for _, required := range contractRequiredHeaders {
+		if _, ok := index[required]; !ok {
+			missing = append(missing, required)
+		}
+	}
+	if len(missing) > 0 {
+		return nil, fmt.Sprintf("missing required columns: %s", strings.Join(missing, ", "))
+	}
+
+	return index, ""
+}
+
+func parseContractRow(rowNumber int, row []string, headerIndex map[string]int) (parsedContractRow, UploadContractRow, []string) {
+	get := func(header string) string {
+		idx, ok := headerIndex[header]
+		if !ok || idx >= len(row) {
+			return ""
+		}
+		return strings.TrimSpace(row[idx])
+	}
+
+	rowErrors := []string{}
+	previewRow := UploadContractRow{RowNumber: rowNumber}
+
+	supplierID := get("supplier_id")
+	if supplierID == "" {
+		rowErrors = append(rowErrors, "supplier_id is required")
+	}
+
+	contractNumber := get("contract_number")
+	if contractNumber == "" {
+		rowErrors = append(rowErrors, "contract_number is required")
+	}
+
+	var vatFlag *int
+	vatRaw := get("vat_flag")
+	if vatRaw == "" {
+		rowErrors = append(rowErrors, "vat_flag is required")
+	} else {
+		parsedVat, err := strconv.Atoi(vatRaw)
+		if err != nil {
+			rowErrors = append(rowErrors, "vat_flag must be an integer percentage")
+		} else {
+			vatFlag = &parsedVat
+		}
+	}
+
+	var signedDate *time.Time
+	signedDateRaw := get("signed_date")
+	if signedDateRaw == "" {
+		rowErrors = append(rowErrors, "signed_date is required")
+	} else {
+		parsedSignedDate, err := time.Parse("2006-01-02", signedDateRaw)
+		if err != nil {
+			rowErrors = append(rowErrors, "signed_date must be in YYYY-MM-DD format")
+		} else {
+			signedDate = &parsedSignedDate
+		}
+	}
+
+	var endDate *time.Time
+	if endDateRaw := get("end_date"); endDateRaw != "" {
+		parsedEndDate, err := time.Parse("2006-01-02", endDateRaw)
+		if err != nil {
+			rowErrors = append(rowErrors, "end_date must be in YYYY-MM-DD format")
+		} else {
+			endDate = &parsedEndDate
+		}
+	}
+
+	var amount *float64
+	amountRaw := get("amount")
+	if amountRaw == "" {
+		rowErrors = append(rowErrors, "amount is required")
+	} else {
+		parsedAmount, err := strconv.ParseFloat(amountRaw, 64)
+		if err != nil {
+			rowErrors = append(rowErrors, "amount must be a number")
+		} else {
+			amount = &parsedAmount
+		}
+	}
+
+	var amountCurrency *float64
+	if amountCurrencyRaw := get("amount_currency"); amountCurrencyRaw != "" {
+		parsedAmountCurrency, err := strconv.ParseFloat(amountCurrencyRaw, 64)
+		if err != nil {
+			rowErrors = append(rowErrors, "amount_currency must be a number")
+		} else {
+			amountCurrency = &parsedAmountCurrency
+		}
+	}
+
+	currencyValue := normalizeContractCurrencyValue(strPtr(get("currency")))
+	currency := strPtr(currencyValue)
+
+	var balanceAtYearEnd *float64
+	if balanceRaw := get("balance_at_year_end"); balanceRaw != "" {
+		parsedBalance, err := strconv.ParseFloat(balanceRaw, 64)
+		if err != nil {
+			rowErrors = append(rowErrors, "balance_at_year_end must be a number")
+		} else {
+			balanceAtYearEnd = &parsedBalance
+		}
+	}
+
+	previewRow.SupplierID = supplierID
+	previewRow.ContractNumber = contractNumber
+	previewRow.VatFlag = vatFlag
+	previewRow.SignedDate = signedDate
+	previewRow.EndDate = endDate
+	previewRow.Amount = amount
+	previewRow.AmountCurrency = amountCurrency
+	previewRow.Currency = currency
+	previewRow.BalanceAtYearEnd = balanceAtYearEnd
+
+	if len(rowErrors) > 0 {
+		return parsedContractRow{}, previewRow, rowErrors
+	}
+
+	req := CreateContractRequest{
+		ContractNumber:   contractNumber,
+		VatFlag:          *vatFlag,
+		SignedDate:       *signedDate,
+		EndDate:          endDate,
+		Amount:           *amount,
+		AmountCurrency:   amountCurrency,
+		Currency:         currency,
+		BalanceAtYearEnd: balanceAtYearEnd,
+	}
+	if err := validateCreateRequest(&req); err != nil {
+		return parsedContractRow{}, previewRow, []string{err.Error()}
+	}
+
+	return parsedContractRow{
+		RowNumber:  rowNumber,
+		SupplierID: supplierID,
+		Request:    req,
+	}, previewRow, nil
+}
+
+func applyContractBusinessRules(ctx context.Context, clientID uuid.UUID, parsedRows []parsedContractRow, previewRows []UploadContractRow, validationErrors []string) ([]parsedContractRow, []UploadContractRow, []string, error) {
+	rowIndex := make(map[int]int, len(previewRows))
+	for i := range previewRows {
+		rowIndex[previewRows[i].RowNumber] = i
+	}
+
+	appendRowErrors := func(rowNumber int, rowErrors ...string) {
+		if len(rowErrors) == 0 {
+			return
+		}
+		for _, rowError := range rowErrors {
+			validationErrors = append(validationErrors, fmt.Sprintf("row %d: %s", rowNumber, rowError))
+		}
+		idx, ok := rowIndex[rowNumber]
+		if !ok {
+			return
+		}
+		previewRows[idx].IsValid = false
+		previewRows[idx].Include = false
+		previewRows[idx].Errors = append(previewRows[idx].Errors, rowErrors...)
+	}
+
+	supplierIDs := []uuid.UUID{}
+	for _, row := range parsedRows {
+		parsedSupplierID, err := uuid.Parse(row.SupplierID)
+		if err != nil {
+			appendRowErrors(row.RowNumber, "supplier_id must be a valid UUID")
+			continue
+		}
+		supplierIDs = append(supplierIDs, parsedSupplierID)
+	}
+
+	existingSuppliers := map[string]struct{}{}
+	if len(supplierIDs) > 0 {
+		rows, err := Client.Supplier.
+			Query().
+			Where(
+				supplier.ClientIDEQ(clientID),
+				supplier.IDIn(supplierIDs...),
+				supplier.IsActiveEQ(true),
+			).
+			All(ctx)
+		if err != nil {
+			return nil, nil, nil, errs.B().Code(errs.Internal).Msg("failed to check suppliers for import").Cause(err).Err()
+		}
+		for _, row := range rows {
+			existingSuppliers[row.ID.String()] = struct{}{}
+		}
+	}
+
+	seenInFile := map[string]int{}
+	for _, row := range parsedRows {
+		if _, ok := existingSuppliers[row.SupplierID]; !ok {
+			appendRowErrors(row.RowNumber, "supplier not found")
+		}
+
+		key := buildContractDuplicateKey(row.SupplierID, row.Request.ContractNumber)
+		if firstRow, seen := seenInFile[key]; seen {
+			appendRowErrors(firstRow, "duplicate contract in file")
+			appendRowErrors(row.RowNumber, "duplicate contract in file")
+		} else {
+			seenInFile[key] = row.RowNumber
+		}
+	}
+
+	if len(supplierIDs) > 0 {
+		existingContracts, err := Client.ContractSupplier.
+			Query().
+			Where(
+				contractsupplier.SupplierIDIn(supplierIDs...),
+				contractsupplier.IsActiveEQ(true),
+			).
+			All(ctx)
+		if err != nil {
+			return nil, nil, nil, errs.B().Code(errs.Internal).Msg("failed to check existing contracts").Cause(err).Err()
+		}
+
+		existingKeys := map[string]struct{}{}
+		for _, row := range existingContracts {
+			existingKeys[buildContractDuplicateKey(row.SupplierID.String(), row.ContractNumber)] = struct{}{}
+		}
+
+		for _, row := range parsedRows {
+			key := buildContractDuplicateKey(row.SupplierID, row.Request.ContractNumber)
+			if _, exists := existingKeys[key]; exists {
+				appendRowErrors(row.RowNumber, "contract already exists in database")
+			}
+		}
+	}
+
+	validRows := []parsedContractRow{}
+	for _, row := range parsedRows {
+		idx, ok := rowIndex[row.RowNumber]
+		if !ok {
+			continue
+		}
+		if previewRows[idx].IsValid {
+			validRows = append(validRows, row)
+		}
+	}
+
+	return validRows, previewRows, validationErrors, nil
+}
+
+func parseContractCSV(data []byte) ([][]string, error) {
+	reader := csv.NewReader(bytes.NewReader(data))
+	reader.TrimLeadingSpace = true
+	return reader.ReadAll()
+}
+
+func parseContractXLSX(data []byte) ([][]string, error) {
 	f, err := excelize.OpenReader(bytes.NewReader(data))
 	if err != nil {
-		return nil, nil, errs.B().Code(errs.InvalidArgument).Msg("invalid XLSX").Cause(err).Err()
+		return nil, err
+	}
+	defer func() { _ = f.Close() }()
+
+	sheets := f.GetSheetList()
+	if len(sheets) == 0 {
+		return nil, fmt.Errorf("xlsx file has no sheets")
 	}
 
-	sheet := f.GetSheetName(0)
-	rows, err := f.GetRows(sheet)
+	rows, err := f.GetRows(sheets[0])
 	if err != nil {
-		return nil, nil, err
+		return nil, err
 	}
 
-	if len(rows) < 2 {
-		return nil, nil, errs.B().Code(errs.InvalidArgument).Msg("empty XLSX").Err()
+	for i, row := range rows {
+		for j, cell := range row {
+			rows[i][j] = normalizeContractExcelValue(cell)
+		}
 	}
 
-	var supplierIDs []string
-	var result []CreateContractRequest
-
-	for i, row := range rows[1:] {
-		if len(row) < 5 {
-			return nil, nil, errs.B().Code(errs.InvalidArgument).
-				Msgf("row %d: not enough columns", i+1).Err()
-		}
-
-		supplierID := strings.TrimSpace(row[0])
-		if supplierID == "" {
-			return nil, nil, errs.B().Code(errs.InvalidArgument).
-				Msgf("row %d: supplier_id is required", i+1).Err()
-		}
-
-		amount, err := strconv.ParseFloat(row[2], 64)
-		if err != nil {
-			return nil, nil, errs.B().Msgf("row %d: invalid amount", i+1).Err()
-		}
-
-		vat, err := strconv.Atoi(row[3])
-		if err != nil {
-			return nil, nil, errs.B().Msgf("row %d: invalid vat_flag", i+1).Err()
-		}
-
-		signedDate, err := time.Parse("2006-01-02", row[4])
-		if err != nil {
-			return nil, nil, errs.B().Msgf("row %d: invalid date format (YYYY-MM-DD)", i+1).Err()
-		}
-
-		req := CreateContractRequest{
-			ContractNumber: row[1],
-			Amount:         amount,
-			VatFlag:        vat,
-			SignedDate:     signedDate,
-		}
-
-		supplierIDs = append(supplierIDs, supplierID)
-		result = append(result, req)
-	}
-
-	return supplierIDs, result, nil
+	return rows, nil
 }
 
-func formatImportError(row int, err error) string {
-	return "row " + strconv.Itoa(row+1) + ": " + err.Error()
+func normalizeContractHeader(header string) string {
+	h := strings.ToLower(strings.TrimSpace(header))
+	h = strings.ReplaceAll(h, " ", "_")
+	h = strings.ReplaceAll(h, "-", "_")
+	return h
+}
+
+func normalizeContractExcelValue(value string) string {
+	value = strings.TrimSpace(value)
+	if strings.ContainsAny(value, "eE") {
+		f, err := strconv.ParseFloat(value, 64)
+		if err == nil {
+			return strconv.FormatInt(int64(f), 10)
+		}
+	}
+	return value
+}
+
+func normalizeContractCurrencyValue(currency *string) string {
+	if currency == nil {
+		return defaultContractCurrency
+	}
+	normalized := strings.ToUpper(strings.TrimSpace(*currency))
+	if normalized == "" {
+		return defaultContractCurrency
+	}
+	return normalized
+}
+
+func isAllowedContractCurrency(currency string) bool {
+	_, ok := allowedContractCurrencies[currency]
+	return ok
+}
+
+func isContractRowEmpty(row []string) bool {
+	for _, cell := range row {
+		if strings.TrimSpace(cell) != "" {
+			return false
+		}
+	}
+	return true
+}
+
+func buildContractDuplicateKey(supplierID, contractNumber string) string {
+	return strings.ToLower(strings.TrimSpace(supplierID)) + "|" + strings.ToLower(strings.TrimSpace(contractNumber))
+}
+
+func strPtr(value string) *string {
+	value = strings.TrimSpace(value)
+	if value == "" {
+		return nil
+	}
+	return &value
 }

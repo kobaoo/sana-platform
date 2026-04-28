@@ -87,6 +87,94 @@ func TestValidateCreateRequest(t *testing.T) {
 	}
 }
 
+func TestValidateCreateRequestCurrencyRules(t *testing.T) {
+	validDate := time.Date(2025, 1, 15, 0, 0, 0, 0, time.UTC)
+	floatP := func(v float64) *float64 { return &v }
+	strP := func(v string) *string { return &v }
+
+	tests := []struct {
+		name    string
+		req     *CreateContractRequest
+		wantErr bool
+	}{
+		{"empty currency defaults to KZT", &CreateContractRequest{ContractNumber: "C-001", Amount: 100, SignedDate: validDate, Currency: strP("")}, false},
+		{"USD with amount_currency is valid", &CreateContractRequest{ContractNumber: "C-002", Amount: 100, SignedDate: validDate, Currency: strP("USD"), AmountCurrency: floatP(500)}, false},
+		{"EUR without amount_currency is invalid", &CreateContractRequest{ContractNumber: "C-003", Amount: 100, SignedDate: validDate, Currency: strP("EUR")}, true},
+		{"invalid currency code", &CreateContractRequest{ContractNumber: "C-004", Amount: 100, SignedDate: validDate, Currency: strP("GBP")}, true},
+		{"negative amount_currency", &CreateContractRequest{ContractNumber: "C-005", Amount: 100, SignedDate: validDate, AmountCurrency: floatP(-1)}, true},
+		{"vat above 100", &CreateContractRequest{ContractNumber: "C-006", Amount: 100, SignedDate: validDate, VatFlag: 101}, true},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			err := validateCreateRequest(tt.req)
+			if (err != nil) != tt.wantErr {
+				t.Errorf("validateCreateRequest() err = %v, wantErr %v", err, tt.wantErr)
+			}
+		})
+	}
+}
+
+func TestParseAndValidateContractFileCSV(t *testing.T) {
+	data := []byte("supplier_id,contract_number,vat_flag,signed_date,amount,currency,amount_currency,end_date,balance_at_year_end\n" +
+		"11111111-1111-1111-1111-111111111111,C-001,12,2025-01-15,1500.50,USD,3000,2025-12-31,100\n")
+
+	parsedRows, previewRows, validationErrors, totalRows, err := parseAndValidateContractFile(data, "contracts.csv")
+	if err != nil {
+		t.Fatalf("unexpected error: %v", err)
+	}
+	if totalRows != 1 {
+		t.Fatalf("expected totalRows=1, got %d", totalRows)
+	}
+	if len(validationErrors) != 0 {
+		t.Fatalf("expected no validation errors, got %v", validationErrors)
+	}
+	if len(parsedRows) != 1 {
+		t.Fatalf("expected 1 parsed row, got %d", len(parsedRows))
+	}
+	if len(previewRows) != 1 {
+		t.Fatalf("expected 1 preview row, got %d", len(previewRows))
+	}
+	if !previewRows[0].IsValid || !previewRows[0].Include {
+		t.Fatalf("expected valid preview row, got %+v", previewRows[0])
+	}
+	if previewRows[0].Currency == nil || *previewRows[0].Currency != "USD" {
+		t.Fatalf("expected preview currency USD, got %+v", previewRows[0].Currency)
+	}
+	if parsedRows[0].Request.AmountCurrency == nil || *parsedRows[0].Request.AmountCurrency != 3000 {
+		t.Fatalf("expected amount_currency=3000, got %+v", parsedRows[0].Request.AmountCurrency)
+	}
+}
+
+func TestParseAndValidateContractFileCurrencyRules(t *testing.T) {
+	data := []byte("supplier_id,contract_number,vat_flag,signed_date,amount,currency,amount_currency\n" +
+		"11111111-1111-1111-1111-111111111111,C-001,12,2025-01-15,1500.50,USD,\n" +
+		"11111111-1111-1111-1111-111111111111,C-002,12,2025-01-15,1500.50,,\n")
+
+	parsedRows, previewRows, validationErrors, totalRows, err := parseAndValidateContractFile(data, "contracts.csv")
+	if err != nil {
+		t.Fatalf("unexpected error: %v", err)
+	}
+	if totalRows != 2 {
+		t.Fatalf("expected totalRows=2, got %d", totalRows)
+	}
+	if len(parsedRows) != 1 {
+		t.Fatalf("expected 1 valid parsed row, got %d", len(parsedRows))
+	}
+	if len(previewRows) != 2 {
+		t.Fatalf("expected 2 preview rows, got %d", len(previewRows))
+	}
+	if previewRows[0].IsValid {
+		t.Fatalf("expected first row to be invalid, got %+v", previewRows[0])
+	}
+	if previewRows[1].Currency == nil || *previewRows[1].Currency != "KZT" {
+		t.Fatalf("expected empty currency to normalize to KZT, got %+v", previewRows[1].Currency)
+	}
+	if len(validationErrors) == 0 || !strings.Contains(strings.Join(validationErrors, "; "), "amount_currency is required for USD/EUR contracts") {
+		t.Fatalf("expected USD amount_currency validation error, got %v", validationErrors)
+	}
+}
+
 func TestApplyFilterDefaults(t *testing.T) {
 	tests := []struct {
 		name      string
