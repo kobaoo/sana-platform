@@ -28,6 +28,8 @@ import (
 	"encore.app/db/ent/requestdzocontract"
 	"encore.app/db/ent/requestparticipant"
 	"encore.app/db/ent/requesttargetdzo"
+	"encore.app/db/ent/scormcourse"
+	"encore.app/db/ent/scormprogress"
 	"encore.app/db/ent/supplier"
 	"encore.app/db/ent/trainingevent"
 	"encore.app/db/ent/trainingparticipant"
@@ -75,6 +77,10 @@ type Client struct {
 	RequestParticipant *RequestParticipantClient
 	// RequestTargetDzo is the client for interacting with the RequestTargetDzo builders.
 	RequestTargetDzo *RequestTargetDzoClient
+	// ScormCourse is the client for interacting with the ScormCourse builders.
+	ScormCourse *ScormCourseClient
+	// ScormProgress is the client for interacting with the ScormProgress builders.
+	ScormProgress *ScormProgressClient
 	// Supplier is the client for interacting with the Supplier builders.
 	Supplier *SupplierClient
 	// TrainingEvent is the client for interacting with the TrainingEvent builders.
@@ -110,6 +116,8 @@ func (c *Client) init() {
 	c.RequestDzoContract = NewRequestDzoContractClient(c.config)
 	c.RequestParticipant = NewRequestParticipantClient(c.config)
 	c.RequestTargetDzo = NewRequestTargetDzoClient(c.config)
+	c.ScormCourse = NewScormCourseClient(c.config)
+	c.ScormProgress = NewScormProgressClient(c.config)
 	c.Supplier = NewSupplierClient(c.config)
 	c.TrainingEvent = NewTrainingEventClient(c.config)
 	c.TrainingParticipant = NewTrainingParticipantClient(c.config)
@@ -222,6 +230,8 @@ func (c *Client) Tx(ctx context.Context) (*Tx, error) {
 		RequestDzoContract:      NewRequestDzoContractClient(cfg),
 		RequestParticipant:      NewRequestParticipantClient(cfg),
 		RequestTargetDzo:        NewRequestTargetDzoClient(cfg),
+		ScormCourse:             NewScormCourseClient(cfg),
+		ScormProgress:           NewScormProgressClient(cfg),
 		Supplier:                NewSupplierClient(cfg),
 		TrainingEvent:           NewTrainingEventClient(cfg),
 		TrainingParticipant:     NewTrainingParticipantClient(cfg),
@@ -261,6 +271,8 @@ func (c *Client) BeginTx(ctx context.Context, opts *sql.TxOptions) (*Tx, error) 
 		RequestDzoContract:      NewRequestDzoContractClient(cfg),
 		RequestParticipant:      NewRequestParticipantClient(cfg),
 		RequestTargetDzo:        NewRequestTargetDzoClient(cfg),
+		ScormCourse:             NewScormCourseClient(cfg),
+		ScormProgress:           NewScormProgressClient(cfg),
 		Supplier:                NewSupplierClient(cfg),
 		TrainingEvent:           NewTrainingEventClient(cfg),
 		TrainingParticipant:     NewTrainingParticipantClient(cfg),
@@ -298,7 +310,8 @@ func (c *Client) Use(hooks ...Hook) {
 		c.ContractSupplierHistory, c.DzoOrganization, c.Employee, c.Event,
 		c.EventParticipant, c.ExternalTrainingEvent, c.Notification, c.Organization,
 		c.Request, c.RequestDzoContract, c.RequestParticipant, c.RequestTargetDzo,
-		c.Supplier, c.TrainingEvent, c.TrainingParticipant, c.User,
+		c.ScormCourse, c.ScormProgress, c.Supplier, c.TrainingEvent,
+		c.TrainingParticipant, c.User,
 	} {
 		n.Use(hooks...)
 	}
@@ -312,7 +325,8 @@ func (c *Client) Intercept(interceptors ...Interceptor) {
 		c.ContractSupplierHistory, c.DzoOrganization, c.Employee, c.Event,
 		c.EventParticipant, c.ExternalTrainingEvent, c.Notification, c.Organization,
 		c.Request, c.RequestDzoContract, c.RequestParticipant, c.RequestTargetDzo,
-		c.Supplier, c.TrainingEvent, c.TrainingParticipant, c.User,
+		c.ScormCourse, c.ScormProgress, c.Supplier, c.TrainingEvent,
+		c.TrainingParticipant, c.User,
 	} {
 		n.Intercept(interceptors...)
 	}
@@ -353,6 +367,10 @@ func (c *Client) Mutate(ctx context.Context, m Mutation) (Value, error) {
 		return c.RequestParticipant.mutate(ctx, m)
 	case *RequestTargetDzoMutation:
 		return c.RequestTargetDzo.mutate(ctx, m)
+	case *ScormCourseMutation:
+		return c.ScormCourse.mutate(ctx, m)
+	case *ScormProgressMutation:
+		return c.ScormProgress.mutate(ctx, m)
 	case *SupplierMutation:
 		return c.Supplier.mutate(ctx, m)
 	case *TrainingEventMutation:
@@ -2846,6 +2864,304 @@ func (c *RequestTargetDzoClient) mutate(ctx context.Context, m *RequestTargetDzo
 	}
 }
 
+// ScormCourseClient is a client for the ScormCourse schema.
+type ScormCourseClient struct {
+	config
+}
+
+// NewScormCourseClient returns a client for the ScormCourse from the given config.
+func NewScormCourseClient(c config) *ScormCourseClient {
+	return &ScormCourseClient{config: c}
+}
+
+// Use adds a list of mutation hooks to the hooks stack.
+// A call to `Use(f, g, h)` equals to `scormcourse.Hooks(f(g(h())))`.
+func (c *ScormCourseClient) Use(hooks ...Hook) {
+	c.hooks.ScormCourse = append(c.hooks.ScormCourse, hooks...)
+}
+
+// Intercept adds a list of query interceptors to the interceptors stack.
+// A call to `Intercept(f, g, h)` equals to `scormcourse.Intercept(f(g(h())))`.
+func (c *ScormCourseClient) Intercept(interceptors ...Interceptor) {
+	c.inters.ScormCourse = append(c.inters.ScormCourse, interceptors...)
+}
+
+// Create returns a builder for creating a ScormCourse entity.
+func (c *ScormCourseClient) Create() *ScormCourseCreate {
+	mutation := newScormCourseMutation(c.config, OpCreate)
+	return &ScormCourseCreate{config: c.config, hooks: c.Hooks(), mutation: mutation}
+}
+
+// CreateBulk returns a builder for creating a bulk of ScormCourse entities.
+func (c *ScormCourseClient) CreateBulk(builders ...*ScormCourseCreate) *ScormCourseCreateBulk {
+	return &ScormCourseCreateBulk{config: c.config, builders: builders}
+}
+
+// MapCreateBulk creates a bulk creation builder from the given slice. For each item in the slice, the function creates
+// a builder and applies setFunc on it.
+func (c *ScormCourseClient) MapCreateBulk(slice any, setFunc func(*ScormCourseCreate, int)) *ScormCourseCreateBulk {
+	rv := reflect.ValueOf(slice)
+	if rv.Kind() != reflect.Slice {
+		return &ScormCourseCreateBulk{err: fmt.Errorf("calling to ScormCourseClient.MapCreateBulk with wrong type %T, need slice", slice)}
+	}
+	builders := make([]*ScormCourseCreate, rv.Len())
+	for i := 0; i < rv.Len(); i++ {
+		builders[i] = c.Create()
+		setFunc(builders[i], i)
+	}
+	return &ScormCourseCreateBulk{config: c.config, builders: builders}
+}
+
+// Update returns an update builder for ScormCourse.
+func (c *ScormCourseClient) Update() *ScormCourseUpdate {
+	mutation := newScormCourseMutation(c.config, OpUpdate)
+	return &ScormCourseUpdate{config: c.config, hooks: c.Hooks(), mutation: mutation}
+}
+
+// UpdateOne returns an update builder for the given entity.
+func (c *ScormCourseClient) UpdateOne(_m *ScormCourse) *ScormCourseUpdateOne {
+	mutation := newScormCourseMutation(c.config, OpUpdateOne, withScormCourse(_m))
+	return &ScormCourseUpdateOne{config: c.config, hooks: c.Hooks(), mutation: mutation}
+}
+
+// UpdateOneID returns an update builder for the given id.
+func (c *ScormCourseClient) UpdateOneID(id uuid.UUID) *ScormCourseUpdateOne {
+	mutation := newScormCourseMutation(c.config, OpUpdateOne, withScormCourseID(id))
+	return &ScormCourseUpdateOne{config: c.config, hooks: c.Hooks(), mutation: mutation}
+}
+
+// Delete returns a delete builder for ScormCourse.
+func (c *ScormCourseClient) Delete() *ScormCourseDelete {
+	mutation := newScormCourseMutation(c.config, OpDelete)
+	return &ScormCourseDelete{config: c.config, hooks: c.Hooks(), mutation: mutation}
+}
+
+// DeleteOne returns a builder for deleting the given entity.
+func (c *ScormCourseClient) DeleteOne(_m *ScormCourse) *ScormCourseDeleteOne {
+	return c.DeleteOneID(_m.ID)
+}
+
+// DeleteOneID returns a builder for deleting the given entity by its id.
+func (c *ScormCourseClient) DeleteOneID(id uuid.UUID) *ScormCourseDeleteOne {
+	builder := c.Delete().Where(scormcourse.ID(id))
+	builder.mutation.id = &id
+	builder.mutation.op = OpDeleteOne
+	return &ScormCourseDeleteOne{builder}
+}
+
+// Query returns a query builder for ScormCourse.
+func (c *ScormCourseClient) Query() *ScormCourseQuery {
+	return &ScormCourseQuery{
+		config: c.config,
+		ctx:    &QueryContext{Type: TypeScormCourse},
+		inters: c.Interceptors(),
+	}
+}
+
+// Get returns a ScormCourse entity by its id.
+func (c *ScormCourseClient) Get(ctx context.Context, id uuid.UUID) (*ScormCourse, error) {
+	return c.Query().Where(scormcourse.ID(id)).Only(ctx)
+}
+
+// GetX is like Get, but panics if an error occurs.
+func (c *ScormCourseClient) GetX(ctx context.Context, id uuid.UUID) *ScormCourse {
+	obj, err := c.Get(ctx, id)
+	if err != nil {
+		panic(err)
+	}
+	return obj
+}
+
+// QueryCourseProgress queries the course_progress edge of a ScormCourse.
+func (c *ScormCourseClient) QueryCourseProgress(_m *ScormCourse) *ScormProgressQuery {
+	query := (&ScormProgressClient{config: c.config}).Query()
+	query.path = func(context.Context) (fromV *sql.Selector, _ error) {
+		id := _m.ID
+		step := sqlgraph.NewStep(
+			sqlgraph.From(scormcourse.Table, scormcourse.FieldID, id),
+			sqlgraph.To(scormprogress.Table, scormprogress.FieldID),
+			sqlgraph.Edge(sqlgraph.O2M, false, scormcourse.CourseProgressTable, scormcourse.CourseProgressColumn),
+		)
+		fromV = sqlgraph.Neighbors(_m.driver.Dialect(), step)
+		return fromV, nil
+	}
+	return query
+}
+
+// Hooks returns the client hooks.
+func (c *ScormCourseClient) Hooks() []Hook {
+	return c.hooks.ScormCourse
+}
+
+// Interceptors returns the client interceptors.
+func (c *ScormCourseClient) Interceptors() []Interceptor {
+	return c.inters.ScormCourse
+}
+
+func (c *ScormCourseClient) mutate(ctx context.Context, m *ScormCourseMutation) (Value, error) {
+	switch m.Op() {
+	case OpCreate:
+		return (&ScormCourseCreate{config: c.config, hooks: c.Hooks(), mutation: m}).Save(ctx)
+	case OpUpdate:
+		return (&ScormCourseUpdate{config: c.config, hooks: c.Hooks(), mutation: m}).Save(ctx)
+	case OpUpdateOne:
+		return (&ScormCourseUpdateOne{config: c.config, hooks: c.Hooks(), mutation: m}).Save(ctx)
+	case OpDelete, OpDeleteOne:
+		return (&ScormCourseDelete{config: c.config, hooks: c.Hooks(), mutation: m}).Exec(ctx)
+	default:
+		return nil, fmt.Errorf("ent: unknown ScormCourse mutation op: %q", m.Op())
+	}
+}
+
+// ScormProgressClient is a client for the ScormProgress schema.
+type ScormProgressClient struct {
+	config
+}
+
+// NewScormProgressClient returns a client for the ScormProgress from the given config.
+func NewScormProgressClient(c config) *ScormProgressClient {
+	return &ScormProgressClient{config: c}
+}
+
+// Use adds a list of mutation hooks to the hooks stack.
+// A call to `Use(f, g, h)` equals to `scormprogress.Hooks(f(g(h())))`.
+func (c *ScormProgressClient) Use(hooks ...Hook) {
+	c.hooks.ScormProgress = append(c.hooks.ScormProgress, hooks...)
+}
+
+// Intercept adds a list of query interceptors to the interceptors stack.
+// A call to `Intercept(f, g, h)` equals to `scormprogress.Intercept(f(g(h())))`.
+func (c *ScormProgressClient) Intercept(interceptors ...Interceptor) {
+	c.inters.ScormProgress = append(c.inters.ScormProgress, interceptors...)
+}
+
+// Create returns a builder for creating a ScormProgress entity.
+func (c *ScormProgressClient) Create() *ScormProgressCreate {
+	mutation := newScormProgressMutation(c.config, OpCreate)
+	return &ScormProgressCreate{config: c.config, hooks: c.Hooks(), mutation: mutation}
+}
+
+// CreateBulk returns a builder for creating a bulk of ScormProgress entities.
+func (c *ScormProgressClient) CreateBulk(builders ...*ScormProgressCreate) *ScormProgressCreateBulk {
+	return &ScormProgressCreateBulk{config: c.config, builders: builders}
+}
+
+// MapCreateBulk creates a bulk creation builder from the given slice. For each item in the slice, the function creates
+// a builder and applies setFunc on it.
+func (c *ScormProgressClient) MapCreateBulk(slice any, setFunc func(*ScormProgressCreate, int)) *ScormProgressCreateBulk {
+	rv := reflect.ValueOf(slice)
+	if rv.Kind() != reflect.Slice {
+		return &ScormProgressCreateBulk{err: fmt.Errorf("calling to ScormProgressClient.MapCreateBulk with wrong type %T, need slice", slice)}
+	}
+	builders := make([]*ScormProgressCreate, rv.Len())
+	for i := 0; i < rv.Len(); i++ {
+		builders[i] = c.Create()
+		setFunc(builders[i], i)
+	}
+	return &ScormProgressCreateBulk{config: c.config, builders: builders}
+}
+
+// Update returns an update builder for ScormProgress.
+func (c *ScormProgressClient) Update() *ScormProgressUpdate {
+	mutation := newScormProgressMutation(c.config, OpUpdate)
+	return &ScormProgressUpdate{config: c.config, hooks: c.Hooks(), mutation: mutation}
+}
+
+// UpdateOne returns an update builder for the given entity.
+func (c *ScormProgressClient) UpdateOne(_m *ScormProgress) *ScormProgressUpdateOne {
+	mutation := newScormProgressMutation(c.config, OpUpdateOne, withScormProgress(_m))
+	return &ScormProgressUpdateOne{config: c.config, hooks: c.Hooks(), mutation: mutation}
+}
+
+// UpdateOneID returns an update builder for the given id.
+func (c *ScormProgressClient) UpdateOneID(id uuid.UUID) *ScormProgressUpdateOne {
+	mutation := newScormProgressMutation(c.config, OpUpdateOne, withScormProgressID(id))
+	return &ScormProgressUpdateOne{config: c.config, hooks: c.Hooks(), mutation: mutation}
+}
+
+// Delete returns a delete builder for ScormProgress.
+func (c *ScormProgressClient) Delete() *ScormProgressDelete {
+	mutation := newScormProgressMutation(c.config, OpDelete)
+	return &ScormProgressDelete{config: c.config, hooks: c.Hooks(), mutation: mutation}
+}
+
+// DeleteOne returns a builder for deleting the given entity.
+func (c *ScormProgressClient) DeleteOne(_m *ScormProgress) *ScormProgressDeleteOne {
+	return c.DeleteOneID(_m.ID)
+}
+
+// DeleteOneID returns a builder for deleting the given entity by its id.
+func (c *ScormProgressClient) DeleteOneID(id uuid.UUID) *ScormProgressDeleteOne {
+	builder := c.Delete().Where(scormprogress.ID(id))
+	builder.mutation.id = &id
+	builder.mutation.op = OpDeleteOne
+	return &ScormProgressDeleteOne{builder}
+}
+
+// Query returns a query builder for ScormProgress.
+func (c *ScormProgressClient) Query() *ScormProgressQuery {
+	return &ScormProgressQuery{
+		config: c.config,
+		ctx:    &QueryContext{Type: TypeScormProgress},
+		inters: c.Interceptors(),
+	}
+}
+
+// Get returns a ScormProgress entity by its id.
+func (c *ScormProgressClient) Get(ctx context.Context, id uuid.UUID) (*ScormProgress, error) {
+	return c.Query().Where(scormprogress.ID(id)).Only(ctx)
+}
+
+// GetX is like Get, but panics if an error occurs.
+func (c *ScormProgressClient) GetX(ctx context.Context, id uuid.UUID) *ScormProgress {
+	obj, err := c.Get(ctx, id)
+	if err != nil {
+		panic(err)
+	}
+	return obj
+}
+
+// QueryProgress queries the progress edge of a ScormProgress.
+func (c *ScormProgressClient) QueryProgress(_m *ScormProgress) *ScormCourseQuery {
+	query := (&ScormCourseClient{config: c.config}).Query()
+	query.path = func(context.Context) (fromV *sql.Selector, _ error) {
+		id := _m.ID
+		step := sqlgraph.NewStep(
+			sqlgraph.From(scormprogress.Table, scormprogress.FieldID, id),
+			sqlgraph.To(scormcourse.Table, scormcourse.FieldID),
+			sqlgraph.Edge(sqlgraph.M2O, true, scormprogress.ProgressTable, scormprogress.ProgressColumn),
+		)
+		fromV = sqlgraph.Neighbors(_m.driver.Dialect(), step)
+		return fromV, nil
+	}
+	return query
+}
+
+// Hooks returns the client hooks.
+func (c *ScormProgressClient) Hooks() []Hook {
+	return c.hooks.ScormProgress
+}
+
+// Interceptors returns the client interceptors.
+func (c *ScormProgressClient) Interceptors() []Interceptor {
+	return c.inters.ScormProgress
+}
+
+func (c *ScormProgressClient) mutate(ctx context.Context, m *ScormProgressMutation) (Value, error) {
+	switch m.Op() {
+	case OpCreate:
+		return (&ScormProgressCreate{config: c.config, hooks: c.Hooks(), mutation: m}).Save(ctx)
+	case OpUpdate:
+		return (&ScormProgressUpdate{config: c.config, hooks: c.Hooks(), mutation: m}).Save(ctx)
+	case OpUpdateOne:
+		return (&ScormProgressUpdateOne{config: c.config, hooks: c.Hooks(), mutation: m}).Save(ctx)
+	case OpDelete, OpDeleteOne:
+		return (&ScormProgressDelete{config: c.config, hooks: c.Hooks(), mutation: m}).Exec(ctx)
+	default:
+		return nil, fmt.Errorf("ent: unknown ScormProgress mutation op: %q", m.Op())
+	}
+}
+
 // SupplierClient is a client for the Supplier schema.
 type SupplierClient struct {
 	config
@@ -3480,13 +3796,14 @@ type (
 		Category, Certificate, Company, ContractSupplier, ContractSupplierHistory,
 		DzoOrganization, Employee, Event, EventParticipant, ExternalTrainingEvent,
 		Notification, Organization, Request, RequestDzoContract, RequestParticipant,
-		RequestTargetDzo, Supplier, TrainingEvent, TrainingParticipant, User []ent.Hook
+		RequestTargetDzo, ScormCourse, ScormProgress, Supplier, TrainingEvent,
+		TrainingParticipant, User []ent.Hook
 	}
 	inters struct {
 		Category, Certificate, Company, ContractSupplier, ContractSupplierHistory,
 		DzoOrganization, Employee, Event, EventParticipant, ExternalTrainingEvent,
 		Notification, Organization, Request, RequestDzoContract, RequestParticipant,
-		RequestTargetDzo, Supplier, TrainingEvent, TrainingParticipant,
-		User []ent.Interceptor
+		RequestTargetDzo, ScormCourse, ScormProgress, Supplier, TrainingEvent,
+		TrainingParticipant, User []ent.Interceptor
 	}
 )
