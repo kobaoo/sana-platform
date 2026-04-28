@@ -73,7 +73,7 @@ func GetCategoryByID(ctx context.Context, category_id string) (*GetCategoryRespo
 	if err != nil {
 		return nil, err
 	}
-	if err := requireRole(ad, authhandler.RoleHR, authhandler.RoleADM, authhandler.RoleSA); err != nil {
+	if err := requireRole(ad, authhandler.RoleHR, authhandler.RoleADM, authhandler.RoleSA, authhandler.RoleEMP); err != nil {
 		return nil, err
 	}
 
@@ -91,7 +91,7 @@ func GetCategoriesByIDs(ctx context.Context, req *GetCategoriesByIDsRequest) (*G
 	if err != nil {
 		return nil, err
 	}
-	if err := requireRole(ad, authhandler.RoleHR, authhandler.RoleADM, authhandler.RoleSA); err != nil {
+	if err := requireRole(ad, authhandler.RoleHR, authhandler.RoleADM, authhandler.RoleSA, authhandler.RoleEMP); err != nil {
 		return nil, err
 	}
 	if req == nil {
