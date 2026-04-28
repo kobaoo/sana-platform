@@ -57,7 +57,7 @@ build:
     - encore version
     - docker login -u "$CI_REGISTRY_USER" -p "$CI_REGISTRY_PASSWORD" "$CI_REGISTRY"
     - |
-      envsubst '${INFRA_BASE_URL}${INFRA_POSTGRES_HOST}${INFRA_POSTGRES_USER}${INFRA_S3_REGION}${INFRA_S3_ENDPOINT}' \
+      envsubst '${INFRA_BASE_URL}${INFRA_POSTGRES_HOST}${INFRA_POSTGRES_USER}${INFRA_S3_REGION}${INFRA_S3_ENDPOINT}${INFRA_S3_ACCESS_KEY_ID}${INFRA_S3_SECRET_KEY}' \
         < infra.config.json.tmpl > infra.config.json
   script:
     - echo "IMAGE_TAG=$IMAGE_TAG"
@@ -97,13 +97,11 @@ deploy:
         --from-literal=MAIL_USERNAME="$INFRA_MAIL_USERNAME" \
         --from-literal=MAIL_PASSWORD="$INFRA_MAIL_PASSWORD" \
         --from-literal=MAIL_FROM="$INFRA_MAIL_FROM" \
-        --from-literal=S3_ACCESS_KEY_ID="$INFRA_S3_ACCESS_KEY_ID" \
-        --from-literal=S3_SECRET_KEY="$INFRA_S3_SECRET_KEY" \
         --save-config \
         --dry-run=client -o yaml | kubectl apply -f -
   script:
     - echo "IMAGE_TAG=$IMAGE_TAG"
-    - envsubst < k8s/deployment.yaml | kubectl apply -f - -n sana-lms
+    - sed "s|\${IMAGE_TAG}|$IMAGE_TAG|g" k8s/deployment.yaml | kubectl apply -f - -n sana-lms
     - kubectl apply -f k8s/service.yaml -n sana-lms
     - kubectl apply -f k8s/ingress.yaml -n sana-lms
     - kubectl rollout status deployment/sana-lms-backend -n sana-lms --timeout=120s
