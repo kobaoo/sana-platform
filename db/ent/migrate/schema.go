@@ -196,6 +196,86 @@ var (
 			},
 		},
 	}
+	// EventsColumns holds the columns for the "events" table.
+	EventsColumns = []*schema.Column{
+		{Name: "id", Type: field.TypeUUID, Unique: true},
+		{Name: "title", Type: field.TypeString},
+		{Name: "description", Type: field.TypeString, Nullable: true},
+		{Name: "zoom_link", Type: field.TypeString},
+		{Name: "event_date", Type: field.TypeTime, SchemaType: map[string]string{"postgres": "timestamptz"}},
+		{Name: "max_participants", Type: field.TypeInt},
+		{Name: "materials_url", Type: field.TypeString, Nullable: true},
+		{Name: "status", Type: field.TypeEnum, Enums: []string{"ACTIVE", "COMPLETED", "CANCELLED"}, Default: "ACTIVE"},
+		{Name: "created_at", Type: field.TypeTime},
+		{Name: "updated_at", Type: field.TypeTime},
+		{Name: "client_id", Type: field.TypeUUID},
+		{Name: "host_id", Type: field.TypeUUID},
+	}
+	// EventsTable holds the schema information for the "events" table.
+	EventsTable = &schema.Table{
+		Name:       "events",
+		Columns:    EventsColumns,
+		PrimaryKey: []*schema.Column{EventsColumns[0]},
+		ForeignKeys: []*schema.ForeignKey{
+			{
+				Symbol:     "events_clients_events",
+				Columns:    []*schema.Column{EventsColumns[10]},
+				RefColumns: []*schema.Column{ClientsColumns[0]},
+				OnDelete:   schema.NoAction,
+			},
+			{
+				Symbol:     "events_users_hosted_events",
+				Columns:    []*schema.Column{EventsColumns[11]},
+				RefColumns: []*schema.Column{UsersColumns[0]},
+				OnDelete:   schema.NoAction,
+			},
+		},
+	}
+	// EventParticipantsColumns holds the columns for the "event_participants" table.
+	EventParticipantsColumns = []*schema.Column{
+		{Name: "id", Type: field.TypeUUID, Unique: true},
+		{Name: "joined_at", Type: field.TypeTime, Nullable: true, SchemaType: map[string]string{"postgres": "timestamptz"}},
+		{Name: "attendance_status", Type: field.TypeEnum, Enums: []string{"PENDING", "ATTENDED", "MISSED"}, Default: "PENDING"},
+		{Name: "reviewed_at", Type: field.TypeTime, Nullable: true, SchemaType: map[string]string{"postgres": "timestamptz"}},
+		{Name: "created_at", Type: field.TypeTime},
+		{Name: "updated_at", Type: field.TypeTime},
+		{Name: "employee_id", Type: field.TypeUUID},
+		{Name: "event_id", Type: field.TypeUUID},
+		{Name: "reviewed_by", Type: field.TypeUUID, Nullable: true},
+	}
+	// EventParticipantsTable holds the schema information for the "event_participants" table.
+	EventParticipantsTable = &schema.Table{
+		Name:       "event_participants",
+		Columns:    EventParticipantsColumns,
+		PrimaryKey: []*schema.Column{EventParticipantsColumns[0]},
+		ForeignKeys: []*schema.ForeignKey{
+			{
+				Symbol:     "event_participants_employees_event_participations",
+				Columns:    []*schema.Column{EventParticipantsColumns[6]},
+				RefColumns: []*schema.Column{EmployeesColumns[0]},
+				OnDelete:   schema.NoAction,
+			},
+			{
+				Symbol:     "event_participants_events_participants",
+				Columns:    []*schema.Column{EventParticipantsColumns[7]},
+				RefColumns: []*schema.Column{EventsColumns[0]},
+				OnDelete:   schema.NoAction,
+			},
+			{
+				Symbol:     "event_participants_users_reviewed_participations",
+				Columns:    []*schema.Column{EventParticipantsColumns[8]},
+				RefColumns: []*schema.Column{UsersColumns[0]},
+				OnDelete:   schema.SetNull,
+			},
+		},
+		Indexes: []*schema.Index{
+			{
+				Name:    "eventparticipant_event_id_employee_id",
+				Unique:  true,
+				Columns: []*schema.Column{EventParticipantsColumns[7], EventParticipantsColumns[6]},
+			},
+		},
+	}
 	// ExternalTrainingEventsColumns holds the columns for the "external_training_events" table.
 	ExternalTrainingEventsColumns = []*schema.Column{
 		{Name: "id", Type: field.TypeUUID},
@@ -625,6 +705,8 @@ var (
 		ContractSupplierHistoriesTable,
 		DzoOrganizationsTable,
 		EmployeesTable,
+		EventsTable,
+		EventParticipantsTable,
 		ExternalTrainingEventsTable,
 		NotificationsTable,
 		OrganizationsTable,
@@ -650,6 +732,11 @@ func init() {
 	EmployeesTable.Annotation = &entsql.Annotation{
 		Table: "employees",
 	}
+	EventsTable.ForeignKeys[0].RefTable = ClientsTable
+	EventsTable.ForeignKeys[1].RefTable = UsersTable
+	EventParticipantsTable.ForeignKeys[0].RefTable = EmployeesTable
+	EventParticipantsTable.ForeignKeys[1].RefTable = EventsTable
+	EventParticipantsTable.ForeignKeys[2].RefTable = UsersTable
 	ExternalTrainingEventsTable.ForeignKeys[0].RefTable = CategoriesTable
 	ExternalTrainingEventsTable.ForeignKeys[1].RefTable = ContractSuppliersTable
 	ExternalTrainingEventsTable.ForeignKeys[2].RefTable = SuppliersTable

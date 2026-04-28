@@ -9,6 +9,7 @@ import (
 	"time"
 
 	"encore.app/db/ent/company"
+	"encore.app/db/ent/event"
 	"encore.app/db/ent/user"
 	"entgo.io/ent/dialect/sql/sqlgraph"
 	"entgo.io/ent/schema/field"
@@ -125,6 +126,21 @@ func (_c *CompanyCreate) AddUsers(v ...*User) *CompanyCreate {
 		ids[i] = v[i].ID
 	}
 	return _c.AddUserIDs(ids...)
+}
+
+// AddEventIDs adds the "events" edge to the Event entity by IDs.
+func (_c *CompanyCreate) AddEventIDs(ids ...uuid.UUID) *CompanyCreate {
+	_c.mutation.AddEventIDs(ids...)
+	return _c
+}
+
+// AddEvents adds the "events" edges to the Event entity.
+func (_c *CompanyCreate) AddEvents(v ...*Event) *CompanyCreate {
+	ids := make([]uuid.UUID, len(v))
+	for i := range v {
+		ids[i] = v[i].ID
+	}
+	return _c.AddEventIDs(ids...)
 }
 
 // Mutation returns the CompanyMutation object of the builder.
@@ -270,6 +286,22 @@ func (_c *CompanyCreate) createSpec() (*Company, *sqlgraph.CreateSpec) {
 			Bidi:    false,
 			Target: &sqlgraph.EdgeTarget{
 				IDSpec: sqlgraph.NewFieldSpec(user.FieldID, field.TypeUUID),
+			},
+		}
+		for _, k := range nodes {
+			edge.Target.Nodes = append(edge.Target.Nodes, k)
+		}
+		_spec.Edges = append(_spec.Edges, edge)
+	}
+	if nodes := _c.mutation.EventsIDs(); len(nodes) > 0 {
+		edge := &sqlgraph.EdgeSpec{
+			Rel:     sqlgraph.O2M,
+			Inverse: false,
+			Table:   company.EventsTable,
+			Columns: []string{company.EventsColumn},
+			Bidi:    false,
+			Target: &sqlgraph.EdgeTarget{
+				IDSpec: sqlgraph.NewFieldSpec(event.FieldID, field.TypeUUID),
 			},
 		}
 		for _, k := range nodes {

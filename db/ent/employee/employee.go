@@ -41,6 +41,8 @@ const (
 	FieldIsDeleted = "is_deleted"
 	// EdgeDzo holds the string denoting the dzo edge name in mutations.
 	EdgeDzo = "dzo"
+	// EdgeEventParticipations holds the string denoting the event_participations edge name in mutations.
+	EdgeEventParticipations = "event_participations"
 	// Table holds the table name of the employee in the database.
 	Table = "employees"
 	// DzoTable is the table that holds the dzo relation/edge.
@@ -50,6 +52,13 @@ const (
 	DzoInverseTable = "dzo_organizations"
 	// DzoColumn is the table column denoting the dzo relation/edge.
 	DzoColumn = "dzo_id"
+	// EventParticipationsTable is the table that holds the event_participations relation/edge.
+	EventParticipationsTable = "event_participants"
+	// EventParticipationsInverseTable is the table name for the EventParticipant entity.
+	// It exists in this package in order to avoid circular dependency with the "eventparticipant" package.
+	EventParticipationsInverseTable = "event_participants"
+	// EventParticipationsColumn is the table column denoting the event_participations relation/edge.
+	EventParticipationsColumn = "employee_id"
 )
 
 // Columns holds all SQL columns for employee fields.
@@ -182,10 +191,31 @@ func ByDzoField(field string, opts ...sql.OrderTermOption) OrderOption {
 		sqlgraph.OrderByNeighborTerms(s, newDzoStep(), sql.OrderByField(field, opts...))
 	}
 }
+
+// ByEventParticipationsCount orders the results by event_participations count.
+func ByEventParticipationsCount(opts ...sql.OrderTermOption) OrderOption {
+	return func(s *sql.Selector) {
+		sqlgraph.OrderByNeighborsCount(s, newEventParticipationsStep(), opts...)
+	}
+}
+
+// ByEventParticipations orders the results by event_participations terms.
+func ByEventParticipations(term sql.OrderTerm, terms ...sql.OrderTerm) OrderOption {
+	return func(s *sql.Selector) {
+		sqlgraph.OrderByNeighborTerms(s, newEventParticipationsStep(), append([]sql.OrderTerm{term}, terms...)...)
+	}
+}
 func newDzoStep() *sqlgraph.Step {
 	return sqlgraph.NewStep(
 		sqlgraph.From(Table, FieldID),
 		sqlgraph.To(DzoInverseTable, FieldID),
 		sqlgraph.Edge(sqlgraph.M2O, true, DzoTable, DzoColumn),
+	)
+}
+func newEventParticipationsStep() *sqlgraph.Step {
+	return sqlgraph.NewStep(
+		sqlgraph.From(Table, FieldID),
+		sqlgraph.To(EventParticipationsInverseTable, FieldID),
+		sqlgraph.Edge(sqlgraph.O2M, false, EventParticipationsTable, EventParticipationsColumn),
 	)
 }
