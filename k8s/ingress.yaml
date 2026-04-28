@@ -11,7 +11,7 @@ spec:
   tls:
     - hosts:
         - api.sanaplatform.kz
-      secretName: sanaplatform-kz-tls
+      secretName: sanalms-kz-tls
   rules:
     - host: api.sanaplatform.kz
       http:

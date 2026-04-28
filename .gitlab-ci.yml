@@ -47,9 +47,11 @@ build:
   stage: build
   image: golang:1.26
   services:
-    - docker:27-dind
+    - name: docker:27-dind
+      command: ["--tls=false"]
   variables:
-    DOCKER_TLS_CERTDIR: "/certs"
+    DOCKER_TLS_CERTDIR: ""
+    DOCKER_HOST: tcp://localhost:2375
   before_script:
     - apt-get update -qq && apt-get install -y -qq docker.io curl git gettext-base
     - curl -L https://encore.dev/install.sh | bash
