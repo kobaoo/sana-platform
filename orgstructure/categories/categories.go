@@ -55,7 +55,7 @@ func ListCategories(ctx context.Context) (*ListCategoriesResponse, error) {
 	if err != nil {
 		return nil, err
 	}
-	if err := requireRole(ad, authhandler.RoleHR, authhandler.RoleADM, authhandler.RoleSA); err != nil {
+	if err := requireRole(ad, authhandler.RoleHR, authhandler.RoleADM, authhandler.RoleSA, authhandler.RoleEMP); err != nil {
 		return nil, err
 	}
 

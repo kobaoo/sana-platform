@@ -6,6 +6,7 @@
 package courses
 
 import (
+	"archive/zip"
 	"bytes"
 	"context"
 	"reflect"
@@ -52,6 +53,34 @@ func strPtr(s string) *string {
 
 func boolPtr(v bool) *bool {
 	return &v
+}
+
+func makeSCORMZip(t *testing.T, files map[string]string) []byte {
+	t.Helper()
+
+	var buf bytes.Buffer
+	writer := zip.NewWriter(&buf)
+	for name, body := range files {
+		fileWriter, err := writer.Create(name)
+		if err != nil {
+			t.Fatalf("create zip file %q: %v", name, err)
+		}
+		if _, err := fileWriter.Write([]byte(body)); err != nil {
+			t.Fatalf("write zip file %q: %v", name, err)
+		}
+	}
+	if err := writer.Close(); err != nil {
+		t.Fatalf("close zip: %v", err)
+	}
+
+	return buf.Bytes()
+}
+
+func makeValidSCORMZip(t *testing.T) []byte {
+	return makeSCORMZip(t, map[string]string{
+		"imsmanifest.xml": `<manifest><resources><resource identifier="__5mfgNOa3Y7l_course_id_RES" type="webcontent" href="index_lms.html" adlcp:scormtype="sco"/></resources></manifest>`,
+		"index_lms.html":  "<html><body>Course</body></html>",
+	})
 }
 
 func makeCreateCourseRequest() *CreateCourseRequest {
@@ -102,7 +131,7 @@ func requireErrCode(t *testing.T, err error, code errs.ErrCode) {
 func TestUploadSCORM_Success(t *testing.T) {
 	req := &UploadSCORMRequest{
 		FileName: "My Course Package.zip",
-		FileData: bytes.Repeat([]byte("zip-data"), 4),
+		FileData: makeValidSCORMZip(t),
 	}
 
 	resp, err := UploadSCORM(adminCtx(), req)
@@ -121,6 +150,19 @@ func TestUploadSCORM_Success(t *testing.T) {
 	}
 	if !resp.IsValid {
 		t.Error("expected upload to be valid")
+	}
+}
+
+func TestValidateSCORM_RequiresSCOWebContentResource(t *testing.T) {
+	_, err := validateSCORM(makeSCORMZip(t, map[string]string{
+		"imsmanifest.xml": `<manifest><resources><resource href="index_lms.html"/></resources></manifest>`,
+		"index_lms.html":  "<html><body>Course</body></html>",
+	}))
+	if err == nil {
+		t.Fatal("expected error, got nil")
+	}
+	if err.Error() != "invalid SCORM: entry point not found" {
+		t.Fatalf("unexpected error: %v", err)
 	}
 }
 

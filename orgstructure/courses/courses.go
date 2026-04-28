@@ -1,8 +1,13 @@
 package courses
 
 import (
+	"archive/zip"
+	"bytes"
 	"context"
+	"encoding/xml"
 	"fmt"
+	"io"
+	"path"
 	"path/filepath"
 	"strings"
 	"time"
@@ -58,7 +63,19 @@ func UploadSCORM(ctx context.Context, req *UploadSCORMRequest) (*UploadSCORMResp
 	if err := validateUploadSCORMRequest(req.FileName, req.FileData); err != nil {
 		return nil, err
 	}
-
+	entryPoint, err := validateSCORM(req.FileData)
+	if err != nil {
+		return nil, errs.B().
+			Code(errs.InvalidArgument).
+			Msg(err.Error()).
+			Err()
+	}
+	if strings.TrimSpace(entryPoint) == "" {
+		return nil, errs.B().
+			Code(errs.InvalidArgument).
+			Msg("invalid SCORM: entry point not found").
+			Err()
+	}
 	scormURL, err := uploadSCORMToStorage(ctx, req.FileName, req.FileData)
 	if err != nil {
 		return nil, err
@@ -257,7 +274,92 @@ func validateUploadSCORMRequest(fileName string, fileData []byte) error {
 
 	return nil
 }
+func validateSCORM(fileData []byte) (string, error) {
+	reader, err := zip.NewReader(bytes.NewReader(fileData), int64(len(fileData)))
+	if err != nil {
+		return "", fmt.Errorf("invalid SCORM: invalid zip archive")
+	}
 
+	files := make(map[string]bool, len(reader.File))
+	var manifestFile *zip.File
+	for _, file := range reader.File {
+		normalizedName := normalizeSCORMPath(file.Name)
+		files[normalizedName] = true
+		if strings.EqualFold(path.Base(normalizedName), "imsmanifest.xml") {
+			manifestFile = file
+		}
+	}
+	if manifestFile == nil {
+		return "", fmt.Errorf("invalid SCORM: imsmanifest.xml not found")
+	}
+
+	href, err := readSCORMEntryPoint(manifestFile)
+	if err != nil {
+		return "", err
+	}
+
+	entryPoint := normalizeSCORMPath(href)
+	manifestDir := path.Dir(normalizeSCORMPath(manifestFile.Name))
+	if manifestDir != "." && manifestDir != "/" {
+		entryPoint = normalizeSCORMPath(path.Join(manifestDir, entryPoint))
+	}
+	if !files[entryPoint] {
+		return "", fmt.Errorf("invalid SCORM: entry point not found")
+	}
+
+	return entryPoint, nil
+}
+func readSCORMEntryPoint(manifestFile *zip.File) (string, error) {
+	rc, err := manifestFile.Open()
+	if err != nil {
+		return "", fmt.Errorf("invalid SCORM: failed to read imsmanifest.xml")
+	}
+	defer rc.Close()
+
+	decoder := xml.NewDecoder(rc)
+	for {
+		token, err := decoder.Token()
+		if err == io.EOF {
+			return "", fmt.Errorf("invalid SCORM: entry point not found")
+		}
+		if err != nil {
+			return "", fmt.Errorf("invalid SCORM: failed to parse imsmanifest.xml")
+		}
+
+		start, ok := token.(xml.StartElement)
+		if !ok || start.Name.Local != "resource" {
+			continue
+		}
+		var href string
+		var isWebContent bool
+		var isSCO bool
+		for _, attr := range start.Attr {
+			value := strings.TrimSpace(attr.Value)
+			switch attr.Name.Local {
+			case "href":
+				href = value
+			case "type":
+				isWebContent = strings.EqualFold(value, "webcontent")
+			case "scormtype":
+				isSCO = strings.EqualFold(value, "sco")
+			}
+		}
+		if href != "" && isWebContent && isSCO {
+			return href, nil
+		}
+	}
+}
+func normalizeSCORMPath(p string) string {
+	p = strings.ReplaceAll(strings.TrimSpace(p), "\\", "/")
+	p = strings.TrimLeft(p, "/")
+	for strings.HasPrefix(p, "./") {
+		p = strings.TrimPrefix(p, "./")
+	}
+	if p == "" {
+		return ""
+	}
+	return path.Clean(p)
+}
 func validateUploadCourseImageRequest(fileName string, fileData []byte) error {
 	if strings.TrimSpace(fileName) == "" {
 		return errs.B().
