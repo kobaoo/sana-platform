@@ -15,7 +15,7 @@ test:
   variables:
     DOCKER_TLS_CERTDIR: "/certs"
   before_script:
-    - apk add --no-cache docker-cli curl git
+    - apk add --no-cache docker-cli curl git bash
     - curl -L https://encore.dev/install.sh | bash
     - export PATH="$HOME/.encore/bin:$PATH"
   script:
@@ -54,7 +54,7 @@ build:
   variables:
     DOCKER_TLS_CERTDIR: "/certs"
   before_script:
-    - apk add --no-cache docker-cli curl git gettext
+    - apk add --no-cache docker-cli curl git bash gettext
     - curl -L https://encore.dev/install.sh | bash
     - export PATH="$HOME/.encore/bin:$PATH"
     - encore version
