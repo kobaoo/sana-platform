@@ -40,9 +40,11 @@ type Company struct {
 type CompanyEdges struct {
 	// Users holds the value of the users edge.
 	Users []*User `json:"users,omitempty"`
+	// Events holds the value of the events edge.
+	Events []*Event `json:"events,omitempty"`
 	// loadedTypes holds the information for reporting if a
 	// type was loaded (or requested) in eager-loading or not.
-	loadedTypes [1]bool
+	loadedTypes [2]bool
 }
 
 // UsersOrErr returns the Users value or an error if the edge
@@ -52,6 +54,15 @@ func (e CompanyEdges) UsersOrErr() ([]*User, error) {
 		return e.Users, nil
 	}
 	return nil, &NotLoadedError{edge: "users"}
+}
+
+// EventsOrErr returns the Events value or an error if the edge
+// was not loaded in eager-loading.
+func (e CompanyEdges) EventsOrErr() ([]*Event, error) {
+	if e.loadedTypes[1] {
+		return e.Events, nil
+	}
+	return nil, &NotLoadedError{edge: "events"}
 }
 
 // scanValues returns the types for scanning values from sql.Rows.
@@ -145,6 +156,11 @@ func (_m *Company) Value(name string) (ent.Value, error) {
 // QueryUsers queries the "users" edge of the Company entity.
 func (_m *Company) QueryUsers() *UserQuery {
 	return NewCompanyClient(_m.config).QueryUsers(_m)
+}
+
+// QueryEvents queries the "events" edge of the Company entity.
+func (_m *Company) QueryEvents() *EventQuery {
+	return NewCompanyClient(_m.config).QueryEvents(_m)
 }
 
 // Update returns a builder for updating this Company.

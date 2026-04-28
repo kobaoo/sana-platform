@@ -10,6 +10,7 @@ import (
 
 	"encore.app/db/ent/dzoorganization"
 	"encore.app/db/ent/employee"
+	"encore.app/db/ent/eventparticipant"
 	"entgo.io/ent/dialect/sql/sqlgraph"
 	"entgo.io/ent/schema/field"
 	"github.com/google/uuid"
@@ -189,6 +190,21 @@ func (_c *EmployeeCreate) SetNillableID(v *uuid.UUID) *EmployeeCreate {
 // SetDzo sets the "dzo" edge to the DzoOrganization entity.
 func (_c *EmployeeCreate) SetDzo(v *DzoOrganization) *EmployeeCreate {
 	return _c.SetDzoID(v.ID)
+}
+
+// AddEventParticipationIDs adds the "event_participations" edge to the EventParticipant entity by IDs.
+func (_c *EmployeeCreate) AddEventParticipationIDs(ids ...uuid.UUID) *EmployeeCreate {
+	_c.mutation.AddEventParticipationIDs(ids...)
+	return _c
+}
+
+// AddEventParticipations adds the "event_participations" edges to the EventParticipant entity.
+func (_c *EmployeeCreate) AddEventParticipations(v ...*EventParticipant) *EmployeeCreate {
+	ids := make([]uuid.UUID, len(v))
+	for i := range v {
+		ids[i] = v[i].ID
+	}
+	return _c.AddEventParticipationIDs(ids...)
 }
 
 // Mutation returns the EmployeeMutation object of the builder.
@@ -396,6 +412,22 @@ func (_c *EmployeeCreate) createSpec() (*Employee, *sqlgraph.CreateSpec) {
 			edge.Target.Nodes = append(edge.Target.Nodes, k)
 		}
 		_node.DzoID = nodes[0]
+		_spec.Edges = append(_spec.Edges, edge)
+	}
+	if nodes := _c.mutation.EventParticipationsIDs(); len(nodes) > 0 {
+		edge := &sqlgraph.EdgeSpec{
+			Rel:     sqlgraph.O2M,
+			Inverse: false,
+			Table:   employee.EventParticipationsTable,
+			Columns: []string{employee.EventParticipationsColumn},
+			Bidi:    false,
+			Target: &sqlgraph.EdgeTarget{
+				IDSpec: sqlgraph.NewFieldSpec(eventparticipant.FieldID, field.TypeUUID),
+			},
+		}
+		for _, k := range nodes {
+			edge.Target.Nodes = append(edge.Target.Nodes, k)
+		}
 		_spec.Edges = append(_spec.Edges, edge)
 	}
 	return _node, _spec

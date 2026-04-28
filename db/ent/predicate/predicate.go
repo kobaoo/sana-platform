@@ -27,6 +27,12 @@ type DzoOrganization func(*sql.Selector)
 // Employee is the predicate function for employee builders.
 type Employee func(*sql.Selector)
 
+// Event is the predicate function for event builders.
+type Event func(*sql.Selector)
+
+// EventParticipant is the predicate function for eventparticipant builders.
+type EventParticipant func(*sql.Selector)
+
 // ExternalTrainingEvent is the predicate function for externaltrainingevent builders.
 type ExternalTrainingEvent func(*sql.Selector)
 

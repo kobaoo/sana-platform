@@ -9,6 +9,7 @@ import (
 	"math"
 
 	"encore.app/db/ent/company"
+	"encore.app/db/ent/event"
 	"encore.app/db/ent/predicate"
 	"encore.app/db/ent/user"
 	"entgo.io/ent"
@@ -26,6 +27,7 @@ type CompanyQuery struct {
 	inters     []Interceptor
 	predicates []predicate.Company
 	withUsers  *UserQuery
+	withEvents *EventQuery
 	// intermediate query (i.e. traversal path).
 	sql  *sql.Selector
 	path func(context.Context) (*sql.Selector, error)
@@ -77,6 +79,28 @@ func (_q *CompanyQuery) QueryUsers() *UserQuery {
 			sqlgraph.From(company.Table, company.FieldID, selector),
 			sqlgraph.To(user.Table, user.FieldID),
 			sqlgraph.Edge(sqlgraph.O2M, false, company.UsersTable, company.UsersColumn),
+		)
+		fromU = sqlgraph.SetNeighbors(_q.driver.Dialect(), step)
+		return fromU, nil
+	}
+	return query
+}
+
+// QueryEvents chains the current query on the "events" edge.
+func (_q *CompanyQuery) QueryEvents() *EventQuery {
+	query := (&EventClient{config: _q.config}).Query()
+	query.path = func(ctx context.Context) (fromU *sql.Selector, err error) {
+		if err := _q.prepareQuery(ctx); err != nil {
+			return nil, err
+		}
+		selector := _q.sqlQuery(ctx)
+		if err := selector.Err(); err != nil {
+			return nil, err
+		}
+		step := sqlgraph.NewStep(
+			sqlgraph.From(company.Table, company.FieldID, selector),
+			sqlgraph.To(event.Table, event.FieldID),
+			sqlgraph.Edge(sqlgraph.O2M, false, company.EventsTable, company.EventsColumn),
 		)
 		fromU = sqlgraph.SetNeighbors(_q.driver.Dialect(), step)
 		return fromU, nil
@@ -277,6 +301,7 @@ func (_q *CompanyQuery) Clone() *CompanyQuery {
 		inters:     append([]Interceptor{}, _q.inters...),
 		predicates: append([]predicate.Company{}, _q.predicates...),
 		withUsers:  _q.withUsers.Clone(),
+		withEvents: _q.withEvents.Clone(),
 		// clone intermediate query.
 		sql:  _q.sql.Clone(),
 		path: _q.path,
@@ -291,6 +316,17 @@ func (_q *CompanyQuery) WithUsers(opts ...func(*UserQuery)) *CompanyQuery {
 		opt(query)
 	}
 	_q.withUsers = query
+	return _q
+}
+
+// WithEvents tells the query-builder to eager-load the nodes that are connected to
+// the "events" edge. The optional arguments are used to configure the query builder of the edge.
+func (_q *CompanyQuery) WithEvents(opts ...func(*EventQuery)) *CompanyQuery {
+	query := (&EventClient{config: _q.config}).Query()
+	for _, opt := range opts {
+		opt(query)
+	}
+	_q.withEvents = query
 	return _q
 }
 
@@ -372,8 +408,9 @@ func (_q *CompanyQuery) sqlAll(ctx context.Context, hooks ...queryHook) ([]*Comp
 	var (
 		nodes       = []*Company{}
 		_spec       = _q.querySpec()
-		loadedTypes = [1]bool{
+		loadedTypes = [2]bool{
 			_q.withUsers != nil,
+			_q.withEvents != nil,
 		}
 	)
 	_spec.ScanValues = func(columns []string) ([]any, error) {
@@ -401,6 +438,13 @@ func (_q *CompanyQuery) sqlAll(ctx context.Context, hooks ...queryHook) ([]*Comp
 			return nil, err
 		}
 	}
+	if query := _q.withEvents; query != nil {
+		if err := _q.loadEvents(ctx, query, nodes,
+			func(n *Company) { n.Edges.Events = []*Event{} },
+			func(n *Company, e *Event) { n.Edges.Events = append(n.Edges.Events, e) }); err != nil {
+			return nil, err
+		}
+	}
 	return nodes, nil
 }
 
@@ -419,6 +463,36 @@ func (_q *CompanyQuery) loadUsers(ctx context.Context, query *UserQuery, nodes [
 	}
 	query.Where(predicate.User(func(s *sql.Selector) {
 		s.Where(sql.InValues(s.C(company.UsersColumn), fks...))
+	}))
+	neighbors, err := query.All(ctx)
+	if err != nil {
+		return err
+	}
+	for _, n := range neighbors {
+		fk := n.ClientID
+		node, ok := nodeids[fk]
+		if !ok {
+			return fmt.Errorf(`unexpected referenced foreign-key "client_id" returned %v for node %v`, fk, n.ID)
+		}
+		assign(node, n)
+	}
+	return nil
+}
+func (_q *CompanyQuery) loadEvents(ctx context.Context, query *EventQuery, nodes []*Company, init func(*Company), assign func(*Company, *Event)) error {
+	fks := make([]driver.Value, 0, len(nodes))
+	nodeids := make(map[uuid.UUID]*Company)
+	for i := range nodes {
+		fks = append(fks, nodes[i].ID)
+		nodeids[nodes[i].ID] = nodes[i]
+		if init != nil {
+			init(nodes[i])
+		}
+	}
+	if len(query.ctx.Fields) > 0 {
+		query.ctx.AppendFieldOnce(event.FieldClientID)
+	}
+	query.Where(predicate.Event(func(s *sql.Selector) {
+		s.Where(sql.InValues(s.C(company.EventsColumn), fks...))
 	}))
 	neighbors, err := query.All(ctx)
 	if err != nil {
