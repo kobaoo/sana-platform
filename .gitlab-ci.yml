@@ -9,11 +9,7 @@ variables:
 
 test:
   stage: test
-  image: golang:1.26
-  before_script:
-    - apt-get update -qq && apt-get install -y -qq curl git
-    - curl -L https://encore.dev/install.sh | bash
-    - export PATH="$HOME/.encore/bin:$PATH"
+  image: encoredev/encore:1.52.1
   script:
     - encore version
     - go mod download
@@ -45,16 +41,13 @@ test:
 
 build:
   stage: build
-  image: golang:1.26
+  image: encoredev/encore:1.52.1
   before_script:
-    - apt-get update -qq && apt-get install -y -qq curl git gettext-base
-    - curl -L https://encore.dev/install.sh | bash
-    - export PATH="$HOME/.encore/bin:$PATH"
-    - encore version
+    - apt-get update -qq && apt-get install -y -qq gettext-base
     - curl -sSL https://github.com/google/go-containerregistry/releases/latest/download/go-containerregistry_Linux_x86_64.tar.gz | tar -xz -C /usr/local/bin crane
     - crane auth login "$CI_REGISTRY" -u "$CI_REGISTRY_USER" -p "$CI_REGISTRY_PASSWORD"
     - |
-      envsubst '${INFRA_BASE_URL}${INFRA_POSTGRES_HOST}${INFRA_POSTGRES_USER}${INFRA_S3_REGION}${INFRA_S3_ENDPOINT}${INFRA_S3_ACCESS_KEY_ID}${INFRA_S3_SECRET_KEY}' \
+      envsubst '${INFRA_BASE_URL}${INFRA_POSTGRES_HOST}${INFRA_POSTGRES_USER}${INFRA_S3_REGION}${INFRA_S3_ENDPOINT}${INFRA_S3_ACCESS_KEY_ID}${INFRA_S3_SECRET_KEY}${INFRA_S3_PUBLIC_BASE_URL}' \
         < infra.config.json.tmpl > infra.config.json
   script:
     - echo "IMAGE_TAG=$IMAGE_TAG"
