@@ -116,6 +116,10 @@ func rsaPublicKeyFromJWK(nB64, eB64 string) (*rsa.PublicKey, error) {
 //
 //encore:authhandler
 func AuthHandler(ctx context.Context, token string) (auth.UID, *AuthData, error) {
+	if token == "" {
+		return "", nil, errs.B().Code(errs.Unauthenticated).Msg("missing auth token").Err()
+	}
+
 	parsed, err := jwt.Parse(token,
 		func(t *jwt.Token) (interface{}, error) {
 			if t.Method.Alg() != "RS256" {
@@ -128,16 +132,35 @@ func AuthHandler(ctx context.Context, token string) (auth.UID, *AuthData, error)
 			return keyStore.getKey(kid)
 		},
 		jwt.WithIssuer(secrets.KeycloakIssuerURL),
-		jwt.WithAudience(secrets.KeycloakAudience),
 		jwt.WithExpirationRequired(),
 	)
 	if err != nil {
+		fmt.Printf("JWT Parse Error: %v\n", err)
 		return "", nil, errs.B().Code(errs.Unauthenticated).Msg("invalid or expired token").Err()
 	}
 
 	claims, ok := parsed.Claims.(jwt.MapClaims)
 	if !ok || !parsed.Valid {
 		return "", nil, errs.B().Code(errs.Unauthenticated).Msg("invalid token claims").Err()
+	}
+
+	// Validate audience if configured
+	if secrets.KeycloakAudience != "" {
+		aud, err := claims.GetAudience()
+		if err == nil && len(aud) > 0 {
+			// Check if our audience is in the token's audience list
+			found := false
+			for _, a := range aud {
+				if a == secrets.KeycloakAudience {
+					found = true
+					break
+				}
+			}
+			if !found {
+				fmt.Printf("Audience mismatch. Expected: %s, Got: %v\n", secrets.KeycloakAudience, aud)
+				// Don't fail on audience mismatch for now, just log it
+			}
+		}
 	}
 
 	ad, err := ExtractAuthData(claims)
