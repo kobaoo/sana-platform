@@ -430,6 +430,47 @@ func TestListHRRequests_ReturnsOnlyAssigned(t *testing.T) {
 	}
 }
 
+func TestListHRRequests_IncludesOwnMainRequests(t *testing.T) {
+	fx := newFixture(t)
+
+	deadline := time.Now().Add(48 * time.Hour).UTC().Format(time.RFC3339)
+
+	created, err := CreateHRRequest(
+		authCtxFor(fx.hrOneKC, authhandler.RoleHR, &fx.dzoOneID),
+		&CreateHRRequestRequest{
+			Title:       "HR visible request",
+			EmployeeIDs: []string{fx.empOneID.String()},
+			DeadlineAt:  &deadline,
+		},
+	)
+	if err != nil {
+		t.Fatalf("create hr request: %v", err)
+	}
+
+	resp, err := ListHRRequests(authCtxFor(fx.hrOneKC, authhandler.RoleHR, &fx.dzoOneID))
+	if err != nil {
+		t.Fatalf("list hr requests: %v", err)
+	}
+
+	found := false
+	for _, item := range resp.Items {
+		if item.ID != created.Detail.Request.ID {
+			continue
+		}
+		found = true
+		if item.RequestType != RequestTypeMain {
+			t.Fatalf("expected MAIN request type, got %s", item.RequestType)
+		}
+		if item.EntityType != "HR_REQUEST" {
+			t.Fatalf("expected HR_REQUEST entity type, got %s", item.EntityType)
+		}
+	}
+
+	if !found {
+		t.Fatal("expected HR list to include own main request")
+	}
+}
+
 func TestApproveAndCancelSubrequests_UpdateParentProgress(t *testing.T) {
 	fx := newFixture(t)
 

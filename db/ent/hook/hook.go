@@ -93,6 +93,30 @@ func (f EmployeeFunc) Mutate(ctx context.Context, m ent.Mutation) (ent.Value, er
 	return nil, fmt.Errorf("unexpected mutation type %T. expect *ent.EmployeeMutation", m)
 }
 
+// The EventFunc type is an adapter to allow the use of ordinary
+// function as Event mutator.
+type EventFunc func(context.Context, *ent.EventMutation) (ent.Value, error)
+
+// Mutate calls f(ctx, m).
+func (f EventFunc) Mutate(ctx context.Context, m ent.Mutation) (ent.Value, error) {
+	if mv, ok := m.(*ent.EventMutation); ok {
+		return f(ctx, mv)
+	}
+	return nil, fmt.Errorf("unexpected mutation type %T. expect *ent.EventMutation", m)
+}
+
+// The EventParticipantFunc type is an adapter to allow the use of ordinary
+// function as EventParticipant mutator.
+type EventParticipantFunc func(context.Context, *ent.EventParticipantMutation) (ent.Value, error)
+
+// Mutate calls f(ctx, m).
+func (f EventParticipantFunc) Mutate(ctx context.Context, m ent.Mutation) (ent.Value, error) {
+	if mv, ok := m.(*ent.EventParticipantMutation); ok {
+		return f(ctx, mv)
+	}
+	return nil, fmt.Errorf("unexpected mutation type %T. expect *ent.EventParticipantMutation", m)
+}
+
 // The ExternalTrainingEventFunc type is an adapter to allow the use of ordinary
 // function as ExternalTrainingEvent mutator.
 type ExternalTrainingEventFunc func(context.Context, *ent.ExternalTrainingEventMutation) (ent.Value, error)
@@ -175,6 +199,30 @@ func (f RequestTargetDzoFunc) Mutate(ctx context.Context, m ent.Mutation) (ent.V
 		return f(ctx, mv)
 	}
 	return nil, fmt.Errorf("unexpected mutation type %T. expect *ent.RequestTargetDzoMutation", m)
+}
+
+// The ScormCourseFunc type is an adapter to allow the use of ordinary
+// function as ScormCourse mutator.
+type ScormCourseFunc func(context.Context, *ent.ScormCourseMutation) (ent.Value, error)
+
+// Mutate calls f(ctx, m).
+func (f ScormCourseFunc) Mutate(ctx context.Context, m ent.Mutation) (ent.Value, error) {
+	if mv, ok := m.(*ent.ScormCourseMutation); ok {
+		return f(ctx, mv)
+	}
+	return nil, fmt.Errorf("unexpected mutation type %T. expect *ent.ScormCourseMutation", m)
+}
+
+// The ScormProgressFunc type is an adapter to allow the use of ordinary
+// function as ScormProgress mutator.
+type ScormProgressFunc func(context.Context, *ent.ScormProgressMutation) (ent.Value, error)
+
+// Mutate calls f(ctx, m).
+func (f ScormProgressFunc) Mutate(ctx context.Context, m ent.Mutation) (ent.Value, error) {
+	if mv, ok := m.(*ent.ScormProgressMutation); ok {
+		return f(ctx, mv)
+	}
+	return nil, fmt.Errorf("unexpected mutation type %T. expect *ent.ScormProgressMutation", m)
 }
 
 // The SupplierFunc type is an adapter to allow the use of ordinary

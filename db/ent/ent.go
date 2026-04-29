@@ -16,6 +16,8 @@ import (
 	"encore.app/db/ent/contractsupplierhistory"
 	"encore.app/db/ent/dzoorganization"
 	"encore.app/db/ent/employee"
+	"encore.app/db/ent/event"
+	"encore.app/db/ent/eventparticipant"
 	"encore.app/db/ent/externaltrainingevent"
 	"encore.app/db/ent/notification"
 	"encore.app/db/ent/organization"
@@ -23,6 +25,8 @@ import (
 	"encore.app/db/ent/requestdzocontract"
 	"encore.app/db/ent/requestparticipant"
 	"encore.app/db/ent/requesttargetdzo"
+	"encore.app/db/ent/scormcourse"
+	"encore.app/db/ent/scormprogress"
 	"encore.app/db/ent/supplier"
 	"encore.app/db/ent/trainingevent"
 	"encore.app/db/ent/trainingparticipant"
@@ -97,6 +101,8 @@ func checkColumn(t, c string) error {
 			contractsupplierhistory.Table: contractsupplierhistory.ValidColumn,
 			dzoorganization.Table:         dzoorganization.ValidColumn,
 			employee.Table:                employee.ValidColumn,
+			event.Table:                   event.ValidColumn,
+			eventparticipant.Table:        eventparticipant.ValidColumn,
 			externaltrainingevent.Table:   externaltrainingevent.ValidColumn,
 			notification.Table:            notification.ValidColumn,
 			organization.Table:            organization.ValidColumn,
@@ -104,6 +110,8 @@ func checkColumn(t, c string) error {
 			requestdzocontract.Table:      requestdzocontract.ValidColumn,
 			requestparticipant.Table:      requestparticipant.ValidColumn,
 			requesttargetdzo.Table:        requesttargetdzo.ValidColumn,
+			scormcourse.Table:             scormcourse.ValidColumn,
+			scormprogress.Table:           scormprogress.ValidColumn,
 			supplier.Table:                supplier.ValidColumn,
 			trainingevent.Table:           trainingevent.ValidColumn,
 			trainingparticipant.Table:     trainingparticipant.ValidColumn,

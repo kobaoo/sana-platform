@@ -87,5 +87,6 @@ func (Employee) Edges() []ent.Edge {
 			Field("dzo_id").
 			Required().
 			Unique(),
+		edge.To("event_participations", EventParticipant.Type),
 	}
 }

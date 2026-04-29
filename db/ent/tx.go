@@ -26,6 +26,10 @@ type Tx struct {
 	DzoOrganization *DzoOrganizationClient
 	// Employee is the client for interacting with the Employee builders.
 	Employee *EmployeeClient
+	// Event is the client for interacting with the Event builders.
+	Event *EventClient
+	// EventParticipant is the client for interacting with the EventParticipant builders.
+	EventParticipant *EventParticipantClient
 	// ExternalTrainingEvent is the client for interacting with the ExternalTrainingEvent builders.
 	ExternalTrainingEvent *ExternalTrainingEventClient
 	// Notification is the client for interacting with the Notification builders.
@@ -40,6 +44,10 @@ type Tx struct {
 	RequestParticipant *RequestParticipantClient
 	// RequestTargetDzo is the client for interacting with the RequestTargetDzo builders.
 	RequestTargetDzo *RequestTargetDzoClient
+	// ScormCourse is the client for interacting with the ScormCourse builders.
+	ScormCourse *ScormCourseClient
+	// ScormProgress is the client for interacting with the ScormProgress builders.
+	ScormProgress *ScormProgressClient
 	// Supplier is the client for interacting with the Supplier builders.
 	Supplier *SupplierClient
 	// TrainingEvent is the client for interacting with the TrainingEvent builders.
@@ -186,6 +194,8 @@ func (tx *Tx) init() {
 	tx.ContractSupplierHistory = NewContractSupplierHistoryClient(tx.config)
 	tx.DzoOrganization = NewDzoOrganizationClient(tx.config)
 	tx.Employee = NewEmployeeClient(tx.config)
+	tx.Event = NewEventClient(tx.config)
+	tx.EventParticipant = NewEventParticipantClient(tx.config)
 	tx.ExternalTrainingEvent = NewExternalTrainingEventClient(tx.config)
 	tx.Notification = NewNotificationClient(tx.config)
 	tx.Organization = NewOrganizationClient(tx.config)
@@ -193,6 +203,8 @@ func (tx *Tx) init() {
 	tx.RequestDzoContract = NewRequestDzoContractClient(tx.config)
 	tx.RequestParticipant = NewRequestParticipantClient(tx.config)
 	tx.RequestTargetDzo = NewRequestTargetDzoClient(tx.config)
+	tx.ScormCourse = NewScormCourseClient(tx.config)
+	tx.ScormProgress = NewScormProgressClient(tx.config)
 	tx.Supplier = NewSupplierClient(tx.config)
 	tx.TrainingEvent = NewTrainingEventClient(tx.config)
 	tx.TrainingParticipant = NewTrainingParticipantClient(tx.config)

@@ -12,6 +12,8 @@ import (
 	"encore.app/db/ent/contractsupplierhistory"
 	"encore.app/db/ent/dzoorganization"
 	"encore.app/db/ent/employee"
+	"encore.app/db/ent/event"
+	"encore.app/db/ent/eventparticipant"
 	"encore.app/db/ent/externaltrainingevent"
 	"encore.app/db/ent/notification"
 	"encore.app/db/ent/organization"
@@ -20,6 +22,8 @@ import (
 	"encore.app/db/ent/requestparticipant"
 	"encore.app/db/ent/requesttargetdzo"
 	"encore.app/db/ent/schema"
+	"encore.app/db/ent/scormcourse"
+	"encore.app/db/ent/scormprogress"
 	"encore.app/db/ent/supplier"
 	"encore.app/db/ent/trainingevent"
 	"encore.app/db/ent/trainingparticipant"
@@ -341,6 +345,50 @@ func init() {
 	employeeDescID := employeeFields[0].Descriptor()
 	// employee.DefaultID holds the default value on creation for the id field.
 	employee.DefaultID = employeeDescID.Default.(func() uuid.UUID)
+	eventFields := schema.Event{}.Fields()
+	_ = eventFields
+	// eventDescTitle is the schema descriptor for title field.
+	eventDescTitle := eventFields[3].Descriptor()
+	// event.TitleValidator is a validator for the "title" field. It is called by the builders before save.
+	event.TitleValidator = eventDescTitle.Validators[0].(func(string) error)
+	// eventDescZoomLink is the schema descriptor for zoom_link field.
+	eventDescZoomLink := eventFields[5].Descriptor()
+	// event.ZoomLinkValidator is a validator for the "zoom_link" field. It is called by the builders before save.
+	event.ZoomLinkValidator = eventDescZoomLink.Validators[0].(func(string) error)
+	// eventDescMaxParticipants is the schema descriptor for max_participants field.
+	eventDescMaxParticipants := eventFields[7].Descriptor()
+	// event.MaxParticipantsValidator is a validator for the "max_participants" field. It is called by the builders before save.
+	event.MaxParticipantsValidator = eventDescMaxParticipants.Validators[0].(func(int) error)
+	// eventDescCreatedAt is the schema descriptor for created_at field.
+	eventDescCreatedAt := eventFields[10].Descriptor()
+	// event.DefaultCreatedAt holds the default value on creation for the created_at field.
+	event.DefaultCreatedAt = eventDescCreatedAt.Default.(func() time.Time)
+	// eventDescUpdatedAt is the schema descriptor for updated_at field.
+	eventDescUpdatedAt := eventFields[11].Descriptor()
+	// event.DefaultUpdatedAt holds the default value on creation for the updated_at field.
+	event.DefaultUpdatedAt = eventDescUpdatedAt.Default.(func() time.Time)
+	// event.UpdateDefaultUpdatedAt holds the default value on update for the updated_at field.
+	event.UpdateDefaultUpdatedAt = eventDescUpdatedAt.UpdateDefault.(func() time.Time)
+	// eventDescID is the schema descriptor for id field.
+	eventDescID := eventFields[0].Descriptor()
+	// event.DefaultID holds the default value on creation for the id field.
+	event.DefaultID = eventDescID.Default.(func() uuid.UUID)
+	eventparticipantFields := schema.EventParticipant{}.Fields()
+	_ = eventparticipantFields
+	// eventparticipantDescCreatedAt is the schema descriptor for created_at field.
+	eventparticipantDescCreatedAt := eventparticipantFields[7].Descriptor()
+	// eventparticipant.DefaultCreatedAt holds the default value on creation for the created_at field.
+	eventparticipant.DefaultCreatedAt = eventparticipantDescCreatedAt.Default.(func() time.Time)
+	// eventparticipantDescUpdatedAt is the schema descriptor for updated_at field.
+	eventparticipantDescUpdatedAt := eventparticipantFields[8].Descriptor()
+	// eventparticipant.DefaultUpdatedAt holds the default value on creation for the updated_at field.
+	eventparticipant.DefaultUpdatedAt = eventparticipantDescUpdatedAt.Default.(func() time.Time)
+	// eventparticipant.UpdateDefaultUpdatedAt holds the default value on update for the updated_at field.
+	eventparticipant.UpdateDefaultUpdatedAt = eventparticipantDescUpdatedAt.UpdateDefault.(func() time.Time)
+	// eventparticipantDescID is the schema descriptor for id field.
+	eventparticipantDescID := eventparticipantFields[0].Descriptor()
+	// eventparticipant.DefaultID holds the default value on creation for the id field.
+	eventparticipant.DefaultID = eventparticipantDescID.Default.(func() uuid.UUID)
 	externaltrainingeventFields := schema.ExternalTrainingEvent{}.Fields()
 	_ = externaltrainingeventFields
 	// externaltrainingeventDescName is the schema descriptor for name field.
@@ -635,6 +683,38 @@ func init() {
 	requesttargetdzoDescID := requesttargetdzoFields[0].Descriptor()
 	// requesttargetdzo.DefaultID holds the default value on creation for the id field.
 	requesttargetdzo.DefaultID = requesttargetdzoDescID.Default.(func() uuid.UUID)
+	scormcourseFields := schema.ScormCourse{}.Fields()
+	_ = scormcourseFields
+	// scormcourseDescTitle is the schema descriptor for title field.
+	scormcourseDescTitle := scormcourseFields[2].Descriptor()
+	// scormcourse.TitleValidator is a validator for the "title" field. It is called by the builders before save.
+	scormcourse.TitleValidator = scormcourseDescTitle.Validators[0].(func(string) error)
+	// scormcourseDescLecturer is the schema descriptor for lecturer field.
+	scormcourseDescLecturer := scormcourseFields[5].Descriptor()
+	// scormcourse.LecturerValidator is a validator for the "lecturer" field. It is called by the builders before save.
+	scormcourse.LecturerValidator = scormcourseDescLecturer.Validators[0].(func(string) error)
+	// scormcourseDescScormURL is the schema descriptor for scorm_url field.
+	scormcourseDescScormURL := scormcourseFields[6].Descriptor()
+	// scormcourse.ScormURLValidator is a validator for the "scorm_url" field. It is called by the builders before save.
+	scormcourse.ScormURLValidator = scormcourseDescScormURL.Validators[0].(func(string) error)
+	// scormcourseDescIsActive is the schema descriptor for is_active field.
+	scormcourseDescIsActive := scormcourseFields[7].Descriptor()
+	// scormcourse.DefaultIsActive holds the default value on creation for the is_active field.
+	scormcourse.DefaultIsActive = scormcourseDescIsActive.Default.(bool)
+	// scormcourseDescImageURL is the schema descriptor for image_url field.
+	scormcourseDescImageURL := scormcourseFields[8].Descriptor()
+	// scormcourse.ImageURLValidator is a validator for the "image_url" field. It is called by the builders before save.
+	scormcourse.ImageURLValidator = scormcourseDescImageURL.Validators[0].(func(string) error)
+	// scormcourseDescID is the schema descriptor for id field.
+	scormcourseDescID := scormcourseFields[0].Descriptor()
+	// scormcourse.DefaultID holds the default value on creation for the id field.
+	scormcourse.DefaultID = scormcourseDescID.Default.(func() uuid.UUID)
+	scormprogressFields := schema.ScormProgress{}.Fields()
+	_ = scormprogressFields
+	// scormprogressDescID is the schema descriptor for id field.
+	scormprogressDescID := scormprogressFields[0].Descriptor()
+	// scormprogress.DefaultID holds the default value on creation for the id field.
+	scormprogress.DefaultID = scormprogressDescID.Default.(func() uuid.UUID)
 	supplierFields := schema.Supplier{}.Fields()
 	_ = supplierFields
 	// supplierDescName is the schema descriptor for name field.
