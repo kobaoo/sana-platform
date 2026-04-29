@@ -606,6 +606,8 @@ var (
 		{Name: "status", Type: field.TypeEnum, Enums: []string{"NOT_STARTED", "IN_PROGRESS", "COMPLETED"}, Default: "NOT_STARTED"},
 		{Name: "score", Type: field.TypeInt, Nullable: true},
 		{Name: "completed_at", Type: field.TypeTime, Nullable: true},
+		{Name: "start_date", Type: field.TypeTime, Nullable: true},
+		{Name: "end_date", Type: field.TypeTime, Nullable: true},
 		{Name: "suspend_data", Type: field.TypeString, Nullable: true, Size: 2147483647},
 		{Name: "course_id", Type: field.TypeUUID},
 	}
@@ -617,7 +619,7 @@ var (
 		ForeignKeys: []*schema.ForeignKey{
 			{
 				Symbol:     "scorm_progresses_scorm_courses_course_progress",
-				Columns:    []*schema.Column{ScormProgressesColumns[6]},
+				Columns:    []*schema.Column{ScormProgressesColumns[8]},
 				RefColumns: []*schema.Column{ScormCoursesColumns[0]},
 				OnDelete:   schema.NoAction,
 			},

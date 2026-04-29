@@ -29,6 +29,10 @@ type ScormProgress struct {
 	Score *int `json:"score,omitempty"`
 	// CompletedAt holds the value of the "completed_at" field.
 	CompletedAt *time.Time `json:"completed_at,omitempty"`
+	// StartDate holds the value of the "start_date" field.
+	StartDate *time.Time `json:"start_date,omitempty"`
+	// EndDate holds the value of the "end_date" field.
+	EndDate *time.Time `json:"end_date,omitempty"`
 	// SuspendData holds the value of the "suspend_data" field.
 	SuspendData *string `json:"suspend_data,omitempty"`
 	// Edges holds the relations/edges for other nodes in the graph.
@@ -66,7 +70,7 @@ func (*ScormProgress) scanValues(columns []string) ([]any, error) {
 			values[i] = new(sql.NullInt64)
 		case scormprogress.FieldStatus, scormprogress.FieldSuspendData:
 			values[i] = new(sql.NullString)
-		case scormprogress.FieldCompletedAt:
+		case scormprogress.FieldCompletedAt, scormprogress.FieldStartDate, scormprogress.FieldEndDate:
 			values[i] = new(sql.NullTime)
 		case scormprogress.FieldID, scormprogress.FieldCourseID, scormprogress.FieldEmployeeID:
 			values[i] = new(uuid.UUID)
@@ -122,6 +126,20 @@ func (_m *ScormProgress) assignValues(columns []string, values []any) error {
 			} else if value.Valid {
 				_m.CompletedAt = new(time.Time)
 				*_m.CompletedAt = value.Time
+			}
+		case scormprogress.FieldStartDate:
+			if value, ok := values[i].(*sql.NullTime); !ok {
+				return fmt.Errorf("unexpected type %T for field start_date", values[i])
+			} else if value.Valid {
+				_m.StartDate = new(time.Time)
+				*_m.StartDate = value.Time
+			}
+		case scormprogress.FieldEndDate:
+			if value, ok := values[i].(*sql.NullTime); !ok {
+				return fmt.Errorf("unexpected type %T for field end_date", values[i])
+			} else if value.Valid {
+				_m.EndDate = new(time.Time)
+				*_m.EndDate = value.Time
 			}
 		case scormprogress.FieldSuspendData:
 			if value, ok := values[i].(*sql.NullString); !ok {
@@ -187,6 +205,16 @@ func (_m *ScormProgress) String() string {
 	builder.WriteString(", ")
 	if v := _m.CompletedAt; v != nil {
 		builder.WriteString("completed_at=")
+		builder.WriteString(v.Format(time.ANSIC))
+	}
+	builder.WriteString(", ")
+	if v := _m.StartDate; v != nil {
+		builder.WriteString("start_date=")
+		builder.WriteString(v.Format(time.ANSIC))
+	}
+	builder.WriteString(", ")
+	if v := _m.EndDate; v != nil {
+		builder.WriteString("end_date=")
 		builder.WriteString(v.Format(time.ANSIC))
 	}
 	builder.WriteString(", ")

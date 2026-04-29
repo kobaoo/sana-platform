@@ -18,6 +18,8 @@ CREATE TABLE "public"."scorm_progresses" (
   "status" character varying NOT NULL DEFAULT 'NOT_STARTED',
   "score" bigint NULL,
   "completed_at" timestamptz NULL,
+  "start_date" timestamptz NULL,
+  "end_date" timestamptz NULL,
   "suspend_data" text NULL,
   "course_id" uuid NOT NULL,
   PRIMARY KEY ("id"),

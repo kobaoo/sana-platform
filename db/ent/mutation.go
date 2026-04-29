@@ -16389,6 +16389,8 @@ type ScormProgressMutation struct {
 	score           *int
 	addscore        *int
 	completed_at    *time.Time
+	start_date      *time.Time
+	end_date        *time.Time
 	suspend_data    *string
 	clearedFields   map[string]struct{}
 	progress        *uuid.UUID
@@ -16729,6 +16731,104 @@ func (m *ScormProgressMutation) ResetCompletedAt() {
 	delete(m.clearedFields, scormprogress.FieldCompletedAt)
 }
 
+// SetStartDate sets the "start_date" field.
+func (m *ScormProgressMutation) SetStartDate(t time.Time) {
+	m.start_date = &t
+}
+
+// StartDate returns the value of the "start_date" field in the mutation.
+func (m *ScormProgressMutation) StartDate() (r time.Time, exists bool) {
+	v := m.start_date
+	if v == nil {
+		return
+	}
+	return *v, true
+}
+
+// OldStartDate returns the old "start_date" field's value of the ScormProgress entity.
+// If the ScormProgress object wasn't provided to the builder, the object is fetched from the database.
+// An error is returned if the mutation operation is not UpdateOne, or the database query fails.
+func (m *ScormProgressMutation) OldStartDate(ctx context.Context) (v *time.Time, err error) {
+	if !m.op.Is(OpUpdateOne) {
+		return v, errors.New("OldStartDate is only allowed on UpdateOne operations")
+	}
+	if m.id == nil || m.oldValue == nil {
+		return v, errors.New("OldStartDate requires an ID field in the mutation")
+	}
+	oldValue, err := m.oldValue(ctx)
+	if err != nil {
+		return v, fmt.Errorf("querying old value for OldStartDate: %w", err)
+	}
+	return oldValue.StartDate, nil
+}
+
+// ClearStartDate clears the value of the "start_date" field.
+func (m *ScormProgressMutation) ClearStartDate() {
+	m.start_date = nil
+	m.clearedFields[scormprogress.FieldStartDate] = struct{}{}
+}
+
+// StartDateCleared returns if the "start_date" field was cleared in this mutation.
+func (m *ScormProgressMutation) StartDateCleared() bool {
+	_, ok := m.clearedFields[scormprogress.FieldStartDate]
+	return ok
+}
+
+// ResetStartDate resets all changes to the "start_date" field.
+func (m *ScormProgressMutation) ResetStartDate() {
+	m.start_date = nil
+	delete(m.clearedFields, scormprogress.FieldStartDate)
+}
+
+// SetEndDate sets the "end_date" field.
+func (m *ScormProgressMutation) SetEndDate(t time.Time) {
+	m.end_date = &t
+}
+
+// EndDate returns the value of the "end_date" field in the mutation.
+func (m *ScormProgressMutation) EndDate() (r time.Time, exists bool) {
+	v := m.end_date
+	if v == nil {
+		return
+	}
+	return *v, true
+}
+
+// OldEndDate returns the old "end_date" field's value of the ScormProgress entity.
+// If the ScormProgress object wasn't provided to the builder, the object is fetched from the database.
+// An error is returned if the mutation operation is not UpdateOne, or the database query fails.
+func (m *ScormProgressMutation) OldEndDate(ctx context.Context) (v *time.Time, err error) {
+	if !m.op.Is(OpUpdateOne) {
+		return v, errors.New("OldEndDate is only allowed on UpdateOne operations")
+	}
+	if m.id == nil || m.oldValue == nil {
+		return v, errors.New("OldEndDate requires an ID field in the mutation")
+	}
+	oldValue, err := m.oldValue(ctx)
+	if err != nil {
+		return v, fmt.Errorf("querying old value for OldEndDate: %w", err)
+	}
+	return oldValue.EndDate, nil
+}
+
+// ClearEndDate clears the value of the "end_date" field.
+func (m *ScormProgressMutation) ClearEndDate() {
+	m.end_date = nil
+	m.clearedFields[scormprogress.FieldEndDate] = struct{}{}
+}
+
+// EndDateCleared returns if the "end_date" field was cleared in this mutation.
+func (m *ScormProgressMutation) EndDateCleared() bool {
+	_, ok := m.clearedFields[scormprogress.FieldEndDate]
+	return ok
+}
+
+// ResetEndDate resets all changes to the "end_date" field.
+func (m *ScormProgressMutation) ResetEndDate() {
+	m.end_date = nil
+	delete(m.clearedFields, scormprogress.FieldEndDate)
+}
+
 // SetSuspendData sets the "suspend_data" field.
 func (m *ScormProgressMutation) SetSuspendData(s string) {
 	m.suspend_data = &s
@@ -16852,7 +16952,7 @@ func (m *ScormProgressMutation) Type() string {
 // order to get all numeric fields that were incremented/decremented, call
 // AddedFields().
 func (m *ScormProgressMutation) Fields() []string {
-	fields := make([]string, 0, 6)
+	fields := make([]string, 0, 8)
 	if m.progress != nil {
 		fields = append(fields, scormprogress.FieldCourseID)
 	}
@@ -16867,6 +16967,12 @@ func (m *ScormProgressMutation) Fields() []string {
 	}
 	if m.completed_at != nil {
 		fields = append(fields, scormprogress.FieldCompletedAt)
+	}
+	if m.start_date != nil {
+		fields = append(fields, scormprogress.FieldStartDate)
+	}
+	if m.end_date != nil {
+		fields = append(fields, scormprogress.FieldEndDate)
 	}
 	if m.suspend_data != nil {
 		fields = append(fields, scormprogress.FieldSuspendData)
@@ -16889,6 +16995,10 @@ func (m *ScormProgressMutation) Field(name string) (ent.Value, bool) {
 		return m.Score()
 	case scormprogress.FieldCompletedAt:
 		return m.CompletedAt()
+	case scormprogress.FieldStartDate:
+		return m.StartDate()
+	case scormprogress.FieldEndDate:
+		return m.EndDate()
 	case scormprogress.FieldSuspendData:
 		return m.SuspendData()
 	}
@@ -16910,6 +17020,10 @@ func (m *ScormProgressMutation) OldField(ctx context.Context, name string) (ent.
 		return m.OldScore(ctx)
 	case scormprogress.FieldCompletedAt:
 		return m.OldCompletedAt(ctx)
+	case scormprogress.FieldStartDate:
+		return m.OldStartDate(ctx)
+	case scormprogress.FieldEndDate:
+		return m.OldEndDate(ctx)
 	case scormprogress.FieldSuspendData:
 		return m.OldSuspendData(ctx)
 	}
@@ -16955,6 +17069,20 @@ func (m *ScormProgressMutation) SetField(name string, value ent.Value) error {
 			return fmt.Errorf("unexpected type %T for field %s", value, name)
 		}
 		m.SetCompletedAt(v)
+		return nil
+	case scormprogress.FieldStartDate:
+		v, ok := value.(time.Time)
+		if !ok {
+			return fmt.Errorf("unexpected type %T for field %s", value, name)
+		}
+		m.SetStartDate(v)
+		return nil
+	case scormprogress.FieldEndDate:
+		v, ok := value.(time.Time)
+		if !ok {
+			return fmt.Errorf("unexpected type %T for field %s", value, name)
+		}
+		m.SetEndDate(v)
 		return nil
 	case scormprogress.FieldSuspendData:
 		v, ok := value.(string)
@@ -17014,6 +17142,12 @@ func (m *ScormProgressMutation) ClearedFields() []string {
 	if m.FieldCleared(scormprogress.FieldCompletedAt) {
 		fields = append(fields, scormprogress.FieldCompletedAt)
 	}
+	if m.FieldCleared(scormprogress.FieldStartDate) {
+		fields = append(fields, scormprogress.FieldStartDate)
+	}
+	if m.FieldCleared(scormprogress.FieldEndDate) {
+		fields = append(fields, scormprogress.FieldEndDate)
+	}
 	if m.FieldCleared(scormprogress.FieldSuspendData) {
 		fields = append(fields, scormprogress.FieldSuspendData)
 	}
@@ -17036,6 +17170,12 @@ func (m *ScormProgressMutation) ClearField(name string) error {
 		return nil
 	case scormprogress.FieldCompletedAt:
 		m.ClearCompletedAt()
+		return nil
+	case scormprogress.FieldStartDate:
+		m.ClearStartDate()
+		return nil
+	case scormprogress.FieldEndDate:
+		m.ClearEndDate()
 		return nil
 	case scormprogress.FieldSuspendData:
 		m.ClearSuspendData()
@@ -17062,6 +17202,12 @@ func (m *ScormProgressMutation) ResetField(name string) error {
 		return nil
 	case scormprogress.FieldCompletedAt:
 		m.ResetCompletedAt()
+		return nil
+	case scormprogress.FieldStartDate:
+		m.ResetStartDate()
+		return nil
+	case scormprogress.FieldEndDate:
+		m.ResetEndDate()
 		return nil
 	case scormprogress.FieldSuspendData:
 		m.ResetSuspendData()

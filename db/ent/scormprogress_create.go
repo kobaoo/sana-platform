@@ -76,6 +76,34 @@ func (_c *ScormProgressCreate) SetNillableCompletedAt(v *time.Time) *ScormProgre
 	return _c
 }
 
+// SetStartDate sets the "start_date" field.
+func (_c *ScormProgressCreate) SetStartDate(v time.Time) *ScormProgressCreate {
+	_c.mutation.SetStartDate(v)
+	return _c
+}
+
+// SetNillableStartDate sets the "start_date" field if the given value is not nil.
+func (_c *ScormProgressCreate) SetNillableStartDate(v *time.Time) *ScormProgressCreate {
+	if v != nil {
+		_c.SetStartDate(*v)
+	}
+	return _c
+}
+
+// SetEndDate sets the "end_date" field.
+func (_c *ScormProgressCreate) SetEndDate(v time.Time) *ScormProgressCreate {
+	_c.mutation.SetEndDate(v)
+	return _c
+}
+
+// SetNillableEndDate sets the "end_date" field if the given value is not nil.
+func (_c *ScormProgressCreate) SetNillableEndDate(v *time.Time) *ScormProgressCreate {
+	if v != nil {
+		_c.SetEndDate(*v)
+	}
+	return _c
+}
+
 // SetSuspendData sets the "suspend_data" field.
 func (_c *ScormProgressCreate) SetSuspendData(v string) *ScormProgressCreate {
 	_c.mutation.SetSuspendData(v)
@@ -229,6 +257,14 @@ func (_c *ScormProgressCreate) createSpec() (*ScormProgress, *sqlgraph.CreateSpe
 	if value, ok := _c.mutation.CompletedAt(); ok {
 		_spec.SetField(scormprogress.FieldCompletedAt, field.TypeTime, value)
 		_node.CompletedAt = &value
+	}
+	if value, ok := _c.mutation.StartDate(); ok {
+		_spec.SetField(scormprogress.FieldStartDate, field.TypeTime, value)
+		_node.StartDate = &value
+	}
+	if value, ok := _c.mutation.EndDate(); ok {
+		_spec.SetField(scormprogress.FieldEndDate, field.TypeTime, value)
+		_node.EndDate = &value
 	}
 	if value, ok := _c.mutation.SuspendData(); ok {
 		_spec.SetField(scormprogress.FieldSuspendData, field.TypeString, value)

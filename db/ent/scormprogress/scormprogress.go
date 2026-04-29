@@ -25,6 +25,10 @@ const (
 	FieldScore = "score"
 	// FieldCompletedAt holds the string denoting the completed_at field in the database.
 	FieldCompletedAt = "completed_at"
+	// FieldStartDate holds the string denoting the start_date field in the database.
+	FieldStartDate = "start_date"
+	// FieldEndDate holds the string denoting the end_date field in the database.
+	FieldEndDate = "end_date"
 	// FieldSuspendData holds the string denoting the suspend_data field in the database.
 	FieldSuspendData = "suspend_data"
 	// EdgeProgress holds the string denoting the progress edge name in mutations.
@@ -48,6 +52,8 @@ var Columns = []string{
 	FieldStatus,
 	FieldScore,
 	FieldCompletedAt,
+	FieldStartDate,
+	FieldEndDate,
 	FieldSuspendData,
 }
 
@@ -124,6 +130,16 @@ func ByScore(opts ...sql.OrderTermOption) OrderOption {
 // ByCompletedAt orders the results by the completed_at field.
 func ByCompletedAt(opts ...sql.OrderTermOption) OrderOption {
 	return sql.OrderByField(FieldCompletedAt, opts...).ToFunc()
+}
+
+// ByStartDate orders the results by the start_date field.
+func ByStartDate(opts ...sql.OrderTermOption) OrderOption {
+	return sql.OrderByField(FieldStartDate, opts...).ToFunc()
+}
+
+// ByEndDate orders the results by the end_date field.
+func ByEndDate(opts ...sql.OrderTermOption) OrderOption {
+	return sql.OrderByField(FieldEndDate, opts...).ToFunc()
 }
 
 // BySuspendData orders the results by the suspend_data field.

@@ -119,6 +119,46 @@ func (_u *ScormProgressUpdate) ClearCompletedAt() *ScormProgressUpdate {
 	return _u
 }
 
+// SetStartDate sets the "start_date" field.
+func (_u *ScormProgressUpdate) SetStartDate(v time.Time) *ScormProgressUpdate {
+	_u.mutation.SetStartDate(v)
+	return _u
+}
+
+// SetNillableStartDate sets the "start_date" field if the given value is not nil.
+func (_u *ScormProgressUpdate) SetNillableStartDate(v *time.Time) *ScormProgressUpdate {
+	if v != nil {
+		_u.SetStartDate(*v)
+	}
+	return _u
+}
+
+// ClearStartDate clears the value of the "start_date" field.
+func (_u *ScormProgressUpdate) ClearStartDate() *ScormProgressUpdate {
+	_u.mutation.ClearStartDate()
+	return _u
+}
+
+// SetEndDate sets the "end_date" field.
+func (_u *ScormProgressUpdate) SetEndDate(v time.Time) *ScormProgressUpdate {
+	_u.mutation.SetEndDate(v)
+	return _u
+}
+
+// SetNillableEndDate sets the "end_date" field if the given value is not nil.
+func (_u *ScormProgressUpdate) SetNillableEndDate(v *time.Time) *ScormProgressUpdate {
+	if v != nil {
+		_u.SetEndDate(*v)
+	}
+	return _u
+}
+
+// ClearEndDate clears the value of the "end_date" field.
+func (_u *ScormProgressUpdate) ClearEndDate() *ScormProgressUpdate {
+	_u.mutation.ClearEndDate()
+	return _u
+}
+
 // SetSuspendData sets the "suspend_data" field.
 func (_u *ScormProgressUpdate) SetSuspendData(v string) *ScormProgressUpdate {
 	_u.mutation.SetSuspendData(v)
@@ -233,6 +273,18 @@ func (_u *ScormProgressUpdate) sqlSave(ctx context.Context) (_node int, err erro
 	}
 	if _u.mutation.CompletedAtCleared() {
 		_spec.ClearField(scormprogress.FieldCompletedAt, field.TypeTime)
+	}
+	if value, ok := _u.mutation.StartDate(); ok {
+		_spec.SetField(scormprogress.FieldStartDate, field.TypeTime, value)
+	}
+	if _u.mutation.StartDateCleared() {
+		_spec.ClearField(scormprogress.FieldStartDate, field.TypeTime)
+	}
+	if value, ok := _u.mutation.EndDate(); ok {
+		_spec.SetField(scormprogress.FieldEndDate, field.TypeTime, value)
+	}
+	if _u.mutation.EndDateCleared() {
+		_spec.ClearField(scormprogress.FieldEndDate, field.TypeTime)
 	}
 	if value, ok := _u.mutation.SuspendData(); ok {
 		_spec.SetField(scormprogress.FieldSuspendData, field.TypeString, value)
@@ -375,6 +427,46 @@ func (_u *ScormProgressUpdateOne) SetNillableCompletedAt(v *time.Time) *ScormPro
 // ClearCompletedAt clears the value of the "completed_at" field.
 func (_u *ScormProgressUpdateOne) ClearCompletedAt() *ScormProgressUpdateOne {
 	_u.mutation.ClearCompletedAt()
+	return _u
+}
+
+// SetStartDate sets the "start_date" field.
+func (_u *ScormProgressUpdateOne) SetStartDate(v time.Time) *ScormProgressUpdateOne {
+	_u.mutation.SetStartDate(v)
+	return _u
+}
+
+// SetNillableStartDate sets the "start_date" field if the given value is not nil.
+func (_u *ScormProgressUpdateOne) SetNillableStartDate(v *time.Time) *ScormProgressUpdateOne {
+	if v != nil {
+		_u.SetStartDate(*v)
+	}
+	return _u
+}
+
+// ClearStartDate clears the value of the "start_date" field.
+func (_u *ScormProgressUpdateOne) ClearStartDate() *ScormProgressUpdateOne {
+	_u.mutation.ClearStartDate()
+	return _u
+}
+
+// SetEndDate sets the "end_date" field.
+func (_u *ScormProgressUpdateOne) SetEndDate(v time.Time) *ScormProgressUpdateOne {
+	_u.mutation.SetEndDate(v)
+	return _u
+}
+
+// SetNillableEndDate sets the "end_date" field if the given value is not nil.
+func (_u *ScormProgressUpdateOne) SetNillableEndDate(v *time.Time) *ScormProgressUpdateOne {
+	if v != nil {
+		_u.SetEndDate(*v)
+	}
+	return _u
+}
+
+// ClearEndDate clears the value of the "end_date" field.
+func (_u *ScormProgressUpdateOne) ClearEndDate() *ScormProgressUpdateOne {
+	_u.mutation.ClearEndDate()
 	return _u
 }
 
@@ -522,6 +614,18 @@ func (_u *ScormProgressUpdateOne) sqlSave(ctx context.Context) (_node *ScormProg
 	}
 	if _u.mutation.CompletedAtCleared() {
 		_spec.ClearField(scormprogress.FieldCompletedAt, field.TypeTime)
+	}
+	if value, ok := _u.mutation.StartDate(); ok {
+		_spec.SetField(scormprogress.FieldStartDate, field.TypeTime, value)
+	}
+	if _u.mutation.StartDateCleared() {
+		_spec.ClearField(scormprogress.FieldStartDate, field.TypeTime)
+	}
+	if value, ok := _u.mutation.EndDate(); ok {
+		_spec.SetField(scormprogress.FieldEndDate, field.TypeTime, value)
+	}
+	if _u.mutation.EndDateCleared() {
+		_spec.ClearField(scormprogress.FieldEndDate, field.TypeTime)
 	}
 	if value, ok := _u.mutation.SuspendData(); ok {
 		_spec.SetField(scormprogress.FieldSuspendData, field.TypeString, value)

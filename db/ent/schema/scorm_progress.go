@@ -32,7 +32,12 @@ func (ScormProgress) Fields() []ent.Field {
 		field.Time("completed_at").
 			Optional().
 			Nillable(),
-		
+		field.Time("start_date").
+			Optional().
+			Nillable(),
+		field.Time("end_date").
+			Optional().
+			Nillable(),
 		field.Text("suspend_data").
 			Optional().
 			Nillable(),
