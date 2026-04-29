@@ -29,8 +29,7 @@ func (Employee) Fields() []ent.Field {
 
 		field.UUID("dzo_id", uuid.UUID{}),
 
-		field.String("position").
-			MaxLen(300).
+		field.UUID("dzo_position_id", uuid.UUID{}).
 			Optional().
 			Nillable(),
 
@@ -87,6 +86,13 @@ func (Employee) Edges() []ent.Edge {
 			Field("dzo_id").
 			Required().
 			Unique(),
+
+		edge.From("dzo_position_title", DzoPositionTitle.Type).
+			Ref("employees").
+			Field("dzo_position_id").
+			Unique(),
+
 		edge.To("event_participations", EventParticipant.Type),
 	}
+
 }

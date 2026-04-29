@@ -9,6 +9,7 @@ import (
 	"time"
 
 	"encore.app/db/ent/dzoorganization"
+	"encore.app/db/ent/dzopositiontitle"
 	"encore.app/db/ent/employee"
 	"encore.app/db/ent/predicate"
 	"entgo.io/ent/dialect/sql"
@@ -133,6 +134,21 @@ func (_u *DzoOrganizationUpdate) AddEmployees(v ...*Employee) *DzoOrganizationUp
 	return _u.AddEmployeeIDs(ids...)
 }
 
+// AddPositionTitleIDs adds the "position_titles" edge to the DzoPositionTitle entity by IDs.
+func (_u *DzoOrganizationUpdate) AddPositionTitleIDs(ids ...uuid.UUID) *DzoOrganizationUpdate {
+	_u.mutation.AddPositionTitleIDs(ids...)
+	return _u
+}
+
+// AddPositionTitles adds the "position_titles" edges to the DzoPositionTitle entity.
+func (_u *DzoOrganizationUpdate) AddPositionTitles(v ...*DzoPositionTitle) *DzoOrganizationUpdate {
+	ids := make([]uuid.UUID, len(v))
+	for i := range v {
+		ids[i] = v[i].ID
+	}
+	return _u.AddPositionTitleIDs(ids...)
+}
+
 // Mutation returns the DzoOrganizationMutation object of the builder.
 func (_u *DzoOrganizationUpdate) Mutation() *DzoOrganizationMutation {
 	return _u.mutation
@@ -157,6 +173,27 @@ func (_u *DzoOrganizationUpdate) RemoveEmployees(v ...*Employee) *DzoOrganizatio
 		ids[i] = v[i].ID
 	}
 	return _u.RemoveEmployeeIDs(ids...)
+}
+
+// ClearPositionTitles clears all "position_titles" edges to the DzoPositionTitle entity.
+func (_u *DzoOrganizationUpdate) ClearPositionTitles() *DzoOrganizationUpdate {
+	_u.mutation.ClearPositionTitles()
+	return _u
+}
+
+// RemovePositionTitleIDs removes the "position_titles" edge to DzoPositionTitle entities by IDs.
+func (_u *DzoOrganizationUpdate) RemovePositionTitleIDs(ids ...uuid.UUID) *DzoOrganizationUpdate {
+	_u.mutation.RemovePositionTitleIDs(ids...)
+	return _u
+}
+
+// RemovePositionTitles removes "position_titles" edges to DzoPositionTitle entities.
+func (_u *DzoOrganizationUpdate) RemovePositionTitles(v ...*DzoPositionTitle) *DzoOrganizationUpdate {
+	ids := make([]uuid.UUID, len(v))
+	for i := range v {
+		ids[i] = v[i].ID
+	}
+	return _u.RemovePositionTitleIDs(ids...)
 }
 
 // Save executes the query and returns the number of nodes affected by the update operation.
@@ -296,6 +333,51 @@ func (_u *DzoOrganizationUpdate) sqlSave(ctx context.Context) (_node int, err er
 		}
 		_spec.Edges.Add = append(_spec.Edges.Add, edge)
 	}
+	if _u.mutation.PositionTitlesCleared() {
+		edge := &sqlgraph.EdgeSpec{
+			Rel:     sqlgraph.O2M,
+			Inverse: false,
+			Table:   dzoorganization.PositionTitlesTable,
+			Columns: []string{dzoorganization.PositionTitlesColumn},
+			Bidi:    false,
+			Target: &sqlgraph.EdgeTarget{
+				IDSpec: sqlgraph.NewFieldSpec(dzopositiontitle.FieldID, field.TypeUUID),
+			},
+		}
+		_spec.Edges.Clear = append(_spec.Edges.Clear, edge)
+	}
+	if nodes := _u.mutation.RemovedPositionTitlesIDs(); len(nodes) > 0 && !_u.mutation.PositionTitlesCleared() {
+		edge := &sqlgraph.EdgeSpec{
+			Rel:     sqlgraph.O2M,
+			Inverse: false,
+			Table:   dzoorganization.PositionTitlesTable,
+			Columns: []string{dzoorganization.PositionTitlesColumn},
+			Bidi:    false,
+			Target: &sqlgraph.EdgeTarget{
+				IDSpec: sqlgraph.NewFieldSpec(dzopositiontitle.FieldID, field.TypeUUID),
+			},
+		}
+		for _, k := range nodes {
+			edge.Target.Nodes = append(edge.Target.Nodes, k)
+		}
+		_spec.Edges.Clear = append(_spec.Edges.Clear, edge)
+	}
+	if nodes := _u.mutation.PositionTitlesIDs(); len(nodes) > 0 {
+		edge := &sqlgraph.EdgeSpec{
+			Rel:     sqlgraph.O2M,
+			Inverse: false,
+			Table:   dzoorganization.PositionTitlesTable,
+			Columns: []string{dzoorganization.PositionTitlesColumn},
+			Bidi:    false,
+			Target: &sqlgraph.EdgeTarget{
+				IDSpec: sqlgraph.NewFieldSpec(dzopositiontitle.FieldID, field.TypeUUID),
+			},
+		}
+		for _, k := range nodes {
+			edge.Target.Nodes = append(edge.Target.Nodes, k)
+		}
+		_spec.Edges.Add = append(_spec.Edges.Add, edge)
+	}
 	if _node, err = sqlgraph.UpdateNodes(ctx, _u.driver, _spec); err != nil {
 		if _, ok := err.(*sqlgraph.NotFoundError); ok {
 			err = &NotFoundError{dzoorganization.Label}
@@ -419,6 +501,21 @@ func (_u *DzoOrganizationUpdateOne) AddEmployees(v ...*Employee) *DzoOrganizatio
 	return _u.AddEmployeeIDs(ids...)
 }
 
+// AddPositionTitleIDs adds the "position_titles" edge to the DzoPositionTitle entity by IDs.
+func (_u *DzoOrganizationUpdateOne) AddPositionTitleIDs(ids ...uuid.UUID) *DzoOrganizationUpdateOne {
+	_u.mutation.AddPositionTitleIDs(ids...)
+	return _u
+}
+
+// AddPositionTitles adds the "position_titles" edges to the DzoPositionTitle entity.
+func (_u *DzoOrganizationUpdateOne) AddPositionTitles(v ...*DzoPositionTitle) *DzoOrganizationUpdateOne {
+	ids := make([]uuid.UUID, len(v))
+	for i := range v {
+		ids[i] = v[i].ID
+	}
+	return _u.AddPositionTitleIDs(ids...)
+}
+
 // Mutation returns the DzoOrganizationMutation object of the builder.
 func (_u *DzoOrganizationUpdateOne) Mutation() *DzoOrganizationMutation {
 	return _u.mutation
@@ -443,6 +540,27 @@ func (_u *DzoOrganizationUpdateOne) RemoveEmployees(v ...*Employee) *DzoOrganiza
 		ids[i] = v[i].ID
 	}
 	return _u.RemoveEmployeeIDs(ids...)
+}
+
+// ClearPositionTitles clears all "position_titles" edges to the DzoPositionTitle entity.
+func (_u *DzoOrganizationUpdateOne) ClearPositionTitles() *DzoOrganizationUpdateOne {
+	_u.mutation.ClearPositionTitles()
+	return _u
+}
+
+// RemovePositionTitleIDs removes the "position_titles" edge to DzoPositionTitle entities by IDs.
+func (_u *DzoOrganizationUpdateOne) RemovePositionTitleIDs(ids ...uuid.UUID) *DzoOrganizationUpdateOne {
+	_u.mutation.RemovePositionTitleIDs(ids...)
+	return _u
+}
+
+// RemovePositionTitles removes "position_titles" edges to DzoPositionTitle entities.
+func (_u *DzoOrganizationUpdateOne) RemovePositionTitles(v ...*DzoPositionTitle) *DzoOrganizationUpdateOne {
+	ids := make([]uuid.UUID, len(v))
+	for i := range v {
+		ids[i] = v[i].ID
+	}
+	return _u.RemovePositionTitleIDs(ids...)
 }
 
 // Where appends a list predicates to the DzoOrganizationUpdate builder.
@@ -605,6 +723,51 @@ func (_u *DzoOrganizationUpdateOne) sqlSave(ctx context.Context) (_node *DzoOrga
 			Bidi:    false,
 			Target: &sqlgraph.EdgeTarget{
 				IDSpec: sqlgraph.NewFieldSpec(employee.FieldID, field.TypeUUID),
+			},
+		}
+		for _, k := range nodes {
+			edge.Target.Nodes = append(edge.Target.Nodes, k)
+		}
+		_spec.Edges.Add = append(_spec.Edges.Add, edge)
+	}
+	if _u.mutation.PositionTitlesCleared() {
+		edge := &sqlgraph.EdgeSpec{
+			Rel:     sqlgraph.O2M,
+			Inverse: false,
+			Table:   dzoorganization.PositionTitlesTable,
+			Columns: []string{dzoorganization.PositionTitlesColumn},
+			Bidi:    false,
+			Target: &sqlgraph.EdgeTarget{
+				IDSpec: sqlgraph.NewFieldSpec(dzopositiontitle.FieldID, field.TypeUUID),
+			},
+		}
+		_spec.Edges.Clear = append(_spec.Edges.Clear, edge)
+	}
+	if nodes := _u.mutation.RemovedPositionTitlesIDs(); len(nodes) > 0 && !_u.mutation.PositionTitlesCleared() {
+		edge := &sqlgraph.EdgeSpec{
+			Rel:     sqlgraph.O2M,
+			Inverse: false,
+			Table:   dzoorganization.PositionTitlesTable,
+			Columns: []string{dzoorganization.PositionTitlesColumn},
+			Bidi:    false,
+			Target: &sqlgraph.EdgeTarget{
+				IDSpec: sqlgraph.NewFieldSpec(dzopositiontitle.FieldID, field.TypeUUID),
+			},
+		}
+		for _, k := range nodes {
+			edge.Target.Nodes = append(edge.Target.Nodes, k)
+		}
+		_spec.Edges.Clear = append(_spec.Edges.Clear, edge)
+	}
+	if nodes := _u.mutation.PositionTitlesIDs(); len(nodes) > 0 {
+		edge := &sqlgraph.EdgeSpec{
+			Rel:     sqlgraph.O2M,
+			Inverse: false,
+			Table:   dzoorganization.PositionTitlesTable,
+			Columns: []string{dzoorganization.PositionTitlesColumn},
+			Bidi:    false,
+			Target: &sqlgraph.EdgeTarget{
+				IDSpec: sqlgraph.NewFieldSpec(dzopositiontitle.FieldID, field.TypeUUID),
 			},
 		}
 		for _, k := range nodes {

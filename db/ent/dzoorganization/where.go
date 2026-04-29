@@ -459,6 +459,29 @@ func HasEmployeesWith(preds ...predicate.Employee) predicate.DzoOrganization {
 	})
 }
 
+// HasPositionTitles applies the HasEdge predicate on the "position_titles" edge.
+func HasPositionTitles() predicate.DzoOrganization {
+	return predicate.DzoOrganization(func(s *sql.Selector) {
+		step := sqlgraph.NewStep(
+			sqlgraph.From(Table, FieldID),
+			sqlgraph.Edge(sqlgraph.O2M, false, PositionTitlesTable, PositionTitlesColumn),
+		)
+		sqlgraph.HasNeighbors(s, step)
+	})
+}
+
+// HasPositionTitlesWith applies the HasEdge predicate on the "position_titles" edge with a given conditions (other predicates).
+func HasPositionTitlesWith(preds ...predicate.DzoPositionTitle) predicate.DzoOrganization {
+	return predicate.DzoOrganization(func(s *sql.Selector) {
+		step := newPositionTitlesStep()
+		sqlgraph.HasNeighborsWith(s, step, func(s *sql.Selector) {
+			for _, p := range preds {
+				p(s)
+			}
+		})
+	})
+}
+
 // And groups predicates with the AND operator between them.
 func And(predicates ...predicate.DzoOrganization) predicate.DzoOrganization {
 	return predicate.DzoOrganization(sql.AndPredicates(predicates...))

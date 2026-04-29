@@ -9,9 +9,9 @@ import (
 	"strings"
 	"time"
 
+	"encore.app/db/ent/dzopositiontitle"
 	"encore.dev/beta/auth"
 	"encore.dev/beta/errs"
-	"encore.dev/rlog"
 	"encore.dev/storage/sqldb"
 	"entgo.io/ent/dialect"
 	entsql "entgo.io/ent/dialect/sql"
@@ -86,8 +86,6 @@ func CreateEmployee(ctx context.Context, req *CreateEmployeeRequest) (*GetEmploy
 		return nil, err
 	}
 
-	rlog.Info("CreateEmployee auth data", "company_id", ad.CompanyID, "role", ad.Role, "email", ad.Email)
-
 	clientUID, err := uuid.Parse(ad.CompanyID)
 	if err != nil {
 		return nil, errs.B().Code(errs.InvalidArgument).Msg("invalid company_id in token").Err()
@@ -116,107 +114,6 @@ func CreateEmployee(ctx context.Context, req *CreateEmployeeRequest) (*GetEmploy
 	}
 
 	return &GetEmployeeResponse{Employee: *emp}, nil
-}
-
-// insertEmployeeWithUser открывает ent транзакцию и создаёт:
-//
-//	запись в таблице employees
-//	запись в таблице users
-//	связывает employee.user_id к users.id
-//
-// если любой из шагов падает транзакция откатывается автоматически
-func insertEmployeeWithUser(
-	ctx context.Context,
-	clientID, dzoID uuid.UUID,
-	kcUserID string,
-	req *CreateEmployeeRequest,
-) (*Employee, error) {
-	tx, err := Client.Tx(ctx)
-	if err != nil {
-		return nil, errs.B().Code(errs.Internal).Msg("failed to begin transaction").Cause(err).Err()
-	}
-
-	defer func() {
-		if err != nil {
-			_ = tx.Rollback()
-		}
-	}()
-
-	// создаем запись в таблице employees (внутри транзакции)
-	empBuilder := tx.Employee.
-		Create().
-		SetClientID(clientID).
-		SetDzoID(dzoID).
-		SetFullName(req.FullName).
-		SetEmail(strings.TrimSpace(req.Email))
-
-	if req.Position != nil {
-		empBuilder = empBuilder.SetPosition(*req.Position)
-	}
-	if req.ShortName != nil {
-		empBuilder = empBuilder.SetShortName(*req.ShortName)
-	}
-	if req.Department != nil {
-		empBuilder = empBuilder.SetDepartment(*req.Department)
-	}
-	if req.Direction != nil {
-		empBuilder = empBuilder.SetDirection(*req.Direction)
-	}
-	if req.InternalPhone != nil {
-		empBuilder = empBuilder.SetInternalPhone(*req.InternalPhone)
-	}
-	if req.BirthDate != nil {
-		t, parseErr := time.Parse("2006-01-02", *req.BirthDate)
-		if parseErr != nil {
-			err = errs.B().Code(errs.InvalidArgument).Msg("invalid birth_date format, expected YYYY-MM-DD").Err()
-			return nil, err
-		}
-		empBuilder = empBuilder.SetBirthDate(t)
-	}
-
-	empRow, err := empBuilder.Save(ctx)
-	if err != nil {
-		err = errs.B().Code(errs.Internal).Msg("failed to create employee").Cause(err).Err()
-		return nil, err
-	}
-
-	// создаем запись в таблице users (внутри той же транзакции)
-	dzoIDStr := dzoID.String()
-	userRow, err := tx.User.
-		Create().
-		SetKeycloakUserID(kcUserID).
-		SetEmail(strings.TrimSpace(req.Email)).
-		SetRole(string(req.Role)).
-		SetDzoID(dzoID).
-		SetClientID(clientID).
-		Save(ctx)
-	if err != nil {
-		if ent.IsConstraintError(err) {
-			err = errs.B().Code(errs.AlreadyExists).Msg("user with this email already exists").Err()
-			return nil, err
-		}
-		err = errs.B().Code(errs.Internal).Msg("failed to create user").Cause(err).Err()
-		return nil, err
-	}
-	_ = dzoIDStr
-
-	// обновляем employee.user_id на ссылку на только что созданного user
-	empRow, err = tx.Employee.
-		UpdateOneID(empRow.ID).
-		SetUserID(userRow.ID).
-		Save(ctx)
-	if err != nil {
-		err = errs.B().Code(errs.Internal).Msg("failed to link employee to user").Cause(err).Err()
-		return nil, err
-	}
-
-	// коммитим транзакцию оба insert фиксируются одновременно
-	if err = tx.Commit(); err != nil {
-		err = errs.B().Code(errs.Internal).Msg("failed to commit transaction").Cause(err).Err()
-		return nil, err
-	}
-
-	return entToEmployee(empRow), nil
 }
 
 // ListEmployees returns all active employees, with an optional search filter.
@@ -642,11 +539,18 @@ func ImportCountedRows(ctx context.Context, rowsToImport []parsedEmployeeRow, im
 
 	prepared := make([]preparedRow, 0, len(rowsToImport))
 	createdKCUserIDs := make([]string, 0, len(rowsToImport))
+	allPositions := make(map[uuid.UUID][]string)
 
 	for _, row := range rowsToImport {
 		dzoID, ok := dzoMap[normalizeHeader(row.DzoName)]
 		if !ok {
 			continue
+		}
+		if row.Position != nil {
+			position := strings.TrimSpace(*row.Position)
+			if position != "" {
+				allPositions[dzoID] = append(allPositions[dzoID], position)
+			}
 		}
 
 		kcUserID, err := kcAdmin.createKeycloakUser(ctx, strings.TrimSpace(row.Email), row.FullName, clientUID.String(), dzoID.String())
@@ -690,9 +594,15 @@ func ImportCountedRows(ctx context.Context, rowsToImport []parsedEmployeeRow, im
 			_ = tx.Rollback()
 		}
 	}()
+	positionsIdMap, err := getDzoPositionTitleIDsTx(ctx, tx, clientUID, allPositions)
+	if err != nil {
+		for _, id := range createdKCUserIDs {
+			deleteKeycloakUser(ctx, id)
+		}
+		return 0, nil, err
+	}
 
 	createdCount := 0
-
 	for _, item := range prepared {
 		userRow, err := tx.User.
 			Create().
@@ -718,7 +628,21 @@ func ImportCountedRows(ctx context.Context, rowsToImport []parsedEmployeeRow, im
 			SetUserID(userRow.ID)
 
 		if item.row.Position != nil {
-			empBuilder = empBuilder.SetPosition(*item.row.Position)
+			position := strings.TrimSpace(*item.row.Position)
+			if position != "" {
+				positionID, ok := positionsIdMap[item.dzoID][position]
+				if !ok {
+					for _, id := range createdKCUserIDs {
+						deleteKeycloakUser(ctx, id)
+					}
+					return 0, nil, errs.B().
+						Code(errs.Internal).
+						Msg("position title id not found after preload").
+						Err()
+				}
+
+				empBuilder = empBuilder.SetDzoPositionID(positionID)
+			}
 		}
 		if item.row.ShortName != nil {
 			empBuilder = empBuilder.SetShortName(*item.row.ShortName)
@@ -757,56 +681,116 @@ func ImportCountedRows(ctx context.Context, rowsToImport []parsedEmployeeRow, im
 	return importedCount, nil, nil
 }
 
-func insertEmployee(ctx context.Context, clientID, dzoID uuid.UUID, req *CreateEmployeeRequest) (*Employee, error) {
-	builder := Client.Employee.
+// insertEmployeeWithUser открывает ent транзакцию и создаёт:
+//
+//	запись в таблице employees
+//	запись в таблице users
+//	связывает employee.user_id к users.id
+//
+// если любой из шагов падает транзакция откатывается автоматически
+func insertEmployeeWithUser(
+	ctx context.Context,
+	clientID, dzoID uuid.UUID,
+	kcUserID string,
+	req *CreateEmployeeRequest,
+) (*Employee, error) {
+	tx, err := Client.Tx(ctx)
+	if err != nil {
+		return nil, errs.B().Code(errs.Internal).Msg("failed to begin transaction").Cause(err).Err()
+	}
+
+	defer func() {
+		if err != nil {
+			_ = tx.Rollback()
+		}
+	}()
+
+	// создаем запись в таблице employees (внутри транзакции)
+	empBuilder := tx.Employee.
 		Create().
 		SetClientID(clientID).
 		SetDzoID(dzoID).
 		SetFullName(req.FullName).
 		SetEmail(strings.TrimSpace(req.Email))
 
-	if req.Position != nil {
-		builder = builder.SetPosition(*req.Position)
+	if req.PositionID != nil {
+		posUid, err := uuid.Parse(*req.PositionID)
+		if err != nil {
+			return nil, errs.B().Code(errs.InvalidArgument).Msg("invalid position id").Err()
+		}
+		empBuilder = empBuilder.SetDzoPositionTitleID(posUid)
 	}
 	if req.ShortName != nil {
-		builder = builder.SetShortName(*req.ShortName)
+		empBuilder = empBuilder.SetShortName(*req.ShortName)
 	}
 	if req.Department != nil {
-		builder = builder.SetDepartment(*req.Department)
+		empBuilder = empBuilder.SetDepartment(*req.Department)
 	}
 	if req.Direction != nil {
-		builder = builder.SetDirection(*req.Direction)
+		empBuilder = empBuilder.SetDirection(*req.Direction)
 	}
 	if req.InternalPhone != nil {
-		builder = builder.SetInternalPhone(*req.InternalPhone)
+		empBuilder = empBuilder.SetInternalPhone(*req.InternalPhone)
 	}
 	if req.BirthDate != nil {
-		t, err := time.Parse("2006-01-02", *req.BirthDate)
-		if err != nil {
-			return nil, errs.B().Code(errs.InvalidArgument).Msg("invalid birth_date format, expected YYYY-MM-DD").Err()
+		t, parseErr := time.Parse("2006-01-02", *req.BirthDate)
+		if parseErr != nil {
+			err = errs.B().Code(errs.InvalidArgument).Msg("invalid birth_date format, expected YYYY-MM-DD").Err()
+			return nil, err
 		}
-		builder = builder.SetBirthDate(t)
-	}
-	if req.UserID != nil {
-		uid, err := uuid.Parse(*req.UserID)
-		if err != nil {
-			return nil, errs.B().Code(errs.InvalidArgument).Msg("invalid user_id format").Err()
-		}
-		builder = builder.SetUserID(uid)
+		empBuilder = empBuilder.SetBirthDate(t)
 	}
 
-	row, err := builder.Save(ctx)
+	empRow, err := empBuilder.Save(ctx)
 	if err != nil {
-		return nil, errs.B().Code(errs.Internal).Msg("failed to create employee").Cause(err).Err()
+		err = errs.B().Code(errs.Internal).Msg("failed to create employee").Cause(err).Err()
+		return nil, err
 	}
 
-	return entToEmployee(row), nil
+	// создаем запись в таблице users (внутри той же транзакции)
+	dzoIDStr := dzoID.String()
+	userRow, err := tx.User.
+		Create().
+		SetKeycloakUserID(kcUserID).
+		SetEmail(strings.TrimSpace(req.Email)).
+		SetRole(string(req.Role)).
+		SetDzoID(dzoID).
+		SetClientID(clientID).
+		Save(ctx)
+	if err != nil {
+		if ent.IsConstraintError(err) {
+			err = errs.B().Code(errs.AlreadyExists).Msg("user with this email already exists").Err()
+			return nil, err
+		}
+		err = errs.B().Code(errs.Internal).Msg("failed to create user").Cause(err).Err()
+		return nil, err
+	}
+	_ = dzoIDStr
+
+	// обновляем employee.user_id на ссылку на только что созданного user
+	empRow, err = tx.Employee.
+		UpdateOneID(empRow.ID).
+		SetUserID(userRow.ID).
+		Save(ctx)
+	if err != nil {
+		err = errs.B().Code(errs.Internal).Msg("failed to link employee to user").Cause(err).Err()
+		return nil, err
+	}
+
+	// коммитим транзакцию оба insert фиксируются одновременно
+	if err = tx.Commit(); err != nil {
+		err = errs.B().Code(errs.Internal).Msg("failed to commit transaction").Cause(err).Err()
+		return nil, err
+	}
+
+	return entToEmployee(empRow), nil
 }
 
 func queryActiveEmployees(ctx context.Context, search string, dzoID string, page int, limit int, clientID string) ([]Employee, int, error) {
 	q := Client.Employee.
 		Query().
 		WithDzo().
+		WithDzoPositionTitle().
 		Where(employee.IsDeletedEQ(false))
 
 	if search != "" {
@@ -870,6 +854,7 @@ func queryEmployeeByKeycloakUserID(ctx context.Context, kcUserID string) (*Emplo
 	empRow, err := Client.Employee.Query().
 		Where(employee.UserIDEQ(userRow.ID), employee.IsDeletedEQ(false)).
 		WithDzo().
+		WithDzoPositionTitle().
 		Only(ctx)
 	if err != nil {
 		if ent.IsNotFound(err) {
@@ -891,6 +876,7 @@ func queryEmployeeByID(ctx context.Context, id string) (*Employee, error) {
 		Query().
 		Where(employee.IDEQ(uid), employee.IsDeletedEQ(false)).
 		WithDzo().
+		WithDzoPositionTitle().
 		Only(ctx)
 	if err != nil {
 		if ent.IsNotFound(err) {
@@ -939,8 +925,12 @@ func patchEmployee(ctx context.Context, id string, req *UpdateEmployeeRequest) (
 		}
 		builder = builder.SetDzoID(dzoUID)
 	}
-	if req.Position != nil {
-		builder = builder.SetPosition(*req.Position)
+	if req.PositionID != nil {
+		posUid, err := uuid.Parse(*req.PositionID)
+		if err != nil {
+			return nil, errs.B().Code(errs.InvalidArgument).Msg("invalid position id").Err()
+		}
+		builder = builder.SetDzoPositionTitleID(posUid)
 	}
 	if req.ShortName != nil {
 		builder = builder.SetShortName(*req.ShortName)
@@ -1236,6 +1226,170 @@ func checkEmailUnique(ctx context.Context, email string, excludeID *uuid.UUID) e
 		return errs.B().Code(errs.AlreadyExists).Msg("employee with this email already exists").Err()
 	}
 	return nil
+}
+
+// Возврващает айди должности в дзо по названию
+func getDzoPositionTitleID(ctx context.Context, clientID, dzoID uuid.UUID, name string) (*uuid.UUID, error) {
+	name = strings.TrimSpace(name)
+	if name == "" {
+		return nil, errs.B().Code(errs.InvalidArgument).Msg("position title is required").Err()
+	}
+
+	row, err := Client.DzoPositionTitle.
+		Query().
+		Where(
+			dzopositiontitle.LocalTitleEQ(name),
+			dzopositiontitle.DzoIDEQ(dzoID),
+			dzopositiontitle.ClientIDEQ(clientID),
+			dzopositiontitle.IsDeletedEQ(false),
+		).
+		Only(ctx)
+
+	if err == nil {
+		return &row.ID, nil
+	}
+
+	if !ent.IsNotFound(err) {
+		return nil, errs.B().
+			Code(errs.Internal).
+			Msg("failed to query dzo position title").
+			Cause(err).
+			Err()
+	}
+
+	row, err = Client.DzoPositionTitle.
+		Create().
+		SetDzoID(dzoID).
+		SetClientID(clientID).
+		SetLocalTitle(name).
+		Save(ctx)
+	if err != nil {
+		return nil, errs.B().
+			Code(errs.Internal).
+			Msg("failed to create dzo position title").
+			Cause(err).
+			Err()
+	}
+
+	return &row.ID, nil
+}
+
+// Возвращает мапу с айдишками названии должностей
+func getDzoPositionTitleIDsTx(
+	ctx context.Context,
+	tx *ent.Tx,
+	clientID uuid.UUID,
+	names map[uuid.UUID][]string,
+) (map[uuid.UUID]map[string]uuid.UUID, error) {
+	result := make(map[uuid.UUID]map[string]uuid.UUID)
+
+	if len(names) == 0 {
+		return result, nil
+	}
+
+	dzoIDs := make([]uuid.UUID, 0, len(names))
+	allNamesSet := make(map[string]struct{})
+	needed := make(map[uuid.UUID]map[string]struct{})
+
+	for dzoID, rawNames := range names {
+		if needed[dzoID] == nil {
+			needed[dzoID] = make(map[string]struct{})
+		}
+
+		dzoIDs = append(dzoIDs, dzoID)
+
+		for _, name := range rawNames {
+			name = strings.TrimSpace(name)
+			if name == "" {
+				continue
+			}
+
+			if _, ok := needed[dzoID][name]; ok {
+				continue
+			}
+
+			needed[dzoID][name] = struct{}{}
+			allNamesSet[name] = struct{}{}
+		}
+	}
+
+	allNames := make([]string, 0, len(allNamesSet))
+	for name := range allNamesSet {
+		allNames = append(allNames, name)
+	}
+
+	if len(allNames) == 0 {
+		return result, nil
+	}
+
+	existingRows, err := tx.DzoPositionTitle.
+		Query().
+		Where(
+			dzopositiontitle.ClientIDEQ(clientID),
+			dzopositiontitle.DzoIDIn(dzoIDs...),
+			dzopositiontitle.LocalTitleIn(allNames...),
+			dzopositiontitle.IsDeletedEQ(false),
+		).
+		All(ctx)
+	if err != nil {
+		return nil, errs.B().
+			Code(errs.Internal).
+			Msg("failed to query dzo position titles").
+			Cause(err).
+			Err()
+	}
+
+	for _, row := range existingRows {
+		if result[row.DzoID] == nil {
+			result[row.DzoID] = make(map[string]uuid.UUID)
+		}
+
+		result[row.DzoID][row.LocalTitle] = row.ID
+	}
+
+	builders := make([]*ent.DzoPositionTitleCreate, 0)
+
+	for dzoID, titleSet := range needed {
+		if result[dzoID] == nil {
+			result[dzoID] = make(map[string]uuid.UUID)
+		}
+
+		for name := range titleSet {
+			if _, exists := result[dzoID][name]; exists {
+				continue
+			}
+
+			builders = append(builders, tx.DzoPositionTitle.
+				Create().
+				SetDzoID(dzoID).
+				SetClientID(clientID).
+				SetLocalTitle(name),
+			)
+		}
+	}
+
+	if len(builders) > 0 {
+		createdRows, err := tx.DzoPositionTitle.
+			CreateBulk(builders...).
+			Save(ctx)
+		if err != nil {
+			return nil, errs.B().
+				Code(errs.Internal).
+				Msg("failed to create dzo position titles").
+				Cause(err).
+				Err()
+		}
+
+		for _, row := range createdRows {
+			if result[row.DzoID] == nil {
+				result[row.DzoID] = make(map[string]uuid.UUID)
+			}
+
+			result[row.DzoID][row.LocalTitle] = row.ID
+		}
+	}
+
+	return result, nil
 }
 
 func checkDzoExists(ctx context.Context, dzoID uuid.UUID) error {
@@ -1693,8 +1847,10 @@ func entToEmployee(e *ent.Employee) *Employee {
 	if e.Edges.Dzo != nil {
 		emp.DzoName = e.Edges.Dzo.Name
 	}
-	if e.Position != nil {
-		emp.Position = e.Position
+	if e.Edges.DzoPositionTitle != nil {
+		emp.Position = &e.Edges.DzoPositionTitle.LocalTitle
+		positionStringID := e.DzoPositionID.String()
+		emp.PositionID = &positionStringID
 	}
 	if e.ShortName != nil {
 		emp.ShortName = e.ShortName

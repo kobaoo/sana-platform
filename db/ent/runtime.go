@@ -11,10 +11,12 @@ import (
 	"encore.app/db/ent/contractsupplier"
 	"encore.app/db/ent/contractsupplierhistory"
 	"encore.app/db/ent/dzoorganization"
+	"encore.app/db/ent/dzopositiontitle"
 	"encore.app/db/ent/employee"
 	"encore.app/db/ent/event"
 	"encore.app/db/ent/eventparticipant"
 	"encore.app/db/ent/externaltrainingevent"
+	"encore.app/db/ent/generalposition"
 	"encore.app/db/ent/notification"
 	"encore.app/db/ent/organization"
 	"encore.app/db/ent/request"
@@ -273,12 +275,50 @@ func init() {
 	dzoorganizationDescID := dzoorganizationFields[0].Descriptor()
 	// dzoorganization.DefaultID holds the default value on creation for the id field.
 	dzoorganization.DefaultID = dzoorganizationDescID.Default.(func() uuid.UUID)
+	dzopositiontitleFields := schema.DzoPositionTitle{}.Fields()
+	_ = dzopositiontitleFields
+	// dzopositiontitleDescLocalTitle is the schema descriptor for local_title field.
+	dzopositiontitleDescLocalTitle := dzopositiontitleFields[4].Descriptor()
+	// dzopositiontitle.LocalTitleValidator is a validator for the "local_title" field. It is called by the builders before save.
+	dzopositiontitle.LocalTitleValidator = func() func(string) error {
+		validators := dzopositiontitleDescLocalTitle.Validators
+		fns := [...]func(string) error{
+			validators[0].(func(string) error),
+			validators[1].(func(string) error),
+		}
+		return func(local_title string) error {
+			for _, fn := range fns {
+				if err := fn(local_title); err != nil {
+					return err
+				}
+			}
+			return nil
+		}
+	}()
+	// dzopositiontitleDescIsActive is the schema descriptor for is_active field.
+	dzopositiontitleDescIsActive := dzopositiontitleFields[5].Descriptor()
+	// dzopositiontitle.DefaultIsActive holds the default value on creation for the is_active field.
+	dzopositiontitle.DefaultIsActive = dzopositiontitleDescIsActive.Default.(bool)
+	// dzopositiontitleDescIsDeleted is the schema descriptor for is_deleted field.
+	dzopositiontitleDescIsDeleted := dzopositiontitleFields[6].Descriptor()
+	// dzopositiontitle.DefaultIsDeleted holds the default value on creation for the is_deleted field.
+	dzopositiontitle.DefaultIsDeleted = dzopositiontitleDescIsDeleted.Default.(bool)
+	// dzopositiontitleDescCreatedAt is the schema descriptor for created_at field.
+	dzopositiontitleDescCreatedAt := dzopositiontitleFields[7].Descriptor()
+	// dzopositiontitle.DefaultCreatedAt holds the default value on creation for the created_at field.
+	dzopositiontitle.DefaultCreatedAt = dzopositiontitleDescCreatedAt.Default.(func() time.Time)
+	// dzopositiontitleDescUpdatedAt is the schema descriptor for updated_at field.
+	dzopositiontitleDescUpdatedAt := dzopositiontitleFields[8].Descriptor()
+	// dzopositiontitle.DefaultUpdatedAt holds the default value on creation for the updated_at field.
+	dzopositiontitle.DefaultUpdatedAt = dzopositiontitleDescUpdatedAt.Default.(func() time.Time)
+	// dzopositiontitle.UpdateDefaultUpdatedAt holds the default value on update for the updated_at field.
+	dzopositiontitle.UpdateDefaultUpdatedAt = dzopositiontitleDescUpdatedAt.UpdateDefault.(func() time.Time)
+	// dzopositiontitleDescID is the schema descriptor for id field.
+	dzopositiontitleDescID := dzopositiontitleFields[0].Descriptor()
+	// dzopositiontitle.DefaultID holds the default value on creation for the id field.
+	dzopositiontitle.DefaultID = dzopositiontitleDescID.Default.(func() uuid.UUID)
 	employeeFields := schema.Employee{}.Fields()
 	_ = employeeFields
-	// employeeDescPosition is the schema descriptor for position field.
-	employeeDescPosition := employeeFields[3].Descriptor()
-	// employee.PositionValidator is a validator for the "position" field. It is called by the builders before save.
-	employee.PositionValidator = employeeDescPosition.Validators[0].(func(string) error)
 	// employeeDescFullName is the schema descriptor for full_name field.
 	employeeDescFullName := employeeFields[4].Descriptor()
 	// employee.FullNameValidator is a validator for the "full_name" field. It is called by the builders before save.
@@ -409,6 +449,38 @@ func init() {
 	externaltrainingeventDescID := externaltrainingeventFields[0].Descriptor()
 	// externaltrainingevent.DefaultID holds the default value on creation for the id field.
 	externaltrainingevent.DefaultID = externaltrainingeventDescID.Default.(func() uuid.UUID)
+	generalpositionFields := schema.GeneralPosition{}.Fields()
+	_ = generalpositionFields
+	// generalpositionDescName is the schema descriptor for name field.
+	generalpositionDescName := generalpositionFields[1].Descriptor()
+	// generalposition.NameValidator is a validator for the "name" field. It is called by the builders before save.
+	generalposition.NameValidator = func() func(string) error {
+		validators := generalpositionDescName.Validators
+		fns := [...]func(string) error{
+			validators[0].(func(string) error),
+			validators[1].(func(string) error),
+		}
+		return func(name string) error {
+			for _, fn := range fns {
+				if err := fn(name); err != nil {
+					return err
+				}
+			}
+			return nil
+		}
+	}()
+	// generalpositionDescIsDeleted is the schema descriptor for is_deleted field.
+	generalpositionDescIsDeleted := generalpositionFields[3].Descriptor()
+	// generalposition.DefaultIsDeleted holds the default value on creation for the is_deleted field.
+	generalposition.DefaultIsDeleted = generalpositionDescIsDeleted.Default.(bool)
+	// generalpositionDescCreatedAt is the schema descriptor for created_at field.
+	generalpositionDescCreatedAt := generalpositionFields[4].Descriptor()
+	// generalposition.DefaultCreatedAt holds the default value on creation for the created_at field.
+	generalposition.DefaultCreatedAt = generalpositionDescCreatedAt.Default.(func() time.Time)
+	// generalpositionDescID is the schema descriptor for id field.
+	generalpositionDescID := generalpositionFields[0].Descriptor()
+	// generalposition.DefaultID holds the default value on creation for the id field.
+	generalposition.DefaultID = generalpositionDescID.Default.(func() uuid.UUID)
 	notificationFields := schema.Notification{}.Fields()
 	_ = notificationFields
 	// notificationDescCreatedAt is the schema descriptor for created_at field.

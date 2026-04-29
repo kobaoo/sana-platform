@@ -18,10 +18,12 @@ import (
 	"encore.app/db/ent/contractsupplier"
 	"encore.app/db/ent/contractsupplierhistory"
 	"encore.app/db/ent/dzoorganization"
+	"encore.app/db/ent/dzopositiontitle"
 	"encore.app/db/ent/employee"
 	"encore.app/db/ent/event"
 	"encore.app/db/ent/eventparticipant"
 	"encore.app/db/ent/externaltrainingevent"
+	"encore.app/db/ent/generalposition"
 	"encore.app/db/ent/notification"
 	"encore.app/db/ent/organization"
 	"encore.app/db/ent/request"
@@ -55,6 +57,8 @@ type Client struct {
 	ContractSupplierHistory *ContractSupplierHistoryClient
 	// DzoOrganization is the client for interacting with the DzoOrganization builders.
 	DzoOrganization *DzoOrganizationClient
+	// DzoPositionTitle is the client for interacting with the DzoPositionTitle builders.
+	DzoPositionTitle *DzoPositionTitleClient
 	// Employee is the client for interacting with the Employee builders.
 	Employee *EmployeeClient
 	// Event is the client for interacting with the Event builders.
@@ -63,6 +67,8 @@ type Client struct {
 	EventParticipant *EventParticipantClient
 	// ExternalTrainingEvent is the client for interacting with the ExternalTrainingEvent builders.
 	ExternalTrainingEvent *ExternalTrainingEventClient
+	// GeneralPosition is the client for interacting with the GeneralPosition builders.
+	GeneralPosition *GeneralPositionClient
 	// Notification is the client for interacting with the Notification builders.
 	Notification *NotificationClient
 	// Organization is the client for interacting with the Organization builders.
@@ -100,10 +106,12 @@ func (c *Client) init() {
 	c.ContractSupplier = NewContractSupplierClient(c.config)
 	c.ContractSupplierHistory = NewContractSupplierHistoryClient(c.config)
 	c.DzoOrganization = NewDzoOrganizationClient(c.config)
+	c.DzoPositionTitle = NewDzoPositionTitleClient(c.config)
 	c.Employee = NewEmployeeClient(c.config)
 	c.Event = NewEventClient(c.config)
 	c.EventParticipant = NewEventParticipantClient(c.config)
 	c.ExternalTrainingEvent = NewExternalTrainingEventClient(c.config)
+	c.GeneralPosition = NewGeneralPositionClient(c.config)
 	c.Notification = NewNotificationClient(c.config)
 	c.Organization = NewOrganizationClient(c.config)
 	c.Request = NewRequestClient(c.config)
@@ -212,10 +220,12 @@ func (c *Client) Tx(ctx context.Context) (*Tx, error) {
 		ContractSupplier:        NewContractSupplierClient(cfg),
 		ContractSupplierHistory: NewContractSupplierHistoryClient(cfg),
 		DzoOrganization:         NewDzoOrganizationClient(cfg),
+		DzoPositionTitle:        NewDzoPositionTitleClient(cfg),
 		Employee:                NewEmployeeClient(cfg),
 		Event:                   NewEventClient(cfg),
 		EventParticipant:        NewEventParticipantClient(cfg),
 		ExternalTrainingEvent:   NewExternalTrainingEventClient(cfg),
+		GeneralPosition:         NewGeneralPositionClient(cfg),
 		Notification:            NewNotificationClient(cfg),
 		Organization:            NewOrganizationClient(cfg),
 		Request:                 NewRequestClient(cfg),
@@ -251,10 +261,12 @@ func (c *Client) BeginTx(ctx context.Context, opts *sql.TxOptions) (*Tx, error) 
 		ContractSupplier:        NewContractSupplierClient(cfg),
 		ContractSupplierHistory: NewContractSupplierHistoryClient(cfg),
 		DzoOrganization:         NewDzoOrganizationClient(cfg),
+		DzoPositionTitle:        NewDzoPositionTitleClient(cfg),
 		Employee:                NewEmployeeClient(cfg),
 		Event:                   NewEventClient(cfg),
 		EventParticipant:        NewEventParticipantClient(cfg),
 		ExternalTrainingEvent:   NewExternalTrainingEventClient(cfg),
+		GeneralPosition:         NewGeneralPositionClient(cfg),
 		Notification:            NewNotificationClient(cfg),
 		Organization:            NewOrganizationClient(cfg),
 		Request:                 NewRequestClient(cfg),
@@ -295,10 +307,11 @@ func (c *Client) Close() error {
 func (c *Client) Use(hooks ...Hook) {
 	for _, n := range []interface{ Use(...Hook) }{
 		c.Category, c.Certificate, c.Company, c.ContractSupplier,
-		c.ContractSupplierHistory, c.DzoOrganization, c.Employee, c.Event,
-		c.EventParticipant, c.ExternalTrainingEvent, c.Notification, c.Organization,
-		c.Request, c.RequestDzoContract, c.RequestParticipant, c.RequestTargetDzo,
-		c.Supplier, c.TrainingEvent, c.TrainingParticipant, c.User,
+		c.ContractSupplierHistory, c.DzoOrganization, c.DzoPositionTitle, c.Employee,
+		c.Event, c.EventParticipant, c.ExternalTrainingEvent, c.GeneralPosition,
+		c.Notification, c.Organization, c.Request, c.RequestDzoContract,
+		c.RequestParticipant, c.RequestTargetDzo, c.Supplier, c.TrainingEvent,
+		c.TrainingParticipant, c.User,
 	} {
 		n.Use(hooks...)
 	}
@@ -309,10 +322,11 @@ func (c *Client) Use(hooks ...Hook) {
 func (c *Client) Intercept(interceptors ...Interceptor) {
 	for _, n := range []interface{ Intercept(...Interceptor) }{
 		c.Category, c.Certificate, c.Company, c.ContractSupplier,
-		c.ContractSupplierHistory, c.DzoOrganization, c.Employee, c.Event,
-		c.EventParticipant, c.ExternalTrainingEvent, c.Notification, c.Organization,
-		c.Request, c.RequestDzoContract, c.RequestParticipant, c.RequestTargetDzo,
-		c.Supplier, c.TrainingEvent, c.TrainingParticipant, c.User,
+		c.ContractSupplierHistory, c.DzoOrganization, c.DzoPositionTitle, c.Employee,
+		c.Event, c.EventParticipant, c.ExternalTrainingEvent, c.GeneralPosition,
+		c.Notification, c.Organization, c.Request, c.RequestDzoContract,
+		c.RequestParticipant, c.RequestTargetDzo, c.Supplier, c.TrainingEvent,
+		c.TrainingParticipant, c.User,
 	} {
 		n.Intercept(interceptors...)
 	}
@@ -333,6 +347,8 @@ func (c *Client) Mutate(ctx context.Context, m Mutation) (Value, error) {
 		return c.ContractSupplierHistory.mutate(ctx, m)
 	case *DzoOrganizationMutation:
 		return c.DzoOrganization.mutate(ctx, m)
+	case *DzoPositionTitleMutation:
+		return c.DzoPositionTitle.mutate(ctx, m)
 	case *EmployeeMutation:
 		return c.Employee.mutate(ctx, m)
 	case *EventMutation:
@@ -341,6 +357,8 @@ func (c *Client) Mutate(ctx context.Context, m Mutation) (Value, error) {
 		return c.EventParticipant.mutate(ctx, m)
 	case *ExternalTrainingEventMutation:
 		return c.ExternalTrainingEvent.mutate(ctx, m)
+	case *GeneralPositionMutation:
+		return c.GeneralPosition.mutate(ctx, m)
 	case *NotificationMutation:
 		return c.Notification.mutate(ctx, m)
 	case *OrganizationMutation:
@@ -1219,6 +1237,22 @@ func (c *DzoOrganizationClient) QueryEmployees(_m *DzoOrganization) *EmployeeQue
 	return query
 }
 
+// QueryPositionTitles queries the position_titles edge of a DzoOrganization.
+func (c *DzoOrganizationClient) QueryPositionTitles(_m *DzoOrganization) *DzoPositionTitleQuery {
+	query := (&DzoPositionTitleClient{config: c.config}).Query()
+	query.path = func(context.Context) (fromV *sql.Selector, _ error) {
+		id := _m.ID
+		step := sqlgraph.NewStep(
+			sqlgraph.From(dzoorganization.Table, dzoorganization.FieldID, id),
+			sqlgraph.To(dzopositiontitle.Table, dzopositiontitle.FieldID),
+			sqlgraph.Edge(sqlgraph.O2M, false, dzoorganization.PositionTitlesTable, dzoorganization.PositionTitlesColumn),
+		)
+		fromV = sqlgraph.Neighbors(_m.driver.Dialect(), step)
+		return fromV, nil
+	}
+	return query
+}
+
 // Hooks returns the client hooks.
 func (c *DzoOrganizationClient) Hooks() []Hook {
 	return c.hooks.DzoOrganization
@@ -1241,6 +1275,187 @@ func (c *DzoOrganizationClient) mutate(ctx context.Context, m *DzoOrganizationMu
 		return (&DzoOrganizationDelete{config: c.config, hooks: c.Hooks(), mutation: m}).Exec(ctx)
 	default:
 		return nil, fmt.Errorf("ent: unknown DzoOrganization mutation op: %q", m.Op())
+	}
+}
+
+// DzoPositionTitleClient is a client for the DzoPositionTitle schema.
+type DzoPositionTitleClient struct {
+	config
+}
+
+// NewDzoPositionTitleClient returns a client for the DzoPositionTitle from the given config.
+func NewDzoPositionTitleClient(c config) *DzoPositionTitleClient {
+	return &DzoPositionTitleClient{config: c}
+}
+
+// Use adds a list of mutation hooks to the hooks stack.
+// A call to `Use(f, g, h)` equals to `dzopositiontitle.Hooks(f(g(h())))`.
+func (c *DzoPositionTitleClient) Use(hooks ...Hook) {
+	c.hooks.DzoPositionTitle = append(c.hooks.DzoPositionTitle, hooks...)
+}
+
+// Intercept adds a list of query interceptors to the interceptors stack.
+// A call to `Intercept(f, g, h)` equals to `dzopositiontitle.Intercept(f(g(h())))`.
+func (c *DzoPositionTitleClient) Intercept(interceptors ...Interceptor) {
+	c.inters.DzoPositionTitle = append(c.inters.DzoPositionTitle, interceptors...)
+}
+
+// Create returns a builder for creating a DzoPositionTitle entity.
+func (c *DzoPositionTitleClient) Create() *DzoPositionTitleCreate {
+	mutation := newDzoPositionTitleMutation(c.config, OpCreate)
+	return &DzoPositionTitleCreate{config: c.config, hooks: c.Hooks(), mutation: mutation}
+}
+
+// CreateBulk returns a builder for creating a bulk of DzoPositionTitle entities.
+func (c *DzoPositionTitleClient) CreateBulk(builders ...*DzoPositionTitleCreate) *DzoPositionTitleCreateBulk {
+	return &DzoPositionTitleCreateBulk{config: c.config, builders: builders}
+}
+
+// MapCreateBulk creates a bulk creation builder from the given slice. For each item in the slice, the function creates
+// a builder and applies setFunc on it.
+func (c *DzoPositionTitleClient) MapCreateBulk(slice any, setFunc func(*DzoPositionTitleCreate, int)) *DzoPositionTitleCreateBulk {
+	rv := reflect.ValueOf(slice)
+	if rv.Kind() != reflect.Slice {
+		return &DzoPositionTitleCreateBulk{err: fmt.Errorf("calling to DzoPositionTitleClient.MapCreateBulk with wrong type %T, need slice", slice)}
+	}
+	builders := make([]*DzoPositionTitleCreate, rv.Len())
+	for i := 0; i < rv.Len(); i++ {
+		builders[i] = c.Create()
+		setFunc(builders[i], i)
+	}
+	return &DzoPositionTitleCreateBulk{config: c.config, builders: builders}
+}
+
+// Update returns an update builder for DzoPositionTitle.
+func (c *DzoPositionTitleClient) Update() *DzoPositionTitleUpdate {
+	mutation := newDzoPositionTitleMutation(c.config, OpUpdate)
+	return &DzoPositionTitleUpdate{config: c.config, hooks: c.Hooks(), mutation: mutation}
+}
+
+// UpdateOne returns an update builder for the given entity.
+func (c *DzoPositionTitleClient) UpdateOne(_m *DzoPositionTitle) *DzoPositionTitleUpdateOne {
+	mutation := newDzoPositionTitleMutation(c.config, OpUpdateOne, withDzoPositionTitle(_m))
+	return &DzoPositionTitleUpdateOne{config: c.config, hooks: c.Hooks(), mutation: mutation}
+}
+
+// UpdateOneID returns an update builder for the given id.
+func (c *DzoPositionTitleClient) UpdateOneID(id uuid.UUID) *DzoPositionTitleUpdateOne {
+	mutation := newDzoPositionTitleMutation(c.config, OpUpdateOne, withDzoPositionTitleID(id))
+	return &DzoPositionTitleUpdateOne{config: c.config, hooks: c.Hooks(), mutation: mutation}
+}
+
+// Delete returns a delete builder for DzoPositionTitle.
+func (c *DzoPositionTitleClient) Delete() *DzoPositionTitleDelete {
+	mutation := newDzoPositionTitleMutation(c.config, OpDelete)
+	return &DzoPositionTitleDelete{config: c.config, hooks: c.Hooks(), mutation: mutation}
+}
+
+// DeleteOne returns a builder for deleting the given entity.
+func (c *DzoPositionTitleClient) DeleteOne(_m *DzoPositionTitle) *DzoPositionTitleDeleteOne {
+	return c.DeleteOneID(_m.ID)
+}
+
+// DeleteOneID returns a builder for deleting the given entity by its id.
+func (c *DzoPositionTitleClient) DeleteOneID(id uuid.UUID) *DzoPositionTitleDeleteOne {
+	builder := c.Delete().Where(dzopositiontitle.ID(id))
+	builder.mutation.id = &id
+	builder.mutation.op = OpDeleteOne
+	return &DzoPositionTitleDeleteOne{builder}
+}
+
+// Query returns a query builder for DzoPositionTitle.
+func (c *DzoPositionTitleClient) Query() *DzoPositionTitleQuery {
+	return &DzoPositionTitleQuery{
+		config: c.config,
+		ctx:    &QueryContext{Type: TypeDzoPositionTitle},
+		inters: c.Interceptors(),
+	}
+}
+
+// Get returns a DzoPositionTitle entity by its id.
+func (c *DzoPositionTitleClient) Get(ctx context.Context, id uuid.UUID) (*DzoPositionTitle, error) {
+	return c.Query().Where(dzopositiontitle.ID(id)).Only(ctx)
+}
+
+// GetX is like Get, but panics if an error occurs.
+func (c *DzoPositionTitleClient) GetX(ctx context.Context, id uuid.UUID) *DzoPositionTitle {
+	obj, err := c.Get(ctx, id)
+	if err != nil {
+		panic(err)
+	}
+	return obj
+}
+
+// QueryDzo queries the dzo edge of a DzoPositionTitle.
+func (c *DzoPositionTitleClient) QueryDzo(_m *DzoPositionTitle) *DzoOrganizationQuery {
+	query := (&DzoOrganizationClient{config: c.config}).Query()
+	query.path = func(context.Context) (fromV *sql.Selector, _ error) {
+		id := _m.ID
+		step := sqlgraph.NewStep(
+			sqlgraph.From(dzopositiontitle.Table, dzopositiontitle.FieldID, id),
+			sqlgraph.To(dzoorganization.Table, dzoorganization.FieldID),
+			sqlgraph.Edge(sqlgraph.M2O, true, dzopositiontitle.DzoTable, dzopositiontitle.DzoColumn),
+		)
+		fromV = sqlgraph.Neighbors(_m.driver.Dialect(), step)
+		return fromV, nil
+	}
+	return query
+}
+
+// QueryGeneralPosition queries the general_position edge of a DzoPositionTitle.
+func (c *DzoPositionTitleClient) QueryGeneralPosition(_m *DzoPositionTitle) *GeneralPositionQuery {
+	query := (&GeneralPositionClient{config: c.config}).Query()
+	query.path = func(context.Context) (fromV *sql.Selector, _ error) {
+		id := _m.ID
+		step := sqlgraph.NewStep(
+			sqlgraph.From(dzopositiontitle.Table, dzopositiontitle.FieldID, id),
+			sqlgraph.To(generalposition.Table, generalposition.FieldID),
+			sqlgraph.Edge(sqlgraph.M2O, true, dzopositiontitle.GeneralPositionTable, dzopositiontitle.GeneralPositionColumn),
+		)
+		fromV = sqlgraph.Neighbors(_m.driver.Dialect(), step)
+		return fromV, nil
+	}
+	return query
+}
+
+// QueryEmployees queries the employees edge of a DzoPositionTitle.
+func (c *DzoPositionTitleClient) QueryEmployees(_m *DzoPositionTitle) *EmployeeQuery {
+	query := (&EmployeeClient{config: c.config}).Query()
+	query.path = func(context.Context) (fromV *sql.Selector, _ error) {
+		id := _m.ID
+		step := sqlgraph.NewStep(
+			sqlgraph.From(dzopositiontitle.Table, dzopositiontitle.FieldID, id),
+			sqlgraph.To(employee.Table, employee.FieldID),
+			sqlgraph.Edge(sqlgraph.O2M, false, dzopositiontitle.EmployeesTable, dzopositiontitle.EmployeesColumn),
+		)
+		fromV = sqlgraph.Neighbors(_m.driver.Dialect(), step)
+		return fromV, nil
+	}
+	return query
+}
+
+// Hooks returns the client hooks.
+func (c *DzoPositionTitleClient) Hooks() []Hook {
+	return c.hooks.DzoPositionTitle
+}
+
+// Interceptors returns the client interceptors.
+func (c *DzoPositionTitleClient) Interceptors() []Interceptor {
+	return c.inters.DzoPositionTitle
+}
+
+func (c *DzoPositionTitleClient) mutate(ctx context.Context, m *DzoPositionTitleMutation) (Value, error) {
+	switch m.Op() {
+	case OpCreate:
+		return (&DzoPositionTitleCreate{config: c.config, hooks: c.Hooks(), mutation: m}).Save(ctx)
+	case OpUpdate:
+		return (&DzoPositionTitleUpdate{config: c.config, hooks: c.Hooks(), mutation: m}).Save(ctx)
+	case OpUpdateOne:
+		return (&DzoPositionTitleUpdateOne{config: c.config, hooks: c.Hooks(), mutation: m}).Save(ctx)
+	case OpDelete, OpDeleteOne:
+		return (&DzoPositionTitleDelete{config: c.config, hooks: c.Hooks(), mutation: m}).Exec(ctx)
+	default:
+		return nil, fmt.Errorf("ent: unknown DzoPositionTitle mutation op: %q", m.Op())
 	}
 }
 
@@ -1361,6 +1576,22 @@ func (c *EmployeeClient) QueryDzo(_m *Employee) *DzoOrganizationQuery {
 			sqlgraph.From(employee.Table, employee.FieldID, id),
 			sqlgraph.To(dzoorganization.Table, dzoorganization.FieldID),
 			sqlgraph.Edge(sqlgraph.M2O, true, employee.DzoTable, employee.DzoColumn),
+		)
+		fromV = sqlgraph.Neighbors(_m.driver.Dialect(), step)
+		return fromV, nil
+	}
+	return query
+}
+
+// QueryDzoPositionTitle queries the dzo_position_title edge of a Employee.
+func (c *EmployeeClient) QueryDzoPositionTitle(_m *Employee) *DzoPositionTitleQuery {
+	query := (&DzoPositionTitleClient{config: c.config}).Query()
+	query.path = func(context.Context) (fromV *sql.Selector, _ error) {
+		id := _m.ID
+		step := sqlgraph.NewStep(
+			sqlgraph.From(employee.Table, employee.FieldID, id),
+			sqlgraph.To(dzopositiontitle.Table, dzopositiontitle.FieldID),
+			sqlgraph.Edge(sqlgraph.M2O, true, employee.DzoPositionTitleTable, employee.DzoPositionTitleColumn),
 		)
 		fromV = sqlgraph.Neighbors(_m.driver.Dialect(), step)
 		return fromV, nil
@@ -1965,6 +2196,155 @@ func (c *ExternalTrainingEventClient) mutate(ctx context.Context, m *ExternalTra
 		return (&ExternalTrainingEventDelete{config: c.config, hooks: c.Hooks(), mutation: m}).Exec(ctx)
 	default:
 		return nil, fmt.Errorf("ent: unknown ExternalTrainingEvent mutation op: %q", m.Op())
+	}
+}
+
+// GeneralPositionClient is a client for the GeneralPosition schema.
+type GeneralPositionClient struct {
+	config
+}
+
+// NewGeneralPositionClient returns a client for the GeneralPosition from the given config.
+func NewGeneralPositionClient(c config) *GeneralPositionClient {
+	return &GeneralPositionClient{config: c}
+}
+
+// Use adds a list of mutation hooks to the hooks stack.
+// A call to `Use(f, g, h)` equals to `generalposition.Hooks(f(g(h())))`.
+func (c *GeneralPositionClient) Use(hooks ...Hook) {
+	c.hooks.GeneralPosition = append(c.hooks.GeneralPosition, hooks...)
+}
+
+// Intercept adds a list of query interceptors to the interceptors stack.
+// A call to `Intercept(f, g, h)` equals to `generalposition.Intercept(f(g(h())))`.
+func (c *GeneralPositionClient) Intercept(interceptors ...Interceptor) {
+	c.inters.GeneralPosition = append(c.inters.GeneralPosition, interceptors...)
+}
+
+// Create returns a builder for creating a GeneralPosition entity.
+func (c *GeneralPositionClient) Create() *GeneralPositionCreate {
+	mutation := newGeneralPositionMutation(c.config, OpCreate)
+	return &GeneralPositionCreate{config: c.config, hooks: c.Hooks(), mutation: mutation}
+}
+
+// CreateBulk returns a builder for creating a bulk of GeneralPosition entities.
+func (c *GeneralPositionClient) CreateBulk(builders ...*GeneralPositionCreate) *GeneralPositionCreateBulk {
+	return &GeneralPositionCreateBulk{config: c.config, builders: builders}
+}
+
+// MapCreateBulk creates a bulk creation builder from the given slice. For each item in the slice, the function creates
+// a builder and applies setFunc on it.
+func (c *GeneralPositionClient) MapCreateBulk(slice any, setFunc func(*GeneralPositionCreate, int)) *GeneralPositionCreateBulk {
+	rv := reflect.ValueOf(slice)
+	if rv.Kind() != reflect.Slice {
+		return &GeneralPositionCreateBulk{err: fmt.Errorf("calling to GeneralPositionClient.MapCreateBulk with wrong type %T, need slice", slice)}
+	}
+	builders := make([]*GeneralPositionCreate, rv.Len())
+	for i := 0; i < rv.Len(); i++ {
+		builders[i] = c.Create()
+		setFunc(builders[i], i)
+	}
+	return &GeneralPositionCreateBulk{config: c.config, builders: builders}
+}
+
+// Update returns an update builder for GeneralPosition.
+func (c *GeneralPositionClient) Update() *GeneralPositionUpdate {
+	mutation := newGeneralPositionMutation(c.config, OpUpdate)
+	return &GeneralPositionUpdate{config: c.config, hooks: c.Hooks(), mutation: mutation}
+}
+
+// UpdateOne returns an update builder for the given entity.
+func (c *GeneralPositionClient) UpdateOne(_m *GeneralPosition) *GeneralPositionUpdateOne {
+	mutation := newGeneralPositionMutation(c.config, OpUpdateOne, withGeneralPosition(_m))
+	return &GeneralPositionUpdateOne{config: c.config, hooks: c.Hooks(), mutation: mutation}
+}
+
+// UpdateOneID returns an update builder for the given id.
+func (c *GeneralPositionClient) UpdateOneID(id uuid.UUID) *GeneralPositionUpdateOne {
+	mutation := newGeneralPositionMutation(c.config, OpUpdateOne, withGeneralPositionID(id))
+	return &GeneralPositionUpdateOne{config: c.config, hooks: c.Hooks(), mutation: mutation}
+}
+
+// Delete returns a delete builder for GeneralPosition.
+func (c *GeneralPositionClient) Delete() *GeneralPositionDelete {
+	mutation := newGeneralPositionMutation(c.config, OpDelete)
+	return &GeneralPositionDelete{config: c.config, hooks: c.Hooks(), mutation: mutation}
+}
+
+// DeleteOne returns a builder for deleting the given entity.
+func (c *GeneralPositionClient) DeleteOne(_m *GeneralPosition) *GeneralPositionDeleteOne {
+	return c.DeleteOneID(_m.ID)
+}
+
+// DeleteOneID returns a builder for deleting the given entity by its id.
+func (c *GeneralPositionClient) DeleteOneID(id uuid.UUID) *GeneralPositionDeleteOne {
+	builder := c.Delete().Where(generalposition.ID(id))
+	builder.mutation.id = &id
+	builder.mutation.op = OpDeleteOne
+	return &GeneralPositionDeleteOne{builder}
+}
+
+// Query returns a query builder for GeneralPosition.
+func (c *GeneralPositionClient) Query() *GeneralPositionQuery {
+	return &GeneralPositionQuery{
+		config: c.config,
+		ctx:    &QueryContext{Type: TypeGeneralPosition},
+		inters: c.Interceptors(),
+	}
+}
+
+// Get returns a GeneralPosition entity by its id.
+func (c *GeneralPositionClient) Get(ctx context.Context, id uuid.UUID) (*GeneralPosition, error) {
+	return c.Query().Where(generalposition.ID(id)).Only(ctx)
+}
+
+// GetX is like Get, but panics if an error occurs.
+func (c *GeneralPositionClient) GetX(ctx context.Context, id uuid.UUID) *GeneralPosition {
+	obj, err := c.Get(ctx, id)
+	if err != nil {
+		panic(err)
+	}
+	return obj
+}
+
+// QueryDzoPositionTitles queries the dzo_position_titles edge of a GeneralPosition.
+func (c *GeneralPositionClient) QueryDzoPositionTitles(_m *GeneralPosition) *DzoPositionTitleQuery {
+	query := (&DzoPositionTitleClient{config: c.config}).Query()
+	query.path = func(context.Context) (fromV *sql.Selector, _ error) {
+		id := _m.ID
+		step := sqlgraph.NewStep(
+			sqlgraph.From(generalposition.Table, generalposition.FieldID, id),
+			sqlgraph.To(dzopositiontitle.Table, dzopositiontitle.FieldID),
+			sqlgraph.Edge(sqlgraph.O2M, false, generalposition.DzoPositionTitlesTable, generalposition.DzoPositionTitlesColumn),
+		)
+		fromV = sqlgraph.Neighbors(_m.driver.Dialect(), step)
+		return fromV, nil
+	}
+	return query
+}
+
+// Hooks returns the client hooks.
+func (c *GeneralPositionClient) Hooks() []Hook {
+	return c.hooks.GeneralPosition
+}
+
+// Interceptors returns the client interceptors.
+func (c *GeneralPositionClient) Interceptors() []Interceptor {
+	return c.inters.GeneralPosition
+}
+
+func (c *GeneralPositionClient) mutate(ctx context.Context, m *GeneralPositionMutation) (Value, error) {
+	switch m.Op() {
+	case OpCreate:
+		return (&GeneralPositionCreate{config: c.config, hooks: c.Hooks(), mutation: m}).Save(ctx)
+	case OpUpdate:
+		return (&GeneralPositionUpdate{config: c.config, hooks: c.Hooks(), mutation: m}).Save(ctx)
+	case OpUpdateOne:
+		return (&GeneralPositionUpdateOne{config: c.config, hooks: c.Hooks(), mutation: m}).Save(ctx)
+	case OpDelete, OpDeleteOne:
+		return (&GeneralPositionDelete{config: c.config, hooks: c.Hooks(), mutation: m}).Exec(ctx)
+	default:
+		return nil, fmt.Errorf("ent: unknown GeneralPosition mutation op: %q", m.Op())
 	}
 }
 
@@ -3478,15 +3858,16 @@ func (c *UserClient) mutate(ctx context.Context, m *UserMutation) (Value, error)
 type (
 	hooks struct {
 		Category, Certificate, Company, ContractSupplier, ContractSupplierHistory,
-		DzoOrganization, Employee, Event, EventParticipant, ExternalTrainingEvent,
-		Notification, Organization, Request, RequestDzoContract, RequestParticipant,
-		RequestTargetDzo, Supplier, TrainingEvent, TrainingParticipant, User []ent.Hook
+		DzoOrganization, DzoPositionTitle, Employee, Event, EventParticipant,
+		ExternalTrainingEvent, GeneralPosition, Notification, Organization, Request,
+		RequestDzoContract, RequestParticipant, RequestTargetDzo, Supplier,
+		TrainingEvent, TrainingParticipant, User []ent.Hook
 	}
 	inters struct {
 		Category, Certificate, Company, ContractSupplier, ContractSupplierHistory,
-		DzoOrganization, Employee, Event, EventParticipant, ExternalTrainingEvent,
-		Notification, Organization, Request, RequestDzoContract, RequestParticipant,
-		RequestTargetDzo, Supplier, TrainingEvent, TrainingParticipant,
-		User []ent.Interceptor
+		DzoOrganization, DzoPositionTitle, Employee, Event, EventParticipant,
+		ExternalTrainingEvent, GeneralPosition, Notification, Organization, Request,
+		RequestDzoContract, RequestParticipant, RequestTargetDzo, Supplier,
+		TrainingEvent, TrainingParticipant, User []ent.Interceptor
 	}
 )

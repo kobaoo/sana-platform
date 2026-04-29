@@ -66,9 +66,9 @@ func DzoID(v uuid.UUID) predicate.Employee {
 	return predicate.Employee(sql.FieldEQ(FieldDzoID, v))
 }
 
-// Position applies equality check predicate on the "position" field. It's identical to PositionEQ.
-func Position(v string) predicate.Employee {
-	return predicate.Employee(sql.FieldEQ(FieldPosition, v))
+// DzoPositionID applies equality check predicate on the "dzo_position_id" field. It's identical to DzoPositionIDEQ.
+func DzoPositionID(v uuid.UUID) predicate.Employee {
+	return predicate.Employee(sql.FieldEQ(FieldDzoPositionID, v))
 }
 
 // FullName applies equality check predicate on the "full_name" field. It's identical to FullNameEQ.
@@ -181,79 +181,34 @@ func DzoIDNotIn(vs ...uuid.UUID) predicate.Employee {
 	return predicate.Employee(sql.FieldNotIn(FieldDzoID, vs...))
 }
 
-// PositionEQ applies the EQ predicate on the "position" field.
-func PositionEQ(v string) predicate.Employee {
-	return predicate.Employee(sql.FieldEQ(FieldPosition, v))
+// DzoPositionIDEQ applies the EQ predicate on the "dzo_position_id" field.
+func DzoPositionIDEQ(v uuid.UUID) predicate.Employee {
+	return predicate.Employee(sql.FieldEQ(FieldDzoPositionID, v))
 }
 
-// PositionNEQ applies the NEQ predicate on the "position" field.
-func PositionNEQ(v string) predicate.Employee {
-	return predicate.Employee(sql.FieldNEQ(FieldPosition, v))
+// DzoPositionIDNEQ applies the NEQ predicate on the "dzo_position_id" field.
+func DzoPositionIDNEQ(v uuid.UUID) predicate.Employee {
+	return predicate.Employee(sql.FieldNEQ(FieldDzoPositionID, v))
 }
 
-// PositionIn applies the In predicate on the "position" field.
-func PositionIn(vs ...string) predicate.Employee {
-	return predicate.Employee(sql.FieldIn(FieldPosition, vs...))
+// DzoPositionIDIn applies the In predicate on the "dzo_position_id" field.
+func DzoPositionIDIn(vs ...uuid.UUID) predicate.Employee {
+	return predicate.Employee(sql.FieldIn(FieldDzoPositionID, vs...))
 }
 
-// PositionNotIn applies the NotIn predicate on the "position" field.
-func PositionNotIn(vs ...string) predicate.Employee {
-	return predicate.Employee(sql.FieldNotIn(FieldPosition, vs...))
+// DzoPositionIDNotIn applies the NotIn predicate on the "dzo_position_id" field.
+func DzoPositionIDNotIn(vs ...uuid.UUID) predicate.Employee {
+	return predicate.Employee(sql.FieldNotIn(FieldDzoPositionID, vs...))
 }
 
-// PositionGT applies the GT predicate on the "position" field.
-func PositionGT(v string) predicate.Employee {
-	return predicate.Employee(sql.FieldGT(FieldPosition, v))
+// DzoPositionIDIsNil applies the IsNil predicate on the "dzo_position_id" field.
+func DzoPositionIDIsNil() predicate.Employee {
+	return predicate.Employee(sql.FieldIsNull(FieldDzoPositionID))
 }
 
-// PositionGTE applies the GTE predicate on the "position" field.
-func PositionGTE(v string) predicate.Employee {
-	return predicate.Employee(sql.FieldGTE(FieldPosition, v))
-}
-
-// PositionLT applies the LT predicate on the "position" field.
-func PositionLT(v string) predicate.Employee {
-	return predicate.Employee(sql.FieldLT(FieldPosition, v))
-}
-
-// PositionLTE applies the LTE predicate on the "position" field.
-func PositionLTE(v string) predicate.Employee {
-	return predicate.Employee(sql.FieldLTE(FieldPosition, v))
-}
-
-// PositionContains applies the Contains predicate on the "position" field.
-func PositionContains(v string) predicate.Employee {
-	return predicate.Employee(sql.FieldContains(FieldPosition, v))
-}
-
-// PositionHasPrefix applies the HasPrefix predicate on the "position" field.
-func PositionHasPrefix(v string) predicate.Employee {
-	return predicate.Employee(sql.FieldHasPrefix(FieldPosition, v))
-}
-
-// PositionHasSuffix applies the HasSuffix predicate on the "position" field.
-func PositionHasSuffix(v string) predicate.Employee {
-	return predicate.Employee(sql.FieldHasSuffix(FieldPosition, v))
-}
-
-// PositionIsNil applies the IsNil predicate on the "position" field.
-func PositionIsNil() predicate.Employee {
-	return predicate.Employee(sql.FieldIsNull(FieldPosition))
-}
-
-// PositionNotNil applies the NotNil predicate on the "position" field.
-func PositionNotNil() predicate.Employee {
-	return predicate.Employee(sql.FieldNotNull(FieldPosition))
-}
-
-// PositionEqualFold applies the EqualFold predicate on the "position" field.
-func PositionEqualFold(v string) predicate.Employee {
-	return predicate.Employee(sql.FieldEqualFold(FieldPosition, v))
-}
-
-// PositionContainsFold applies the ContainsFold predicate on the "position" field.
-func PositionContainsFold(v string) predicate.Employee {
-	return predicate.Employee(sql.FieldContainsFold(FieldPosition, v))
+// DzoPositionIDNotNil applies the NotNil predicate on the "dzo_position_id" field.
+func DzoPositionIDNotNil() predicate.Employee {
+	return predicate.Employee(sql.FieldNotNull(FieldDzoPositionID))
 }
 
 // FullNameEQ applies the EQ predicate on the "full_name" field.
@@ -821,6 +776,29 @@ func HasDzo() predicate.Employee {
 func HasDzoWith(preds ...predicate.DzoOrganization) predicate.Employee {
 	return predicate.Employee(func(s *sql.Selector) {
 		step := newDzoStep()
+		sqlgraph.HasNeighborsWith(s, step, func(s *sql.Selector) {
+			for _, p := range preds {
+				p(s)
+			}
+		})
+	})
+}
+
+// HasDzoPositionTitle applies the HasEdge predicate on the "dzo_position_title" edge.
+func HasDzoPositionTitle() predicate.Employee {
+	return predicate.Employee(func(s *sql.Selector) {
+		step := sqlgraph.NewStep(
+			sqlgraph.From(Table, FieldID),
+			sqlgraph.Edge(sqlgraph.M2O, true, DzoPositionTitleTable, DzoPositionTitleColumn),
+		)
+		sqlgraph.HasNeighbors(s, step)
+	})
+}
+
+// HasDzoPositionTitleWith applies the HasEdge predicate on the "dzo_position_title" edge with a given conditions (other predicates).
+func HasDzoPositionTitleWith(preds ...predicate.DzoPositionTitle) predicate.Employee {
+	return predicate.Employee(func(s *sql.Selector) {
+		step := newDzoPositionTitleStep()
 		sqlgraph.HasNeighborsWith(s, step, func(s *sql.Selector) {
 			for _, p := range preds {
 				p(s)

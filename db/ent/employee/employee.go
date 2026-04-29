@@ -17,8 +17,8 @@ const (
 	FieldClientID = "client_id"
 	// FieldDzoID holds the string denoting the dzo_id field in the database.
 	FieldDzoID = "dzo_id"
-	// FieldPosition holds the string denoting the position field in the database.
-	FieldPosition = "position"
+	// FieldDzoPositionID holds the string denoting the dzo_position_id field in the database.
+	FieldDzoPositionID = "dzo_position_id"
 	// FieldFullName holds the string denoting the full_name field in the database.
 	FieldFullName = "full_name"
 	// FieldShortName holds the string denoting the short_name field in the database.
@@ -41,6 +41,8 @@ const (
 	FieldIsDeleted = "is_deleted"
 	// EdgeDzo holds the string denoting the dzo edge name in mutations.
 	EdgeDzo = "dzo"
+	// EdgeDzoPositionTitle holds the string denoting the dzo_position_title edge name in mutations.
+	EdgeDzoPositionTitle = "dzo_position_title"
 	// EdgeEventParticipations holds the string denoting the event_participations edge name in mutations.
 	EdgeEventParticipations = "event_participations"
 	// Table holds the table name of the employee in the database.
@@ -52,6 +54,13 @@ const (
 	DzoInverseTable = "dzo_organizations"
 	// DzoColumn is the table column denoting the dzo relation/edge.
 	DzoColumn = "dzo_id"
+	// DzoPositionTitleTable is the table that holds the dzo_position_title relation/edge.
+	DzoPositionTitleTable = "employees"
+	// DzoPositionTitleInverseTable is the table name for the DzoPositionTitle entity.
+	// It exists in this package in order to avoid circular dependency with the "dzopositiontitle" package.
+	DzoPositionTitleInverseTable = "dzo_position_titles"
+	// DzoPositionTitleColumn is the table column denoting the dzo_position_title relation/edge.
+	DzoPositionTitleColumn = "dzo_position_id"
 	// EventParticipationsTable is the table that holds the event_participations relation/edge.
 	EventParticipationsTable = "event_participants"
 	// EventParticipationsInverseTable is the table name for the EventParticipant entity.
@@ -66,7 +75,7 @@ var Columns = []string{
 	FieldID,
 	FieldClientID,
 	FieldDzoID,
-	FieldPosition,
+	FieldDzoPositionID,
 	FieldFullName,
 	FieldShortName,
 	FieldDepartment,
@@ -90,8 +99,6 @@ func ValidColumn(column string) bool {
 }
 
 var (
-	// PositionValidator is a validator for the "position" field. It is called by the builders before save.
-	PositionValidator func(string) error
 	// FullNameValidator is a validator for the "full_name" field. It is called by the builders before save.
 	FullNameValidator func(string) error
 	// ShortNameValidator is a validator for the "short_name" field. It is called by the builders before save.
@@ -130,9 +137,9 @@ func ByDzoID(opts ...sql.OrderTermOption) OrderOption {
 	return sql.OrderByField(FieldDzoID, opts...).ToFunc()
 }
 
-// ByPosition orders the results by the position field.
-func ByPosition(opts ...sql.OrderTermOption) OrderOption {
-	return sql.OrderByField(FieldPosition, opts...).ToFunc()
+// ByDzoPositionID orders the results by the dzo_position_id field.
+func ByDzoPositionID(opts ...sql.OrderTermOption) OrderOption {
+	return sql.OrderByField(FieldDzoPositionID, opts...).ToFunc()
 }
 
 // ByFullName orders the results by the full_name field.
@@ -192,6 +199,13 @@ func ByDzoField(field string, opts ...sql.OrderTermOption) OrderOption {
 	}
 }
 
+// ByDzoPositionTitleField orders the results by dzo_position_title field.
+func ByDzoPositionTitleField(field string, opts ...sql.OrderTermOption) OrderOption {
+	return func(s *sql.Selector) {
+		sqlgraph.OrderByNeighborTerms(s, newDzoPositionTitleStep(), sql.OrderByField(field, opts...))
+	}
+}
+
 // ByEventParticipationsCount orders the results by event_participations count.
 func ByEventParticipationsCount(opts ...sql.OrderTermOption) OrderOption {
 	return func(s *sql.Selector) {
@@ -210,6 +224,13 @@ func newDzoStep() *sqlgraph.Step {
 		sqlgraph.From(Table, FieldID),
 		sqlgraph.To(DzoInverseTable, FieldID),
 		sqlgraph.Edge(sqlgraph.M2O, true, DzoTable, DzoColumn),
+	)
+}
+func newDzoPositionTitleStep() *sqlgraph.Step {
+	return sqlgraph.NewStep(
+		sqlgraph.From(Table, FieldID),
+		sqlgraph.To(DzoPositionTitleInverseTable, FieldID),
+		sqlgraph.Edge(sqlgraph.M2O, true, DzoPositionTitleTable, DzoPositionTitleColumn),
 	)
 }
 func newEventParticipationsStep() *sqlgraph.Step {

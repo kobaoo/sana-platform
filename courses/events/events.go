@@ -551,7 +551,9 @@ func ListAttendance(ctx context.Context, id string, params *ListAttendanceParams
 	q := Client.EventParticipant.
 		Query().
 		Where(eventparticipant.EventIDEQ(uid)).
-		WithEmployee()
+		WithEmployee(func(eq *ent.EmployeeQuery) {
+			eq.WithDzoPositionTitle()
+		})
 
 	search := strings.TrimSpace(params.Search)
 	if search != "" {
@@ -578,7 +580,9 @@ func ListAttendance(ctx context.Context, id string, params *ListAttendanceParams
 			part.FullName = p.Edges.Employee.FullName
 			part.Email = p.Edges.Employee.Email
 			part.Department = p.Edges.Employee.Department
-			part.Position = p.Edges.Employee.Position
+			if p.Edges.Employee.Edges.DzoPositionTitle != nil {
+				part.Position = &p.Edges.Employee.Edges.DzoPositionTitle.LocalTitle
+			}
 		}
 		out = append(out, part)
 	}
@@ -991,7 +995,9 @@ func loadEventByID(ctx context.Context, uid uuid.UUID, withParticipants bool) (*
 	q := Client.Event.Query().Where(entevent.IDEQ(uid))
 	if withParticipants {
 		q = q.WithParticipants(func(pq *ent.EventParticipantQuery) {
-			pq.WithEmployee()
+			pq.WithEmployee(func(eq *ent.EmployeeQuery) {
+				eq.WithDzoPositionTitle()
+			})
 		})
 	}
 
@@ -1642,7 +1648,7 @@ func entToEvent(e *ent.Event, includeParticipants bool) *Event {
 				part.FullName = p.Edges.Employee.FullName
 				part.Email = p.Edges.Employee.Email
 				part.Department = p.Edges.Employee.Department
-				part.Position = p.Edges.Employee.Position
+				part.Position = &p.Edges.Employee.Edges.DzoPositionTitle.LocalTitle
 			}
 			ev.Participants = append(ev.Participants, part)
 		}

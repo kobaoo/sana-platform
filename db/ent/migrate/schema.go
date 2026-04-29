@@ -165,11 +165,49 @@ var (
 		Columns:    DzoOrganizationsColumns,
 		PrimaryKey: []*schema.Column{DzoOrganizationsColumns[0]},
 	}
+	// DzoPositionTitlesColumns holds the columns for the "dzo_position_titles" table.
+	DzoPositionTitlesColumns = []*schema.Column{
+		{Name: "id", Type: field.TypeUUID},
+		{Name: "client_id", Type: field.TypeUUID},
+		{Name: "local_title", Type: field.TypeString, Size: 255},
+		{Name: "is_active", Type: field.TypeBool, Default: true},
+		{Name: "is_deleted", Type: field.TypeBool, Default: false},
+		{Name: "created_at", Type: field.TypeTime},
+		{Name: "updated_at", Type: field.TypeTime},
+		{Name: "dzo_id", Type: field.TypeUUID},
+		{Name: "general_position_id", Type: field.TypeUUID, Nullable: true},
+	}
+	// DzoPositionTitlesTable holds the schema information for the "dzo_position_titles" table.
+	DzoPositionTitlesTable = &schema.Table{
+		Name:       "dzo_position_titles",
+		Columns:    DzoPositionTitlesColumns,
+		PrimaryKey: []*schema.Column{DzoPositionTitlesColumns[0]},
+		ForeignKeys: []*schema.ForeignKey{
+			{
+				Symbol:     "dzo_position_titles_dzo_organizations_position_titles",
+				Columns:    []*schema.Column{DzoPositionTitlesColumns[7]},
+				RefColumns: []*schema.Column{DzoOrganizationsColumns[0]},
+				OnDelete:   schema.NoAction,
+			},
+			{
+				Symbol:     "dzo_position_titles_general_positions_dzo_position_titles",
+				Columns:    []*schema.Column{DzoPositionTitlesColumns[8]},
+				RefColumns: []*schema.Column{GeneralPositionsColumns[0]},
+				OnDelete:   schema.SetNull,
+			},
+		},
+		Indexes: []*schema.Index{
+			{
+				Name:    "dzopositiontitle_dzo_id_local_title",
+				Unique:  true,
+				Columns: []*schema.Column{DzoPositionTitlesColumns[7], DzoPositionTitlesColumns[2]},
+			},
+		},
+	}
 	// EmployeesColumns holds the columns for the "employees" table.
 	EmployeesColumns = []*schema.Column{
 		{Name: "id", Type: field.TypeUUID},
 		{Name: "client_id", Type: field.TypeUUID},
-		{Name: "position", Type: field.TypeString, Nullable: true, Size: 300},
 		{Name: "full_name", Type: field.TypeString, Size: 300},
 		{Name: "short_name", Type: field.TypeString, Nullable: true, Size: 100},
 		{Name: "department", Type: field.TypeString, Nullable: true, Size: 200},
@@ -181,6 +219,7 @@ var (
 		{Name: "user_id", Type: field.TypeUUID, Nullable: true},
 		{Name: "is_deleted", Type: field.TypeBool, Default: false},
 		{Name: "dzo_id", Type: field.TypeUUID},
+		{Name: "dzo_position_id", Type: field.TypeUUID, Nullable: true},
 	}
 	// EmployeesTable holds the schema information for the "employees" table.
 	EmployeesTable = &schema.Table{
@@ -190,9 +229,15 @@ var (
 		ForeignKeys: []*schema.ForeignKey{
 			{
 				Symbol:     "employees_dzo_organizations_employees",
-				Columns:    []*schema.Column{EmployeesColumns[13]},
+				Columns:    []*schema.Column{EmployeesColumns[12]},
 				RefColumns: []*schema.Column{DzoOrganizationsColumns[0]},
 				OnDelete:   schema.NoAction,
+			},
+			{
+				Symbol:     "employees_dzo_position_titles_employees",
+				Columns:    []*schema.Column{EmployeesColumns[13]},
+				RefColumns: []*schema.Column{DzoPositionTitlesColumns[0]},
+				OnDelete:   schema.SetNull,
 			},
 		},
 	}
@@ -323,6 +368,20 @@ var (
 				OnDelete:   schema.SetNull,
 			},
 		},
+	}
+	// GeneralPositionsColumns holds the columns for the "general_positions" table.
+	GeneralPositionsColumns = []*schema.Column{
+		{Name: "id", Type: field.TypeUUID},
+		{Name: "name", Type: field.TypeString, Size: 255},
+		{Name: "description", Type: field.TypeString, Nullable: true, Size: 2147483647},
+		{Name: "is_deleted", Type: field.TypeBool, Default: false},
+		{Name: "created_at", Type: field.TypeTime},
+	}
+	// GeneralPositionsTable holds the schema information for the "general_positions" table.
+	GeneralPositionsTable = &schema.Table{
+		Name:       "general_positions",
+		Columns:    GeneralPositionsColumns,
+		PrimaryKey: []*schema.Column{GeneralPositionsColumns[0]},
 	}
 	// NotificationsColumns holds the columns for the "notifications" table.
 	NotificationsColumns = []*schema.Column{
@@ -704,10 +763,12 @@ var (
 		ContractSuppliersTable,
 		ContractSupplierHistoriesTable,
 		DzoOrganizationsTable,
+		DzoPositionTitlesTable,
 		EmployeesTable,
 		EventsTable,
 		EventParticipantsTable,
 		ExternalTrainingEventsTable,
+		GeneralPositionsTable,
 		NotificationsTable,
 		OrganizationsTable,
 		RequestsTable,
@@ -728,7 +789,13 @@ func init() {
 	DzoOrganizationsTable.Annotation = &entsql.Annotation{
 		Table: "dzo_organizations",
 	}
+	DzoPositionTitlesTable.ForeignKeys[0].RefTable = DzoOrganizationsTable
+	DzoPositionTitlesTable.ForeignKeys[1].RefTable = GeneralPositionsTable
+	DzoPositionTitlesTable.Annotation = &entsql.Annotation{
+		Table: "dzo_position_titles",
+	}
 	EmployeesTable.ForeignKeys[0].RefTable = DzoOrganizationsTable
+	EmployeesTable.ForeignKeys[1].RefTable = DzoPositionTitlesTable
 	EmployeesTable.Annotation = &entsql.Annotation{
 		Table: "employees",
 	}
@@ -743,6 +810,9 @@ func init() {
 	ExternalTrainingEventsTable.ForeignKeys[3].RefTable = UsersTable
 	ExternalTrainingEventsTable.Annotation = &entsql.Annotation{
 		Table: "external_training_events",
+	}
+	GeneralPositionsTable.Annotation = &entsql.Annotation{
+		Table: "general_positions",
 	}
 	OrganizationsTable.ForeignKeys[0].RefTable = OrganizationsTable
 	RequestsTable.ForeignKeys[0].RefTable = RequestsTable

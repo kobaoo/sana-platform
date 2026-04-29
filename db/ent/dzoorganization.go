@@ -42,9 +42,11 @@ type DzoOrganization struct {
 type DzoOrganizationEdges struct {
 	// Employees holds the value of the employees edge.
 	Employees []*Employee `json:"employees,omitempty"`
+	// PositionTitles holds the value of the position_titles edge.
+	PositionTitles []*DzoPositionTitle `json:"position_titles,omitempty"`
 	// loadedTypes holds the information for reporting if a
 	// type was loaded (or requested) in eager-loading or not.
-	loadedTypes [1]bool
+	loadedTypes [2]bool
 }
 
 // EmployeesOrErr returns the Employees value or an error if the edge
@@ -54,6 +56,15 @@ func (e DzoOrganizationEdges) EmployeesOrErr() ([]*Employee, error) {
 		return e.Employees, nil
 	}
 	return nil, &NotLoadedError{edge: "employees"}
+}
+
+// PositionTitlesOrErr returns the PositionTitles value or an error if the edge
+// was not loaded in eager-loading.
+func (e DzoOrganizationEdges) PositionTitlesOrErr() ([]*DzoPositionTitle, error) {
+	if e.loadedTypes[1] {
+		return e.PositionTitles, nil
+	}
+	return nil, &NotLoadedError{edge: "position_titles"}
 }
 
 // scanValues returns the types for scanning values from sql.Rows.
@@ -150,6 +161,11 @@ func (_m *DzoOrganization) Value(name string) (ent.Value, error) {
 // QueryEmployees queries the "employees" edge of the DzoOrganization entity.
 func (_m *DzoOrganization) QueryEmployees() *EmployeeQuery {
 	return NewDzoOrganizationClient(_m.config).QueryEmployees(_m)
+}
+
+// QueryPositionTitles queries the "position_titles" edge of the DzoOrganization entity.
+func (_m *DzoOrganization) QueryPositionTitles() *DzoPositionTitleQuery {
+	return NewDzoOrganizationClient(_m.config).QueryPositionTitles(_m)
 }
 
 // Update returns a builder for updating this DzoOrganization.

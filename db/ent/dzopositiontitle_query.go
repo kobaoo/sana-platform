@@ -11,7 +11,7 @@ import (
 	"encore.app/db/ent/dzoorganization"
 	"encore.app/db/ent/dzopositiontitle"
 	"encore.app/db/ent/employee"
-	"encore.app/db/ent/eventparticipant"
+	"encore.app/db/ent/generalposition"
 	"encore.app/db/ent/predicate"
 	"entgo.io/ent"
 	"entgo.io/ent/dialect/sql"
@@ -20,54 +20,54 @@ import (
 	"github.com/google/uuid"
 )
 
-// EmployeeQuery is the builder for querying Employee entities.
-type EmployeeQuery struct {
+// DzoPositionTitleQuery is the builder for querying DzoPositionTitle entities.
+type DzoPositionTitleQuery struct {
 	config
-	ctx                     *QueryContext
-	order                   []employee.OrderOption
-	inters                  []Interceptor
-	predicates              []predicate.Employee
-	withDzo                 *DzoOrganizationQuery
-	withDzoPositionTitle    *DzoPositionTitleQuery
-	withEventParticipations *EventParticipantQuery
+	ctx                 *QueryContext
+	order               []dzopositiontitle.OrderOption
+	inters              []Interceptor
+	predicates          []predicate.DzoPositionTitle
+	withDzo             *DzoOrganizationQuery
+	withGeneralPosition *GeneralPositionQuery
+	withEmployees       *EmployeeQuery
 	// intermediate query (i.e. traversal path).
 	sql  *sql.Selector
 	path func(context.Context) (*sql.Selector, error)
 }
 
-// Where adds a new predicate for the EmployeeQuery builder.
-func (_q *EmployeeQuery) Where(ps ...predicate.Employee) *EmployeeQuery {
+// Where adds a new predicate for the DzoPositionTitleQuery builder.
+func (_q *DzoPositionTitleQuery) Where(ps ...predicate.DzoPositionTitle) *DzoPositionTitleQuery {
 	_q.predicates = append(_q.predicates, ps...)
 	return _q
 }
 
 // Limit the number of records to be returned by this query.
-func (_q *EmployeeQuery) Limit(limit int) *EmployeeQuery {
+func (_q *DzoPositionTitleQuery) Limit(limit int) *DzoPositionTitleQuery {
 	_q.ctx.Limit = &limit
 	return _q
 }
 
 // Offset to start from.
-func (_q *EmployeeQuery) Offset(offset int) *EmployeeQuery {
+func (_q *DzoPositionTitleQuery) Offset(offset int) *DzoPositionTitleQuery {
 	_q.ctx.Offset = &offset
 	return _q
 }
 
 // Unique configures the query builder to filter duplicate records on query.
 // By default, unique is set to true, and can be disabled using this method.
-func (_q *EmployeeQuery) Unique(unique bool) *EmployeeQuery {
+func (_q *DzoPositionTitleQuery) Unique(unique bool) *DzoPositionTitleQuery {
 	_q.ctx.Unique = &unique
 	return _q
 }
 
 // Order specifies how the records should be ordered.
-func (_q *EmployeeQuery) Order(o ...employee.OrderOption) *EmployeeQuery {
+func (_q *DzoPositionTitleQuery) Order(o ...dzopositiontitle.OrderOption) *DzoPositionTitleQuery {
 	_q.order = append(_q.order, o...)
 	return _q
 }
 
 // QueryDzo chains the current query on the "dzo" edge.
-func (_q *EmployeeQuery) QueryDzo() *DzoOrganizationQuery {
+func (_q *DzoPositionTitleQuery) QueryDzo() *DzoOrganizationQuery {
 	query := (&DzoOrganizationClient{config: _q.config}).Query()
 	query.path = func(ctx context.Context) (fromU *sql.Selector, err error) {
 		if err := _q.prepareQuery(ctx); err != nil {
@@ -78,9 +78,9 @@ func (_q *EmployeeQuery) QueryDzo() *DzoOrganizationQuery {
 			return nil, err
 		}
 		step := sqlgraph.NewStep(
-			sqlgraph.From(employee.Table, employee.FieldID, selector),
+			sqlgraph.From(dzopositiontitle.Table, dzopositiontitle.FieldID, selector),
 			sqlgraph.To(dzoorganization.Table, dzoorganization.FieldID),
-			sqlgraph.Edge(sqlgraph.M2O, true, employee.DzoTable, employee.DzoColumn),
+			sqlgraph.Edge(sqlgraph.M2O, true, dzopositiontitle.DzoTable, dzopositiontitle.DzoColumn),
 		)
 		fromU = sqlgraph.SetNeighbors(_q.driver.Dialect(), step)
 		return fromU, nil
@@ -88,9 +88,9 @@ func (_q *EmployeeQuery) QueryDzo() *DzoOrganizationQuery {
 	return query
 }
 
-// QueryDzoPositionTitle chains the current query on the "dzo_position_title" edge.
-func (_q *EmployeeQuery) QueryDzoPositionTitle() *DzoPositionTitleQuery {
-	query := (&DzoPositionTitleClient{config: _q.config}).Query()
+// QueryGeneralPosition chains the current query on the "general_position" edge.
+func (_q *DzoPositionTitleQuery) QueryGeneralPosition() *GeneralPositionQuery {
+	query := (&GeneralPositionClient{config: _q.config}).Query()
 	query.path = func(ctx context.Context) (fromU *sql.Selector, err error) {
 		if err := _q.prepareQuery(ctx); err != nil {
 			return nil, err
@@ -100,9 +100,9 @@ func (_q *EmployeeQuery) QueryDzoPositionTitle() *DzoPositionTitleQuery {
 			return nil, err
 		}
 		step := sqlgraph.NewStep(
-			sqlgraph.From(employee.Table, employee.FieldID, selector),
-			sqlgraph.To(dzopositiontitle.Table, dzopositiontitle.FieldID),
-			sqlgraph.Edge(sqlgraph.M2O, true, employee.DzoPositionTitleTable, employee.DzoPositionTitleColumn),
+			sqlgraph.From(dzopositiontitle.Table, dzopositiontitle.FieldID, selector),
+			sqlgraph.To(generalposition.Table, generalposition.FieldID),
+			sqlgraph.Edge(sqlgraph.M2O, true, dzopositiontitle.GeneralPositionTable, dzopositiontitle.GeneralPositionColumn),
 		)
 		fromU = sqlgraph.SetNeighbors(_q.driver.Dialect(), step)
 		return fromU, nil
@@ -110,9 +110,9 @@ func (_q *EmployeeQuery) QueryDzoPositionTitle() *DzoPositionTitleQuery {
 	return query
 }
 
-// QueryEventParticipations chains the current query on the "event_participations" edge.
-func (_q *EmployeeQuery) QueryEventParticipations() *EventParticipantQuery {
-	query := (&EventParticipantClient{config: _q.config}).Query()
+// QueryEmployees chains the current query on the "employees" edge.
+func (_q *DzoPositionTitleQuery) QueryEmployees() *EmployeeQuery {
+	query := (&EmployeeClient{config: _q.config}).Query()
 	query.path = func(ctx context.Context) (fromU *sql.Selector, err error) {
 		if err := _q.prepareQuery(ctx); err != nil {
 			return nil, err
@@ -122,9 +122,9 @@ func (_q *EmployeeQuery) QueryEventParticipations() *EventParticipantQuery {
 			return nil, err
 		}
 		step := sqlgraph.NewStep(
-			sqlgraph.From(employee.Table, employee.FieldID, selector),
-			sqlgraph.To(eventparticipant.Table, eventparticipant.FieldID),
-			sqlgraph.Edge(sqlgraph.O2M, false, employee.EventParticipationsTable, employee.EventParticipationsColumn),
+			sqlgraph.From(dzopositiontitle.Table, dzopositiontitle.FieldID, selector),
+			sqlgraph.To(employee.Table, employee.FieldID),
+			sqlgraph.Edge(sqlgraph.O2M, false, dzopositiontitle.EmployeesTable, dzopositiontitle.EmployeesColumn),
 		)
 		fromU = sqlgraph.SetNeighbors(_q.driver.Dialect(), step)
 		return fromU, nil
@@ -132,21 +132,21 @@ func (_q *EmployeeQuery) QueryEventParticipations() *EventParticipantQuery {
 	return query
 }
 
-// First returns the first Employee entity from the query.
-// Returns a *NotFoundError when no Employee was found.
-func (_q *EmployeeQuery) First(ctx context.Context) (*Employee, error) {
+// First returns the first DzoPositionTitle entity from the query.
+// Returns a *NotFoundError when no DzoPositionTitle was found.
+func (_q *DzoPositionTitleQuery) First(ctx context.Context) (*DzoPositionTitle, error) {
 	nodes, err := _q.Limit(1).All(setContextOp(ctx, _q.ctx, ent.OpQueryFirst))
 	if err != nil {
 		return nil, err
 	}
 	if len(nodes) == 0 {
-		return nil, &NotFoundError{employee.Label}
+		return nil, &NotFoundError{dzopositiontitle.Label}
 	}
 	return nodes[0], nil
 }
 
 // FirstX is like First, but panics if an error occurs.
-func (_q *EmployeeQuery) FirstX(ctx context.Context) *Employee {
+func (_q *DzoPositionTitleQuery) FirstX(ctx context.Context) *DzoPositionTitle {
 	node, err := _q.First(ctx)
 	if err != nil && !IsNotFound(err) {
 		panic(err)
@@ -154,22 +154,22 @@ func (_q *EmployeeQuery) FirstX(ctx context.Context) *Employee {
 	return node
 }
 
-// FirstID returns the first Employee ID from the query.
-// Returns a *NotFoundError when no Employee ID was found.
-func (_q *EmployeeQuery) FirstID(ctx context.Context) (id uuid.UUID, err error) {
+// FirstID returns the first DzoPositionTitle ID from the query.
+// Returns a *NotFoundError when no DzoPositionTitle ID was found.
+func (_q *DzoPositionTitleQuery) FirstID(ctx context.Context) (id uuid.UUID, err error) {
 	var ids []uuid.UUID
 	if ids, err = _q.Limit(1).IDs(setContextOp(ctx, _q.ctx, ent.OpQueryFirstID)); err != nil {
 		return
 	}
 	if len(ids) == 0 {
-		err = &NotFoundError{employee.Label}
+		err = &NotFoundError{dzopositiontitle.Label}
 		return
 	}
 	return ids[0], nil
 }
 
 // FirstIDX is like FirstID, but panics if an error occurs.
-func (_q *EmployeeQuery) FirstIDX(ctx context.Context) uuid.UUID {
+func (_q *DzoPositionTitleQuery) FirstIDX(ctx context.Context) uuid.UUID {
 	id, err := _q.FirstID(ctx)
 	if err != nil && !IsNotFound(err) {
 		panic(err)
@@ -177,10 +177,10 @@ func (_q *EmployeeQuery) FirstIDX(ctx context.Context) uuid.UUID {
 	return id
 }
 
-// Only returns a single Employee entity found by the query, ensuring it only returns one.
-// Returns a *NotSingularError when more than one Employee entity is found.
-// Returns a *NotFoundError when no Employee entities are found.
-func (_q *EmployeeQuery) Only(ctx context.Context) (*Employee, error) {
+// Only returns a single DzoPositionTitle entity found by the query, ensuring it only returns one.
+// Returns a *NotSingularError when more than one DzoPositionTitle entity is found.
+// Returns a *NotFoundError when no DzoPositionTitle entities are found.
+func (_q *DzoPositionTitleQuery) Only(ctx context.Context) (*DzoPositionTitle, error) {
 	nodes, err := _q.Limit(2).All(setContextOp(ctx, _q.ctx, ent.OpQueryOnly))
 	if err != nil {
 		return nil, err
@@ -189,14 +189,14 @@ func (_q *EmployeeQuery) Only(ctx context.Context) (*Employee, error) {
 	case 1:
 		return nodes[0], nil
 	case 0:
-		return nil, &NotFoundError{employee.Label}
+		return nil, &NotFoundError{dzopositiontitle.Label}
 	default:
-		return nil, &NotSingularError{employee.Label}
+		return nil, &NotSingularError{dzopositiontitle.Label}
 	}
 }
 
 // OnlyX is like Only, but panics if an error occurs.
-func (_q *EmployeeQuery) OnlyX(ctx context.Context) *Employee {
+func (_q *DzoPositionTitleQuery) OnlyX(ctx context.Context) *DzoPositionTitle {
 	node, err := _q.Only(ctx)
 	if err != nil {
 		panic(err)
@@ -204,10 +204,10 @@ func (_q *EmployeeQuery) OnlyX(ctx context.Context) *Employee {
 	return node
 }
 
-// OnlyID is like Only, but returns the only Employee ID in the query.
-// Returns a *NotSingularError when more than one Employee ID is found.
+// OnlyID is like Only, but returns the only DzoPositionTitle ID in the query.
+// Returns a *NotSingularError when more than one DzoPositionTitle ID is found.
 // Returns a *NotFoundError when no entities are found.
-func (_q *EmployeeQuery) OnlyID(ctx context.Context) (id uuid.UUID, err error) {
+func (_q *DzoPositionTitleQuery) OnlyID(ctx context.Context) (id uuid.UUID, err error) {
 	var ids []uuid.UUID
 	if ids, err = _q.Limit(2).IDs(setContextOp(ctx, _q.ctx, ent.OpQueryOnlyID)); err != nil {
 		return
@@ -216,15 +216,15 @@ func (_q *EmployeeQuery) OnlyID(ctx context.Context) (id uuid.UUID, err error) {
 	case 1:
 		id = ids[0]
 	case 0:
-		err = &NotFoundError{employee.Label}
+		err = &NotFoundError{dzopositiontitle.Label}
 	default:
-		err = &NotSingularError{employee.Label}
+		err = &NotSingularError{dzopositiontitle.Label}
 	}
 	return
 }
 
 // OnlyIDX is like OnlyID, but panics if an error occurs.
-func (_q *EmployeeQuery) OnlyIDX(ctx context.Context) uuid.UUID {
+func (_q *DzoPositionTitleQuery) OnlyIDX(ctx context.Context) uuid.UUID {
 	id, err := _q.OnlyID(ctx)
 	if err != nil {
 		panic(err)
@@ -232,18 +232,18 @@ func (_q *EmployeeQuery) OnlyIDX(ctx context.Context) uuid.UUID {
 	return id
 }
 
-// All executes the query and returns a list of Employees.
-func (_q *EmployeeQuery) All(ctx context.Context) ([]*Employee, error) {
+// All executes the query and returns a list of DzoPositionTitles.
+func (_q *DzoPositionTitleQuery) All(ctx context.Context) ([]*DzoPositionTitle, error) {
 	ctx = setContextOp(ctx, _q.ctx, ent.OpQueryAll)
 	if err := _q.prepareQuery(ctx); err != nil {
 		return nil, err
 	}
-	qr := querierAll[[]*Employee, *EmployeeQuery]()
-	return withInterceptors[[]*Employee](ctx, _q, qr, _q.inters)
+	qr := querierAll[[]*DzoPositionTitle, *DzoPositionTitleQuery]()
+	return withInterceptors[[]*DzoPositionTitle](ctx, _q, qr, _q.inters)
 }
 
 // AllX is like All, but panics if an error occurs.
-func (_q *EmployeeQuery) AllX(ctx context.Context) []*Employee {
+func (_q *DzoPositionTitleQuery) AllX(ctx context.Context) []*DzoPositionTitle {
 	nodes, err := _q.All(ctx)
 	if err != nil {
 		panic(err)
@@ -251,20 +251,20 @@ func (_q *EmployeeQuery) AllX(ctx context.Context) []*Employee {
 	return nodes
 }
 
-// IDs executes the query and returns a list of Employee IDs.
-func (_q *EmployeeQuery) IDs(ctx context.Context) (ids []uuid.UUID, err error) {
+// IDs executes the query and returns a list of DzoPositionTitle IDs.
+func (_q *DzoPositionTitleQuery) IDs(ctx context.Context) (ids []uuid.UUID, err error) {
 	if _q.ctx.Unique == nil && _q.path != nil {
 		_q.Unique(true)
 	}
 	ctx = setContextOp(ctx, _q.ctx, ent.OpQueryIDs)
-	if err = _q.Select(employee.FieldID).Scan(ctx, &ids); err != nil {
+	if err = _q.Select(dzopositiontitle.FieldID).Scan(ctx, &ids); err != nil {
 		return nil, err
 	}
 	return ids, nil
 }
 
 // IDsX is like IDs, but panics if an error occurs.
-func (_q *EmployeeQuery) IDsX(ctx context.Context) []uuid.UUID {
+func (_q *DzoPositionTitleQuery) IDsX(ctx context.Context) []uuid.UUID {
 	ids, err := _q.IDs(ctx)
 	if err != nil {
 		panic(err)
@@ -273,16 +273,16 @@ func (_q *EmployeeQuery) IDsX(ctx context.Context) []uuid.UUID {
 }
 
 // Count returns the count of the given query.
-func (_q *EmployeeQuery) Count(ctx context.Context) (int, error) {
+func (_q *DzoPositionTitleQuery) Count(ctx context.Context) (int, error) {
 	ctx = setContextOp(ctx, _q.ctx, ent.OpQueryCount)
 	if err := _q.prepareQuery(ctx); err != nil {
 		return 0, err
 	}
-	return withInterceptors[int](ctx, _q, querierCount[*EmployeeQuery](), _q.inters)
+	return withInterceptors[int](ctx, _q, querierCount[*DzoPositionTitleQuery](), _q.inters)
 }
 
 // CountX is like Count, but panics if an error occurs.
-func (_q *EmployeeQuery) CountX(ctx context.Context) int {
+func (_q *DzoPositionTitleQuery) CountX(ctx context.Context) int {
 	count, err := _q.Count(ctx)
 	if err != nil {
 		panic(err)
@@ -291,7 +291,7 @@ func (_q *EmployeeQuery) CountX(ctx context.Context) int {
 }
 
 // Exist returns true if the query has elements in the graph.
-func (_q *EmployeeQuery) Exist(ctx context.Context) (bool, error) {
+func (_q *DzoPositionTitleQuery) Exist(ctx context.Context) (bool, error) {
 	ctx = setContextOp(ctx, _q.ctx, ent.OpQueryExist)
 	switch _, err := _q.FirstID(ctx); {
 	case IsNotFound(err):
@@ -304,7 +304,7 @@ func (_q *EmployeeQuery) Exist(ctx context.Context) (bool, error) {
 }
 
 // ExistX is like Exist, but panics if an error occurs.
-func (_q *EmployeeQuery) ExistX(ctx context.Context) bool {
+func (_q *DzoPositionTitleQuery) ExistX(ctx context.Context) bool {
 	exist, err := _q.Exist(ctx)
 	if err != nil {
 		panic(err)
@@ -312,21 +312,21 @@ func (_q *EmployeeQuery) ExistX(ctx context.Context) bool {
 	return exist
 }
 
-// Clone returns a duplicate of the EmployeeQuery builder, including all associated steps. It can be
+// Clone returns a duplicate of the DzoPositionTitleQuery builder, including all associated steps. It can be
 // used to prepare common query builders and use them differently after the clone is made.
-func (_q *EmployeeQuery) Clone() *EmployeeQuery {
+func (_q *DzoPositionTitleQuery) Clone() *DzoPositionTitleQuery {
 	if _q == nil {
 		return nil
 	}
-	return &EmployeeQuery{
-		config:                  _q.config,
-		ctx:                     _q.ctx.Clone(),
-		order:                   append([]employee.OrderOption{}, _q.order...),
-		inters:                  append([]Interceptor{}, _q.inters...),
-		predicates:              append([]predicate.Employee{}, _q.predicates...),
-		withDzo:                 _q.withDzo.Clone(),
-		withDzoPositionTitle:    _q.withDzoPositionTitle.Clone(),
-		withEventParticipations: _q.withEventParticipations.Clone(),
+	return &DzoPositionTitleQuery{
+		config:              _q.config,
+		ctx:                 _q.ctx.Clone(),
+		order:               append([]dzopositiontitle.OrderOption{}, _q.order...),
+		inters:              append([]Interceptor{}, _q.inters...),
+		predicates:          append([]predicate.DzoPositionTitle{}, _q.predicates...),
+		withDzo:             _q.withDzo.Clone(),
+		withGeneralPosition: _q.withGeneralPosition.Clone(),
+		withEmployees:       _q.withEmployees.Clone(),
 		// clone intermediate query.
 		sql:  _q.sql.Clone(),
 		path: _q.path,
@@ -335,7 +335,7 @@ func (_q *EmployeeQuery) Clone() *EmployeeQuery {
 
 // WithDzo tells the query-builder to eager-load the nodes that are connected to
 // the "dzo" edge. The optional arguments are used to configure the query builder of the edge.
-func (_q *EmployeeQuery) WithDzo(opts ...func(*DzoOrganizationQuery)) *EmployeeQuery {
+func (_q *DzoPositionTitleQuery) WithDzo(opts ...func(*DzoOrganizationQuery)) *DzoPositionTitleQuery {
 	query := (&DzoOrganizationClient{config: _q.config}).Query()
 	for _, opt := range opts {
 		opt(query)
@@ -344,25 +344,25 @@ func (_q *EmployeeQuery) WithDzo(opts ...func(*DzoOrganizationQuery)) *EmployeeQ
 	return _q
 }
 
-// WithDzoPositionTitle tells the query-builder to eager-load the nodes that are connected to
-// the "dzo_position_title" edge. The optional arguments are used to configure the query builder of the edge.
-func (_q *EmployeeQuery) WithDzoPositionTitle(opts ...func(*DzoPositionTitleQuery)) *EmployeeQuery {
-	query := (&DzoPositionTitleClient{config: _q.config}).Query()
+// WithGeneralPosition tells the query-builder to eager-load the nodes that are connected to
+// the "general_position" edge. The optional arguments are used to configure the query builder of the edge.
+func (_q *DzoPositionTitleQuery) WithGeneralPosition(opts ...func(*GeneralPositionQuery)) *DzoPositionTitleQuery {
+	query := (&GeneralPositionClient{config: _q.config}).Query()
 	for _, opt := range opts {
 		opt(query)
 	}
-	_q.withDzoPositionTitle = query
+	_q.withGeneralPosition = query
 	return _q
 }
 
-// WithEventParticipations tells the query-builder to eager-load the nodes that are connected to
-// the "event_participations" edge. The optional arguments are used to configure the query builder of the edge.
-func (_q *EmployeeQuery) WithEventParticipations(opts ...func(*EventParticipantQuery)) *EmployeeQuery {
-	query := (&EventParticipantClient{config: _q.config}).Query()
+// WithEmployees tells the query-builder to eager-load the nodes that are connected to
+// the "employees" edge. The optional arguments are used to configure the query builder of the edge.
+func (_q *DzoPositionTitleQuery) WithEmployees(opts ...func(*EmployeeQuery)) *DzoPositionTitleQuery {
+	query := (&EmployeeClient{config: _q.config}).Query()
 	for _, opt := range opts {
 		opt(query)
 	}
-	_q.withEventParticipations = query
+	_q.withEmployees = query
 	return _q
 }
 
@@ -372,19 +372,19 @@ func (_q *EmployeeQuery) WithEventParticipations(opts ...func(*EventParticipantQ
 // Example:
 //
 //	var v []struct {
-//		ClientID uuid.UUID `json:"client_id,omitempty"`
+//		DzoID uuid.UUID `json:"dzo_id,omitempty"`
 //		Count int `json:"count,omitempty"`
 //	}
 //
-//	client.Employee.Query().
-//		GroupBy(employee.FieldClientID).
+//	client.DzoPositionTitle.Query().
+//		GroupBy(dzopositiontitle.FieldDzoID).
 //		Aggregate(ent.Count()).
 //		Scan(ctx, &v)
-func (_q *EmployeeQuery) GroupBy(field string, fields ...string) *EmployeeGroupBy {
+func (_q *DzoPositionTitleQuery) GroupBy(field string, fields ...string) *DzoPositionTitleGroupBy {
 	_q.ctx.Fields = append([]string{field}, fields...)
-	grbuild := &EmployeeGroupBy{build: _q}
+	grbuild := &DzoPositionTitleGroupBy{build: _q}
 	grbuild.flds = &_q.ctx.Fields
-	grbuild.label = employee.Label
+	grbuild.label = dzopositiontitle.Label
 	grbuild.scan = grbuild.Scan
 	return grbuild
 }
@@ -395,26 +395,26 @@ func (_q *EmployeeQuery) GroupBy(field string, fields ...string) *EmployeeGroupB
 // Example:
 //
 //	var v []struct {
-//		ClientID uuid.UUID `json:"client_id,omitempty"`
+//		DzoID uuid.UUID `json:"dzo_id,omitempty"`
 //	}
 //
-//	client.Employee.Query().
-//		Select(employee.FieldClientID).
+//	client.DzoPositionTitle.Query().
+//		Select(dzopositiontitle.FieldDzoID).
 //		Scan(ctx, &v)
-func (_q *EmployeeQuery) Select(fields ...string) *EmployeeSelect {
+func (_q *DzoPositionTitleQuery) Select(fields ...string) *DzoPositionTitleSelect {
 	_q.ctx.Fields = append(_q.ctx.Fields, fields...)
-	sbuild := &EmployeeSelect{EmployeeQuery: _q}
-	sbuild.label = employee.Label
+	sbuild := &DzoPositionTitleSelect{DzoPositionTitleQuery: _q}
+	sbuild.label = dzopositiontitle.Label
 	sbuild.flds, sbuild.scan = &_q.ctx.Fields, sbuild.Scan
 	return sbuild
 }
 
-// Aggregate returns a EmployeeSelect configured with the given aggregations.
-func (_q *EmployeeQuery) Aggregate(fns ...AggregateFunc) *EmployeeSelect {
+// Aggregate returns a DzoPositionTitleSelect configured with the given aggregations.
+func (_q *DzoPositionTitleQuery) Aggregate(fns ...AggregateFunc) *DzoPositionTitleSelect {
 	return _q.Select().Aggregate(fns...)
 }
 
-func (_q *EmployeeQuery) prepareQuery(ctx context.Context) error {
+func (_q *DzoPositionTitleQuery) prepareQuery(ctx context.Context) error {
 	for _, inter := range _q.inters {
 		if inter == nil {
 			return fmt.Errorf("ent: uninitialized interceptor (forgotten import ent/runtime?)")
@@ -426,7 +426,7 @@ func (_q *EmployeeQuery) prepareQuery(ctx context.Context) error {
 		}
 	}
 	for _, f := range _q.ctx.Fields {
-		if !employee.ValidColumn(f) {
+		if !dzopositiontitle.ValidColumn(f) {
 			return &ValidationError{Name: f, err: fmt.Errorf("ent: invalid field %q for query", f)}
 		}
 	}
@@ -440,21 +440,21 @@ func (_q *EmployeeQuery) prepareQuery(ctx context.Context) error {
 	return nil
 }
 
-func (_q *EmployeeQuery) sqlAll(ctx context.Context, hooks ...queryHook) ([]*Employee, error) {
+func (_q *DzoPositionTitleQuery) sqlAll(ctx context.Context, hooks ...queryHook) ([]*DzoPositionTitle, error) {
 	var (
-		nodes       = []*Employee{}
+		nodes       = []*DzoPositionTitle{}
 		_spec       = _q.querySpec()
 		loadedTypes = [3]bool{
 			_q.withDzo != nil,
-			_q.withDzoPositionTitle != nil,
-			_q.withEventParticipations != nil,
+			_q.withGeneralPosition != nil,
+			_q.withEmployees != nil,
 		}
 	)
 	_spec.ScanValues = func(columns []string) ([]any, error) {
-		return (*Employee).scanValues(nil, columns)
+		return (*DzoPositionTitle).scanValues(nil, columns)
 	}
 	_spec.Assign = func(columns []string, values []any) error {
-		node := &Employee{config: _q.config}
+		node := &DzoPositionTitle{config: _q.config}
 		nodes = append(nodes, node)
 		node.Edges.loadedTypes = loadedTypes
 		return node.assignValues(columns, values)
@@ -470,31 +470,29 @@ func (_q *EmployeeQuery) sqlAll(ctx context.Context, hooks ...queryHook) ([]*Emp
 	}
 	if query := _q.withDzo; query != nil {
 		if err := _q.loadDzo(ctx, query, nodes, nil,
-			func(n *Employee, e *DzoOrganization) { n.Edges.Dzo = e }); err != nil {
+			func(n *DzoPositionTitle, e *DzoOrganization) { n.Edges.Dzo = e }); err != nil {
 			return nil, err
 		}
 	}
-	if query := _q.withDzoPositionTitle; query != nil {
-		if err := _q.loadDzoPositionTitle(ctx, query, nodes, nil,
-			func(n *Employee, e *DzoPositionTitle) { n.Edges.DzoPositionTitle = e }); err != nil {
+	if query := _q.withGeneralPosition; query != nil {
+		if err := _q.loadGeneralPosition(ctx, query, nodes, nil,
+			func(n *DzoPositionTitle, e *GeneralPosition) { n.Edges.GeneralPosition = e }); err != nil {
 			return nil, err
 		}
 	}
-	if query := _q.withEventParticipations; query != nil {
-		if err := _q.loadEventParticipations(ctx, query, nodes,
-			func(n *Employee) { n.Edges.EventParticipations = []*EventParticipant{} },
-			func(n *Employee, e *EventParticipant) {
-				n.Edges.EventParticipations = append(n.Edges.EventParticipations, e)
-			}); err != nil {
+	if query := _q.withEmployees; query != nil {
+		if err := _q.loadEmployees(ctx, query, nodes,
+			func(n *DzoPositionTitle) { n.Edges.Employees = []*Employee{} },
+			func(n *DzoPositionTitle, e *Employee) { n.Edges.Employees = append(n.Edges.Employees, e) }); err != nil {
 			return nil, err
 		}
 	}
 	return nodes, nil
 }
 
-func (_q *EmployeeQuery) loadDzo(ctx context.Context, query *DzoOrganizationQuery, nodes []*Employee, init func(*Employee), assign func(*Employee, *DzoOrganization)) error {
+func (_q *DzoPositionTitleQuery) loadDzo(ctx context.Context, query *DzoOrganizationQuery, nodes []*DzoPositionTitle, init func(*DzoPositionTitle), assign func(*DzoPositionTitle, *DzoOrganization)) error {
 	ids := make([]uuid.UUID, 0, len(nodes))
-	nodeids := make(map[uuid.UUID][]*Employee)
+	nodeids := make(map[uuid.UUID][]*DzoPositionTitle)
 	for i := range nodes {
 		fk := nodes[i].DzoID
 		if _, ok := nodeids[fk]; !ok {
@@ -521,14 +519,14 @@ func (_q *EmployeeQuery) loadDzo(ctx context.Context, query *DzoOrganizationQuer
 	}
 	return nil
 }
-func (_q *EmployeeQuery) loadDzoPositionTitle(ctx context.Context, query *DzoPositionTitleQuery, nodes []*Employee, init func(*Employee), assign func(*Employee, *DzoPositionTitle)) error {
+func (_q *DzoPositionTitleQuery) loadGeneralPosition(ctx context.Context, query *GeneralPositionQuery, nodes []*DzoPositionTitle, init func(*DzoPositionTitle), assign func(*DzoPositionTitle, *GeneralPosition)) error {
 	ids := make([]uuid.UUID, 0, len(nodes))
-	nodeids := make(map[uuid.UUID][]*Employee)
+	nodeids := make(map[uuid.UUID][]*DzoPositionTitle)
 	for i := range nodes {
-		if nodes[i].DzoPositionID == nil {
+		if nodes[i].GeneralPositionID == nil {
 			continue
 		}
-		fk := *nodes[i].DzoPositionID
+		fk := *nodes[i].GeneralPositionID
 		if _, ok := nodeids[fk]; !ok {
 			ids = append(ids, fk)
 		}
@@ -537,7 +535,7 @@ func (_q *EmployeeQuery) loadDzoPositionTitle(ctx context.Context, query *DzoPos
 	if len(ids) == 0 {
 		return nil
 	}
-	query.Where(dzopositiontitle.IDIn(ids...))
+	query.Where(generalposition.IDIn(ids...))
 	neighbors, err := query.All(ctx)
 	if err != nil {
 		return err
@@ -545,7 +543,7 @@ func (_q *EmployeeQuery) loadDzoPositionTitle(ctx context.Context, query *DzoPos
 	for _, n := range neighbors {
 		nodes, ok := nodeids[n.ID]
 		if !ok {
-			return fmt.Errorf(`unexpected foreign-key "dzo_position_id" returned %v`, n.ID)
+			return fmt.Errorf(`unexpected foreign-key "general_position_id" returned %v`, n.ID)
 		}
 		for i := range nodes {
 			assign(nodes[i], n)
@@ -553,9 +551,9 @@ func (_q *EmployeeQuery) loadDzoPositionTitle(ctx context.Context, query *DzoPos
 	}
 	return nil
 }
-func (_q *EmployeeQuery) loadEventParticipations(ctx context.Context, query *EventParticipantQuery, nodes []*Employee, init func(*Employee), assign func(*Employee, *EventParticipant)) error {
+func (_q *DzoPositionTitleQuery) loadEmployees(ctx context.Context, query *EmployeeQuery, nodes []*DzoPositionTitle, init func(*DzoPositionTitle), assign func(*DzoPositionTitle, *Employee)) error {
 	fks := make([]driver.Value, 0, len(nodes))
-	nodeids := make(map[uuid.UUID]*Employee)
+	nodeids := make(map[uuid.UUID]*DzoPositionTitle)
 	for i := range nodes {
 		fks = append(fks, nodes[i].ID)
 		nodeids[nodes[i].ID] = nodes[i]
@@ -564,27 +562,30 @@ func (_q *EmployeeQuery) loadEventParticipations(ctx context.Context, query *Eve
 		}
 	}
 	if len(query.ctx.Fields) > 0 {
-		query.ctx.AppendFieldOnce(eventparticipant.FieldEmployeeID)
+		query.ctx.AppendFieldOnce(employee.FieldDzoPositionID)
 	}
-	query.Where(predicate.EventParticipant(func(s *sql.Selector) {
-		s.Where(sql.InValues(s.C(employee.EventParticipationsColumn), fks...))
+	query.Where(predicate.Employee(func(s *sql.Selector) {
+		s.Where(sql.InValues(s.C(dzopositiontitle.EmployeesColumn), fks...))
 	}))
 	neighbors, err := query.All(ctx)
 	if err != nil {
 		return err
 	}
 	for _, n := range neighbors {
-		fk := n.EmployeeID
-		node, ok := nodeids[fk]
+		fk := n.DzoPositionID
+		if fk == nil {
+			return fmt.Errorf(`foreign-key "dzo_position_id" is nil for node %v`, n.ID)
+		}
+		node, ok := nodeids[*fk]
 		if !ok {
-			return fmt.Errorf(`unexpected referenced foreign-key "employee_id" returned %v for node %v`, fk, n.ID)
+			return fmt.Errorf(`unexpected referenced foreign-key "dzo_position_id" returned %v for node %v`, *fk, n.ID)
 		}
 		assign(node, n)
 	}
 	return nil
 }
 
-func (_q *EmployeeQuery) sqlCount(ctx context.Context) (int, error) {
+func (_q *DzoPositionTitleQuery) sqlCount(ctx context.Context) (int, error) {
 	_spec := _q.querySpec()
 	_spec.Node.Columns = _q.ctx.Fields
 	if len(_q.ctx.Fields) > 0 {
@@ -593,8 +594,8 @@ func (_q *EmployeeQuery) sqlCount(ctx context.Context) (int, error) {
 	return sqlgraph.CountNodes(ctx, _q.driver, _spec)
 }
 
-func (_q *EmployeeQuery) querySpec() *sqlgraph.QuerySpec {
-	_spec := sqlgraph.NewQuerySpec(employee.Table, employee.Columns, sqlgraph.NewFieldSpec(employee.FieldID, field.TypeUUID))
+func (_q *DzoPositionTitleQuery) querySpec() *sqlgraph.QuerySpec {
+	_spec := sqlgraph.NewQuerySpec(dzopositiontitle.Table, dzopositiontitle.Columns, sqlgraph.NewFieldSpec(dzopositiontitle.FieldID, field.TypeUUID))
 	_spec.From = _q.sql
 	if unique := _q.ctx.Unique; unique != nil {
 		_spec.Unique = *unique
@@ -603,17 +604,17 @@ func (_q *EmployeeQuery) querySpec() *sqlgraph.QuerySpec {
 	}
 	if fields := _q.ctx.Fields; len(fields) > 0 {
 		_spec.Node.Columns = make([]string, 0, len(fields))
-		_spec.Node.Columns = append(_spec.Node.Columns, employee.FieldID)
+		_spec.Node.Columns = append(_spec.Node.Columns, dzopositiontitle.FieldID)
 		for i := range fields {
-			if fields[i] != employee.FieldID {
+			if fields[i] != dzopositiontitle.FieldID {
 				_spec.Node.Columns = append(_spec.Node.Columns, fields[i])
 			}
 		}
 		if _q.withDzo != nil {
-			_spec.Node.AddColumnOnce(employee.FieldDzoID)
+			_spec.Node.AddColumnOnce(dzopositiontitle.FieldDzoID)
 		}
-		if _q.withDzoPositionTitle != nil {
-			_spec.Node.AddColumnOnce(employee.FieldDzoPositionID)
+		if _q.withGeneralPosition != nil {
+			_spec.Node.AddColumnOnce(dzopositiontitle.FieldGeneralPositionID)
 		}
 	}
 	if ps := _q.predicates; len(ps) > 0 {
@@ -639,12 +640,12 @@ func (_q *EmployeeQuery) querySpec() *sqlgraph.QuerySpec {
 	return _spec
 }
 
-func (_q *EmployeeQuery) sqlQuery(ctx context.Context) *sql.Selector {
+func (_q *DzoPositionTitleQuery) sqlQuery(ctx context.Context) *sql.Selector {
 	builder := sql.Dialect(_q.driver.Dialect())
-	t1 := builder.Table(employee.Table)
+	t1 := builder.Table(dzopositiontitle.Table)
 	columns := _q.ctx.Fields
 	if len(columns) == 0 {
-		columns = employee.Columns
+		columns = dzopositiontitle.Columns
 	}
 	selector := builder.Select(t1.Columns(columns...)...).From(t1)
 	if _q.sql != nil {
@@ -671,28 +672,28 @@ func (_q *EmployeeQuery) sqlQuery(ctx context.Context) *sql.Selector {
 	return selector
 }
 
-// EmployeeGroupBy is the group-by builder for Employee entities.
-type EmployeeGroupBy struct {
+// DzoPositionTitleGroupBy is the group-by builder for DzoPositionTitle entities.
+type DzoPositionTitleGroupBy struct {
 	selector
-	build *EmployeeQuery
+	build *DzoPositionTitleQuery
 }
 
 // Aggregate adds the given aggregation functions to the group-by query.
-func (_g *EmployeeGroupBy) Aggregate(fns ...AggregateFunc) *EmployeeGroupBy {
+func (_g *DzoPositionTitleGroupBy) Aggregate(fns ...AggregateFunc) *DzoPositionTitleGroupBy {
 	_g.fns = append(_g.fns, fns...)
 	return _g
 }
 
 // Scan applies the selector query and scans the result into the given value.
-func (_g *EmployeeGroupBy) Scan(ctx context.Context, v any) error {
+func (_g *DzoPositionTitleGroupBy) Scan(ctx context.Context, v any) error {
 	ctx = setContextOp(ctx, _g.build.ctx, ent.OpQueryGroupBy)
 	if err := _g.build.prepareQuery(ctx); err != nil {
 		return err
 	}
-	return scanWithInterceptors[*EmployeeQuery, *EmployeeGroupBy](ctx, _g.build, _g, _g.build.inters, v)
+	return scanWithInterceptors[*DzoPositionTitleQuery, *DzoPositionTitleGroupBy](ctx, _g.build, _g, _g.build.inters, v)
 }
 
-func (_g *EmployeeGroupBy) sqlScan(ctx context.Context, root *EmployeeQuery, v any) error {
+func (_g *DzoPositionTitleGroupBy) sqlScan(ctx context.Context, root *DzoPositionTitleQuery, v any) error {
 	selector := root.sqlQuery(ctx).Select()
 	aggregation := make([]string, 0, len(_g.fns))
 	for _, fn := range _g.fns {
@@ -719,28 +720,28 @@ func (_g *EmployeeGroupBy) sqlScan(ctx context.Context, root *EmployeeQuery, v a
 	return sql.ScanSlice(rows, v)
 }
 
-// EmployeeSelect is the builder for selecting fields of Employee entities.
-type EmployeeSelect struct {
-	*EmployeeQuery
+// DzoPositionTitleSelect is the builder for selecting fields of DzoPositionTitle entities.
+type DzoPositionTitleSelect struct {
+	*DzoPositionTitleQuery
 	selector
 }
 
 // Aggregate adds the given aggregation functions to the selector query.
-func (_s *EmployeeSelect) Aggregate(fns ...AggregateFunc) *EmployeeSelect {
+func (_s *DzoPositionTitleSelect) Aggregate(fns ...AggregateFunc) *DzoPositionTitleSelect {
 	_s.fns = append(_s.fns, fns...)
 	return _s
 }
 
 // Scan applies the selector query and scans the result into the given value.
-func (_s *EmployeeSelect) Scan(ctx context.Context, v any) error {
+func (_s *DzoPositionTitleSelect) Scan(ctx context.Context, v any) error {
 	ctx = setContextOp(ctx, _s.ctx, ent.OpQuerySelect)
 	if err := _s.prepareQuery(ctx); err != nil {
 		return err
 	}
-	return scanWithInterceptors[*EmployeeQuery, *EmployeeSelect](ctx, _s.EmployeeQuery, _s, _s.inters, v)
+	return scanWithInterceptors[*DzoPositionTitleQuery, *DzoPositionTitleSelect](ctx, _s.DzoPositionTitleQuery, _s, _s.inters, v)
 }
 
-func (_s *EmployeeSelect) sqlScan(ctx context.Context, root *EmployeeQuery, v any) error {
+func (_s *DzoPositionTitleSelect) sqlScan(ctx context.Context, root *DzoPositionTitleQuery, v any) error {
 	selector := root.sqlQuery(ctx)
 	aggregation := make([]string, 0, len(_s.fns))
 	for _, fn := range _s.fns {

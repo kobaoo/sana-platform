@@ -24,6 +24,8 @@ type Tx struct {
 	ContractSupplierHistory *ContractSupplierHistoryClient
 	// DzoOrganization is the client for interacting with the DzoOrganization builders.
 	DzoOrganization *DzoOrganizationClient
+	// DzoPositionTitle is the client for interacting with the DzoPositionTitle builders.
+	DzoPositionTitle *DzoPositionTitleClient
 	// Employee is the client for interacting with the Employee builders.
 	Employee *EmployeeClient
 	// Event is the client for interacting with the Event builders.
@@ -32,6 +34,8 @@ type Tx struct {
 	EventParticipant *EventParticipantClient
 	// ExternalTrainingEvent is the client for interacting with the ExternalTrainingEvent builders.
 	ExternalTrainingEvent *ExternalTrainingEventClient
+	// GeneralPosition is the client for interacting with the GeneralPosition builders.
+	GeneralPosition *GeneralPositionClient
 	// Notification is the client for interacting with the Notification builders.
 	Notification *NotificationClient
 	// Organization is the client for interacting with the Organization builders.
@@ -189,10 +193,12 @@ func (tx *Tx) init() {
 	tx.ContractSupplier = NewContractSupplierClient(tx.config)
 	tx.ContractSupplierHistory = NewContractSupplierHistoryClient(tx.config)
 	tx.DzoOrganization = NewDzoOrganizationClient(tx.config)
+	tx.DzoPositionTitle = NewDzoPositionTitleClient(tx.config)
 	tx.Employee = NewEmployeeClient(tx.config)
 	tx.Event = NewEventClient(tx.config)
 	tx.EventParticipant = NewEventParticipantClient(tx.config)
 	tx.ExternalTrainingEvent = NewExternalTrainingEventClient(tx.config)
+	tx.GeneralPosition = NewGeneralPositionClient(tx.config)
 	tx.Notification = NewNotificationClient(tx.config)
 	tx.Organization = NewOrganizationClient(tx.config)
 	tx.Request = NewRequestClient(tx.config)

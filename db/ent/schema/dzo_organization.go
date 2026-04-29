@@ -58,5 +58,6 @@ func (DzoOrganization) Fields() []ent.Field {
 func (DzoOrganization) Edges() []ent.Edge {
 	return []ent.Edge{
 		edge.To("employees", Employee.Type),
+		edge.To("position_titles", DzoPositionTitle.Type),
 	}
 }

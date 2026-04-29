@@ -1,3 +1,5 @@
-h1:XiwqThHN2IA3wvArIENE71k4ykFRxaVZbl/VXLXnnF4=
-20260427021339_initial.up.sql h1:P+EvBMx1Rl0pMiwqfOnzCxm8538ll4PSPoP1Ny4rR9I=
-20260427113458_add_events.up.sql h1:cx+XAvcaNo8vaIPlY7vlmGmrNdBVNpRJWubHb6Kclrs=
+h1:vRRogrB1vB5dphom3xVqN20r22bfTaFJAraRET9BzLk=
+20260427021339_initial.up.sql h1:WvzDhtiMVPKn9MNpQSf7Snzdk4tvqr/DFbfI8MOWxjg=
+20260427113458_add_events.up.sql h1:cdpd1Ft9r7ZN8LZsOAtgBYERK8uvYtqhiSCmoBn2Mwg=
+20260428203522_add_positions_tables.up.sql h1:E78RpejKuU6ChOg+qin4bOvCpBtwwsCEQ6/bttVCmU0=
+20260429075618_add_client_id_field_for_dzo_positions.up.sql h1:liQETfT2l6NdaTmpq8kbS4w8D+q99HvPiD5+03QPOJI=

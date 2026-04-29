@@ -15,6 +15,7 @@ type Employee struct {
 	DzoName       string               `json:"dzo_name"`
 	Role          authhandler.UserRole `json:"role"`
 	Position      *string              `json:"position,omitempty"`
+	PositionID    *string              `json:"position_id"`
 	FullName      string               `json:"full_name"`
 	ShortName     *string              `json:"short_name,omitempty"`
 	Department    *string              `json:"department,omitempty"`
@@ -32,7 +33,7 @@ type CreateEmployeeRequest struct {
 	FullName      string               `json:"full_name"`
 	Email         string               `json:"email"`
 	Role          authhandler.UserRole `json:"role"`
-	Position      *string              `json:"position,omitempty"`
+	PositionID    *string              `json:"position_id,omitempty"`
 	ShortName     *string              `json:"short_name,omitempty"`
 	Department    *string              `json:"department,omitempty"`
 	Direction     *string              `json:"direction,omitempty"`
@@ -47,7 +48,7 @@ type UpdateEmployeeRequest struct {
 	FullName      *string               `json:"full_name,omitempty"`
 	Email         *string               `json:"email,omitempty"`
 	Role          *authhandler.UserRole `json:"role,omitempty"`
-	Position      *string               `json:"position,omitempty"`
+	PositionID    *string               `json:"position_id,omitempty"`
 	ShortName     *string               `json:"short_name,omitempty"`
 	Department    *string               `json:"department,omitempty"`
 	Direction     *string               `json:"direction,omitempty"`

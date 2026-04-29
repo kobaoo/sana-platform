@@ -24,6 +24,9 @@ type ContractSupplierHistory func(*sql.Selector)
 // DzoOrganization is the predicate function for dzoorganization builders.
 type DzoOrganization func(*sql.Selector)
 
+// DzoPositionTitle is the predicate function for dzopositiontitle builders.
+type DzoPositionTitle func(*sql.Selector)
+
 // Employee is the predicate function for employee builders.
 type Employee func(*sql.Selector)
 
@@ -35,6 +38,9 @@ type EventParticipant func(*sql.Selector)
 
 // ExternalTrainingEvent is the predicate function for externaltrainingevent builders.
 type ExternalTrainingEvent func(*sql.Selector)
+
+// GeneralPosition is the predicate function for generalposition builders.
+type GeneralPosition func(*sql.Selector)
 
 // Notification is the predicate function for notification builders.
 type Notification func(*sql.Selector)

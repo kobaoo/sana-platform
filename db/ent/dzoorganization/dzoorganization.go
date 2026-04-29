@@ -31,6 +31,8 @@ const (
 	FieldUpdatedAt = "updated_at"
 	// EdgeEmployees holds the string denoting the employees edge name in mutations.
 	EdgeEmployees = "employees"
+	// EdgePositionTitles holds the string denoting the position_titles edge name in mutations.
+	EdgePositionTitles = "position_titles"
 	// Table holds the table name of the dzoorganization in the database.
 	Table = "dzo_organizations"
 	// EmployeesTable is the table that holds the employees relation/edge.
@@ -40,6 +42,13 @@ const (
 	EmployeesInverseTable = "employees"
 	// EmployeesColumn is the table column denoting the employees relation/edge.
 	EmployeesColumn = "dzo_id"
+	// PositionTitlesTable is the table that holds the position_titles relation/edge.
+	PositionTitlesTable = "dzo_position_titles"
+	// PositionTitlesInverseTable is the table name for the DzoPositionTitle entity.
+	// It exists in this package in order to avoid circular dependency with the "dzopositiontitle" package.
+	PositionTitlesInverseTable = "dzo_position_titles"
+	// PositionTitlesColumn is the table column denoting the position_titles relation/edge.
+	PositionTitlesColumn = "dzo_id"
 )
 
 // Columns holds all SQL columns for dzoorganization fields.
@@ -139,10 +148,31 @@ func ByEmployees(term sql.OrderTerm, terms ...sql.OrderTerm) OrderOption {
 		sqlgraph.OrderByNeighborTerms(s, newEmployeesStep(), append([]sql.OrderTerm{term}, terms...)...)
 	}
 }
+
+// ByPositionTitlesCount orders the results by position_titles count.
+func ByPositionTitlesCount(opts ...sql.OrderTermOption) OrderOption {
+	return func(s *sql.Selector) {
+		sqlgraph.OrderByNeighborsCount(s, newPositionTitlesStep(), opts...)
+	}
+}
+
+// ByPositionTitles orders the results by position_titles terms.
+func ByPositionTitles(term sql.OrderTerm, terms ...sql.OrderTerm) OrderOption {
+	return func(s *sql.Selector) {
+		sqlgraph.OrderByNeighborTerms(s, newPositionTitlesStep(), append([]sql.OrderTerm{term}, terms...)...)
+	}
+}
 func newEmployeesStep() *sqlgraph.Step {
 	return sqlgraph.NewStep(
 		sqlgraph.From(Table, FieldID),
 		sqlgraph.To(EmployeesInverseTable, FieldID),
 		sqlgraph.Edge(sqlgraph.O2M, false, EmployeesTable, EmployeesColumn),
+	)
+}
+func newPositionTitlesStep() *sqlgraph.Step {
+	return sqlgraph.NewStep(
+		sqlgraph.From(Table, FieldID),
+		sqlgraph.To(PositionTitlesInverseTable, FieldID),
+		sqlgraph.Edge(sqlgraph.O2M, false, PositionTitlesTable, PositionTitlesColumn),
 	)
 }

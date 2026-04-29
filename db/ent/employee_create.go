@@ -9,6 +9,7 @@ import (
 	"time"
 
 	"encore.app/db/ent/dzoorganization"
+	"encore.app/db/ent/dzopositiontitle"
 	"encore.app/db/ent/employee"
 	"encore.app/db/ent/eventparticipant"
 	"entgo.io/ent/dialect/sql/sqlgraph"
@@ -35,16 +36,16 @@ func (_c *EmployeeCreate) SetDzoID(v uuid.UUID) *EmployeeCreate {
 	return _c
 }
 
-// SetPosition sets the "position" field.
-func (_c *EmployeeCreate) SetPosition(v string) *EmployeeCreate {
-	_c.mutation.SetPosition(v)
+// SetDzoPositionID sets the "dzo_position_id" field.
+func (_c *EmployeeCreate) SetDzoPositionID(v uuid.UUID) *EmployeeCreate {
+	_c.mutation.SetDzoPositionID(v)
 	return _c
 }
 
-// SetNillablePosition sets the "position" field if the given value is not nil.
-func (_c *EmployeeCreate) SetNillablePosition(v *string) *EmployeeCreate {
+// SetNillableDzoPositionID sets the "dzo_position_id" field if the given value is not nil.
+func (_c *EmployeeCreate) SetNillableDzoPositionID(v *uuid.UUID) *EmployeeCreate {
 	if v != nil {
-		_c.SetPosition(*v)
+		_c.SetDzoPositionID(*v)
 	}
 	return _c
 }
@@ -192,6 +193,25 @@ func (_c *EmployeeCreate) SetDzo(v *DzoOrganization) *EmployeeCreate {
 	return _c.SetDzoID(v.ID)
 }
 
+// SetDzoPositionTitleID sets the "dzo_position_title" edge to the DzoPositionTitle entity by ID.
+func (_c *EmployeeCreate) SetDzoPositionTitleID(id uuid.UUID) *EmployeeCreate {
+	_c.mutation.SetDzoPositionTitleID(id)
+	return _c
+}
+
+// SetNillableDzoPositionTitleID sets the "dzo_position_title" edge to the DzoPositionTitle entity by ID if the given value is not nil.
+func (_c *EmployeeCreate) SetNillableDzoPositionTitleID(id *uuid.UUID) *EmployeeCreate {
+	if id != nil {
+		_c = _c.SetDzoPositionTitleID(*id)
+	}
+	return _c
+}
+
+// SetDzoPositionTitle sets the "dzo_position_title" edge to the DzoPositionTitle entity.
+func (_c *EmployeeCreate) SetDzoPositionTitle(v *DzoPositionTitle) *EmployeeCreate {
+	return _c.SetDzoPositionTitleID(v.ID)
+}
+
 // AddEventParticipationIDs adds the "event_participations" edge to the EventParticipant entity by IDs.
 func (_c *EmployeeCreate) AddEventParticipationIDs(ids ...uuid.UUID) *EmployeeCreate {
 	_c.mutation.AddEventParticipationIDs(ids...)
@@ -263,11 +283,6 @@ func (_c *EmployeeCreate) check() error {
 	}
 	if _, ok := _c.mutation.DzoID(); !ok {
 		return &ValidationError{Name: "dzo_id", err: errors.New(`ent: missing required field "Employee.dzo_id"`)}
-	}
-	if v, ok := _c.mutation.Position(); ok {
-		if err := employee.PositionValidator(v); err != nil {
-			return &ValidationError{Name: "position", err: fmt.Errorf(`ent: validator failed for field "Employee.position": %w`, err)}
-		}
 	}
 	if _, ok := _c.mutation.FullName(); !ok {
 		return &ValidationError{Name: "full_name", err: errors.New(`ent: missing required field "Employee.full_name"`)}
@@ -353,10 +368,6 @@ func (_c *EmployeeCreate) createSpec() (*Employee, *sqlgraph.CreateSpec) {
 		_spec.SetField(employee.FieldClientID, field.TypeUUID, value)
 		_node.ClientID = value
 	}
-	if value, ok := _c.mutation.Position(); ok {
-		_spec.SetField(employee.FieldPosition, field.TypeString, value)
-		_node.Position = &value
-	}
 	if value, ok := _c.mutation.FullName(); ok {
 		_spec.SetField(employee.FieldFullName, field.TypeString, value)
 		_node.FullName = value
@@ -412,6 +423,23 @@ func (_c *EmployeeCreate) createSpec() (*Employee, *sqlgraph.CreateSpec) {
 			edge.Target.Nodes = append(edge.Target.Nodes, k)
 		}
 		_node.DzoID = nodes[0]
+		_spec.Edges = append(_spec.Edges, edge)
+	}
+	if nodes := _c.mutation.DzoPositionTitleIDs(); len(nodes) > 0 {
+		edge := &sqlgraph.EdgeSpec{
+			Rel:     sqlgraph.M2O,
+			Inverse: true,
+			Table:   employee.DzoPositionTitleTable,
+			Columns: []string{employee.DzoPositionTitleColumn},
+			Bidi:    false,
+			Target: &sqlgraph.EdgeTarget{
+				IDSpec: sqlgraph.NewFieldSpec(dzopositiontitle.FieldID, field.TypeUUID),
+			},
+		}
+		for _, k := range nodes {
+			edge.Target.Nodes = append(edge.Target.Nodes, k)
+		}
+		_node.DzoPositionID = &nodes[0]
 		_spec.Edges = append(_spec.Edges, edge)
 	}
 	if nodes := _c.mutation.EventParticipationsIDs(); len(nodes) > 0 {

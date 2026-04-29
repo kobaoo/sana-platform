@@ -15,10 +15,12 @@ import (
 	"encore.app/db/ent/contractsupplier"
 	"encore.app/db/ent/contractsupplierhistory"
 	"encore.app/db/ent/dzoorganization"
+	"encore.app/db/ent/dzopositiontitle"
 	"encore.app/db/ent/employee"
 	"encore.app/db/ent/event"
 	"encore.app/db/ent/eventparticipant"
 	"encore.app/db/ent/externaltrainingevent"
+	"encore.app/db/ent/generalposition"
 	"encore.app/db/ent/notification"
 	"encore.app/db/ent/organization"
 	"encore.app/db/ent/predicate"
@@ -50,10 +52,12 @@ const (
 	TypeContractSupplier        = "ContractSupplier"
 	TypeContractSupplierHistory = "ContractSupplierHistory"
 	TypeDzoOrganization         = "DzoOrganization"
+	TypeDzoPositionTitle        = "DzoPositionTitle"
 	TypeEmployee                = "Employee"
 	TypeEvent                   = "Event"
 	TypeEventParticipant        = "EventParticipant"
 	TypeExternalTrainingEvent   = "ExternalTrainingEvent"
+	TypeGeneralPosition         = "GeneralPosition"
 	TypeNotification            = "Notification"
 	TypeOrganization            = "Organization"
 	TypeRequest                 = "Request"
@@ -5129,23 +5133,26 @@ func (m *ContractSupplierHistoryMutation) ResetEdge(name string) error {
 // DzoOrganizationMutation represents an operation that mutates the DzoOrganization nodes in the graph.
 type DzoOrganizationMutation struct {
 	config
-	op               Op
-	typ              string
-	id               *uuid.UUID
-	client_id        *uuid.UUID
-	name             *string
-	short_name       *string
-	bin              *string
-	is_active        *bool
-	created_at       *time.Time
-	updated_at       *time.Time
-	clearedFields    map[string]struct{}
-	employees        map[uuid.UUID]struct{}
-	removedemployees map[uuid.UUID]struct{}
-	clearedemployees bool
-	done             bool
-	oldValue         func(context.Context) (*DzoOrganization, error)
-	predicates       []predicate.DzoOrganization
+	op                     Op
+	typ                    string
+	id                     *uuid.UUID
+	client_id              *uuid.UUID
+	name                   *string
+	short_name             *string
+	bin                    *string
+	is_active              *bool
+	created_at             *time.Time
+	updated_at             *time.Time
+	clearedFields          map[string]struct{}
+	employees              map[uuid.UUID]struct{}
+	removedemployees       map[uuid.UUID]struct{}
+	clearedemployees       bool
+	position_titles        map[uuid.UUID]struct{}
+	removedposition_titles map[uuid.UUID]struct{}
+	clearedposition_titles bool
+	done                   bool
+	oldValue               func(context.Context) (*DzoOrganization, error)
+	predicates             []predicate.DzoOrganization
 }
 
 var _ ent.Mutation = (*DzoOrganizationMutation)(nil)
@@ -5584,6 +5591,60 @@ func (m *DzoOrganizationMutation) ResetEmployees() {
 	m.removedemployees = nil
 }
 
+// AddPositionTitleIDs adds the "position_titles" edge to the DzoPositionTitle entity by ids.
+func (m *DzoOrganizationMutation) AddPositionTitleIDs(ids ...uuid.UUID) {
+	if m.position_titles == nil {
+		m.position_titles = make(map[uuid.UUID]struct{})
+	}
+	for i := range ids {
+		m.position_titles[ids[i]] = struct{}{}
+	}
+}
+
+// ClearPositionTitles clears the "position_titles" edge to the DzoPositionTitle entity.
+func (m *DzoOrganizationMutation) ClearPositionTitles() {
+	m.clearedposition_titles = true
+}
+
+// PositionTitlesCleared reports if the "position_titles" edge to the DzoPositionTitle entity was cleared.
+func (m *DzoOrganizationMutation) PositionTitlesCleared() bool {
+	return m.clearedposition_titles
+}
+
+// RemovePositionTitleIDs removes the "position_titles" edge to the DzoPositionTitle entity by IDs.
+func (m *DzoOrganizationMutation) RemovePositionTitleIDs(ids ...uuid.UUID) {
+	if m.removedposition_titles == nil {
+		m.removedposition_titles = make(map[uuid.UUID]struct{})
+	}
+	for i := range ids {
+		delete(m.position_titles, ids[i])
+		m.removedposition_titles[ids[i]] = struct{}{}
+	}
+}
+
+// RemovedPositionTitles returns the removed IDs of the "position_titles" edge to the DzoPositionTitle entity.
+func (m *DzoOrganizationMutation) RemovedPositionTitlesIDs() (ids []uuid.UUID) {
+	for id := range m.removedposition_titles {
+		ids = append(ids, id)
+	}
+	return
+}
+
+// PositionTitlesIDs returns the "position_titles" edge IDs in the mutation.
+func (m *DzoOrganizationMutation) PositionTitlesIDs() (ids []uuid.UUID) {
+	for id := range m.position_titles {
+		ids = append(ids, id)
+	}
+	return
+}
+
+// ResetPositionTitles resets all changes to the "position_titles" edge.
+func (m *DzoOrganizationMutation) ResetPositionTitles() {
+	m.position_titles = nil
+	m.clearedposition_titles = false
+	m.removedposition_titles = nil
+}
+
 // Where appends a list predicates to the DzoOrganizationMutation builder.
 func (m *DzoOrganizationMutation) Where(ps ...predicate.DzoOrganization) {
 	m.predicates = append(m.predicates, ps...)
@@ -5834,9 +5895,12 @@ func (m *DzoOrganizationMutation) ResetField(name string) error {
 
 // AddedEdges returns all edge names that were set/added in this mutation.
 func (m *DzoOrganizationMutation) AddedEdges() []string {
-	edges := make([]string, 0, 1)
+	edges := make([]string, 0, 2)
 	if m.employees != nil {
 		edges = append(edges, dzoorganization.EdgeEmployees)
+	}
+	if m.position_titles != nil {
+		edges = append(edges, dzoorganization.EdgePositionTitles)
 	}
 	return edges
 }
@@ -5851,15 +5915,24 @@ func (m *DzoOrganizationMutation) AddedIDs(name string) []ent.Value {
 			ids = append(ids, id)
 		}
 		return ids
+	case dzoorganization.EdgePositionTitles:
+		ids := make([]ent.Value, 0, len(m.position_titles))
+		for id := range m.position_titles {
+			ids = append(ids, id)
+		}
+		return ids
 	}
 	return nil
 }
 
 // RemovedEdges returns all edge names that were removed in this mutation.
 func (m *DzoOrganizationMutation) RemovedEdges() []string {
-	edges := make([]string, 0, 1)
+	edges := make([]string, 0, 2)
 	if m.removedemployees != nil {
 		edges = append(edges, dzoorganization.EdgeEmployees)
+	}
+	if m.removedposition_titles != nil {
+		edges = append(edges, dzoorganization.EdgePositionTitles)
 	}
 	return edges
 }
@@ -5874,15 +5947,24 @@ func (m *DzoOrganizationMutation) RemovedIDs(name string) []ent.Value {
 			ids = append(ids, id)
 		}
 		return ids
+	case dzoorganization.EdgePositionTitles:
+		ids := make([]ent.Value, 0, len(m.removedposition_titles))
+		for id := range m.removedposition_titles {
+			ids = append(ids, id)
+		}
+		return ids
 	}
 	return nil
 }
 
 // ClearedEdges returns all edge names that were cleared in this mutation.
 func (m *DzoOrganizationMutation) ClearedEdges() []string {
-	edges := make([]string, 0, 1)
+	edges := make([]string, 0, 2)
 	if m.clearedemployees {
 		edges = append(edges, dzoorganization.EdgeEmployees)
+	}
+	if m.clearedposition_titles {
+		edges = append(edges, dzoorganization.EdgePositionTitles)
 	}
 	return edges
 }
@@ -5893,6 +5975,8 @@ func (m *DzoOrganizationMutation) EdgeCleared(name string) bool {
 	switch name {
 	case dzoorganization.EdgeEmployees:
 		return m.clearedemployees
+	case dzoorganization.EdgePositionTitles:
+		return m.clearedposition_titles
 	}
 	return false
 }
@@ -5912,8 +5996,928 @@ func (m *DzoOrganizationMutation) ResetEdge(name string) error {
 	case dzoorganization.EdgeEmployees:
 		m.ResetEmployees()
 		return nil
+	case dzoorganization.EdgePositionTitles:
+		m.ResetPositionTitles()
+		return nil
 	}
 	return fmt.Errorf("unknown DzoOrganization edge %s", name)
+}
+
+// DzoPositionTitleMutation represents an operation that mutates the DzoPositionTitle nodes in the graph.
+type DzoPositionTitleMutation struct {
+	config
+	op                      Op
+	typ                     string
+	id                      *uuid.UUID
+	client_id               *uuid.UUID
+	local_title             *string
+	is_active               *bool
+	is_deleted              *bool
+	created_at              *time.Time
+	updated_at              *time.Time
+	clearedFields           map[string]struct{}
+	dzo                     *uuid.UUID
+	cleareddzo              bool
+	general_position        *uuid.UUID
+	clearedgeneral_position bool
+	employees               map[uuid.UUID]struct{}
+	removedemployees        map[uuid.UUID]struct{}
+	clearedemployees        bool
+	done                    bool
+	oldValue                func(context.Context) (*DzoPositionTitle, error)
+	predicates              []predicate.DzoPositionTitle
+}
+
+var _ ent.Mutation = (*DzoPositionTitleMutation)(nil)
+
+// dzopositiontitleOption allows management of the mutation configuration using functional options.
+type dzopositiontitleOption func(*DzoPositionTitleMutation)
+
+// newDzoPositionTitleMutation creates new mutation for the DzoPositionTitle entity.
+func newDzoPositionTitleMutation(c config, op Op, opts ...dzopositiontitleOption) *DzoPositionTitleMutation {
+	m := &DzoPositionTitleMutation{
+		config:        c,
+		op:            op,
+		typ:           TypeDzoPositionTitle,
+		clearedFields: make(map[string]struct{}),
+	}
+	for _, opt := range opts {
+		opt(m)
+	}
+	return m
+}
+
+// withDzoPositionTitleID sets the ID field of the mutation.
+func withDzoPositionTitleID(id uuid.UUID) dzopositiontitleOption {
+	return func(m *DzoPositionTitleMutation) {
+		var (
+			err   error
+			once  sync.Once
+			value *DzoPositionTitle
+		)
+		m.oldValue = func(ctx context.Context) (*DzoPositionTitle, error) {
+			once.Do(func() {
+				if m.done {
+					err = errors.New("querying old values post mutation is not allowed")
+				} else {
+					value, err = m.Client().DzoPositionTitle.Get(ctx, id)
+				}
+			})
+			return value, err
+		}
+		m.id = &id
+	}
+}
+
+// withDzoPositionTitle sets the old DzoPositionTitle of the mutation.
+func withDzoPositionTitle(node *DzoPositionTitle) dzopositiontitleOption {
+	return func(m *DzoPositionTitleMutation) {
+		m.oldValue = func(context.Context) (*DzoPositionTitle, error) {
+			return node, nil
+		}
+		m.id = &node.ID
+	}
+}
+
+// Client returns a new `ent.Client` from the mutation. If the mutation was
+// executed in a transaction (ent.Tx), a transactional client is returned.
+func (m DzoPositionTitleMutation) Client() *Client {
+	client := &Client{config: m.config}
+	client.init()
+	return client
+}
+
+// Tx returns an `ent.Tx` for mutations that were executed in transactions;
+// it returns an error otherwise.
+func (m DzoPositionTitleMutation) Tx() (*Tx, error) {
+	if _, ok := m.driver.(*txDriver); !ok {
+		return nil, errors.New("ent: mutation is not running in a transaction")
+	}
+	tx := &Tx{config: m.config}
+	tx.init()
+	return tx, nil
+}
+
+// SetID sets the value of the id field. Note that this
+// operation is only accepted on creation of DzoPositionTitle entities.
+func (m *DzoPositionTitleMutation) SetID(id uuid.UUID) {
+	m.id = &id
+}
+
+// ID returns the ID value in the mutation. Note that the ID is only available
+// if it was provided to the builder or after it was returned from the database.
+func (m *DzoPositionTitleMutation) ID() (id uuid.UUID, exists bool) {
+	if m.id == nil {
+		return
+	}
+	return *m.id, true
+}
+
+// IDs queries the database and returns the entity ids that match the mutation's predicate.
+// That means, if the mutation is applied within a transaction with an isolation level such
+// as sql.LevelSerializable, the returned ids match the ids of the rows that will be updated
+// or updated by the mutation.
+func (m *DzoPositionTitleMutation) IDs(ctx context.Context) ([]uuid.UUID, error) {
+	switch {
+	case m.op.Is(OpUpdateOne | OpDeleteOne):
+		id, exists := m.ID()
+		if exists {
+			return []uuid.UUID{id}, nil
+		}
+		fallthrough
+	case m.op.Is(OpUpdate | OpDelete):
+		return m.Client().DzoPositionTitle.Query().Where(m.predicates...).IDs(ctx)
+	default:
+		return nil, fmt.Errorf("IDs is not allowed on %s operations", m.op)
+	}
+}
+
+// SetDzoID sets the "dzo_id" field.
+func (m *DzoPositionTitleMutation) SetDzoID(u uuid.UUID) {
+	m.dzo = &u
+}
+
+// DzoID returns the value of the "dzo_id" field in the mutation.
+func (m *DzoPositionTitleMutation) DzoID() (r uuid.UUID, exists bool) {
+	v := m.dzo
+	if v == nil {
+		return
+	}
+	return *v, true
+}
+
+// OldDzoID returns the old "dzo_id" field's value of the DzoPositionTitle entity.
+// If the DzoPositionTitle object wasn't provided to the builder, the object is fetched from the database.
+// An error is returned if the mutation operation is not UpdateOne, or the database query fails.
+func (m *DzoPositionTitleMutation) OldDzoID(ctx context.Context) (v uuid.UUID, err error) {
+	if !m.op.Is(OpUpdateOne) {
+		return v, errors.New("OldDzoID is only allowed on UpdateOne operations")
+	}
+	if m.id == nil || m.oldValue == nil {
+		return v, errors.New("OldDzoID requires an ID field in the mutation")
+	}
+	oldValue, err := m.oldValue(ctx)
+	if err != nil {
+		return v, fmt.Errorf("querying old value for OldDzoID: %w", err)
+	}
+	return oldValue.DzoID, nil
+}
+
+// ResetDzoID resets all changes to the "dzo_id" field.
+func (m *DzoPositionTitleMutation) ResetDzoID() {
+	m.dzo = nil
+}
+
+// SetClientID sets the "client_id" field.
+func (m *DzoPositionTitleMutation) SetClientID(u uuid.UUID) {
+	m.client_id = &u
+}
+
+// ClientID returns the value of the "client_id" field in the mutation.
+func (m *DzoPositionTitleMutation) ClientID() (r uuid.UUID, exists bool) {
+	v := m.client_id
+	if v == nil {
+		return
+	}
+	return *v, true
+}
+
+// OldClientID returns the old "client_id" field's value of the DzoPositionTitle entity.
+// If the DzoPositionTitle object wasn't provided to the builder, the object is fetched from the database.
+// An error is returned if the mutation operation is not UpdateOne, or the database query fails.
+func (m *DzoPositionTitleMutation) OldClientID(ctx context.Context) (v uuid.UUID, err error) {
+	if !m.op.Is(OpUpdateOne) {
+		return v, errors.New("OldClientID is only allowed on UpdateOne operations")
+	}
+	if m.id == nil || m.oldValue == nil {
+		return v, errors.New("OldClientID requires an ID field in the mutation")
+	}
+	oldValue, err := m.oldValue(ctx)
+	if err != nil {
+		return v, fmt.Errorf("querying old value for OldClientID: %w", err)
+	}
+	return oldValue.ClientID, nil
+}
+
+// ResetClientID resets all changes to the "client_id" field.
+func (m *DzoPositionTitleMutation) ResetClientID() {
+	m.client_id = nil
+}
+
+// SetGeneralPositionID sets the "general_position_id" field.
+func (m *DzoPositionTitleMutation) SetGeneralPositionID(u uuid.UUID) {
+	m.general_position = &u
+}
+
+// GeneralPositionID returns the value of the "general_position_id" field in the mutation.
+func (m *DzoPositionTitleMutation) GeneralPositionID() (r uuid.UUID, exists bool) {
+	v := m.general_position
+	if v == nil {
+		return
+	}
+	return *v, true
+}
+
+// OldGeneralPositionID returns the old "general_position_id" field's value of the DzoPositionTitle entity.
+// If the DzoPositionTitle object wasn't provided to the builder, the object is fetched from the database.
+// An error is returned if the mutation operation is not UpdateOne, or the database query fails.
+func (m *DzoPositionTitleMutation) OldGeneralPositionID(ctx context.Context) (v *uuid.UUID, err error) {
+	if !m.op.Is(OpUpdateOne) {
+		return v, errors.New("OldGeneralPositionID is only allowed on UpdateOne operations")
+	}
+	if m.id == nil || m.oldValue == nil {
+		return v, errors.New("OldGeneralPositionID requires an ID field in the mutation")
+	}
+	oldValue, err := m.oldValue(ctx)
+	if err != nil {
+		return v, fmt.Errorf("querying old value for OldGeneralPositionID: %w", err)
+	}
+	return oldValue.GeneralPositionID, nil
+}
+
+// ClearGeneralPositionID clears the value of the "general_position_id" field.
+func (m *DzoPositionTitleMutation) ClearGeneralPositionID() {
+	m.general_position = nil
+	m.clearedFields[dzopositiontitle.FieldGeneralPositionID] = struct{}{}
+}
+
+// GeneralPositionIDCleared returns if the "general_position_id" field was cleared in this mutation.
+func (m *DzoPositionTitleMutation) GeneralPositionIDCleared() bool {
+	_, ok := m.clearedFields[dzopositiontitle.FieldGeneralPositionID]
+	return ok
+}
+
+// ResetGeneralPositionID resets all changes to the "general_position_id" field.
+func (m *DzoPositionTitleMutation) ResetGeneralPositionID() {
+	m.general_position = nil
+	delete(m.clearedFields, dzopositiontitle.FieldGeneralPositionID)
+}
+
+// SetLocalTitle sets the "local_title" field.
+func (m *DzoPositionTitleMutation) SetLocalTitle(s string) {
+	m.local_title = &s
+}
+
+// LocalTitle returns the value of the "local_title" field in the mutation.
+func (m *DzoPositionTitleMutation) LocalTitle() (r string, exists bool) {
+	v := m.local_title
+	if v == nil {
+		return
+	}
+	return *v, true
+}
+
+// OldLocalTitle returns the old "local_title" field's value of the DzoPositionTitle entity.
+// If the DzoPositionTitle object wasn't provided to the builder, the object is fetched from the database.
+// An error is returned if the mutation operation is not UpdateOne, or the database query fails.
+func (m *DzoPositionTitleMutation) OldLocalTitle(ctx context.Context) (v string, err error) {
+	if !m.op.Is(OpUpdateOne) {
+		return v, errors.New("OldLocalTitle is only allowed on UpdateOne operations")
+	}
+	if m.id == nil || m.oldValue == nil {
+		return v, errors.New("OldLocalTitle requires an ID field in the mutation")
+	}
+	oldValue, err := m.oldValue(ctx)
+	if err != nil {
+		return v, fmt.Errorf("querying old value for OldLocalTitle: %w", err)
+	}
+	return oldValue.LocalTitle, nil
+}
+
+// ResetLocalTitle resets all changes to the "local_title" field.
+func (m *DzoPositionTitleMutation) ResetLocalTitle() {
+	m.local_title = nil
+}
+
+// SetIsActive sets the "is_active" field.
+func (m *DzoPositionTitleMutation) SetIsActive(b bool) {
+	m.is_active = &b
+}
+
+// IsActive returns the value of the "is_active" field in the mutation.
+func (m *DzoPositionTitleMutation) IsActive() (r bool, exists bool) {
+	v := m.is_active
+	if v == nil {
+		return
+	}
+	return *v, true
+}
+
+// OldIsActive returns the old "is_active" field's value of the DzoPositionTitle entity.
+// If the DzoPositionTitle object wasn't provided to the builder, the object is fetched from the database.
+// An error is returned if the mutation operation is not UpdateOne, or the database query fails.
+func (m *DzoPositionTitleMutation) OldIsActive(ctx context.Context) (v bool, err error) {
+	if !m.op.Is(OpUpdateOne) {
+		return v, errors.New("OldIsActive is only allowed on UpdateOne operations")
+	}
+	if m.id == nil || m.oldValue == nil {
+		return v, errors.New("OldIsActive requires an ID field in the mutation")
+	}
+	oldValue, err := m.oldValue(ctx)
+	if err != nil {
+		return v, fmt.Errorf("querying old value for OldIsActive: %w", err)
+	}
+	return oldValue.IsActive, nil
+}
+
+// ResetIsActive resets all changes to the "is_active" field.
+func (m *DzoPositionTitleMutation) ResetIsActive() {
+	m.is_active = nil
+}
+
+// SetIsDeleted sets the "is_deleted" field.
+func (m *DzoPositionTitleMutation) SetIsDeleted(b bool) {
+	m.is_deleted = &b
+}
+
+// IsDeleted returns the value of the "is_deleted" field in the mutation.
+func (m *DzoPositionTitleMutation) IsDeleted() (r bool, exists bool) {
+	v := m.is_deleted
+	if v == nil {
+		return
+	}
+	return *v, true
+}
+
+// OldIsDeleted returns the old "is_deleted" field's value of the DzoPositionTitle entity.
+// If the DzoPositionTitle object wasn't provided to the builder, the object is fetched from the database.
+// An error is returned if the mutation operation is not UpdateOne, or the database query fails.
+func (m *DzoPositionTitleMutation) OldIsDeleted(ctx context.Context) (v bool, err error) {
+	if !m.op.Is(OpUpdateOne) {
+		return v, errors.New("OldIsDeleted is only allowed on UpdateOne operations")
+	}
+	if m.id == nil || m.oldValue == nil {
+		return v, errors.New("OldIsDeleted requires an ID field in the mutation")
+	}
+	oldValue, err := m.oldValue(ctx)
+	if err != nil {
+		return v, fmt.Errorf("querying old value for OldIsDeleted: %w", err)
+	}
+	return oldValue.IsDeleted, nil
+}
+
+// ResetIsDeleted resets all changes to the "is_deleted" field.
+func (m *DzoPositionTitleMutation) ResetIsDeleted() {
+	m.is_deleted = nil
+}
+
+// SetCreatedAt sets the "created_at" field.
+func (m *DzoPositionTitleMutation) SetCreatedAt(t time.Time) {
+	m.created_at = &t
+}
+
+// CreatedAt returns the value of the "created_at" field in the mutation.
+func (m *DzoPositionTitleMutation) CreatedAt() (r time.Time, exists bool) {
+	v := m.created_at
+	if v == nil {
+		return
+	}
+	return *v, true
+}
+
+// OldCreatedAt returns the old "created_at" field's value of the DzoPositionTitle entity.
+// If the DzoPositionTitle object wasn't provided to the builder, the object is fetched from the database.
+// An error is returned if the mutation operation is not UpdateOne, or the database query fails.
+func (m *DzoPositionTitleMutation) OldCreatedAt(ctx context.Context) (v time.Time, err error) {
+	if !m.op.Is(OpUpdateOne) {
+		return v, errors.New("OldCreatedAt is only allowed on UpdateOne operations")
+	}
+	if m.id == nil || m.oldValue == nil {
+		return v, errors.New("OldCreatedAt requires an ID field in the mutation")
+	}
+	oldValue, err := m.oldValue(ctx)
+	if err != nil {
+		return v, fmt.Errorf("querying old value for OldCreatedAt: %w", err)
+	}
+	return oldValue.CreatedAt, nil
+}
+
+// ResetCreatedAt resets all changes to the "created_at" field.
+func (m *DzoPositionTitleMutation) ResetCreatedAt() {
+	m.created_at = nil
+}
+
+// SetUpdatedAt sets the "updated_at" field.
+func (m *DzoPositionTitleMutation) SetUpdatedAt(t time.Time) {
+	m.updated_at = &t
+}
+
+// UpdatedAt returns the value of the "updated_at" field in the mutation.
+func (m *DzoPositionTitleMutation) UpdatedAt() (r time.Time, exists bool) {
+	v := m.updated_at
+	if v == nil {
+		return
+	}
+	return *v, true
+}
+
+// OldUpdatedAt returns the old "updated_at" field's value of the DzoPositionTitle entity.
+// If the DzoPositionTitle object wasn't provided to the builder, the object is fetched from the database.
+// An error is returned if the mutation operation is not UpdateOne, or the database query fails.
+func (m *DzoPositionTitleMutation) OldUpdatedAt(ctx context.Context) (v time.Time, err error) {
+	if !m.op.Is(OpUpdateOne) {
+		return v, errors.New("OldUpdatedAt is only allowed on UpdateOne operations")
+	}
+	if m.id == nil || m.oldValue == nil {
+		return v, errors.New("OldUpdatedAt requires an ID field in the mutation")
+	}
+	oldValue, err := m.oldValue(ctx)
+	if err != nil {
+		return v, fmt.Errorf("querying old value for OldUpdatedAt: %w", err)
+	}
+	return oldValue.UpdatedAt, nil
+}
+
+// ResetUpdatedAt resets all changes to the "updated_at" field.
+func (m *DzoPositionTitleMutation) ResetUpdatedAt() {
+	m.updated_at = nil
+}
+
+// ClearDzo clears the "dzo" edge to the DzoOrganization entity.
+func (m *DzoPositionTitleMutation) ClearDzo() {
+	m.cleareddzo = true
+	m.clearedFields[dzopositiontitle.FieldDzoID] = struct{}{}
+}
+
+// DzoCleared reports if the "dzo" edge to the DzoOrganization entity was cleared.
+func (m *DzoPositionTitleMutation) DzoCleared() bool {
+	return m.cleareddzo
+}
+
+// DzoIDs returns the "dzo" edge IDs in the mutation.
+// Note that IDs always returns len(IDs) <= 1 for unique edges, and you should use
+// DzoID instead. It exists only for internal usage by the builders.
+func (m *DzoPositionTitleMutation) DzoIDs() (ids []uuid.UUID) {
+	if id := m.dzo; id != nil {
+		ids = append(ids, *id)
+	}
+	return
+}
+
+// ResetDzo resets all changes to the "dzo" edge.
+func (m *DzoPositionTitleMutation) ResetDzo() {
+	m.dzo = nil
+	m.cleareddzo = false
+}
+
+// ClearGeneralPosition clears the "general_position" edge to the GeneralPosition entity.
+func (m *DzoPositionTitleMutation) ClearGeneralPosition() {
+	m.clearedgeneral_position = true
+	m.clearedFields[dzopositiontitle.FieldGeneralPositionID] = struct{}{}
+}
+
+// GeneralPositionCleared reports if the "general_position" edge to the GeneralPosition entity was cleared.
+func (m *DzoPositionTitleMutation) GeneralPositionCleared() bool {
+	return m.GeneralPositionIDCleared() || m.clearedgeneral_position
+}
+
+// GeneralPositionIDs returns the "general_position" edge IDs in the mutation.
+// Note that IDs always returns len(IDs) <= 1 for unique edges, and you should use
+// GeneralPositionID instead. It exists only for internal usage by the builders.
+func (m *DzoPositionTitleMutation) GeneralPositionIDs() (ids []uuid.UUID) {
+	if id := m.general_position; id != nil {
+		ids = append(ids, *id)
+	}
+	return
+}
+
+// ResetGeneralPosition resets all changes to the "general_position" edge.
+func (m *DzoPositionTitleMutation) ResetGeneralPosition() {
+	m.general_position = nil
+	m.clearedgeneral_position = false
+}
+
+// AddEmployeeIDs adds the "employees" edge to the Employee entity by ids.
+func (m *DzoPositionTitleMutation) AddEmployeeIDs(ids ...uuid.UUID) {
+	if m.employees == nil {
+		m.employees = make(map[uuid.UUID]struct{})
+	}
+	for i := range ids {
+		m.employees[ids[i]] = struct{}{}
+	}
+}
+
+// ClearEmployees clears the "employees" edge to the Employee entity.
+func (m *DzoPositionTitleMutation) ClearEmployees() {
+	m.clearedemployees = true
+}
+
+// EmployeesCleared reports if the "employees" edge to the Employee entity was cleared.
+func (m *DzoPositionTitleMutation) EmployeesCleared() bool {
+	return m.clearedemployees
+}
+
+// RemoveEmployeeIDs removes the "employees" edge to the Employee entity by IDs.
+func (m *DzoPositionTitleMutation) RemoveEmployeeIDs(ids ...uuid.UUID) {
+	if m.removedemployees == nil {
+		m.removedemployees = make(map[uuid.UUID]struct{})
+	}
+	for i := range ids {
+		delete(m.employees, ids[i])
+		m.removedemployees[ids[i]] = struct{}{}
+	}
+}
+
+// RemovedEmployees returns the removed IDs of the "employees" edge to the Employee entity.
+func (m *DzoPositionTitleMutation) RemovedEmployeesIDs() (ids []uuid.UUID) {
+	for id := range m.removedemployees {
+		ids = append(ids, id)
+	}
+	return
+}
+
+// EmployeesIDs returns the "employees" edge IDs in the mutation.
+func (m *DzoPositionTitleMutation) EmployeesIDs() (ids []uuid.UUID) {
+	for id := range m.employees {
+		ids = append(ids, id)
+	}
+	return
+}
+
+// ResetEmployees resets all changes to the "employees" edge.
+func (m *DzoPositionTitleMutation) ResetEmployees() {
+	m.employees = nil
+	m.clearedemployees = false
+	m.removedemployees = nil
+}
+
+// Where appends a list predicates to the DzoPositionTitleMutation builder.
+func (m *DzoPositionTitleMutation) Where(ps ...predicate.DzoPositionTitle) {
+	m.predicates = append(m.predicates, ps...)
+}
+
+// WhereP appends storage-level predicates to the DzoPositionTitleMutation builder. Using this method,
+// users can use type-assertion to append predicates that do not depend on any generated package.
+func (m *DzoPositionTitleMutation) WhereP(ps ...func(*sql.Selector)) {
+	p := make([]predicate.DzoPositionTitle, len(ps))
+	for i := range ps {
+		p[i] = ps[i]
+	}
+	m.Where(p...)
+}
+
+// Op returns the operation name.
+func (m *DzoPositionTitleMutation) Op() Op {
+	return m.op
+}
+
+// SetOp allows setting the mutation operation.
+func (m *DzoPositionTitleMutation) SetOp(op Op) {
+	m.op = op
+}
+
+// Type returns the node type of this mutation (DzoPositionTitle).
+func (m *DzoPositionTitleMutation) Type() string {
+	return m.typ
+}
+
+// Fields returns all fields that were changed during this mutation. Note that in
+// order to get all numeric fields that were incremented/decremented, call
+// AddedFields().
+func (m *DzoPositionTitleMutation) Fields() []string {
+	fields := make([]string, 0, 8)
+	if m.dzo != nil {
+		fields = append(fields, dzopositiontitle.FieldDzoID)
+	}
+	if m.client_id != nil {
+		fields = append(fields, dzopositiontitle.FieldClientID)
+	}
+	if m.general_position != nil {
+		fields = append(fields, dzopositiontitle.FieldGeneralPositionID)
+	}
+	if m.local_title != nil {
+		fields = append(fields, dzopositiontitle.FieldLocalTitle)
+	}
+	if m.is_active != nil {
+		fields = append(fields, dzopositiontitle.FieldIsActive)
+	}
+	if m.is_deleted != nil {
+		fields = append(fields, dzopositiontitle.FieldIsDeleted)
+	}
+	if m.created_at != nil {
+		fields = append(fields, dzopositiontitle.FieldCreatedAt)
+	}
+	if m.updated_at != nil {
+		fields = append(fields, dzopositiontitle.FieldUpdatedAt)
+	}
+	return fields
+}
+
+// Field returns the value of a field with the given name. The second boolean
+// return value indicates that this field was not set, or was not defined in the
+// schema.
+func (m *DzoPositionTitleMutation) Field(name string) (ent.Value, bool) {
+	switch name {
+	case dzopositiontitle.FieldDzoID:
+		return m.DzoID()
+	case dzopositiontitle.FieldClientID:
+		return m.ClientID()
+	case dzopositiontitle.FieldGeneralPositionID:
+		return m.GeneralPositionID()
+	case dzopositiontitle.FieldLocalTitle:
+		return m.LocalTitle()
+	case dzopositiontitle.FieldIsActive:
+		return m.IsActive()
+	case dzopositiontitle.FieldIsDeleted:
+		return m.IsDeleted()
+	case dzopositiontitle.FieldCreatedAt:
+		return m.CreatedAt()
+	case dzopositiontitle.FieldUpdatedAt:
+		return m.UpdatedAt()
+	}
+	return nil, false
+}
+
+// OldField returns the old value of the field from the database. An error is
+// returned if the mutation operation is not UpdateOne, or the query to the
+// database failed.
+func (m *DzoPositionTitleMutation) OldField(ctx context.Context, name string) (ent.Value, error) {
+	switch name {
+	case dzopositiontitle.FieldDzoID:
+		return m.OldDzoID(ctx)
+	case dzopositiontitle.FieldClientID:
+		return m.OldClientID(ctx)
+	case dzopositiontitle.FieldGeneralPositionID:
+		return m.OldGeneralPositionID(ctx)
+	case dzopositiontitle.FieldLocalTitle:
+		return m.OldLocalTitle(ctx)
+	case dzopositiontitle.FieldIsActive:
+		return m.OldIsActive(ctx)
+	case dzopositiontitle.FieldIsDeleted:
+		return m.OldIsDeleted(ctx)
+	case dzopositiontitle.FieldCreatedAt:
+		return m.OldCreatedAt(ctx)
+	case dzopositiontitle.FieldUpdatedAt:
+		return m.OldUpdatedAt(ctx)
+	}
+	return nil, fmt.Errorf("unknown DzoPositionTitle field %s", name)
+}
+
+// SetField sets the value of a field with the given name. It returns an error if
+// the field is not defined in the schema, or if the type mismatched the field
+// type.
+func (m *DzoPositionTitleMutation) SetField(name string, value ent.Value) error {
+	switch name {
+	case dzopositiontitle.FieldDzoID:
+		v, ok := value.(uuid.UUID)
+		if !ok {
+			return fmt.Errorf("unexpected type %T for field %s", value, name)
+		}
+		m.SetDzoID(v)
+		return nil
+	case dzopositiontitle.FieldClientID:
+		v, ok := value.(uuid.UUID)
+		if !ok {
+			return fmt.Errorf("unexpected type %T for field %s", value, name)
+		}
+		m.SetClientID(v)
+		return nil
+	case dzopositiontitle.FieldGeneralPositionID:
+		v, ok := value.(uuid.UUID)
+		if !ok {
+			return fmt.Errorf("unexpected type %T for field %s", value, name)
+		}
+		m.SetGeneralPositionID(v)
+		return nil
+	case dzopositiontitle.FieldLocalTitle:
+		v, ok := value.(string)
+		if !ok {
+			return fmt.Errorf("unexpected type %T for field %s", value, name)
+		}
+		m.SetLocalTitle(v)
+		return nil
+	case dzopositiontitle.FieldIsActive:
+		v, ok := value.(bool)
+		if !ok {
+			return fmt.Errorf("unexpected type %T for field %s", value, name)
+		}
+		m.SetIsActive(v)
+		return nil
+	case dzopositiontitle.FieldIsDeleted:
+		v, ok := value.(bool)
+		if !ok {
+			return fmt.Errorf("unexpected type %T for field %s", value, name)
+		}
+		m.SetIsDeleted(v)
+		return nil
+	case dzopositiontitle.FieldCreatedAt:
+		v, ok := value.(time.Time)
+		if !ok {
+			return fmt.Errorf("unexpected type %T for field %s", value, name)
+		}
+		m.SetCreatedAt(v)
+		return nil
+	case dzopositiontitle.FieldUpdatedAt:
+		v, ok := value.(time.Time)
+		if !ok {
+			return fmt.Errorf("unexpected type %T for field %s", value, name)
+		}
+		m.SetUpdatedAt(v)
+		return nil
+	}
+	return fmt.Errorf("unknown DzoPositionTitle field %s", name)
+}
+
+// AddedFields returns all numeric fields that were incremented/decremented during
+// this mutation.
+func (m *DzoPositionTitleMutation) AddedFields() []string {
+	return nil
+}
+
+// AddedField returns the numeric value that was incremented/decremented on a field
+// with the given name. The second boolean return value indicates that this field
+// was not set, or was not defined in the schema.
+func (m *DzoPositionTitleMutation) AddedField(name string) (ent.Value, bool) {
+	return nil, false
+}
+
+// AddField adds the value to the field with the given name. It returns an error if
+// the field is not defined in the schema, or if the type mismatched the field
+// type.
+func (m *DzoPositionTitleMutation) AddField(name string, value ent.Value) error {
+	switch name {
+	}
+	return fmt.Errorf("unknown DzoPositionTitle numeric field %s", name)
+}
+
+// ClearedFields returns all nullable fields that were cleared during this
+// mutation.
+func (m *DzoPositionTitleMutation) ClearedFields() []string {
+	var fields []string
+	if m.FieldCleared(dzopositiontitle.FieldGeneralPositionID) {
+		fields = append(fields, dzopositiontitle.FieldGeneralPositionID)
+	}
+	return fields
+}
+
+// FieldCleared returns a boolean indicating if a field with the given name was
+// cleared in this mutation.
+func (m *DzoPositionTitleMutation) FieldCleared(name string) bool {
+	_, ok := m.clearedFields[name]
+	return ok
+}
+
+// ClearField clears the value of the field with the given name. It returns an
+// error if the field is not defined in the schema.
+func (m *DzoPositionTitleMutation) ClearField(name string) error {
+	switch name {
+	case dzopositiontitle.FieldGeneralPositionID:
+		m.ClearGeneralPositionID()
+		return nil
+	}
+	return fmt.Errorf("unknown DzoPositionTitle nullable field %s", name)
+}
+
+// ResetField resets all changes in the mutation for the field with the given name.
+// It returns an error if the field is not defined in the schema.
+func (m *DzoPositionTitleMutation) ResetField(name string) error {
+	switch name {
+	case dzopositiontitle.FieldDzoID:
+		m.ResetDzoID()
+		return nil
+	case dzopositiontitle.FieldClientID:
+		m.ResetClientID()
+		return nil
+	case dzopositiontitle.FieldGeneralPositionID:
+		m.ResetGeneralPositionID()
+		return nil
+	case dzopositiontitle.FieldLocalTitle:
+		m.ResetLocalTitle()
+		return nil
+	case dzopositiontitle.FieldIsActive:
+		m.ResetIsActive()
+		return nil
+	case dzopositiontitle.FieldIsDeleted:
+		m.ResetIsDeleted()
+		return nil
+	case dzopositiontitle.FieldCreatedAt:
+		m.ResetCreatedAt()
+		return nil
+	case dzopositiontitle.FieldUpdatedAt:
+		m.ResetUpdatedAt()
+		return nil
+	}
+	return fmt.Errorf("unknown DzoPositionTitle field %s", name)
+}
+
+// AddedEdges returns all edge names that were set/added in this mutation.
+func (m *DzoPositionTitleMutation) AddedEdges() []string {
+	edges := make([]string, 0, 3)
+	if m.dzo != nil {
+		edges = append(edges, dzopositiontitle.EdgeDzo)
+	}
+	if m.general_position != nil {
+		edges = append(edges, dzopositiontitle.EdgeGeneralPosition)
+	}
+	if m.employees != nil {
+		edges = append(edges, dzopositiontitle.EdgeEmployees)
+	}
+	return edges
+}
+
+// AddedIDs returns all IDs (to other nodes) that were added for the given edge
+// name in this mutation.
+func (m *DzoPositionTitleMutation) AddedIDs(name string) []ent.Value {
+	switch name {
+	case dzopositiontitle.EdgeDzo:
+		if id := m.dzo; id != nil {
+			return []ent.Value{*id}
+		}
+	case dzopositiontitle.EdgeGeneralPosition:
+		if id := m.general_position; id != nil {
+			return []ent.Value{*id}
+		}
+	case dzopositiontitle.EdgeEmployees:
+		ids := make([]ent.Value, 0, len(m.employees))
+		for id := range m.employees {
+			ids = append(ids, id)
+		}
+		return ids
+	}
+	return nil
+}
+
+// RemovedEdges returns all edge names that were removed in this mutation.
+func (m *DzoPositionTitleMutation) RemovedEdges() []string {
+	edges := make([]string, 0, 3)
+	if m.removedemployees != nil {
+		edges = append(edges, dzopositiontitle.EdgeEmployees)
+	}
+	return edges
+}
+
+// RemovedIDs returns all IDs (to other nodes) that were removed for the edge with
+// the given name in this mutation.
+func (m *DzoPositionTitleMutation) RemovedIDs(name string) []ent.Value {
+	switch name {
+	case dzopositiontitle.EdgeEmployees:
+		ids := make([]ent.Value, 0, len(m.removedemployees))
+		for id := range m.removedemployees {
+			ids = append(ids, id)
+		}
+		return ids
+	}
+	return nil
+}
+
+// ClearedEdges returns all edge names that were cleared in this mutation.
+func (m *DzoPositionTitleMutation) ClearedEdges() []string {
+	edges := make([]string, 0, 3)
+	if m.cleareddzo {
+		edges = append(edges, dzopositiontitle.EdgeDzo)
+	}
+	if m.clearedgeneral_position {
+		edges = append(edges, dzopositiontitle.EdgeGeneralPosition)
+	}
+	if m.clearedemployees {
+		edges = append(edges, dzopositiontitle.EdgeEmployees)
+	}
+	return edges
+}
+
+// EdgeCleared returns a boolean which indicates if the edge with the given name
+// was cleared in this mutation.
+func (m *DzoPositionTitleMutation) EdgeCleared(name string) bool {
+	switch name {
+	case dzopositiontitle.EdgeDzo:
+		return m.cleareddzo
+	case dzopositiontitle.EdgeGeneralPosition:
+		return m.clearedgeneral_position
+	case dzopositiontitle.EdgeEmployees:
+		return m.clearedemployees
+	}
+	return false
+}
+
+// ClearEdge clears the value of the edge with the given name. It returns an error
+// if that edge is not defined in the schema.
+func (m *DzoPositionTitleMutation) ClearEdge(name string) error {
+	switch name {
+	case dzopositiontitle.EdgeDzo:
+		m.ClearDzo()
+		return nil
+	case dzopositiontitle.EdgeGeneralPosition:
+		m.ClearGeneralPosition()
+		return nil
+	}
+	return fmt.Errorf("unknown DzoPositionTitle unique edge %s", name)
+}
+
+// ResetEdge resets all changes to the edge with the given name in this mutation.
+// It returns an error if the edge is not defined in the schema.
+func (m *DzoPositionTitleMutation) ResetEdge(name string) error {
+	switch name {
+	case dzopositiontitle.EdgeDzo:
+		m.ResetDzo()
+		return nil
+	case dzopositiontitle.EdgeGeneralPosition:
+		m.ResetGeneralPosition()
+		return nil
+	case dzopositiontitle.EdgeEmployees:
+		m.ResetEmployees()
+		return nil
+	}
+	return fmt.Errorf("unknown DzoPositionTitle edge %s", name)
 }
 
 // EmployeeMutation represents an operation that mutates the Employee nodes in the graph.
@@ -5923,7 +6927,6 @@ type EmployeeMutation struct {
 	typ                         string
 	id                          *uuid.UUID
 	client_id                   *uuid.UUID
-	position                    *string
 	full_name                   *string
 	short_name                  *string
 	department                  *string
@@ -5937,6 +6940,8 @@ type EmployeeMutation struct {
 	clearedFields               map[string]struct{}
 	dzo                         *uuid.UUID
 	cleareddzo                  bool
+	dzo_position_title          *uuid.UUID
+	cleareddzo_position_title   bool
 	event_participations        map[uuid.UUID]struct{}
 	removedevent_participations map[uuid.UUID]struct{}
 	clearedevent_participations bool
@@ -6121,53 +7126,53 @@ func (m *EmployeeMutation) ResetDzoID() {
 	m.dzo = nil
 }
 
-// SetPosition sets the "position" field.
-func (m *EmployeeMutation) SetPosition(s string) {
-	m.position = &s
+// SetDzoPositionID sets the "dzo_position_id" field.
+func (m *EmployeeMutation) SetDzoPositionID(u uuid.UUID) {
+	m.dzo_position_title = &u
 }
 
-// Position returns the value of the "position" field in the mutation.
-func (m *EmployeeMutation) Position() (r string, exists bool) {
-	v := m.position
+// DzoPositionID returns the value of the "dzo_position_id" field in the mutation.
+func (m *EmployeeMutation) DzoPositionID() (r uuid.UUID, exists bool) {
+	v := m.dzo_position_title
 	if v == nil {
 		return
 	}
 	return *v, true
 }
 
-// OldPosition returns the old "position" field's value of the Employee entity.
+// OldDzoPositionID returns the old "dzo_position_id" field's value of the Employee entity.
 // If the Employee object wasn't provided to the builder, the object is fetched from the database.
 // An error is returned if the mutation operation is not UpdateOne, or the database query fails.
-func (m *EmployeeMutation) OldPosition(ctx context.Context) (v *string, err error) {
+func (m *EmployeeMutation) OldDzoPositionID(ctx context.Context) (v *uuid.UUID, err error) {
 	if !m.op.Is(OpUpdateOne) {
-		return v, errors.New("OldPosition is only allowed on UpdateOne operations")
+		return v, errors.New("OldDzoPositionID is only allowed on UpdateOne operations")
 	}
 	if m.id == nil || m.oldValue == nil {
-		return v, errors.New("OldPosition requires an ID field in the mutation")
+		return v, errors.New("OldDzoPositionID requires an ID field in the mutation")
 	}
 	oldValue, err := m.oldValue(ctx)
 	if err != nil {
-		return v, fmt.Errorf("querying old value for OldPosition: %w", err)
+		return v, fmt.Errorf("querying old value for OldDzoPositionID: %w", err)
 	}
-	return oldValue.Position, nil
+	return oldValue.DzoPositionID, nil
 }
 
-// ClearPosition clears the value of the "position" field.
-func (m *EmployeeMutation) ClearPosition() {
-	m.position = nil
-	m.clearedFields[employee.FieldPosition] = struct{}{}
+// ClearDzoPositionID clears the value of the "dzo_position_id" field.
+func (m *EmployeeMutation) ClearDzoPositionID() {
+	m.dzo_position_title = nil
+	m.clearedFields[employee.FieldDzoPositionID] = struct{}{}
 }
 
-// PositionCleared returns if the "position" field was cleared in this mutation.
-func (m *EmployeeMutation) PositionCleared() bool {
-	_, ok := m.clearedFields[employee.FieldPosition]
+// DzoPositionIDCleared returns if the "dzo_position_id" field was cleared in this mutation.
+func (m *EmployeeMutation) DzoPositionIDCleared() bool {
+	_, ok := m.clearedFields[employee.FieldDzoPositionID]
 	return ok
 }
 
-// ResetPosition resets all changes to the "position" field.
-func (m *EmployeeMutation) ResetPosition() {
-	m.position = nil
-	delete(m.clearedFields, employee.FieldPosition)
+// ResetDzoPositionID resets all changes to the "dzo_position_id" field.
+func (m *EmployeeMutation) ResetDzoPositionID() {
+	m.dzo_position_title = nil
+	delete(m.clearedFields, employee.FieldDzoPositionID)
 }
 
 // SetFullName sets the "full_name" field.
@@ -6635,6 +7640,46 @@ func (m *EmployeeMutation) ResetDzo() {
 	m.cleareddzo = false
 }
 
+// SetDzoPositionTitleID sets the "dzo_position_title" edge to the DzoPositionTitle entity by id.
+func (m *EmployeeMutation) SetDzoPositionTitleID(id uuid.UUID) {
+	m.dzo_position_title = &id
+}
+
+// ClearDzoPositionTitle clears the "dzo_position_title" edge to the DzoPositionTitle entity.
+func (m *EmployeeMutation) ClearDzoPositionTitle() {
+	m.cleareddzo_position_title = true
+	m.clearedFields[employee.FieldDzoPositionID] = struct{}{}
+}
+
+// DzoPositionTitleCleared reports if the "dzo_position_title" edge to the DzoPositionTitle entity was cleared.
+func (m *EmployeeMutation) DzoPositionTitleCleared() bool {
+	return m.DzoPositionIDCleared() || m.cleareddzo_position_title
+}
+
+// DzoPositionTitleID returns the "dzo_position_title" edge ID in the mutation.
+func (m *EmployeeMutation) DzoPositionTitleID() (id uuid.UUID, exists bool) {
+	if m.dzo_position_title != nil {
+		return *m.dzo_position_title, true
+	}
+	return
+}
+
+// DzoPositionTitleIDs returns the "dzo_position_title" edge IDs in the mutation.
+// Note that IDs always returns len(IDs) <= 1 for unique edges, and you should use
+// DzoPositionTitleID instead. It exists only for internal usage by the builders.
+func (m *EmployeeMutation) DzoPositionTitleIDs() (ids []uuid.UUID) {
+	if id := m.dzo_position_title; id != nil {
+		ids = append(ids, *id)
+	}
+	return
+}
+
+// ResetDzoPositionTitle resets all changes to the "dzo_position_title" edge.
+func (m *EmployeeMutation) ResetDzoPositionTitle() {
+	m.dzo_position_title = nil
+	m.cleareddzo_position_title = false
+}
+
 // AddEventParticipationIDs adds the "event_participations" edge to the EventParticipant entity by ids.
 func (m *EmployeeMutation) AddEventParticipationIDs(ids ...uuid.UUID) {
 	if m.event_participations == nil {
@@ -6730,8 +7775,8 @@ func (m *EmployeeMutation) Fields() []string {
 	if m.dzo != nil {
 		fields = append(fields, employee.FieldDzoID)
 	}
-	if m.position != nil {
-		fields = append(fields, employee.FieldPosition)
+	if m.dzo_position_title != nil {
+		fields = append(fields, employee.FieldDzoPositionID)
 	}
 	if m.full_name != nil {
 		fields = append(fields, employee.FieldFullName)
@@ -6775,8 +7820,8 @@ func (m *EmployeeMutation) Field(name string) (ent.Value, bool) {
 		return m.ClientID()
 	case employee.FieldDzoID:
 		return m.DzoID()
-	case employee.FieldPosition:
-		return m.Position()
+	case employee.FieldDzoPositionID:
+		return m.DzoPositionID()
 	case employee.FieldFullName:
 		return m.FullName()
 	case employee.FieldShortName:
@@ -6810,8 +7855,8 @@ func (m *EmployeeMutation) OldField(ctx context.Context, name string) (ent.Value
 		return m.OldClientID(ctx)
 	case employee.FieldDzoID:
 		return m.OldDzoID(ctx)
-	case employee.FieldPosition:
-		return m.OldPosition(ctx)
+	case employee.FieldDzoPositionID:
+		return m.OldDzoPositionID(ctx)
 	case employee.FieldFullName:
 		return m.OldFullName(ctx)
 	case employee.FieldShortName:
@@ -6855,12 +7900,12 @@ func (m *EmployeeMutation) SetField(name string, value ent.Value) error {
 		}
 		m.SetDzoID(v)
 		return nil
-	case employee.FieldPosition:
-		v, ok := value.(string)
+	case employee.FieldDzoPositionID:
+		v, ok := value.(uuid.UUID)
 		if !ok {
 			return fmt.Errorf("unexpected type %T for field %s", value, name)
 		}
-		m.SetPosition(v)
+		m.SetDzoPositionID(v)
 		return nil
 	case employee.FieldFullName:
 		v, ok := value.(string)
@@ -6962,8 +8007,8 @@ func (m *EmployeeMutation) AddField(name string, value ent.Value) error {
 // mutation.
 func (m *EmployeeMutation) ClearedFields() []string {
 	var fields []string
-	if m.FieldCleared(employee.FieldPosition) {
-		fields = append(fields, employee.FieldPosition)
+	if m.FieldCleared(employee.FieldDzoPositionID) {
+		fields = append(fields, employee.FieldDzoPositionID)
 	}
 	if m.FieldCleared(employee.FieldShortName) {
 		fields = append(fields, employee.FieldShortName)
@@ -6997,8 +8042,8 @@ func (m *EmployeeMutation) FieldCleared(name string) bool {
 // error if the field is not defined in the schema.
 func (m *EmployeeMutation) ClearField(name string) error {
 	switch name {
-	case employee.FieldPosition:
-		m.ClearPosition()
+	case employee.FieldDzoPositionID:
+		m.ClearDzoPositionID()
 		return nil
 	case employee.FieldShortName:
 		m.ClearShortName()
@@ -7032,8 +8077,8 @@ func (m *EmployeeMutation) ResetField(name string) error {
 	case employee.FieldDzoID:
 		m.ResetDzoID()
 		return nil
-	case employee.FieldPosition:
-		m.ResetPosition()
+	case employee.FieldDzoPositionID:
+		m.ResetDzoPositionID()
 		return nil
 	case employee.FieldFullName:
 		m.ResetFullName()
@@ -7071,9 +8116,12 @@ func (m *EmployeeMutation) ResetField(name string) error {
 
 // AddedEdges returns all edge names that were set/added in this mutation.
 func (m *EmployeeMutation) AddedEdges() []string {
-	edges := make([]string, 0, 2)
+	edges := make([]string, 0, 3)
 	if m.dzo != nil {
 		edges = append(edges, employee.EdgeDzo)
+	}
+	if m.dzo_position_title != nil {
+		edges = append(edges, employee.EdgeDzoPositionTitle)
 	}
 	if m.event_participations != nil {
 		edges = append(edges, employee.EdgeEventParticipations)
@@ -7089,6 +8137,10 @@ func (m *EmployeeMutation) AddedIDs(name string) []ent.Value {
 		if id := m.dzo; id != nil {
 			return []ent.Value{*id}
 		}
+	case employee.EdgeDzoPositionTitle:
+		if id := m.dzo_position_title; id != nil {
+			return []ent.Value{*id}
+		}
 	case employee.EdgeEventParticipations:
 		ids := make([]ent.Value, 0, len(m.event_participations))
 		for id := range m.event_participations {
@@ -7101,7 +8153,7 @@ func (m *EmployeeMutation) AddedIDs(name string) []ent.Value {
 
 // RemovedEdges returns all edge names that were removed in this mutation.
 func (m *EmployeeMutation) RemovedEdges() []string {
-	edges := make([]string, 0, 2)
+	edges := make([]string, 0, 3)
 	if m.removedevent_participations != nil {
 		edges = append(edges, employee.EdgeEventParticipations)
 	}
@@ -7124,9 +8176,12 @@ func (m *EmployeeMutation) RemovedIDs(name string) []ent.Value {
 
 // ClearedEdges returns all edge names that were cleared in this mutation.
 func (m *EmployeeMutation) ClearedEdges() []string {
-	edges := make([]string, 0, 2)
+	edges := make([]string, 0, 3)
 	if m.cleareddzo {
 		edges = append(edges, employee.EdgeDzo)
+	}
+	if m.cleareddzo_position_title {
+		edges = append(edges, employee.EdgeDzoPositionTitle)
 	}
 	if m.clearedevent_participations {
 		edges = append(edges, employee.EdgeEventParticipations)
@@ -7140,6 +8195,8 @@ func (m *EmployeeMutation) EdgeCleared(name string) bool {
 	switch name {
 	case employee.EdgeDzo:
 		return m.cleareddzo
+	case employee.EdgeDzoPositionTitle:
+		return m.cleareddzo_position_title
 	case employee.EdgeEventParticipations:
 		return m.clearedevent_participations
 	}
@@ -7153,6 +8210,9 @@ func (m *EmployeeMutation) ClearEdge(name string) error {
 	case employee.EdgeDzo:
 		m.ClearDzo()
 		return nil
+	case employee.EdgeDzoPositionTitle:
+		m.ClearDzoPositionTitle()
+		return nil
 	}
 	return fmt.Errorf("unknown Employee unique edge %s", name)
 }
@@ -7163,6 +8223,9 @@ func (m *EmployeeMutation) ResetEdge(name string) error {
 	switch name {
 	case employee.EdgeDzo:
 		m.ResetDzo()
+		return nil
+	case employee.EdgeDzoPositionTitle:
+		m.ResetDzoPositionTitle()
 		return nil
 	case employee.EdgeEventParticipations:
 		m.ResetEventParticipations()
@@ -10532,6 +11595,615 @@ func (m *ExternalTrainingEventMutation) ResetEdge(name string) error {
 		return nil
 	}
 	return fmt.Errorf("unknown ExternalTrainingEvent edge %s", name)
+}
+
+// GeneralPositionMutation represents an operation that mutates the GeneralPosition nodes in the graph.
+type GeneralPositionMutation struct {
+	config
+	op                         Op
+	typ                        string
+	id                         *uuid.UUID
+	name                       *string
+	description                *string
+	is_deleted                 *bool
+	created_at                 *time.Time
+	clearedFields              map[string]struct{}
+	dzo_position_titles        map[uuid.UUID]struct{}
+	removeddzo_position_titles map[uuid.UUID]struct{}
+	cleareddzo_position_titles bool
+	done                       bool
+	oldValue                   func(context.Context) (*GeneralPosition, error)
+	predicates                 []predicate.GeneralPosition
+}
+
+var _ ent.Mutation = (*GeneralPositionMutation)(nil)
+
+// generalpositionOption allows management of the mutation configuration using functional options.
+type generalpositionOption func(*GeneralPositionMutation)
+
+// newGeneralPositionMutation creates new mutation for the GeneralPosition entity.
+func newGeneralPositionMutation(c config, op Op, opts ...generalpositionOption) *GeneralPositionMutation {
+	m := &GeneralPositionMutation{
+		config:        c,
+		op:            op,
+		typ:           TypeGeneralPosition,
+		clearedFields: make(map[string]struct{}),
+	}
+	for _, opt := range opts {
+		opt(m)
+	}
+	return m
+}
+
+// withGeneralPositionID sets the ID field of the mutation.
+func withGeneralPositionID(id uuid.UUID) generalpositionOption {
+	return func(m *GeneralPositionMutation) {
+		var (
+			err   error
+			once  sync.Once
+			value *GeneralPosition
+		)
+		m.oldValue = func(ctx context.Context) (*GeneralPosition, error) {
+			once.Do(func() {
+				if m.done {
+					err = errors.New("querying old values post mutation is not allowed")
+				} else {
+					value, err = m.Client().GeneralPosition.Get(ctx, id)
+				}
+			})
+			return value, err
+		}
+		m.id = &id
+	}
+}
+
+// withGeneralPosition sets the old GeneralPosition of the mutation.
+func withGeneralPosition(node *GeneralPosition) generalpositionOption {
+	return func(m *GeneralPositionMutation) {
+		m.oldValue = func(context.Context) (*GeneralPosition, error) {
+			return node, nil
+		}
+		m.id = &node.ID
+	}
+}
+
+// Client returns a new `ent.Client` from the mutation. If the mutation was
+// executed in a transaction (ent.Tx), a transactional client is returned.
+func (m GeneralPositionMutation) Client() *Client {
+	client := &Client{config: m.config}
+	client.init()
+	return client
+}
+
+// Tx returns an `ent.Tx` for mutations that were executed in transactions;
+// it returns an error otherwise.
+func (m GeneralPositionMutation) Tx() (*Tx, error) {
+	if _, ok := m.driver.(*txDriver); !ok {
+		return nil, errors.New("ent: mutation is not running in a transaction")
+	}
+	tx := &Tx{config: m.config}
+	tx.init()
+	return tx, nil
+}
+
+// SetID sets the value of the id field. Note that this
+// operation is only accepted on creation of GeneralPosition entities.
+func (m *GeneralPositionMutation) SetID(id uuid.UUID) {
+	m.id = &id
+}
+
+// ID returns the ID value in the mutation. Note that the ID is only available
+// if it was provided to the builder or after it was returned from the database.
+func (m *GeneralPositionMutation) ID() (id uuid.UUID, exists bool) {
+	if m.id == nil {
+		return
+	}
+	return *m.id, true
+}
+
+// IDs queries the database and returns the entity ids that match the mutation's predicate.
+// That means, if the mutation is applied within a transaction with an isolation level such
+// as sql.LevelSerializable, the returned ids match the ids of the rows that will be updated
+// or updated by the mutation.
+func (m *GeneralPositionMutation) IDs(ctx context.Context) ([]uuid.UUID, error) {
+	switch {
+	case m.op.Is(OpUpdateOne | OpDeleteOne):
+		id, exists := m.ID()
+		if exists {
+			return []uuid.UUID{id}, nil
+		}
+		fallthrough
+	case m.op.Is(OpUpdate | OpDelete):
+		return m.Client().GeneralPosition.Query().Where(m.predicates...).IDs(ctx)
+	default:
+		return nil, fmt.Errorf("IDs is not allowed on %s operations", m.op)
+	}
+}
+
+// SetName sets the "name" field.
+func (m *GeneralPositionMutation) SetName(s string) {
+	m.name = &s
+}
+
+// Name returns the value of the "name" field in the mutation.
+func (m *GeneralPositionMutation) Name() (r string, exists bool) {
+	v := m.name
+	if v == nil {
+		return
+	}
+	return *v, true
+}
+
+// OldName returns the old "name" field's value of the GeneralPosition entity.
+// If the GeneralPosition object wasn't provided to the builder, the object is fetched from the database.
+// An error is returned if the mutation operation is not UpdateOne, or the database query fails.
+func (m *GeneralPositionMutation) OldName(ctx context.Context) (v string, err error) {
+	if !m.op.Is(OpUpdateOne) {
+		return v, errors.New("OldName is only allowed on UpdateOne operations")
+	}
+	if m.id == nil || m.oldValue == nil {
+		return v, errors.New("OldName requires an ID field in the mutation")
+	}
+	oldValue, err := m.oldValue(ctx)
+	if err != nil {
+		return v, fmt.Errorf("querying old value for OldName: %w", err)
+	}
+	return oldValue.Name, nil
+}
+
+// ResetName resets all changes to the "name" field.
+func (m *GeneralPositionMutation) ResetName() {
+	m.name = nil
+}
+
+// SetDescription sets the "description" field.
+func (m *GeneralPositionMutation) SetDescription(s string) {
+	m.description = &s
+}
+
+// Description returns the value of the "description" field in the mutation.
+func (m *GeneralPositionMutation) Description() (r string, exists bool) {
+	v := m.description
+	if v == nil {
+		return
+	}
+	return *v, true
+}
+
+// OldDescription returns the old "description" field's value of the GeneralPosition entity.
+// If the GeneralPosition object wasn't provided to the builder, the object is fetched from the database.
+// An error is returned if the mutation operation is not UpdateOne, or the database query fails.
+func (m *GeneralPositionMutation) OldDescription(ctx context.Context) (v *string, err error) {
+	if !m.op.Is(OpUpdateOne) {
+		return v, errors.New("OldDescription is only allowed on UpdateOne operations")
+	}
+	if m.id == nil || m.oldValue == nil {
+		return v, errors.New("OldDescription requires an ID field in the mutation")
+	}
+	oldValue, err := m.oldValue(ctx)
+	if err != nil {
+		return v, fmt.Errorf("querying old value for OldDescription: %w", err)
+	}
+	return oldValue.Description, nil
+}
+
+// ClearDescription clears the value of the "description" field.
+func (m *GeneralPositionMutation) ClearDescription() {
+	m.description = nil
+	m.clearedFields[generalposition.FieldDescription] = struct{}{}
+}
+
+// DescriptionCleared returns if the "description" field was cleared in this mutation.
+func (m *GeneralPositionMutation) DescriptionCleared() bool {
+	_, ok := m.clearedFields[generalposition.FieldDescription]
+	return ok
+}
+
+// ResetDescription resets all changes to the "description" field.
+func (m *GeneralPositionMutation) ResetDescription() {
+	m.description = nil
+	delete(m.clearedFields, generalposition.FieldDescription)
+}
+
+// SetIsDeleted sets the "is_deleted" field.
+func (m *GeneralPositionMutation) SetIsDeleted(b bool) {
+	m.is_deleted = &b
+}
+
+// IsDeleted returns the value of the "is_deleted" field in the mutation.
+func (m *GeneralPositionMutation) IsDeleted() (r bool, exists bool) {
+	v := m.is_deleted
+	if v == nil {
+		return
+	}
+	return *v, true
+}
+
+// OldIsDeleted returns the old "is_deleted" field's value of the GeneralPosition entity.
+// If the GeneralPosition object wasn't provided to the builder, the object is fetched from the database.
+// An error is returned if the mutation operation is not UpdateOne, or the database query fails.
+func (m *GeneralPositionMutation) OldIsDeleted(ctx context.Context) (v bool, err error) {
+	if !m.op.Is(OpUpdateOne) {
+		return v, errors.New("OldIsDeleted is only allowed on UpdateOne operations")
+	}
+	if m.id == nil || m.oldValue == nil {
+		return v, errors.New("OldIsDeleted requires an ID field in the mutation")
+	}
+	oldValue, err := m.oldValue(ctx)
+	if err != nil {
+		return v, fmt.Errorf("querying old value for OldIsDeleted: %w", err)
+	}
+	return oldValue.IsDeleted, nil
+}
+
+// ResetIsDeleted resets all changes to the "is_deleted" field.
+func (m *GeneralPositionMutation) ResetIsDeleted() {
+	m.is_deleted = nil
+}
+
+// SetCreatedAt sets the "created_at" field.
+func (m *GeneralPositionMutation) SetCreatedAt(t time.Time) {
+	m.created_at = &t
+}
+
+// CreatedAt returns the value of the "created_at" field in the mutation.
+func (m *GeneralPositionMutation) CreatedAt() (r time.Time, exists bool) {
+	v := m.created_at
+	if v == nil {
+		return
+	}
+	return *v, true
+}
+
+// OldCreatedAt returns the old "created_at" field's value of the GeneralPosition entity.
+// If the GeneralPosition object wasn't provided to the builder, the object is fetched from the database.
+// An error is returned if the mutation operation is not UpdateOne, or the database query fails.
+func (m *GeneralPositionMutation) OldCreatedAt(ctx context.Context) (v time.Time, err error) {
+	if !m.op.Is(OpUpdateOne) {
+		return v, errors.New("OldCreatedAt is only allowed on UpdateOne operations")
+	}
+	if m.id == nil || m.oldValue == nil {
+		return v, errors.New("OldCreatedAt requires an ID field in the mutation")
+	}
+	oldValue, err := m.oldValue(ctx)
+	if err != nil {
+		return v, fmt.Errorf("querying old value for OldCreatedAt: %w", err)
+	}
+	return oldValue.CreatedAt, nil
+}
+
+// ResetCreatedAt resets all changes to the "created_at" field.
+func (m *GeneralPositionMutation) ResetCreatedAt() {
+	m.created_at = nil
+}
+
+// AddDzoPositionTitleIDs adds the "dzo_position_titles" edge to the DzoPositionTitle entity by ids.
+func (m *GeneralPositionMutation) AddDzoPositionTitleIDs(ids ...uuid.UUID) {
+	if m.dzo_position_titles == nil {
+		m.dzo_position_titles = make(map[uuid.UUID]struct{})
+	}
+	for i := range ids {
+		m.dzo_position_titles[ids[i]] = struct{}{}
+	}
+}
+
+// ClearDzoPositionTitles clears the "dzo_position_titles" edge to the DzoPositionTitle entity.
+func (m *GeneralPositionMutation) ClearDzoPositionTitles() {
+	m.cleareddzo_position_titles = true
+}
+
+// DzoPositionTitlesCleared reports if the "dzo_position_titles" edge to the DzoPositionTitle entity was cleared.
+func (m *GeneralPositionMutation) DzoPositionTitlesCleared() bool {
+	return m.cleareddzo_position_titles
+}
+
+// RemoveDzoPositionTitleIDs removes the "dzo_position_titles" edge to the DzoPositionTitle entity by IDs.
+func (m *GeneralPositionMutation) RemoveDzoPositionTitleIDs(ids ...uuid.UUID) {
+	if m.removeddzo_position_titles == nil {
+		m.removeddzo_position_titles = make(map[uuid.UUID]struct{})
+	}
+	for i := range ids {
+		delete(m.dzo_position_titles, ids[i])
+		m.removeddzo_position_titles[ids[i]] = struct{}{}
+	}
+}
+
+// RemovedDzoPositionTitles returns the removed IDs of the "dzo_position_titles" edge to the DzoPositionTitle entity.
+func (m *GeneralPositionMutation) RemovedDzoPositionTitlesIDs() (ids []uuid.UUID) {
+	for id := range m.removeddzo_position_titles {
+		ids = append(ids, id)
+	}
+	return
+}
+
+// DzoPositionTitlesIDs returns the "dzo_position_titles" edge IDs in the mutation.
+func (m *GeneralPositionMutation) DzoPositionTitlesIDs() (ids []uuid.UUID) {
+	for id := range m.dzo_position_titles {
+		ids = append(ids, id)
+	}
+	return
+}
+
+// ResetDzoPositionTitles resets all changes to the "dzo_position_titles" edge.
+func (m *GeneralPositionMutation) ResetDzoPositionTitles() {
+	m.dzo_position_titles = nil
+	m.cleareddzo_position_titles = false
+	m.removeddzo_position_titles = nil
+}
+
+// Where appends a list predicates to the GeneralPositionMutation builder.
+func (m *GeneralPositionMutation) Where(ps ...predicate.GeneralPosition) {
+	m.predicates = append(m.predicates, ps...)
+}
+
+// WhereP appends storage-level predicates to the GeneralPositionMutation builder. Using this method,
+// users can use type-assertion to append predicates that do not depend on any generated package.
+func (m *GeneralPositionMutation) WhereP(ps ...func(*sql.Selector)) {
+	p := make([]predicate.GeneralPosition, len(ps))
+	for i := range ps {
+		p[i] = ps[i]
+	}
+	m.Where(p...)
+}
+
+// Op returns the operation name.
+func (m *GeneralPositionMutation) Op() Op {
+	return m.op
+}
+
+// SetOp allows setting the mutation operation.
+func (m *GeneralPositionMutation) SetOp(op Op) {
+	m.op = op
+}
+
+// Type returns the node type of this mutation (GeneralPosition).
+func (m *GeneralPositionMutation) Type() string {
+	return m.typ
+}
+
+// Fields returns all fields that were changed during this mutation. Note that in
+// order to get all numeric fields that were incremented/decremented, call
+// AddedFields().
+func (m *GeneralPositionMutation) Fields() []string {
+	fields := make([]string, 0, 4)
+	if m.name != nil {
+		fields = append(fields, generalposition.FieldName)
+	}
+	if m.description != nil {
+		fields = append(fields, generalposition.FieldDescription)
+	}
+	if m.is_deleted != nil {
+		fields = append(fields, generalposition.FieldIsDeleted)
+	}
+	if m.created_at != nil {
+		fields = append(fields, generalposition.FieldCreatedAt)
+	}
+	return fields
+}
+
+// Field returns the value of a field with the given name. The second boolean
+// return value indicates that this field was not set, or was not defined in the
+// schema.
+func (m *GeneralPositionMutation) Field(name string) (ent.Value, bool) {
+	switch name {
+	case generalposition.FieldName:
+		return m.Name()
+	case generalposition.FieldDescription:
+		return m.Description()
+	case generalposition.FieldIsDeleted:
+		return m.IsDeleted()
+	case generalposition.FieldCreatedAt:
+		return m.CreatedAt()
+	}
+	return nil, false
+}
+
+// OldField returns the old value of the field from the database. An error is
+// returned if the mutation operation is not UpdateOne, or the query to the
+// database failed.
+func (m *GeneralPositionMutation) OldField(ctx context.Context, name string) (ent.Value, error) {
+	switch name {
+	case generalposition.FieldName:
+		return m.OldName(ctx)
+	case generalposition.FieldDescription:
+		return m.OldDescription(ctx)
+	case generalposition.FieldIsDeleted:
+		return m.OldIsDeleted(ctx)
+	case generalposition.FieldCreatedAt:
+		return m.OldCreatedAt(ctx)
+	}
+	return nil, fmt.Errorf("unknown GeneralPosition field %s", name)
+}
+
+// SetField sets the value of a field with the given name. It returns an error if
+// the field is not defined in the schema, or if the type mismatched the field
+// type.
+func (m *GeneralPositionMutation) SetField(name string, value ent.Value) error {
+	switch name {
+	case generalposition.FieldName:
+		v, ok := value.(string)
+		if !ok {
+			return fmt.Errorf("unexpected type %T for field %s", value, name)
+		}
+		m.SetName(v)
+		return nil
+	case generalposition.FieldDescription:
+		v, ok := value.(string)
+		if !ok {
+			return fmt.Errorf("unexpected type %T for field %s", value, name)
+		}
+		m.SetDescription(v)
+		return nil
+	case generalposition.FieldIsDeleted:
+		v, ok := value.(bool)
+		if !ok {
+			return fmt.Errorf("unexpected type %T for field %s", value, name)
+		}
+		m.SetIsDeleted(v)
+		return nil
+	case generalposition.FieldCreatedAt:
+		v, ok := value.(time.Time)
+		if !ok {
+			return fmt.Errorf("unexpected type %T for field %s", value, name)
+		}
+		m.SetCreatedAt(v)
+		return nil
+	}
+	return fmt.Errorf("unknown GeneralPosition field %s", name)
+}
+
+// AddedFields returns all numeric fields that were incremented/decremented during
+// this mutation.
+func (m *GeneralPositionMutation) AddedFields() []string {
+	return nil
+}
+
+// AddedField returns the numeric value that was incremented/decremented on a field
+// with the given name. The second boolean return value indicates that this field
+// was not set, or was not defined in the schema.
+func (m *GeneralPositionMutation) AddedField(name string) (ent.Value, bool) {
+	return nil, false
+}
+
+// AddField adds the value to the field with the given name. It returns an error if
+// the field is not defined in the schema, or if the type mismatched the field
+// type.
+func (m *GeneralPositionMutation) AddField(name string, value ent.Value) error {
+	switch name {
+	}
+	return fmt.Errorf("unknown GeneralPosition numeric field %s", name)
+}
+
+// ClearedFields returns all nullable fields that were cleared during this
+// mutation.
+func (m *GeneralPositionMutation) ClearedFields() []string {
+	var fields []string
+	if m.FieldCleared(generalposition.FieldDescription) {
+		fields = append(fields, generalposition.FieldDescription)
+	}
+	return fields
+}
+
+// FieldCleared returns a boolean indicating if a field with the given name was
+// cleared in this mutation.
+func (m *GeneralPositionMutation) FieldCleared(name string) bool {
+	_, ok := m.clearedFields[name]
+	return ok
+}
+
+// ClearField clears the value of the field with the given name. It returns an
+// error if the field is not defined in the schema.
+func (m *GeneralPositionMutation) ClearField(name string) error {
+	switch name {
+	case generalposition.FieldDescription:
+		m.ClearDescription()
+		return nil
+	}
+	return fmt.Errorf("unknown GeneralPosition nullable field %s", name)
+}
+
+// ResetField resets all changes in the mutation for the field with the given name.
+// It returns an error if the field is not defined in the schema.
+func (m *GeneralPositionMutation) ResetField(name string) error {
+	switch name {
+	case generalposition.FieldName:
+		m.ResetName()
+		return nil
+	case generalposition.FieldDescription:
+		m.ResetDescription()
+		return nil
+	case generalposition.FieldIsDeleted:
+		m.ResetIsDeleted()
+		return nil
+	case generalposition.FieldCreatedAt:
+		m.ResetCreatedAt()
+		return nil
+	}
+	return fmt.Errorf("unknown GeneralPosition field %s", name)
+}
+
+// AddedEdges returns all edge names that were set/added in this mutation.
+func (m *GeneralPositionMutation) AddedEdges() []string {
+	edges := make([]string, 0, 1)
+	if m.dzo_position_titles != nil {
+		edges = append(edges, generalposition.EdgeDzoPositionTitles)
+	}
+	return edges
+}
+
+// AddedIDs returns all IDs (to other nodes) that were added for the given edge
+// name in this mutation.
+func (m *GeneralPositionMutation) AddedIDs(name string) []ent.Value {
+	switch name {
+	case generalposition.EdgeDzoPositionTitles:
+		ids := make([]ent.Value, 0, len(m.dzo_position_titles))
+		for id := range m.dzo_position_titles {
+			ids = append(ids, id)
+		}
+		return ids
+	}
+	return nil
+}
+
+// RemovedEdges returns all edge names that were removed in this mutation.
+func (m *GeneralPositionMutation) RemovedEdges() []string {
+	edges := make([]string, 0, 1)
+	if m.removeddzo_position_titles != nil {
+		edges = append(edges, generalposition.EdgeDzoPositionTitles)
+	}
+	return edges
+}
+
+// RemovedIDs returns all IDs (to other nodes) that were removed for the edge with
+// the given name in this mutation.
+func (m *GeneralPositionMutation) RemovedIDs(name string) []ent.Value {
+	switch name {
+	case generalposition.EdgeDzoPositionTitles:
+		ids := make([]ent.Value, 0, len(m.removeddzo_position_titles))
+		for id := range m.removeddzo_position_titles {
+			ids = append(ids, id)
+		}
+		return ids
+	}
+	return nil
+}
+
+// ClearedEdges returns all edge names that were cleared in this mutation.
+func (m *GeneralPositionMutation) ClearedEdges() []string {
+	edges := make([]string, 0, 1)
+	if m.cleareddzo_position_titles {
+		edges = append(edges, generalposition.EdgeDzoPositionTitles)
+	}
+	return edges
+}
+
+// EdgeCleared returns a boolean which indicates if the edge with the given name
+// was cleared in this mutation.
+func (m *GeneralPositionMutation) EdgeCleared(name string) bool {
+	switch name {
+	case generalposition.EdgeDzoPositionTitles:
+		return m.cleareddzo_position_titles
+	}
+	return false
+}
+
+// ClearEdge clears the value of the edge with the given name. It returns an error
+// if that edge is not defined in the schema.
+func (m *GeneralPositionMutation) ClearEdge(name string) error {
+	switch name {
+	}
+	return fmt.Errorf("unknown GeneralPosition unique edge %s", name)
+}
+
+// ResetEdge resets all changes to the edge with the given name in this mutation.
+// It returns an error if the edge is not defined in the schema.
+func (m *GeneralPositionMutation) ResetEdge(name string) error {
+	switch name {
+	case generalposition.EdgeDzoPositionTitles:
+		m.ResetDzoPositionTitles()
+		return nil
+	}
+	return fmt.Errorf("unknown GeneralPosition edge %s", name)
 }
 
 // NotificationMutation represents an operation that mutates the Notification nodes in the graph.

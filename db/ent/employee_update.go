@@ -9,6 +9,7 @@ import (
 	"time"
 
 	"encore.app/db/ent/dzoorganization"
+	"encore.app/db/ent/dzopositiontitle"
 	"encore.app/db/ent/employee"
 	"encore.app/db/ent/eventparticipant"
 	"encore.app/db/ent/predicate"
@@ -59,23 +60,23 @@ func (_u *EmployeeUpdate) SetNillableDzoID(v *uuid.UUID) *EmployeeUpdate {
 	return _u
 }
 
-// SetPosition sets the "position" field.
-func (_u *EmployeeUpdate) SetPosition(v string) *EmployeeUpdate {
-	_u.mutation.SetPosition(v)
+// SetDzoPositionID sets the "dzo_position_id" field.
+func (_u *EmployeeUpdate) SetDzoPositionID(v uuid.UUID) *EmployeeUpdate {
+	_u.mutation.SetDzoPositionID(v)
 	return _u
 }
 
-// SetNillablePosition sets the "position" field if the given value is not nil.
-func (_u *EmployeeUpdate) SetNillablePosition(v *string) *EmployeeUpdate {
+// SetNillableDzoPositionID sets the "dzo_position_id" field if the given value is not nil.
+func (_u *EmployeeUpdate) SetNillableDzoPositionID(v *uuid.UUID) *EmployeeUpdate {
 	if v != nil {
-		_u.SetPosition(*v)
+		_u.SetDzoPositionID(*v)
 	}
 	return _u
 }
 
-// ClearPosition clears the value of the "position" field.
-func (_u *EmployeeUpdate) ClearPosition() *EmployeeUpdate {
-	_u.mutation.ClearPosition()
+// ClearDzoPositionID clears the value of the "dzo_position_id" field.
+func (_u *EmployeeUpdate) ClearDzoPositionID() *EmployeeUpdate {
+	_u.mutation.ClearDzoPositionID()
 	return _u
 }
 
@@ -260,6 +261,25 @@ func (_u *EmployeeUpdate) SetDzo(v *DzoOrganization) *EmployeeUpdate {
 	return _u.SetDzoID(v.ID)
 }
 
+// SetDzoPositionTitleID sets the "dzo_position_title" edge to the DzoPositionTitle entity by ID.
+func (_u *EmployeeUpdate) SetDzoPositionTitleID(id uuid.UUID) *EmployeeUpdate {
+	_u.mutation.SetDzoPositionTitleID(id)
+	return _u
+}
+
+// SetNillableDzoPositionTitleID sets the "dzo_position_title" edge to the DzoPositionTitle entity by ID if the given value is not nil.
+func (_u *EmployeeUpdate) SetNillableDzoPositionTitleID(id *uuid.UUID) *EmployeeUpdate {
+	if id != nil {
+		_u = _u.SetDzoPositionTitleID(*id)
+	}
+	return _u
+}
+
+// SetDzoPositionTitle sets the "dzo_position_title" edge to the DzoPositionTitle entity.
+func (_u *EmployeeUpdate) SetDzoPositionTitle(v *DzoPositionTitle) *EmployeeUpdate {
+	return _u.SetDzoPositionTitleID(v.ID)
+}
+
 // AddEventParticipationIDs adds the "event_participations" edge to the EventParticipant entity by IDs.
 func (_u *EmployeeUpdate) AddEventParticipationIDs(ids ...uuid.UUID) *EmployeeUpdate {
 	_u.mutation.AddEventParticipationIDs(ids...)
@@ -283,6 +303,12 @@ func (_u *EmployeeUpdate) Mutation() *EmployeeMutation {
 // ClearDzo clears the "dzo" edge to the DzoOrganization entity.
 func (_u *EmployeeUpdate) ClearDzo() *EmployeeUpdate {
 	_u.mutation.ClearDzo()
+	return _u
+}
+
+// ClearDzoPositionTitle clears the "dzo_position_title" edge to the DzoPositionTitle entity.
+func (_u *EmployeeUpdate) ClearDzoPositionTitle() *EmployeeUpdate {
+	_u.mutation.ClearDzoPositionTitle()
 	return _u
 }
 
@@ -336,11 +362,6 @@ func (_u *EmployeeUpdate) ExecX(ctx context.Context) {
 
 // check runs all checks and user-defined validators on the builder.
 func (_u *EmployeeUpdate) check() error {
-	if v, ok := _u.mutation.Position(); ok {
-		if err := employee.PositionValidator(v); err != nil {
-			return &ValidationError{Name: "position", err: fmt.Errorf(`ent: validator failed for field "Employee.position": %w`, err)}
-		}
-	}
 	if v, ok := _u.mutation.FullName(); ok {
 		if err := employee.FullNameValidator(v); err != nil {
 			return &ValidationError{Name: "full_name", err: fmt.Errorf(`ent: validator failed for field "Employee.full_name": %w`, err)}
@@ -391,12 +412,6 @@ func (_u *EmployeeUpdate) sqlSave(ctx context.Context) (_node int, err error) {
 	}
 	if value, ok := _u.mutation.ClientID(); ok {
 		_spec.SetField(employee.FieldClientID, field.TypeUUID, value)
-	}
-	if value, ok := _u.mutation.Position(); ok {
-		_spec.SetField(employee.FieldPosition, field.TypeString, value)
-	}
-	if _u.mutation.PositionCleared() {
-		_spec.ClearField(employee.FieldPosition, field.TypeString)
 	}
 	if value, ok := _u.mutation.FullName(); ok {
 		_spec.SetField(employee.FieldFullName, field.TypeString, value)
@@ -468,6 +483,35 @@ func (_u *EmployeeUpdate) sqlSave(ctx context.Context) (_node int, err error) {
 			Bidi:    false,
 			Target: &sqlgraph.EdgeTarget{
 				IDSpec: sqlgraph.NewFieldSpec(dzoorganization.FieldID, field.TypeUUID),
+			},
+		}
+		for _, k := range nodes {
+			edge.Target.Nodes = append(edge.Target.Nodes, k)
+		}
+		_spec.Edges.Add = append(_spec.Edges.Add, edge)
+	}
+	if _u.mutation.DzoPositionTitleCleared() {
+		edge := &sqlgraph.EdgeSpec{
+			Rel:     sqlgraph.M2O,
+			Inverse: true,
+			Table:   employee.DzoPositionTitleTable,
+			Columns: []string{employee.DzoPositionTitleColumn},
+			Bidi:    false,
+			Target: &sqlgraph.EdgeTarget{
+				IDSpec: sqlgraph.NewFieldSpec(dzopositiontitle.FieldID, field.TypeUUID),
+			},
+		}
+		_spec.Edges.Clear = append(_spec.Edges.Clear, edge)
+	}
+	if nodes := _u.mutation.DzoPositionTitleIDs(); len(nodes) > 0 {
+		edge := &sqlgraph.EdgeSpec{
+			Rel:     sqlgraph.M2O,
+			Inverse: true,
+			Table:   employee.DzoPositionTitleTable,
+			Columns: []string{employee.DzoPositionTitleColumn},
+			Bidi:    false,
+			Target: &sqlgraph.EdgeTarget{
+				IDSpec: sqlgraph.NewFieldSpec(dzopositiontitle.FieldID, field.TypeUUID),
 			},
 		}
 		for _, k := range nodes {
@@ -568,23 +612,23 @@ func (_u *EmployeeUpdateOne) SetNillableDzoID(v *uuid.UUID) *EmployeeUpdateOne {
 	return _u
 }
 
-// SetPosition sets the "position" field.
-func (_u *EmployeeUpdateOne) SetPosition(v string) *EmployeeUpdateOne {
-	_u.mutation.SetPosition(v)
+// SetDzoPositionID sets the "dzo_position_id" field.
+func (_u *EmployeeUpdateOne) SetDzoPositionID(v uuid.UUID) *EmployeeUpdateOne {
+	_u.mutation.SetDzoPositionID(v)
 	return _u
 }
 
-// SetNillablePosition sets the "position" field if the given value is not nil.
-func (_u *EmployeeUpdateOne) SetNillablePosition(v *string) *EmployeeUpdateOne {
+// SetNillableDzoPositionID sets the "dzo_position_id" field if the given value is not nil.
+func (_u *EmployeeUpdateOne) SetNillableDzoPositionID(v *uuid.UUID) *EmployeeUpdateOne {
 	if v != nil {
-		_u.SetPosition(*v)
+		_u.SetDzoPositionID(*v)
 	}
 	return _u
 }
 
-// ClearPosition clears the value of the "position" field.
-func (_u *EmployeeUpdateOne) ClearPosition() *EmployeeUpdateOne {
-	_u.mutation.ClearPosition()
+// ClearDzoPositionID clears the value of the "dzo_position_id" field.
+func (_u *EmployeeUpdateOne) ClearDzoPositionID() *EmployeeUpdateOne {
+	_u.mutation.ClearDzoPositionID()
 	return _u
 }
 
@@ -769,6 +813,25 @@ func (_u *EmployeeUpdateOne) SetDzo(v *DzoOrganization) *EmployeeUpdateOne {
 	return _u.SetDzoID(v.ID)
 }
 
+// SetDzoPositionTitleID sets the "dzo_position_title" edge to the DzoPositionTitle entity by ID.
+func (_u *EmployeeUpdateOne) SetDzoPositionTitleID(id uuid.UUID) *EmployeeUpdateOne {
+	_u.mutation.SetDzoPositionTitleID(id)
+	return _u
+}
+
+// SetNillableDzoPositionTitleID sets the "dzo_position_title" edge to the DzoPositionTitle entity by ID if the given value is not nil.
+func (_u *EmployeeUpdateOne) SetNillableDzoPositionTitleID(id *uuid.UUID) *EmployeeUpdateOne {
+	if id != nil {
+		_u = _u.SetDzoPositionTitleID(*id)
+	}
+	return _u
+}
+
+// SetDzoPositionTitle sets the "dzo_position_title" edge to the DzoPositionTitle entity.
+func (_u *EmployeeUpdateOne) SetDzoPositionTitle(v *DzoPositionTitle) *EmployeeUpdateOne {
+	return _u.SetDzoPositionTitleID(v.ID)
+}
+
 // AddEventParticipationIDs adds the "event_participations" edge to the EventParticipant entity by IDs.
 func (_u *EmployeeUpdateOne) AddEventParticipationIDs(ids ...uuid.UUID) *EmployeeUpdateOne {
 	_u.mutation.AddEventParticipationIDs(ids...)
@@ -792,6 +855,12 @@ func (_u *EmployeeUpdateOne) Mutation() *EmployeeMutation {
 // ClearDzo clears the "dzo" edge to the DzoOrganization entity.
 func (_u *EmployeeUpdateOne) ClearDzo() *EmployeeUpdateOne {
 	_u.mutation.ClearDzo()
+	return _u
+}
+
+// ClearDzoPositionTitle clears the "dzo_position_title" edge to the DzoPositionTitle entity.
+func (_u *EmployeeUpdateOne) ClearDzoPositionTitle() *EmployeeUpdateOne {
+	_u.mutation.ClearDzoPositionTitle()
 	return _u
 }
 
@@ -858,11 +927,6 @@ func (_u *EmployeeUpdateOne) ExecX(ctx context.Context) {
 
 // check runs all checks and user-defined validators on the builder.
 func (_u *EmployeeUpdateOne) check() error {
-	if v, ok := _u.mutation.Position(); ok {
-		if err := employee.PositionValidator(v); err != nil {
-			return &ValidationError{Name: "position", err: fmt.Errorf(`ent: validator failed for field "Employee.position": %w`, err)}
-		}
-	}
 	if v, ok := _u.mutation.FullName(); ok {
 		if err := employee.FullNameValidator(v); err != nil {
 			return &ValidationError{Name: "full_name", err: fmt.Errorf(`ent: validator failed for field "Employee.full_name": %w`, err)}
@@ -930,12 +994,6 @@ func (_u *EmployeeUpdateOne) sqlSave(ctx context.Context) (_node *Employee, err 
 	}
 	if value, ok := _u.mutation.ClientID(); ok {
 		_spec.SetField(employee.FieldClientID, field.TypeUUID, value)
-	}
-	if value, ok := _u.mutation.Position(); ok {
-		_spec.SetField(employee.FieldPosition, field.TypeString, value)
-	}
-	if _u.mutation.PositionCleared() {
-		_spec.ClearField(employee.FieldPosition, field.TypeString)
 	}
 	if value, ok := _u.mutation.FullName(); ok {
 		_spec.SetField(employee.FieldFullName, field.TypeString, value)
@@ -1007,6 +1065,35 @@ func (_u *EmployeeUpdateOne) sqlSave(ctx context.Context) (_node *Employee, err 
 			Bidi:    false,
 			Target: &sqlgraph.EdgeTarget{
 				IDSpec: sqlgraph.NewFieldSpec(dzoorganization.FieldID, field.TypeUUID),
+			},
+		}
+		for _, k := range nodes {
+			edge.Target.Nodes = append(edge.Target.Nodes, k)
+		}
+		_spec.Edges.Add = append(_spec.Edges.Add, edge)
+	}
+	if _u.mutation.DzoPositionTitleCleared() {
+		edge := &sqlgraph.EdgeSpec{
+			Rel:     sqlgraph.M2O,
+			Inverse: true,
+			Table:   employee.DzoPositionTitleTable,
+			Columns: []string{employee.DzoPositionTitleColumn},
+			Bidi:    false,
+			Target: &sqlgraph.EdgeTarget{
+				IDSpec: sqlgraph.NewFieldSpec(dzopositiontitle.FieldID, field.TypeUUID),
+			},
+		}
+		_spec.Edges.Clear = append(_spec.Edges.Clear, edge)
+	}
+	if nodes := _u.mutation.DzoPositionTitleIDs(); len(nodes) > 0 {
+		edge := &sqlgraph.EdgeSpec{
+			Rel:     sqlgraph.M2O,
+			Inverse: true,
+			Table:   employee.DzoPositionTitleTable,
+			Columns: []string{employee.DzoPositionTitleColumn},
+			Bidi:    false,
+			Target: &sqlgraph.EdgeTarget{
+				IDSpec: sqlgraph.NewFieldSpec(dzopositiontitle.FieldID, field.TypeUUID),
 			},
 		}
 		for _, k := range nodes {

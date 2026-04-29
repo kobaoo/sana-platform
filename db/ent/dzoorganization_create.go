@@ -9,6 +9,7 @@ import (
 	"time"
 
 	"encore.app/db/ent/dzoorganization"
+	"encore.app/db/ent/dzopositiontitle"
 	"encore.app/db/ent/employee"
 	"entgo.io/ent/dialect/sql/sqlgraph"
 	"entgo.io/ent/schema/field"
@@ -131,6 +132,21 @@ func (_c *DzoOrganizationCreate) AddEmployees(v ...*Employee) *DzoOrganizationCr
 		ids[i] = v[i].ID
 	}
 	return _c.AddEmployeeIDs(ids...)
+}
+
+// AddPositionTitleIDs adds the "position_titles" edge to the DzoPositionTitle entity by IDs.
+func (_c *DzoOrganizationCreate) AddPositionTitleIDs(ids ...uuid.UUID) *DzoOrganizationCreate {
+	_c.mutation.AddPositionTitleIDs(ids...)
+	return _c
+}
+
+// AddPositionTitles adds the "position_titles" edges to the DzoPositionTitle entity.
+func (_c *DzoOrganizationCreate) AddPositionTitles(v ...*DzoPositionTitle) *DzoOrganizationCreate {
+	ids := make([]uuid.UUID, len(v))
+	for i := range v {
+		ids[i] = v[i].ID
+	}
+	return _c.AddPositionTitleIDs(ids...)
 }
 
 // Mutation returns the DzoOrganizationMutation object of the builder.
@@ -290,6 +306,22 @@ func (_c *DzoOrganizationCreate) createSpec() (*DzoOrganization, *sqlgraph.Creat
 			Bidi:    false,
 			Target: &sqlgraph.EdgeTarget{
 				IDSpec: sqlgraph.NewFieldSpec(employee.FieldID, field.TypeUUID),
+			},
+		}
+		for _, k := range nodes {
+			edge.Target.Nodes = append(edge.Target.Nodes, k)
+		}
+		_spec.Edges = append(_spec.Edges, edge)
+	}
+	if nodes := _c.mutation.PositionTitlesIDs(); len(nodes) > 0 {
+		edge := &sqlgraph.EdgeSpec{
+			Rel:     sqlgraph.O2M,
+			Inverse: false,
+			Table:   dzoorganization.PositionTitlesTable,
+			Columns: []string{dzoorganization.PositionTitlesColumn},
+			Bidi:    false,
+			Target: &sqlgraph.EdgeTarget{
+				IDSpec: sqlgraph.NewFieldSpec(dzopositiontitle.FieldID, field.TypeUUID),
 			},
 		}
 		for _, k := range nodes {

@@ -81,6 +81,18 @@ func (f DzoOrganizationFunc) Mutate(ctx context.Context, m ent.Mutation) (ent.Va
 	return nil, fmt.Errorf("unexpected mutation type %T. expect *ent.DzoOrganizationMutation", m)
 }
 
+// The DzoPositionTitleFunc type is an adapter to allow the use of ordinary
+// function as DzoPositionTitle mutator.
+type DzoPositionTitleFunc func(context.Context, *ent.DzoPositionTitleMutation) (ent.Value, error)
+
+// Mutate calls f(ctx, m).
+func (f DzoPositionTitleFunc) Mutate(ctx context.Context, m ent.Mutation) (ent.Value, error) {
+	if mv, ok := m.(*ent.DzoPositionTitleMutation); ok {
+		return f(ctx, mv)
+	}
+	return nil, fmt.Errorf("unexpected mutation type %T. expect *ent.DzoPositionTitleMutation", m)
+}
+
 // The EmployeeFunc type is an adapter to allow the use of ordinary
 // function as Employee mutator.
 type EmployeeFunc func(context.Context, *ent.EmployeeMutation) (ent.Value, error)
@@ -127,6 +139,18 @@ func (f ExternalTrainingEventFunc) Mutate(ctx context.Context, m ent.Mutation) (
 		return f(ctx, mv)
 	}
 	return nil, fmt.Errorf("unexpected mutation type %T. expect *ent.ExternalTrainingEventMutation", m)
+}
+
+// The GeneralPositionFunc type is an adapter to allow the use of ordinary
+// function as GeneralPosition mutator.
+type GeneralPositionFunc func(context.Context, *ent.GeneralPositionMutation) (ent.Value, error)
+
+// Mutate calls f(ctx, m).
+func (f GeneralPositionFunc) Mutate(ctx context.Context, m ent.Mutation) (ent.Value, error) {
+	if mv, ok := m.(*ent.GeneralPositionMutation); ok {
+		return f(ctx, mv)
+	}
+	return nil, fmt.Errorf("unexpected mutation type %T. expect *ent.GeneralPositionMutation", m)
 }
 
 // The NotificationFunc type is an adapter to allow the use of ordinary

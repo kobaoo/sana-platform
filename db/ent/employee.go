@@ -8,6 +8,7 @@ import (
 	"time"
 
 	"encore.app/db/ent/dzoorganization"
+	"encore.app/db/ent/dzopositiontitle"
 	"encore.app/db/ent/employee"
 	"entgo.io/ent"
 	"entgo.io/ent/dialect/sql"
@@ -23,8 +24,8 @@ type Employee struct {
 	ClientID uuid.UUID `json:"client_id,omitempty"`
 	// DzoID holds the value of the "dzo_id" field.
 	DzoID uuid.UUID `json:"dzo_id,omitempty"`
-	// Position holds the value of the "position" field.
-	Position *string `json:"position,omitempty"`
+	// DzoPositionID holds the value of the "dzo_position_id" field.
+	DzoPositionID *uuid.UUID `json:"dzo_position_id,omitempty"`
 	// FullName holds the value of the "full_name" field.
 	FullName string `json:"full_name,omitempty"`
 	// ShortName holds the value of the "short_name" field.
@@ -55,11 +56,13 @@ type Employee struct {
 type EmployeeEdges struct {
 	// Dzo holds the value of the dzo edge.
 	Dzo *DzoOrganization `json:"dzo,omitempty"`
+	// DzoPositionTitle holds the value of the dzo_position_title edge.
+	DzoPositionTitle *DzoPositionTitle `json:"dzo_position_title,omitempty"`
 	// EventParticipations holds the value of the event_participations edge.
 	EventParticipations []*EventParticipant `json:"event_participations,omitempty"`
 	// loadedTypes holds the information for reporting if a
 	// type was loaded (or requested) in eager-loading or not.
-	loadedTypes [2]bool
+	loadedTypes [3]bool
 }
 
 // DzoOrErr returns the Dzo value or an error if the edge
@@ -73,10 +76,21 @@ func (e EmployeeEdges) DzoOrErr() (*DzoOrganization, error) {
 	return nil, &NotLoadedError{edge: "dzo"}
 }
 
+// DzoPositionTitleOrErr returns the DzoPositionTitle value or an error if the edge
+// was not loaded in eager-loading, or loaded but was not found.
+func (e EmployeeEdges) DzoPositionTitleOrErr() (*DzoPositionTitle, error) {
+	if e.DzoPositionTitle != nil {
+		return e.DzoPositionTitle, nil
+	} else if e.loadedTypes[1] {
+		return nil, &NotFoundError{label: dzopositiontitle.Label}
+	}
+	return nil, &NotLoadedError{edge: "dzo_position_title"}
+}
+
 // EventParticipationsOrErr returns the EventParticipations value or an error if the edge
 // was not loaded in eager-loading.
 func (e EmployeeEdges) EventParticipationsOrErr() ([]*EventParticipant, error) {
-	if e.loadedTypes[1] {
+	if e.loadedTypes[2] {
 		return e.EventParticipations, nil
 	}
 	return nil, &NotLoadedError{edge: "event_participations"}
@@ -87,11 +101,11 @@ func (*Employee) scanValues(columns []string) ([]any, error) {
 	values := make([]any, len(columns))
 	for i := range columns {
 		switch columns[i] {
-		case employee.FieldUserID:
+		case employee.FieldDzoPositionID, employee.FieldUserID:
 			values[i] = &sql.NullScanner{S: new(uuid.UUID)}
 		case employee.FieldIsActive, employee.FieldIsDeleted:
 			values[i] = new(sql.NullBool)
-		case employee.FieldPosition, employee.FieldFullName, employee.FieldShortName, employee.FieldDepartment, employee.FieldDirection, employee.FieldEmail, employee.FieldInternalPhone:
+		case employee.FieldFullName, employee.FieldShortName, employee.FieldDepartment, employee.FieldDirection, employee.FieldEmail, employee.FieldInternalPhone:
 			values[i] = new(sql.NullString)
 		case employee.FieldBirthDate:
 			values[i] = new(sql.NullTime)
@@ -130,12 +144,12 @@ func (_m *Employee) assignValues(columns []string, values []any) error {
 			} else if value != nil {
 				_m.DzoID = *value
 			}
-		case employee.FieldPosition:
-			if value, ok := values[i].(*sql.NullString); !ok {
-				return fmt.Errorf("unexpected type %T for field position", values[i])
+		case employee.FieldDzoPositionID:
+			if value, ok := values[i].(*sql.NullScanner); !ok {
+				return fmt.Errorf("unexpected type %T for field dzo_position_id", values[i])
 			} else if value.Valid {
-				_m.Position = new(string)
-				*_m.Position = value.String
+				_m.DzoPositionID = new(uuid.UUID)
+				*_m.DzoPositionID = *value.S.(*uuid.UUID)
 			}
 		case employee.FieldFullName:
 			if value, ok := values[i].(*sql.NullString); !ok {
@@ -221,6 +235,11 @@ func (_m *Employee) QueryDzo() *DzoOrganizationQuery {
 	return NewEmployeeClient(_m.config).QueryDzo(_m)
 }
 
+// QueryDzoPositionTitle queries the "dzo_position_title" edge of the Employee entity.
+func (_m *Employee) QueryDzoPositionTitle() *DzoPositionTitleQuery {
+	return NewEmployeeClient(_m.config).QueryDzoPositionTitle(_m)
+}
+
 // QueryEventParticipations queries the "event_participations" edge of the Employee entity.
 func (_m *Employee) QueryEventParticipations() *EventParticipantQuery {
 	return NewEmployeeClient(_m.config).QueryEventParticipations(_m)
@@ -255,9 +274,9 @@ func (_m *Employee) String() string {
 	builder.WriteString("dzo_id=")
 	builder.WriteString(fmt.Sprintf("%v", _m.DzoID))
 	builder.WriteString(", ")
-	if v := _m.Position; v != nil {
-		builder.WriteString("position=")
-		builder.WriteString(*v)
+	if v := _m.DzoPositionID; v != nil {
+		builder.WriteString("dzo_position_id=")
+		builder.WriteString(fmt.Sprintf("%v", *v))
 	}
 	builder.WriteString(", ")
 	builder.WriteString("full_name=")
