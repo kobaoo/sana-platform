@@ -48,7 +48,6 @@ deploy:
     - echo "IMAGE_TAG=$IMAGE_TAG"
     - sed "s|\${IMAGE_TAG}|$IMAGE_TAG|g" k8s/deployment.yaml | kubectl apply -f - -n sana-lms
     - kubectl apply -f k8s/service.yaml -n sana-lms
-    - kubectl apply -f k8s/ingress.yaml -n sana-lms
     - kubectl rollout status deployment/sana-lms-backend -n sana-lms --timeout=120s
   only:
     - dev
