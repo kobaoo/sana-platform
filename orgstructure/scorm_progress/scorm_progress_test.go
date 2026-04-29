@@ -343,6 +343,67 @@ func TestAssignCourseEmployees_ReassignTrueResetsExistingAndCreatesNewRows(t *te
 	}
 }
 
+func TestAssignCourseEmployees_SetsStartAndEndDates(t *testing.T) {
+	companyID, dzoID := mustCreateCompanyAndDZO(t)
+	course := mustCreateCourse(t, companyID)
+	emp1 := mustCreateEmployee(t, companyID, dzoID, uuid.NewString()+"@test.local")
+	emp2 := mustCreateEmployee(t, companyID, dzoID, uuid.NewString()+"@test.local")
+	startDate := time.Now().UTC().Add(24 * time.Hour).Truncate(time.Second)
+	endDate := startDate.Add(72 * time.Hour)
+
+	_, err := AssignCourseEmployees(adminCtx(), course.ID.String(), &AssignCourseEmployeesRequest{
+		EmployeeIDs: []uuid.UUID{emp1.ID, emp2.ID},
+		Reassign:    false,
+		StartDate:   &startDate,
+		EndDate:     &endDate,
+	})
+	if err != nil {
+		t.Fatalf("unexpected error: %v", err)
+	}
+
+	rows, err := Client.ScormProgress.
+		Query().
+		Where(
+			scormprogress.CourseIDEQ(course.ID),
+			scormprogress.EmployeeIDIn(emp1.ID, emp2.ID),
+		).
+		All(context.Background())
+	if err != nil {
+		t.Fatalf("query progress rows: %v", err)
+	}
+	if len(rows) != 2 {
+		t.Fatalf("expected 2 progress rows, got %d", len(rows))
+	}
+	for _, row := range rows {
+		if row.StartDate == nil || !row.StartDate.Equal(startDate) {
+			t.Fatalf("expected start_date %v, got %v", startDate, row.StartDate)
+		}
+		if row.EndDate == nil || !row.EndDate.Equal(endDate) {
+			t.Fatalf("expected end_date %v, got %v", endDate, row.EndDate)
+		}
+	}
+}
+
+func TestAssignCourseEmployees_InvalidStartDateAfterEndDate(t *testing.T) {
+	companyID, dzoID := mustCreateCompanyAndDZO(t)
+	course := mustCreateCourse(t, companyID)
+	emp := mustCreateEmployee(t, companyID, dzoID, uuid.NewString()+"@test.local")
+	startDate := time.Now().UTC().Add(48 * time.Hour).Truncate(time.Second)
+	endDate := startDate.Add(-24 * time.Hour)
+
+	_, err := AssignCourseEmployees(adminCtx(), course.ID.String(), &AssignCourseEmployeesRequest{
+		EmployeeIDs: []uuid.UUID{emp.ID},
+		StartDate:   &startDate,
+		EndDate:     &endDate,
+	})
+	if err == nil {
+		t.Fatal("expected error")
+	}
+	if errs.Code(err) != errs.InvalidArgument {
+		t.Fatalf("expected InvalidArgument, got %v", errs.Code(err))
+	}
+}
+
 func TestUpdateCourseProgress_Success(t *testing.T) {
 	companyID, dzoID := mustCreateCompanyAndDZO(t)
 	keycloakID := "kc-" + uuid.NewString()
@@ -371,6 +432,60 @@ func TestUpdateCourseProgress_Success(t *testing.T) {
 	}
 	if resp.Progress.CompletedAt == nil {
 		t.Fatal("expected completed_at to be auto-set")
+	}
+}
+
+func TestUpdateCourseProgress_SetsStartAndEndDates(t *testing.T) {
+	companyID, dzoID := mustCreateCompanyAndDZO(t)
+	keycloakID := "kc-" + uuid.NewString()
+	email := uuid.NewString() + "@test.local"
+	course := mustCreateCourse(t, companyID)
+	emp := mustCreateLinkedEmployee(t, companyID, dzoID, keycloakID, email)
+	progress := mustCreateProgress(t, course.ID, emp.ID, scormprogress.StatusNOT_STARTED)
+	startDate := time.Now().UTC().Add(12 * time.Hour).Truncate(time.Second)
+	endDate := startDate.Add(36 * time.Hour)
+
+	resp, err := UpdateCourseProgress(employeeCtx(keycloakID, email), progress.ID.String(), &UpdateCourseProgressRequest{
+		StartDate: &startDate,
+		EndDate:   &endDate,
+	})
+	if err != nil {
+		t.Fatalf("unexpected error: %v", err)
+	}
+
+	if resp.Progress.StartDate == nil || !resp.Progress.StartDate.Equal(startDate) {
+		t.Fatalf("expected start_date %v, got %v", startDate, resp.Progress.StartDate)
+	}
+	if resp.Progress.EndDate == nil || !resp.Progress.EndDate.Equal(endDate) {
+		t.Fatalf("expected end_date %v, got %v", endDate, resp.Progress.EndDate)
+	}
+
+	row := mustGetProgress(t, progress.ID)
+	if row.StartDate == nil || !row.StartDate.Equal(startDate) {
+		t.Fatalf("expected stored start_date %v, got %v", startDate, row.StartDate)
+	}
+	if row.EndDate == nil || !row.EndDate.Equal(endDate) {
+		t.Fatalf("expected stored end_date %v, got %v", endDate, row.EndDate)
+	}
+}
+
+func TestUpdateCourseProgress_InvalidStartDateAfterEndDate(t *testing.T) {
+	companyID, dzoID := mustCreateCompanyAndDZO(t)
+	course := mustCreateCourse(t, companyID)
+	emp := mustCreateEmployee(t, companyID, dzoID, uuid.NewString()+"@test.local")
+	progress := mustCreateProgress(t, course.ID, emp.ID, scormprogress.StatusNOT_STARTED)
+	startDate := time.Now().UTC().Add(72 * time.Hour).Truncate(time.Second)
+	endDate := startDate.Add(-24 * time.Hour)
+
+	_, err := UpdateCourseProgress(adminCtx(), progress.ID.String(), &UpdateCourseProgressRequest{
+		StartDate: &startDate,
+		EndDate:   &endDate,
+	})
+	if err == nil {
+		t.Fatal("expected error")
+	}
+	if errs.Code(err) != errs.InvalidArgument {
+		t.Fatalf("expected InvalidArgument, got %v", errs.Code(err))
 	}
 }
 

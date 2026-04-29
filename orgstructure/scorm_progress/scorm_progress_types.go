@@ -12,6 +12,8 @@ type CourseProgress struct {
 	EmployeeID  uuid.UUID  `json:"employee_id"`
 	Status      string     `json:"status"`
 	Score       *int       `json:"score,omitempty"`
+	StartDate   *time.Time `json:"start_date,omitempty"`
+	EndDate     *time.Time `json:"end_date,omitempty"`
 	CompletedAt *time.Time `json:"completed_at,omitempty"`
 	SuspendData *string    `json:"suspend_data,omitempty"`
 }
@@ -31,6 +33,8 @@ type CourseWithProgress struct {
 type AssignCourseEmployeesRequest struct {
 	EmployeeIDs []uuid.UUID `json:"employee_ids"`
 	Reassign    bool        `json:"reassign"`
+	StartDate   *time.Time  `json:"start_date,omitempty"`
+	EndDate     *time.Time  `json:"end_date,omitempty"`
 }
 
 type AssignCourseEmployeesResponse struct {
@@ -47,6 +51,8 @@ type AssignCourseEmployeesResponse struct {
 type UpdateCourseProgressRequest struct {
 	Status      *string    `json:"status,omitempty"`
 	Score       *int       `json:"score,omitempty"`
+	StartDate   *time.Time `json:"start_date,omitempty"`
+	EndDate     *time.Time `json:"end_date,omitempty"`
 	SuspendData *string    `json:"suspend_data,omitempty"`
 	CompletedAt *time.Time `json:"completed_at,omitempty"`
 }

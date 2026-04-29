@@ -46,6 +46,9 @@ func AssignCourseEmployees(ctx context.Context, course_id string, req *AssignCou
 	if req == nil {
 		return nil, errs.B().Code(errs.InvalidArgument).Msg("request body is required").Err()
 	}
+	if err := validateStartEndDates(req.StartDate, req.EndDate); err != nil {
+		return nil, err
+	}
 
 	employeeIDs := uniqueUUIDs(req.EmployeeIDs)
 	if len(employeeIDs) == 0 {
@@ -119,7 +122,7 @@ func AssignCourseEmployees(ctx context.Context, course_id string, req *AssignCou
 	reassignedIDs := make([]uuid.UUID, 0, len(alreadyAssignedIDs))
 
 	if req.Reassign && len(alreadyAssignedIDs) > 0 {
-		if _, err = tx.ScormProgress.
+		reassignBuilder := tx.ScormProgress.
 			Update().
 			Where(
 				scormprogress.CourseIDEQ(courseID),
@@ -128,8 +131,14 @@ func AssignCourseEmployees(ctx context.Context, course_id string, req *AssignCou
 			SetStatus(scormprogress.StatusNOT_STARTED).
 			ClearScore().
 			ClearCompletedAt().
-			ClearSuspendData().
-			Save(ctx); err != nil {
+			ClearSuspendData()
+		if req.StartDate != nil {
+			reassignBuilder = reassignBuilder.SetStartDate(*req.StartDate)
+		}
+		if req.EndDate != nil {
+			reassignBuilder = reassignBuilder.SetEndDate(*req.EndDate)
+		}
+		if _, err = reassignBuilder.Save(ctx); err != nil {
 			return nil, errs.B().Code(errs.Internal).Msg("failed to reassign course progress").Cause(err).Err()
 		}
 		reassignedIDs = append(reassignedIDs, alreadyAssignedIDs...)
@@ -140,11 +149,18 @@ func AssignCourseEmployees(ctx context.Context, course_id string, req *AssignCou
 		if _, ok := existingByEmployeeID[employeeID]; ok {
 			continue
 		}
-		builders = append(builders, tx.ScormProgress.
+		builder := tx.ScormProgress.
 			Create().
 			SetCourseID(courseID).
 			SetEmployeeID(employeeID).
-			SetStatus(scormprogress.StatusNOT_STARTED))
+			SetStatus(scormprogress.StatusNOT_STARTED)
+		if req.StartDate != nil {
+			builder = builder.SetStartDate(*req.StartDate)
+		}
+		if req.EndDate != nil {
+			builder = builder.SetEndDate(*req.EndDate)
+		}
+		builders = append(builders, builder)
 		assignedIDs = append(assignedIDs, employeeID)
 	}
 
@@ -183,6 +199,9 @@ func UpdateCourseProgress(ctx context.Context, progress_id string, req *UpdateCo
 	if req == nil {
 		return nil, errs.B().Code(errs.InvalidArgument).Msg("request body is required").Err()
 	}
+	if err := validateStartEndDates(req.StartDate, req.EndDate); err != nil {
+		return nil, err
+	}
 
 	_, _, err = getAccessibleProgress(ctx, ad, progressID)
 	if err != nil {
@@ -206,6 +225,12 @@ func UpdateCourseProgress(ctx context.Context, progress_id string, req *UpdateCo
 	}
 	if req.Score != nil {
 		builder = builder.SetScore(*req.Score)
+	}
+	if req.StartDate != nil {
+		builder = builder.SetStartDate(*req.StartDate)
+	}
+	if req.EndDate != nil {
+		builder = builder.SetEndDate(*req.EndDate)
 	}
 	if req.SuspendData != nil {
 		builder = builder.SetSuspendData(*req.SuspendData)
@@ -532,6 +557,13 @@ func uniqueUUIDs(ids []uuid.UUID) []uuid.UUID {
 	return result
 }
 
+func validateStartEndDates(startDate, endDate *time.Time) error {
+	if startDate != nil && endDate != nil && startDate.After(*endDate) {
+		return errs.B().Code(errs.InvalidArgument).Msg("start_date cannot be after end_date").Err()
+	}
+	return nil
+}
+
 func entToCourseProgress(row *ent.ScormProgress) CourseProgress {
 	return CourseProgress{
 		ID:          row.ID,
@@ -539,6 +571,8 @@ func entToCourseProgress(row *ent.ScormProgress) CourseProgress {
 		EmployeeID:  row.EmployeeID,
 		Status:      row.Status.String(),
 		Score:       row.Score,
+		StartDate:   row.StartDate,
+		EndDate:     row.EndDate,
 		CompletedAt: row.CompletedAt,
 		SuspendData: row.SuspendData,
 	}
