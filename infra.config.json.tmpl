@@ -35,7 +35,7 @@
   "object_storage": [
     {
       "type": "s3",
-      "region": "${INFRA_S3_REGION}",
+      "region": "us-east-1",
       "endpoint": "${INFRA_S3_ENDPOINT}",
       "path_style_endpoint": true,
       "access_key_id": "${INFRA_S3_ACCESS_KEY_ID}",
@@ -43,6 +43,13 @@
       "buckets": {
         "contract-files": {
           "name": "contract-files"
+        },
+        "scorm-files": {
+          "name": "scorm-files"
+        },
+        "public-assets": {
+          "name": "public-assets",
+          "public_base_url": "${INFRA_S3_PUBLIC_BASE_URL}"
         }
       }
     }
