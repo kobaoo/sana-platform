@@ -23,7 +23,7 @@ spec:
             - containerPort: 8080
           envFrom:
             - secretRef:
-                name: sana-secrets
+                name: sana-lms-backend-secret
           resources:
             requests:
               cpu: 100m
