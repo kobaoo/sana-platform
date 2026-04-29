@@ -58,8 +58,7 @@ build:
         < infra.config.json.tmpl > infra.config.json
   script:
     - echo "IMAGE_TAG=$IMAGE_TAG"
-    - encore build docker --config infra.config.json --output image.tar "sana-platform:$CI_COMMIT_SHORT_SHA"
-    - crane push image.tar "$IMAGE_TAG"
+    - encore build docker --config infra.config.json --push "$IMAGE_TAG"
     - crane copy "$IMAGE_TAG" "$IMAGE_LATEST"
   only:
     - dev
