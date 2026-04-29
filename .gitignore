@@ -10,6 +10,7 @@ CLAUDE.md
 AGENTS.md
 
 .env
+infra.config.json
 
 .secrets.local.cue
 

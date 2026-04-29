@@ -1,0 +1,54 @@
+stages:
+  - build
+  - deploy
+
+variables:
+  IMAGE_TAG: $CI_REGISTRY_IMAGE:$CI_COMMIT_SHORT_SHA
+
+build:
+  stage: build
+  image: encoredotdev/encore:1.56.7
+  before_script:
+    - apt-get update -qq && apt-get install -y -qq gettext-base curl ca-certificates
+    - curl -sSL https://github.com/google/go-containerregistry/releases/latest/download/go-containerregistry_Linux_x86_64.tar.gz | tar -xz -C /usr/local/bin crane
+    - crane auth login "$CI_REGISTRY" -u "$CI_REGISTRY_USER" -p "$CI_REGISTRY_PASSWORD"
+    - |
+      envsubst '${INFRA_BASE_URL}${INFRA_POSTGRES_HOST}${INFRA_POSTGRES_USER}${INFRA_S3_ENDPOINT}${INFRA_S3_ACCESS_KEY_ID}${INFRA_S3_SECRET_KEY}${INFRA_S3_PUBLIC_BASE_URL}' \
+        < infra.config.json.tmpl > infra.config.json
+  script:
+    - echo "IMAGE_TAG=$IMAGE_TAG"
+    - encore build docker --config infra.config.json --push "$IMAGE_TAG"
+  only:
+    - dev
+    - feat/gitlab_ci
+
+deploy:
+  stage: deploy
+  image: bitnami/kubectl:latest
+  before_script:
+    - |
+      kubectl create secret generic sana-lms-backend-secret \
+        --namespace=sana-lms \
+        --from-literal=DB_PASSWORD="$INFRA_DB_PASSWORD" \
+        --from-literal=KEYCLOAK_ISSUER_URL="$INFRA_KEYCLOAK_ISSUER_URL" \
+        --from-literal=KEYCLOAK_AUDIENCE="$INFRA_KEYCLOAK_AUDIENCE" \
+        --from-literal=KEYCLOAK_ADMIN_USER="$INFRA_KEYCLOAK_ADMIN_USER" \
+        --from-literal=KEYCLOAK_ADMIN_PASSWORD="$INFRA_KEYCLOAK_ADMIN_PASSWORD" \
+        --from-literal=KEYCLOAK_ADMIN_CLIENT_ID="$INFRA_KEYCLOAK_ADMIN_CLIENT_ID" \
+        --from-literal=KEYCLOAK_ADMIN_CLIENT_SECRET="$INFRA_KEYCLOAK_ADMIN_CLIENT_SECRET" \
+        --from-literal=APP_URL="$INFRA_BASE_URL" \
+        --from-literal=MAIL_SERVER="$INFRA_MAIL_SERVER" \
+        --from-literal=MAIL_PORT="$INFRA_MAIL_PORT" \
+        --from-literal=MAIL_USERNAME="$INFRA_MAIL_USERNAME" \
+        --from-literal=MAIL_PASSWORD="$INFRA_MAIL_PASSWORD" \
+        --from-literal=MAIL_FROM="$INFRA_MAIL_FROM" \
+        --save-config \
+        --dry-run=client -o yaml | kubectl apply -f -
+  script:
+    - echo "IMAGE_TAG=$IMAGE_TAG"
+    - sed "s|\${IMAGE_TAG}|$IMAGE_TAG|g" k8s/deployment.yaml | kubectl apply -f - -n sana-lms
+    - kubectl apply -f k8s/service.yaml -n sana-lms
+    - kubectl rollout status deployment/sana-lms-backend -n sana-lms --timeout=120s
+  only:
+    - dev
+    - feat/gitlab_ci
