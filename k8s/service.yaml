@@ -1,0 +1,15 @@
+apiVersion: v1
+kind: Service
+metadata:
+  name: sana-lms-backend
+  namespace: sana-lms
+  labels:
+    app: sana-lms-backend
+spec:
+  type: ClusterIP
+  selector:
+    app: sana-lms-backend
+  ports:
+    - port: 80
+      targetPort: 8080
+      protocol: TCP
