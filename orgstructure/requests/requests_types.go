@@ -112,6 +112,7 @@ type RequestEmployee struct {
 	FullName string `json:"full_name"`
 	DzoID    string `json:"dzo_id"`
 	DzoName  string `json:"dzo_name"`
+	IsActive bool   `json:"is_active"`
 }
 
 type RequestTargetDZO struct {
