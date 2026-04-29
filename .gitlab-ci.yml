@@ -9,11 +9,11 @@ build:
   stage: build
   image: encoredotdev/encore:1.52.1
   before_script:
-    - apt-get update -qq && apt-get install -y -qq gettext-base
+    - apt-get update -qq && apt-get install -y -qq gettext-base curl ca-certificates
     - curl -sSL https://github.com/google/go-containerregistry/releases/latest/download/go-containerregistry_Linux_x86_64.tar.gz | tar -xz -C /usr/local/bin crane
     - crane auth login "$CI_REGISTRY" -u "$CI_REGISTRY_USER" -p "$CI_REGISTRY_PASSWORD"
     - |
-      envsubst '${INFRA_BASE_URL}${INFRA_POSTGRES_HOST}${INFRA_POSTGRES_USER}${INFRA_S3_ENDPOINT}${INFRA_S3_ACCESS_KEY_ID}${INFRA_S3_SECRET_KEY}${INFRA_S3_PUBLIC_BASE_URL}' \
+      envsubst '${INFRA_BASE_URL}${INFRA_POSTGRES_HOST}${INFRA_POSTGRES_USER}${INFRA_S3_ENDPOINT}${INFRA_S3_PUBLIC_BASE_URL}' \
         < infra.config.json.tmpl > infra.config.json
   script:
     - echo "IMAGE_TAG=$IMAGE_TAG"
@@ -42,6 +42,8 @@ deploy:
         --from-literal=MAIL_USERNAME="$INFRA_MAIL_USERNAME" \
         --from-literal=MAIL_PASSWORD="$INFRA_MAIL_PASSWORD" \
         --from-literal=MAIL_FROM="$INFRA_MAIL_FROM" \
+        --from-literal=S3_ACCESS_KEY_ID="$INFRA_S3_ACCESS_KEY_ID" \
+        --from-literal=S3_SECRET_KEY="$INFRA_S3_SECRET_KEY" \
         --save-config \
         --dry-run=client -o yaml | kubectl apply -f -
   script:
