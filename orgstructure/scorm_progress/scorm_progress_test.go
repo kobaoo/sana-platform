@@ -5,7 +5,9 @@
 package scorm_progress
 
 import (
+	"bytes"
 	"context"
+	"strings"
 	"testing"
 	"time"
 
@@ -163,6 +165,35 @@ func mustGetProgress(t *testing.T, progressID uuid.UUID) *ent.ScormProgress {
 	return row
 }
 
+func mustCreateCompletedProgress(t *testing.T, courseID, employeeID uuid.UUID, score *int, description *string) *ent.ScormProgress {
+	t.Helper()
+
+	completedAt := time.Now().UTC().Truncate(time.Second)
+	courseUpdate := Client.ScormCourse.UpdateOneID(courseID)
+	if description != nil {
+		courseUpdate = courseUpdate.SetDescription(*description)
+	}
+	if _, err := courseUpdate.Save(context.Background()); err != nil {
+		t.Fatalf("update course: %v", err)
+	}
+
+	builder := Client.ScormProgress.
+		Create().
+		SetCourseID(courseID).
+		SetEmployeeID(employeeID).
+		SetStatus(scormprogress.StatusCOMPLETED).
+		SetCompletedAt(completedAt)
+	if score != nil {
+		builder = builder.SetScore(*score)
+	}
+
+	row, err := builder.Save(context.Background())
+	if err != nil {
+		t.Fatalf("create completed progress: %v", err)
+	}
+	return row
+}
+
 func TestAssignCourseEmployees_WhenSomeEmployeeAssigned(t *testing.T) {
 	companyID, dzoID := mustCreateCompanyAndDZO(t)
 	course := mustCreateCourse(t, companyID)
@@ -219,6 +250,62 @@ func TestAssignCourseEmployees_SuccessWhenNoEmployeesAlreadyAssigned(t *testing.
 	}
 	if count != 2 {
 		t.Fatalf("expected 2 progress rows, got %d", count)
+	}
+}
+
+func TestAssignCourseEmployees_SmallBatchRunsSynchronously(t *testing.T) {
+	companyID, dzoID := mustCreateCompanyAndDZO(t)
+	course := mustCreateCourse(t, companyID)
+	emp1 := mustCreateEmployee(t, companyID, dzoID, uuid.NewString()+"@test.local")
+	emp2 := mustCreateEmployee(t, companyID, dzoID, uuid.NewString()+"@test.local")
+
+	resp, err := AssignCourseEmployees(adminCtx(), course.ID.String(), &AssignCourseEmployeesRequest{
+		EmployeeIDs: []uuid.UUID{emp1.ID, emp2.ID},
+		Reassign:    false,
+	})
+	if err != nil {
+		t.Fatalf("unexpected error: %v", err)
+	}
+	if resp.Accepted {
+		t.Fatal("expected accepted=false for small batch")
+	}
+
+	count, err := Client.ScormProgress.
+		Query().
+		Where(
+			scormprogress.CourseIDEQ(course.ID),
+			scormprogress.EmployeeIDIn(emp1.ID, emp2.ID),
+		).
+		Count(context.Background())
+	if err != nil {
+		t.Fatalf("count progress rows: %v", err)
+	}
+	if count != 2 {
+		t.Fatalf("expected synchronous progress rows before return, got %d", count)
+	}
+}
+
+func TestAssignCourseEmployees_LargeBatchReturnsAccepted(t *testing.T) {
+	companyID, dzoID := mustCreateCompanyAndDZO(t)
+	course := mustCreateCourse(t, companyID)
+	employeeIDs := make([]uuid.UUID, 0, asyncThreshold+1)
+	for i := 0; i <= asyncThreshold; i++ {
+		emp := mustCreateEmployee(t, companyID, dzoID, uuid.NewString()+"@test.local")
+		employeeIDs = append(employeeIDs, emp.ID)
+	}
+
+	resp, err := AssignCourseEmployees(adminCtx(), course.ID.String(), &AssignCourseEmployeesRequest{
+		EmployeeIDs: employeeIDs,
+		Reassign:    false,
+	})
+	if err != nil {
+		t.Fatalf("unexpected error: %v", err)
+	}
+	if !resp.Accepted {
+		t.Fatal("expected accepted=true for large batch")
+	}
+	if resp.Message != "assignment started in background" {
+		t.Fatalf("unexpected message: %s", resp.Message)
 	}
 }
 
@@ -567,5 +654,113 @@ func TestListEmployeeCourses_Success(t *testing.T) {
 	}
 	if resp.Courses[0].Progress.Status != "IN_PROGRESS" {
 		t.Fatalf("expected IN_PROGRESS, got %s", resp.Courses[0].Progress.Status)
+	}
+}
+
+func TestGenerateCourseCertificate_Success(t *testing.T) {
+	companyID, dzoID := mustCreateCompanyAndDZO(t)
+	course := mustCreateCourse(t, companyID)
+	emp := mustCreateEmployee(t, companyID, dzoID, uuid.NewString()+"@test.local")
+	score := 95
+	description := "SCORM safety training"
+	title := "Safety Basics"
+	if _, err := Client.ScormCourse.UpdateOneID(course.ID).SetTitle(title).Save(context.Background()); err != nil {
+		t.Fatalf("update course title: %v", err)
+	}
+	progress := mustCreateCompletedProgress(t, course.ID, emp.ID, &score, &description)
+
+	pdfBytes, err := GenerateCourseCertificate(context.Background(), progress.ID)
+	if err != nil {
+		t.Fatalf("unexpected error: %v", err)
+	}
+	if !bytes.HasPrefix(pdfBytes, []byte("%PDF")) {
+		t.Fatalf("expected PDF bytes, got %q", string(pdfBytes[:4]))
+	}
+	body := string(pdfBytes)
+	if !strings.Contains(body, "Certificate of Completion") {
+		t.Fatal("expected certificate title in PDF")
+	}
+	if !strings.Contains(body, emp.FullName) {
+		t.Fatal("expected employee full name in PDF")
+	}
+	if !strings.Contains(body, title) {
+		t.Fatal("expected course title in PDF")
+	}
+	if !strings.Contains(body, description) {
+		t.Fatal("expected course description in PDF")
+	}
+}
+
+func TestGenerateCourseCertificate_NotCompleted(t *testing.T) {
+	companyID, dzoID := mustCreateCompanyAndDZO(t)
+	course := mustCreateCourse(t, companyID)
+	emp := mustCreateEmployee(t, companyID, dzoID, uuid.NewString()+"@test.local")
+	progress := mustCreateProgress(t, course.ID, emp.ID, scormprogress.StatusIN_PROGRESS)
+
+	_, err := GenerateCourseCertificate(context.Background(), progress.ID)
+	if err == nil {
+		t.Fatal("expected error")
+	}
+	if errs.Code(err) != errs.FailedPrecondition {
+		t.Fatalf("expected FailedPrecondition, got %v", errs.Code(err))
+	}
+}
+
+func TestGenerateCourseCertificate_NotFound(t *testing.T) {
+	_, err := GenerateCourseCertificate(context.Background(), uuid.New())
+	if err == nil {
+		t.Fatal("expected error")
+	}
+	if errs.Code(err) != errs.NotFound {
+		t.Fatalf("expected NotFound, got %v", errs.Code(err))
+	}
+}
+
+func TestGenerateAccessibleCourseCertificate_Success(t *testing.T) {
+	companyID, dzoID := mustCreateCompanyAndDZO(t)
+	keycloakID := "kc-" + uuid.NewString()
+	email := uuid.NewString() + "@test.local"
+	course := mustCreateCourse(t, companyID)
+	emp := mustCreateLinkedEmployee(t, companyID, dzoID, keycloakID, email)
+	progress := mustCreateCompletedProgress(t, course.ID, emp.ID, nil, nil)
+	ad := &authhandler.AuthData{
+		KeycloakUserID: keycloakID,
+		Email:          email,
+		Role:           authhandler.RoleEMP,
+		CompanyID:      testCompanyID,
+	}
+
+	pdfBytes, err := generateAccessibleCourseCertificate(context.Background(), ad, progress.ID)
+	if err != nil {
+		t.Fatalf("unexpected error: %v", err)
+	}
+	if !bytes.HasPrefix(pdfBytes, []byte("%PDF")) {
+		t.Fatal("expected PDF response body")
+	}
+}
+
+func TestGenerateAccessibleCourseCertificate_ForbiddenForOtherEmployee(t *testing.T) {
+	companyID, dzoID := mustCreateCompanyAndDZO(t)
+	ownerKeycloakID := "kc-" + uuid.NewString()
+	ownerEmail := uuid.NewString() + "@test.local"
+	otherKeycloakID := "kc-" + uuid.NewString()
+	otherEmail := uuid.NewString() + "@test.local"
+	course := mustCreateCourse(t, companyID)
+	owner := mustCreateLinkedEmployee(t, companyID, dzoID, ownerKeycloakID, ownerEmail)
+	_ = mustCreateLinkedEmployee(t, companyID, dzoID, otherKeycloakID, otherEmail)
+	progress := mustCreateCompletedProgress(t, course.ID, owner.ID, nil, nil)
+	ad := &authhandler.AuthData{
+		KeycloakUserID: otherKeycloakID,
+		Email:          otherEmail,
+		Role:           authhandler.RoleEMP,
+		CompanyID:      testCompanyID,
+	}
+
+	_, err := generateAccessibleCourseCertificate(context.Background(), ad, progress.ID)
+	if err == nil {
+		t.Fatal("expected error")
+	}
+	if errs.Code(err) != errs.NotFound {
+		t.Fatalf("expected NotFound, got %v", errs.Code(err))
 	}
 }

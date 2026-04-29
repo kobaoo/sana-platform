@@ -38,6 +38,7 @@ type AssignCourseEmployeesRequest struct {
 }
 
 type AssignCourseEmployeesResponse struct {
+	Accepted                   bool        `json:"accepted"`
 	RequiresReassign           bool        `json:"requires_reassign"`
 	AssignedCount              int         `json:"assigned_count"`
 	ReassignedCount            int         `json:"reassigned_count"`

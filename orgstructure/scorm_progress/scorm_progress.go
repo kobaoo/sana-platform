@@ -2,6 +2,7 @@ package scorm_progress
 
 import (
 	"context"
+	"fmt"
 	"strings"
 	"time"
 
@@ -24,6 +25,8 @@ var (
 	db     = sqldb.Named("lms")
 	Client = newEntClient()
 )
+
+const asyncThreshold = 500
 
 func newEntClient() *ent.Client {
 	drv := entsql.OpenDB(dialect.Postgres, db.Stdlib())
@@ -76,6 +79,34 @@ func AssignCourseEmployees(ctx context.Context, course_id string, req *AssignCou
 		}
 	}
 
+	if len(employeeIDs) > asyncThreshold {
+		reassign := req.Reassign
+		startDate := cloneTime(req.StartDate)
+		endDate := cloneTime(req.EndDate)
+		go func() {
+			if _, err := assignEmployeesWithDates(context.Background(), courseID, employeeIDs, reassign, startDate, endDate); err != nil {
+				fmt.Println("failed to assign course employees in background:", err)
+			}
+		}()
+
+		return &AssignCourseEmployeesResponse{
+			Accepted:                   true,
+			AssignedEmployeeIDs:        []uuid.UUID{},
+			ReassignedEmployeeIDs:      []uuid.UUID{},
+			AlreadyAssignedEmployeeIDs: []uuid.UUID{},
+			Message:                    "assignment started in background",
+		}, nil
+	}
+
+	return assignEmployeesWithDates(ctx, courseID, employeeIDs, req.Reassign, req.StartDate, req.EndDate)
+}
+
+func assignEmployees(ctx context.Context, courseID uuid.UUID, employeeIDs []uuid.UUID, reassign bool) error {
+	_, err := assignEmployeesWithDates(ctx, courseID, employeeIDs, reassign, nil, nil)
+	return err
+}
+
+func assignEmployeesWithDates(ctx context.Context, courseID uuid.UUID, employeeIDs []uuid.UUID, reassign bool, startDate, endDate *time.Time) (*AssignCourseEmployeesResponse, error) {
 	existingRows, err := Client.ScormProgress.
 		Query().
 		Where(
@@ -95,7 +126,7 @@ func AssignCourseEmployees(ctx context.Context, course_id string, req *AssignCou
 		alreadyAssignedIDs = append(alreadyAssignedIDs, row.EmployeeID)
 	}
 
-	if !req.Reassign && len(alreadyAssignedIDs) > 0 {
+	if !reassign && len(alreadyAssignedIDs) > 0 {
 		return &AssignCourseEmployeesResponse{
 			RequiresReassign:           true,
 			AssignedCount:              0,
@@ -121,7 +152,7 @@ func AssignCourseEmployees(ctx context.Context, course_id string, req *AssignCou
 	assignedIDs := make([]uuid.UUID, 0, len(employeeIDs))
 	reassignedIDs := make([]uuid.UUID, 0, len(alreadyAssignedIDs))
 
-	if req.Reassign && len(alreadyAssignedIDs) > 0 {
+	if reassign && len(alreadyAssignedIDs) > 0 {
 		reassignBuilder := tx.ScormProgress.
 			Update().
 			Where(
@@ -132,11 +163,11 @@ func AssignCourseEmployees(ctx context.Context, course_id string, req *AssignCou
 			ClearScore().
 			ClearCompletedAt().
 			ClearSuspendData()
-		if req.StartDate != nil {
-			reassignBuilder = reassignBuilder.SetStartDate(*req.StartDate)
+		if startDate != nil {
+			reassignBuilder = reassignBuilder.SetStartDate(*startDate)
 		}
-		if req.EndDate != nil {
-			reassignBuilder = reassignBuilder.SetEndDate(*req.EndDate)
+		if endDate != nil {
+			reassignBuilder = reassignBuilder.SetEndDate(*endDate)
 		}
 		if _, err = reassignBuilder.Save(ctx); err != nil {
 			return nil, errs.B().Code(errs.Internal).Msg("failed to reassign course progress").Cause(err).Err()
@@ -154,11 +185,11 @@ func AssignCourseEmployees(ctx context.Context, course_id string, req *AssignCou
 			SetCourseID(courseID).
 			SetEmployeeID(employeeID).
 			SetStatus(scormprogress.StatusNOT_STARTED)
-		if req.StartDate != nil {
-			builder = builder.SetStartDate(*req.StartDate)
+		if startDate != nil {
+			builder = builder.SetStartDate(*startDate)
 		}
-		if req.EndDate != nil {
-			builder = builder.SetEndDate(*req.EndDate)
+		if endDate != nil {
+			builder = builder.SetEndDate(*endDate)
 		}
 		builders = append(builders, builder)
 		assignedIDs = append(assignedIDs, employeeID)
@@ -184,6 +215,14 @@ func AssignCourseEmployees(ctx context.Context, course_id string, req *AssignCou
 		AlreadyAssignedEmployeeIDs: alreadyAssignedIDs,
 		Message:                    "course employees processed successfully",
 	}, nil
+}
+
+func cloneTime(value *time.Time) *time.Time {
+	if value == nil {
+		return nil
+	}
+	cloned := *value
+	return &cloned
 }
 
 //encore:api auth method=PATCH path=/course-progress/:progress_id

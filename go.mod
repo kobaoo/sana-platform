@@ -7,6 +7,7 @@ require (
 	entgo.io/ent v0.14.6
 	github.com/golang-jwt/jwt/v5 v5.3.1
 	github.com/google/uuid v1.3.0
+	github.com/jung-kurt/gofpdf v1.16.2
 	github.com/xuri/excelize/v2 v2.10.1
 )
 
