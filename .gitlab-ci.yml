@@ -27,7 +27,7 @@ deploy:
   image: bitnami/kubectl:latest
   before_script:
     - |
-      kubectl create secret generic sana-secrets \
+      kubectl create secret generic sana-lms-backend-secret \
         --namespace=sana-lms \
         --from-literal=DB_PASSWORD="$INFRA_DB_PASSWORD" \
         --from-literal=KEYCLOAK_ISSUER_URL="$INFRA_KEYCLOAK_ISSUER_URL" \
