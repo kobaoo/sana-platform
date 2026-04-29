@@ -10,10 +10,12 @@
   "sql_servers": [
     {
       "host": "${INFRA_POSTGRES_HOST}:5432",
+      "tls_config": { "disabled": true },
       "databases": {
         "lms": {
+          "name": "${INFRA_POSTGRES_DATABASE}",
           "username": "${INFRA_POSTGRES_USER}",
-          "password": { "$env": "DB_PASSWORD" }
+          "password": { "$env": "INFRA_POSTGRES_PASSWORD" }
         }
       }
     }
