@@ -6,9 +6,9 @@ import (
 	"fmt"
 	"io"
 	"net/http"
-	"os"
 	"path/filepath"
 	"strings"
+	"sync"
 	"time"
 
 	"encore.app/auth/authhandler"
@@ -22,6 +22,8 @@ import (
 	"entgo.io/ent/dialect"
 	entsql "entgo.io/ent/dialect/sql"
 	"github.com/google/uuid"
+	"github.com/minio/minio-go/v7"
+	"github.com/minio/minio-go/v7/pkg/credentials"
 )
 
 // ════ DATABASE ════
@@ -36,7 +38,72 @@ func newEntClient() *ent.Client {
 	return ent.NewClient(ent.Driver(drv))
 }
 
+// ════ SECRETS ════
+
+var secrets struct {
+	// S3 / MinIO
+	S3Endpoint  string
+	S3Bucket    string
+	S3AccessKey string
+	S3SecretKey string
+	S3Region    string
+
+	// Mail
+	MailServer   string
+	MailPort     string
+	MailUsername string
+	MailPassword string
+	MailFrom     string
+	AppURL       string
+}
+
+// ════ MINIO CLIENT ════
+
+var (
+	minioOnce sync.Once
+	minioCl   *minio.Client
+	minioErr  error
+)
+
+// getMinioClient returns the shared MinIO client, initialising it on first call.
+// Returns (nil, nil) when S3Endpoint is not configured — callers treat this as
+// "storage not enabled". Returns a non-nil error only when the endpoint is set
+// but the client could not be constructed (bad URL format, etc.).
+func getMinioClient() (*minio.Client, error) {
+	minioOnce.Do(func() {
+		minioCl, minioErr = newMinioClient()
+	})
+	return minioCl, minioErr
+}
+
+func newMinioClient() (*minio.Client, error) {
+	endpoint := secrets.S3Endpoint
+	if endpoint == "" {
+		return nil, nil // not configured
+	}
+
+	useSSL := strings.HasPrefix(endpoint, "https://")
+	endpoint = strings.TrimPrefix(endpoint, "https://")
+	endpoint = strings.TrimPrefix(endpoint, "http://")
+
+	client, err := minio.New(endpoint, &minio.Options{
+		Creds:  credentials.NewStaticV4(secrets.S3AccessKey, secrets.S3SecretKey, ""),
+		Secure: useSSL,
+		Region: secrets.S3Region,
+	})
+	if err != nil {
+		return nil, fmt.Errorf("minio client init: %w", err)
+	}
+	return client, nil
+}
+
+func s3Bucket() string { return secrets.S3Bucket }
+
 const maxUploadSize = 10 << 20 // 10 MiB
+
+func objectKey(id uuid.UUID) string {
+	return id.String() + ".pdf"
+}
 
 // ════ ENDPOINTS ════
 
@@ -95,7 +162,6 @@ func List(ctx context.Context, params *ListParams) (*ListResponse, error) {
 }
 
 // MyCertificates returns certificates belonging to the current user's employee record.
-// Works for any role; returns an empty list if the caller has no linked employee.
 //
 //encore:api auth method=GET path=/my/certificates
 func MyCertificates(ctx context.Context) (*ListResponse, error) {
@@ -106,7 +172,6 @@ func MyCertificates(ctx context.Context) (*ListResponse, error) {
 
 	empID, err := resolveEmployeeIDForUser(ctx, ad.KeycloakUserID)
 	if err != nil {
-		// no linked employee — not an error, just no certs
 		return &ListResponse{Certificates: []Certificate{}, Total: 0}, nil
 	}
 
@@ -151,7 +216,6 @@ func Create(ctx context.Context, req *CreateRequest) (*GetCertResponse, error) {
 }
 
 // Update updates certificate fields. Requires SA or ADM role.
-// File attachment is managed separately via UploadFile.
 //
 //encore:api auth method=PUT path=/certificates/:id
 func Update(ctx context.Context, id string, req *UpdateRequest) (*GetCertResponse, error) {
@@ -189,7 +253,6 @@ func Update(ctx context.Context, id string, req *UpdateRequest) (*GetCertRespons
 }
 
 // MyHRContact returns the contact details of active HR users in the caller's DZO.
-// If the caller has no DzoID in the token (e.g. SA), returns an empty list.
 //
 //encore:api auth method=GET path=/my/hr-contact
 func MyHRContact(ctx context.Context) (*HRContactResponse, error) {
@@ -212,7 +275,6 @@ func MyHRContact(ctx context.Context) (*HRContactResponse, error) {
 		return nil, errs.B().Code(errs.Internal).Msg("failed to query HR contacts").Cause(err).Err()
 	}
 
-	// batch-lookup employee records linked to these HR users (for name + phone)
 	hrUserIDs := make([]uuid.UUID, 0, len(hrUsers))
 	for _, u := range hrUsers {
 		hrUserIDs = append(hrUserIDs, u.ID)
@@ -327,7 +389,6 @@ func ListExpiring(ctx context.Context, params *ExpiringParams) (*ListResponse, e
 }
 
 // UploadFile uploads a PDF file for a certificate.
-// SA/ADM: any certificate. HR: own DZO only. EMP: forbidden.
 //
 //encore:api auth raw method=POST path=/certificates/:id/upload
 func UploadFile(w http.ResponseWriter, r *http.Request) {
@@ -335,7 +396,6 @@ func UploadFile(w http.ResponseWriter, r *http.Request) {
 }
 
 // DownloadFile downloads the PDF file for a certificate.
-// SA/ADM: any certificate. HR: own DZO only. EMP: own certificates only.
 //
 //encore:api auth raw method=GET path=/certificates/:id/download
 func DownloadFile(w http.ResponseWriter, r *http.Request) {
@@ -401,7 +461,6 @@ func queryExpiringCerts(ctx context.Context) ([]Certificate, error) {
 	return certs, nil
 }
 
-// queryEmployeeDzoMap returns a map of employeeID → dzoID for the given certificates.
 func queryEmployeeDzoMap(ctx context.Context, certs []Certificate) (map[string]string, error) {
 	seen := make(map[uuid.UUID]struct{}, len(certs))
 	for _, c := range certs {
@@ -452,7 +511,6 @@ func softDeleteCert(ctx context.Context, id string) error {
 	return Client.Certificate.UpdateOneID(uid).SetIsActive(false).Exec(ctx)
 }
 
-// requireSAorADM returns PermissionDenied for any role other than SA or ADM.
 func requireSAorADM() error {
 	ad, ok := auth.Data().(*authhandler.AuthData)
 	if !ok || (ad.Role != authhandler.RoleSA && ad.Role != authhandler.RoleADM) {
@@ -461,7 +519,6 @@ func requireSAorADM() error {
 	return nil
 }
 
-// checkHRCertScope returns an error if the HR caller's DZO does not contain empID.
 func checkHRCertScope(ctx context.Context, ad *authhandler.AuthData, empID uuid.UUID) error {
 	if ad.DzoID == "" {
 		return errs.B().Code(errs.PermissionDenied).Msg("HR user has no DZO assigned").Err()
@@ -482,7 +539,6 @@ func checkHRCertScope(ctx context.Context, ad *authhandler.AuthData, empID uuid.
 	return nil
 }
 
-// resolveEmployeeIDForUser returns the employee row ID linked to the given Keycloak user.
 func resolveEmployeeIDForUser(ctx context.Context, keycloakUserID string) (uuid.UUID, error) {
 	userRow, err := Client.User.Query().
 		Where(entuser.KeycloakUserIDEQ(keycloakUserID)).
@@ -505,6 +561,44 @@ func resolveEmployeeIDForUser(ctx context.Context, keycloakUserID string) (uuid.
 	return empRow.ID, nil
 }
 
+// uploadToMinIO загружает файл в MinIO и возвращает внутренний ключ объекта.
+// size — точный размер файла в байтах; передайте -1 только если неизвестен.
+func uploadToMinIO(ctx context.Context, id uuid.UUID, file io.Reader, size int64) (string, error) {
+	client, err := getMinioClient()
+	if err != nil {
+		return "", fmt.Errorf("S3 client init: %w", err)
+	}
+	if client == nil {
+		return "", fmt.Errorf("S3 storage is not configured (S3Endpoint is empty)")
+	}
+
+	key := objectKey(id)
+	_, err = client.PutObject(ctx, s3Bucket(), key, file, size, minio.PutObjectOptions{
+		ContentType: "application/pdf",
+	})
+	if err != nil {
+		return "", fmt.Errorf("minio PutObject: %w", err)
+	}
+	return key, nil
+}
+
+// presignedDownloadURL генерирует временную ссылку на скачивание (15 минут).
+func presignedDownloadURL(ctx context.Context, key string) (string, error) {
+	client, err := getMinioClient()
+	if err != nil {
+		return "", fmt.Errorf("S3 client init: %w", err)
+	}
+	if client == nil {
+		return "", fmt.Errorf("S3 storage is not configured (S3Endpoint is empty)")
+	}
+
+	u, err := client.PresignedGetObject(ctx, s3Bucket(), key, 15*time.Minute, nil)
+	if err != nil {
+		return "", fmt.Errorf("minio presign: %w", err)
+	}
+	return u.String(), nil
+}
+
 func handleUpload(w http.ResponseWriter, r *http.Request) {
 	ctx := r.Context()
 
@@ -514,7 +608,6 @@ func handleUpload(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	// Encore raw endpoints may not set PathValue; find the UUID segment in the path.
 	var idStr string
 	for _, seg := range strings.Split(r.URL.Path, "/") {
 		if _, parseErr := uuid.Parse(seg); parseErr == nil {
@@ -575,7 +668,6 @@ func handleUpload(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	// Verify PDF magic bytes (%PDF)
 	magic := make([]byte, 4)
 	if n, _ := io.ReadFull(file, magic); n < 4 || string(magic) != "%PDF" {
 		http.Error(w, "разрешены только PDF-файлы", http.StatusUnsupportedMediaType)
@@ -586,41 +678,27 @@ func handleUpload(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	// TODO: заменить на S3/object storage перед проде
-	dir := "/tmp/certificates"
-	if err := os.MkdirAll(dir, 0755); err != nil {
-		http.Error(w, "failed to create directory", http.StatusInternalServerError)
-		return
-	}
-	filePath := filepath.Join(dir, uid.String()+".pdf")
-
-	dst, err := os.Create(filePath)
+	key, err := uploadToMinIO(ctx, uid, file, header.Size)
 	if err != nil {
-		http.Error(w, "failed to create file", http.StatusInternalServerError)
-		return
-	}
-	defer dst.Close()
-
-	if _, err := io.Copy(dst, file); err != nil {
-		http.Error(w, "failed to save file", http.StatusInternalServerError)
+		http.Error(w, "failed to upload file to storage", http.StatusInternalServerError)
 		return
 	}
 
-	updated, err := Client.Certificate.UpdateOneID(uid).SetFileURL(filePath).Save(ctx)
+	updated, err := Client.Certificate.UpdateOneID(uid).SetFileURL(key).Save(ctx)
 	if err != nil {
 		http.Error(w, "database update error", http.StatusInternalServerError)
 		return
 	}
 
 	cert := entToCert(updated)
-	fileURL := ""
+	fileKey := ""
 	if cert.FileURL != nil {
-		fileURL = *cert.FileURL
+		fileKey = *cert.FileURL
 	}
 	w.Header().Set("Content-Type", "application/json")
 	w.WriteHeader(http.StatusOK)
 	fmt.Fprintf(w, `{"id":%q,"title":%q,"file_url":%q,"is_active":%v}`,
-		cert.ID, cert.Title, fileURL, cert.IsActive)
+		cert.ID, cert.Title, fileKey, cert.IsActive)
 }
 
 func handleDownload(w http.ResponseWriter, r *http.Request) {
@@ -664,7 +742,7 @@ func handleDownload(w http.ResponseWriter, r *http.Request) {
 
 	switch ad.Role {
 	case authhandler.RoleSA, authhandler.RoleADM:
-		// full access — no additional check needed
+		// full access
 	case authhandler.RoleHR:
 		if scopeErr := checkHRCertScope(ctx, ad, row.EmployeeID); scopeErr != nil {
 			http.Error(w, "forbidden", http.StatusForbidden)
@@ -690,19 +768,13 @@ func handleDownload(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	f, err := os.Open(*row.FileURL)
+	presignURL, err := presignedDownloadURL(ctx, *row.FileURL)
 	if err != nil {
-		http.Error(w, "file not found on server", http.StatusNotFound)
+		http.Error(w, "failed to generate download link", http.StatusInternalServerError)
 		return
 	}
-	defer f.Close()
 
-	w.Header().Set("Content-Type", "application/pdf")
-	w.Header().Set("Content-Disposition", fmt.Sprintf(`attachment; filename="%s.pdf"`, row.Title))
-	if _, err := io.Copy(w, f); err != nil {
-		// headers already sent; nothing useful to do
-		return
-	}
+	http.Redirect(w, r, presignURL, http.StatusTemporaryRedirect)
 }
 
 func entToCert(e *ent.Certificate) *Certificate {

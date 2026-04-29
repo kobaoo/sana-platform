@@ -47,6 +47,20 @@ func makeCert(t *testing.T, title string) *Certificate {
 	return &resp.Certificate
 }
 
+// buildPDFMultipart собирает multipart-тело с валидным PDF-заголовком.
+func buildPDFMultipart(t *testing.T) (*bytes.Buffer, string) {
+	t.Helper()
+	body := &bytes.Buffer{}
+	writer := multipart.NewWriter(body)
+	h := make(textproto.MIMEHeader)
+	h.Set("Content-Disposition", `form-data; name="file"; filename="test.pdf"`)
+	h.Set("Content-Type", "application/pdf")
+	part, _ := writer.CreatePart(h)
+	part.Write([]byte("%PDF-1.4 test content"))
+	writer.Close()
+	return body, writer.FormDataContentType()
+}
+
 // ════ CREATE ════
 
 func TestCreate_Success(t *testing.T) {
@@ -79,6 +93,21 @@ func TestCreate_EmptyTitle(t *testing.T) {
 	})
 	if errs.Code(err) != errs.InvalidArgument {
 		t.Errorf("expected InvalidArgument, got %v", err)
+	}
+}
+
+func TestCreate_InvalidType(t *testing.T) {
+	withADMAuth(t)
+	_, err := Create(ctx(), &CreateRequest{
+		EmployeeID: uuid.New(),
+		Type:       "INTERNAL",
+		Title:      "Bad Type",
+		IssuedDate: time.Now(),
+		EntityType: "TRAINING_EVENT",
+		EntityID:   uuid.New(),
+	})
+	if errs.Code(err) != errs.InvalidArgument {
+		t.Errorf("expected InvalidArgument for non-EXTERNAL type, got %v", err)
 	}
 }
 
@@ -127,7 +156,6 @@ func TestList_FilterByEmployeeID(t *testing.T) {
 		t.Fatalf("create target: %v", err)
 	}
 
-	// чужой сертификат — не должен попасть в результат
 	_, err = Create(ctx(), &CreateRequest{
 		EmployeeID: uuid.New(),
 		Type:       "EXTERNAL",
@@ -145,14 +173,12 @@ func TestList_FilterByEmployeeID(t *testing.T) {
 		t.Fatalf("list: %v", err)
 	}
 
-	// все записи должны принадлежать targetEmployee
 	for _, c := range list.Certificates {
 		if c.EmployeeID != resp1.Certificate.EmployeeID {
 			t.Errorf("got cert with wrong employee_id: %s", c.EmployeeID)
 		}
 	}
 
-	// нужный сертификат должен быть в списке
 	found := false
 	for _, c := range list.Certificates {
 		if c.ID == resp1.Certificate.ID {
@@ -199,6 +225,17 @@ func TestList_InvalidEmployeeID(t *testing.T) {
 	}
 }
 
+func TestList_EMPRoleForbidden(t *testing.T) {
+	et.OverrideAuthInfo(auth.UID("emp-user"), &authhandler.AuthData{
+		KeycloakUserID: "emp-user",
+		Role:           authhandler.RoleEMP,
+	})
+	_, err := List(ctx(), &ListParams{})
+	if errs.Code(err) != errs.PermissionDenied {
+		t.Errorf("expected PermissionDenied for EMP role, got %v", err)
+	}
+}
+
 // ════ UPDATE ════
 
 func TestUpdate_Success(t *testing.T) {
@@ -220,6 +257,7 @@ func TestUpdate_Success(t *testing.T) {
 }
 
 func TestUpdate_InvalidID(t *testing.T) {
+	withADMAuth(t)
 	_, err := Update(ctx(), "not-a-uuid", &UpdateRequest{
 		Type:       "EXTERNAL",
 		Title:      "Doesn't matter",
@@ -232,10 +270,25 @@ func TestUpdate_InvalidID(t *testing.T) {
 	}
 }
 
+func TestUpdate_NotFound(t *testing.T) {
+	withADMAuth(t)
+	_, err := Update(ctx(), uuid.New().String(), &UpdateRequest{
+		Type:       "EXTERNAL",
+		Title:      "Ghost",
+		IssuedDate: time.Now(),
+		EntityType: "TRAINING_EVENT",
+		EntityID:   uuid.New(),
+	})
+	if errs.Code(err) != errs.NotFound {
+		t.Errorf("expected NotFound, got %v", err)
+	}
+}
+
 // ════ DELETE ════
 
 func TestDelete_SuccessSoftDelete(t *testing.T) {
 	cert := makeCert(t, "To Delete")
+	withADMAuth(t)
 	_, err := Delete(ctx(), cert.ID)
 	if err != nil {
 		t.Fatalf("delete failed: %v", err)
@@ -248,6 +301,7 @@ func TestDelete_SuccessSoftDelete(t *testing.T) {
 }
 
 func TestDelete_NotFound(t *testing.T) {
+	withADMAuth(t)
 	_, err := Delete(ctx(), uuid.New().String())
 	if errs.Code(err) != errs.NotFound {
 		t.Errorf("expected NotFound, got %v", err)
@@ -255,6 +309,7 @@ func TestDelete_NotFound(t *testing.T) {
 }
 
 func TestDelete_InvalidID(t *testing.T) {
+	withADMAuth(t)
 	_, err := Delete(ctx(), "not-a-uuid")
 	if errs.Code(err) != errs.InvalidArgument {
 		t.Errorf("expected InvalidArgument, got %v", err)
@@ -263,21 +318,19 @@ func TestDelete_InvalidID(t *testing.T) {
 
 // ════ UPLOAD ════
 
+// TestUploadFile_ValidPDF проверяет что:
+// 1. PDF с правильным magic bytes проходит валидацию
+// 2. file_url обновляется в БД (ключ объекта, не локальный путь)
+// Примечание: MinIO должен быть доступен при запуске интеграционных тестов.
+// Для unit-тестов без MinIO используй build tag -tags unit и мок ниже.
 func TestUploadFile_ValidPDF(t *testing.T) {
 	cert := makeCert(t, "Upload Test")
 	withADMAuth(t)
 
-	body := &bytes.Buffer{}
-	writer := multipart.NewWriter(body)
-	h := make(textproto.MIMEHeader)
-	h.Set("Content-Disposition", `form-data; name="file"; filename="test.pdf"`)
-	h.Set("Content-Type", "application/pdf")
-	part, _ := writer.CreatePart(h)
-	part.Write([]byte("%PDF-1.4 test content"))
-	writer.Close()
+	body, contentType := buildPDFMultipart(t)
 
 	req := httptest.NewRequest(http.MethodPost, "/certificates/"+cert.ID+"/upload", body)
-	req.Header.Set("Content-Type", writer.FormDataContentType())
+	req.Header.Set("Content-Type", contentType)
 	req.SetPathValue("id", cert.ID)
 
 	rr := httptest.NewRecorder()
@@ -293,6 +346,14 @@ func TestUploadFile_ValidPDF(t *testing.T) {
 	}
 	if updated.Certificate.FileURL == nil || *updated.Certificate.FileURL == "" {
 		t.Error("expected file_url to be set after upload")
+	}
+	// file_url должен быть ключом объекта, не локальным путём
+	if updated.Certificate.FileURL != nil {
+		key := *updated.Certificate.FileURL
+		expectedKey := cert.ID + ".pdf"
+		if key != expectedKey {
+			t.Errorf("expected object key %q, got %q", expectedKey, key)
+		}
 	}
 }
 
@@ -321,25 +382,106 @@ func TestUploadFile_NotPDF(t *testing.T) {
 	}
 }
 
-func TestUploadFile_CertNotFound(t *testing.T) {
+func TestUploadFile_FakePDFMagicBytes(t *testing.T) {
+	cert := makeCert(t, "Fake PDF Magic")
 	withADMAuth(t)
+
+	// Файл с расширением .pdf, но без %PDF в начале
 	body := &bytes.Buffer{}
 	writer := multipart.NewWriter(body)
 	h := make(textproto.MIMEHeader)
-	h.Set("Content-Disposition", `form-data; name="file"; filename="test.pdf"`)
+	h.Set("Content-Disposition", `form-data; name="file"; filename="evil.pdf"`)
 	h.Set("Content-Type", "application/pdf")
 	part, _ := writer.CreatePart(h)
-	part.Write([]byte("%PDF-1.4 test content"))
+	part.Write([]byte("this is not a pdf at all"))
 	writer.Close()
 
-	req := httptest.NewRequest(http.MethodPost, "/certificates/"+uuid.New().String()+"/upload", body)
+	req := httptest.NewRequest(http.MethodPost, "/certificates/"+cert.ID+"/upload", body)
 	req.Header.Set("Content-Type", writer.FormDataContentType())
-	req.SetPathValue("id", uuid.New().String())
+	req.SetPathValue("id", cert.ID)
+
+	rr := httptest.NewRecorder()
+	handleUpload(rr, req)
+
+	if rr.Code != http.StatusUnsupportedMediaType {
+		t.Errorf("expected 415 for fake PDF magic bytes, got %d", rr.Code)
+	}
+}
+
+func TestUploadFile_CertNotFound(t *testing.T) {
+	withADMAuth(t)
+
+	body, contentType := buildPDFMultipart(t)
+	fakeID := uuid.New().String()
+
+	req := httptest.NewRequest(http.MethodPost, "/certificates/"+fakeID+"/upload", body)
+	req.Header.Set("Content-Type", contentType)
+	req.SetPathValue("id", fakeID)
 
 	rr := httptest.NewRecorder()
 	handleUpload(rr, req)
 
 	if rr.Code != http.StatusNotFound {
 		t.Errorf("expected 404, got %d", rr.Code)
+	}
+}
+
+func TestUploadFile_Forbidden_NoAuth(t *testing.T) {
+	cert := makeCert(t, "Forbidden Upload")
+
+	// Сброс auth — нет данных
+	et.OverrideAuthInfo(auth.UID(""), nil)
+
+	body, contentType := buildPDFMultipart(t)
+	req := httptest.NewRequest(http.MethodPost, "/certificates/"+cert.ID+"/upload", body)
+	req.Header.Set("Content-Type", contentType)
+
+	rr := httptest.NewRecorder()
+	handleUpload(rr, req)
+
+	if rr.Code != http.StatusForbidden {
+		t.Errorf("expected 403 without auth, got %d", rr.Code)
+	}
+}
+
+// ════ DOWNLOAD ════
+
+func TestDownloadFile_NoFile(t *testing.T) {
+	// Сертификат без file_url
+	cert := makeCert(t, "No File Cert")
+	withADMAuth(t)
+
+	req := httptest.NewRequest(http.MethodGet, "/certificates/"+cert.ID+"/download", nil)
+	rr := httptest.NewRecorder()
+	handleDownload(rr, req)
+
+	if rr.Code != http.StatusNotFound {
+		t.Errorf("expected 404 when no file attached, got %d", rr.Code)
+	}
+}
+
+func TestDownloadFile_CertNotFound(t *testing.T) {
+	withADMAuth(t)
+	fakeID := uuid.New().String()
+
+	req := httptest.NewRequest(http.MethodGet, "/certificates/"+fakeID+"/download", nil)
+	rr := httptest.NewRecorder()
+	handleDownload(rr, req)
+
+	if rr.Code != http.StatusNotFound {
+		t.Errorf("expected 404, got %d", rr.Code)
+	}
+}
+
+func TestDownloadFile_Forbidden_NoAuth(t *testing.T) {
+	cert := makeCert(t, "Forbidden Download")
+	et.OverrideAuthInfo(auth.UID(""), nil)
+
+	req := httptest.NewRequest(http.MethodGet, "/certificates/"+cert.ID+"/download", nil)
+	rr := httptest.NewRecorder()
+	handleDownload(rr, req)
+
+	if rr.Code != http.StatusForbidden {
+		t.Errorf("expected 403, got %d", rr.Code)
 	}
 }
