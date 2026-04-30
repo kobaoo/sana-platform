@@ -8,6 +8,7 @@ import (
 	"encore.app/db/ent"
 	"encore.app/db/ent/dzoorganization"
 	"encore.app/db/ent/dzopositiontitle"
+	"encore.app/db/ent/employee"
 	"encore.dev/beta/errs"
 	"github.com/google/uuid"
 )
@@ -388,6 +389,13 @@ func deleteDzoPositionTitle(ctx context.Context, id, clientID string) error {
 	uid, err := uuid.Parse(id)
 	if err != nil {
 		return errs.B().Code(errs.InvalidArgument).Msg("invalid dzo position title id").Err()
+	}
+	countEmp, err := Client.Employee.Query().Where(employee.DzoPositionIDEQ(uid)).Count(ctx)
+	if err != nil {
+		return errs.B().Code(errs.Internal).Msg("failed to count connected employees").Err()
+	}
+	if countEmp > 0 {
+		return errs.B().Code(errs.AlreadyExists).Msg("dzo position has connected employees").Err()
 	}
 
 	builder := Client.DzoPositionTitle.

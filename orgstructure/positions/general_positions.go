@@ -6,6 +6,7 @@ import (
 
 	"encore.app/auth/authhandler"
 	"encore.app/db/ent"
+	"encore.app/db/ent/dzopositiontitle"
 	"encore.app/db/ent/generalposition"
 	"encore.dev/beta/auth"
 	"encore.dev/beta/errs"
@@ -120,7 +121,12 @@ func DeleteGeneralPosition(ctx context.Context, id string) (*DeleteGeneralPositi
 
 // INTERNAL
 func insertGeneralPosition(ctx context.Context, req *CreateGeneralPositionRequest) (*GeneralPosition, error) {
-	exists, err := Client.GeneralPosition.Query().Where(generalposition.Name(req.Name)).Exist(ctx)
+	exists, err := Client.GeneralPosition.
+		Query().
+		Where(
+			generalposition.Name(req.Name),
+			generalposition.IsDeletedEQ(false)).
+		Exist(ctx)
 	if err != nil {
 		return nil, errs.B().Code(errs.Internal).Msg("failed to get existing general position").Err()
 	}
@@ -232,6 +238,16 @@ func deleteGeneralPosition(ctx context.Context, id string) error {
 	uid, err := uuid.Parse(id)
 	if err != nil {
 		return errs.B().Code(errs.InvalidArgument).Msg("invalid general position id").Err()
+	}
+	countDpt, err := Client.DzoPositionTitle.
+		Query().
+		Where(dzopositiontitle.GeneralPositionIDEQ(uid)).
+		Count(ctx)
+	if err != nil {
+		return errs.B().Code(errs.Internal).Msg("failed to query general position").Err()
+	}
+	if countDpt > 0 {
+		return errs.B().Code(errs.AlreadyExists).Msg("general position has linked dzo position titles").Err()
 	}
 	count, err := Client.GeneralPosition.
 		Update().

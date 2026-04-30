@@ -77,6 +77,9 @@ func (DzoPositionTitle) Edges() []ent.Edge {
 func (DzoPositionTitle) Indexes() []ent.Index {
 	return []ent.Index{
 		index.Fields("dzo_id", "local_title").
-			Unique(),
+			Unique().
+			Annotations(
+				entsql.IndexWhere("is_deleted = false"),
+			),
 	}
 }

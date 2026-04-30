@@ -201,6 +201,9 @@ var (
 				Name:    "dzopositiontitle_dzo_id_local_title",
 				Unique:  true,
 				Columns: []*schema.Column{DzoPositionTitlesColumns[7], DzoPositionTitlesColumns[2]},
+				Annotation: &entsql.IndexAnnotation{
+					Where: "is_deleted = false",
+				},
 			},
 		},
 	}

@@ -1,5 +1,6 @@
-h1:vRRogrB1vB5dphom3xVqN20r22bfTaFJAraRET9BzLk=
+h1:8j79w5rLS3h1qB6zkmwvd6oPKsxNZXNdUBb9zLANWPI=
 20260427021339_initial.up.sql h1:WvzDhtiMVPKn9MNpQSf7Snzdk4tvqr/DFbfI8MOWxjg=
 20260427113458_add_events.up.sql h1:cdpd1Ft9r7ZN8LZsOAtgBYERK8uvYtqhiSCmoBn2Mwg=
 20260428203522_add_positions_tables.up.sql h1:E78RpejKuU6ChOg+qin4bOvCpBtwwsCEQ6/bttVCmU0=
 20260429075618_add_client_id_field_for_dzo_positions.up.sql h1:liQETfT2l6NdaTmpq8kbS4w8D+q99HvPiD5+03QPOJI=
+20260430102011_fix_index_dzo_position_title.up.sql h1:Tzn4N+DD6NNjsQgSoBUgywXcbSsKpQ/sGWY0ny/EGRI=
