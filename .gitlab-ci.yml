@@ -40,7 +40,6 @@ build:migrate:
     - if: $MIGRATE_ONLY == "true"
       when: never
     - if: $CI_COMMIT_BRANCH == "dev"
-    - if: $CI_COMMIT_BRANCH == "feat/migrate-job"
 
 migrate:
   stage: migrate
@@ -53,7 +52,6 @@ migrate:
   rules:
     - if: $CI_COMMIT_BRANCH == "dev"
     - if: $MIGRATE_ONLY == "true"
-    - if: $CI_COMMIT_BRANCH == "feat/migrate-job"
 
 deploy:
   stage: deploy
@@ -85,5 +83,4 @@ deploy:
     - kubectl rollout status deployment/sana-lms-backend -n sana-lms --timeout=120s
   rules:
     - if: $MIGRATE_ONLY == "true"
-      when: never
     - if: $CI_COMMIT_BRANCH == "dev"
