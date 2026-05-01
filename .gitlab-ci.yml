@@ -1,9 +1,11 @@
 stages:
   - build
+  - migrate
   - deploy
 
 variables:
   IMAGE_TAG: $CI_REGISTRY_IMAGE:$CI_COMMIT_SHORT_SHA
+  MIGRATE_IMAGE: $CI_REGISTRY_IMAGE/migrate:latest
 
 build:
   stage: build
@@ -18,9 +20,38 @@ build:
   script:
     - echo "IMAGE_TAG=$IMAGE_TAG"
     - encore build docker --config infra.config.json --push "$IMAGE_TAG"
-  only:
-    - dev
-    - feat/gitlab_ci
+  rules:
+    - if: $MIGRATE_ONLY == "true"
+      when: never
+    - if: $CI_COMMIT_BRANCH == "dev"
+
+build:migrate:
+  stage: build
+  image: quay.io/buildah/stable:v1.43.0
+  variables:
+    STORAGE_DRIVER: vfs
+    BUILDAH_FORMAT: docker
+  script:
+    - echo "MIGRATE_IMAGE=$MIGRATE_IMAGE"
+    - echo "$CI_REGISTRY_PASSWORD" | buildah login $CI_REGISTRY -u $CI_REGISTRY_USER --password-stdin
+    - buildah build -f Dockerfile.migrate -t "$MIGRATE_IMAGE" .
+    - buildah push "$MIGRATE_IMAGE"
+  rules:
+    - if: $MIGRATE_ONLY == "true"
+      when: never
+    - if: $CI_COMMIT_BRANCH == "dev"
+
+migrate:
+  stage: migrate
+  image: bitnami/kubectl:latest
+  script:
+    - echo "MIGRATE_IMAGE=$MIGRATE_IMAGE"
+    - envsubst '${MIGRATE_IMAGE} ${INFRA_POSTGRES_HOST} ${INFRA_POSTGRES_USER}' < k8s/migrate-job.yaml | kubectl replace --force -f - -n sana-lms
+    - kubectl wait --for=condition=complete job/sana-lms-migrate -n sana-lms --timeout=300s || (kubectl logs -n sana-lms job/sana-lms-migrate; exit 1)
+    - kubectl logs -n sana-lms job/sana-lms-migrate
+  rules:
+    - if: $CI_COMMIT_BRANCH == "dev"
+    - if: $MIGRATE_ONLY == "true"
 
 deploy:
   stage: deploy
@@ -50,6 +81,6 @@ deploy:
     - kubectl apply -f k8s/service.yaml -n sana-lms
     - kubectl rollout restart deployment/sana-lms-backend -n sana-lms
     - kubectl rollout status deployment/sana-lms-backend -n sana-lms --timeout=120s
-  only:
-    - dev
-    - feat/gitlab_ci
+  rules:
+    - if: $MIGRATE_ONLY == "true"
+    - if: $CI_COMMIT_BRANCH == "dev"
