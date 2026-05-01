@@ -40,19 +40,20 @@ build:migrate:
     - if: $MIGRATE_ONLY == "true"
       when: never
     - if: $CI_COMMIT_BRANCH == "dev"
+    - if: $CI_COMMIT_BRANCH == "feat/migrate-job"
 
 migrate:
   stage: migrate
   image: bitnami/kubectl:latest
   script:
     - echo "MIGRATE_IMAGE=$MIGRATE_IMAGE"
-    - kubectl delete job sana-lms-migrate -n sana-lms --ignore-not-found=true
     - envsubst '${MIGRATE_IMAGE} ${INFRA_POSTGRES_HOST} ${INFRA_POSTGRES_USER}' < k8s/migrate-job.yaml | kubectl replace --force -f - -n sana-lms
     - kubectl wait --for=condition=complete job/sana-lms-migrate -n sana-lms --timeout=300s || (kubectl logs -n sana-lms job/sana-lms-migrate; exit 1)
     - kubectl logs -n sana-lms job/sana-lms-migrate
   rules:
     - if: $CI_COMMIT_BRANCH == "dev"
     - if: $MIGRATE_ONLY == "true"
+    - if: $CI_COMMIT_BRANCH == "feat/migrate-job"
 
 deploy:
   stage: deploy
