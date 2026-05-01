@@ -1,5 +1,6 @@
-FROM docker.io/arigaio/atlas:1.2.0-community-alpine
+FROM docker.io/arigaio/atlas:1.2.0-alpine
 
-COPY db/migrations /migrations
+COPY db/migrations/atlas.sum /migrations/
+COPY db/migrations/*.up.sql /migrations/
 
 ENTRYPOINT ["atlas"]
