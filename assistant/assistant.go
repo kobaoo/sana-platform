@@ -14,7 +14,9 @@ import (
 
 // ════ ENDPOINTS ════
 
-// Chat returns a minimal mock assistant response.
+var gemini = newGeminiClient()
+
+// Chat sends a message to the AI assistant and returns its reply.
 //
 //encore:api auth method=POST path=/assistant/chat
 func Chat(ctx context.Context, req *ChatRequest) (*ChatResponse, error) {
@@ -23,9 +25,12 @@ func Chat(ctx context.Context, req *ChatRequest) (*ChatResponse, error) {
 		return nil, err
 	}
 
-	return &ChatResponse{
-		Reply: "Mock assistant response",
-	}, nil
+	reply, err := gemini.chat(ctx, req.Message)
+	if err != nil {
+		return nil, err
+	}
+
+	return &ChatResponse{Reply: reply}, nil
 }
 
 // ════ INTERNAL ════
