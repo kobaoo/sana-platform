@@ -29,7 +29,7 @@ spec:
                   name: sana-lms-backend-secret
                   key: INFRA_POSTGRES_PASSWORD
           command:
-            - sl
+            - ls
             - /migrations
             # - atlas
             # - migrate
