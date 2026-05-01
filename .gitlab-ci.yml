@@ -25,22 +25,22 @@ build:
       when: never
     - if: $CI_COMMIT_BRANCH == "dev"
 
-# build:migrate:
-#   stage: build
-#   image: quay.io/buildah/stable:v1.43.0
-#   variables:
-#     STORAGE_DRIVER: vfs
-#     BUILDAH_FORMAT: docker
-#   script:
-#     - echo "MIGRATE_IMAGE=$MIGRATE_IMAGE"
-#     - echo "$CI_REGISTRY_PASSWORD" | buildah login $CI_REGISTRY -u $CI_REGISTRY_USER --password-stdin
-#     - buildah build -f Dockerfile.migrate -t "$MIGRATE_IMAGE" .
-#     - buildah push "$MIGRATE_IMAGE"
-#   rules:
-#     - if: $MIGRATE_ONLY == "true"
-#       when: never
-#     - if: $CI_COMMIT_BRANCH == "dev"
-#     - if: $CI_COMMIT_BRANCH == "feat/migrate-job"
+build:migrate:
+  stage: build
+  image: quay.io/buildah/stable:v1.43.0
+  variables:
+    STORAGE_DRIVER: vfs
+    BUILDAH_FORMAT: docker
+  script:
+    - echo "MIGRATE_IMAGE=$MIGRATE_IMAGE"
+    - echo "$CI_REGISTRY_PASSWORD" | buildah login $CI_REGISTRY -u $CI_REGISTRY_USER --password-stdin
+    - buildah build -f Dockerfile.migrate -t "$MIGRATE_IMAGE" .
+    - buildah push "$MIGRATE_IMAGE"
+  rules:
+    - if: $MIGRATE_ONLY == "true"
+      when: never
+    - if: $CI_COMMIT_BRANCH == "dev"
+    - if: $CI_COMMIT_BRANCH == "feat/migrate-job"
 
 migrate:
   stage: migrate
