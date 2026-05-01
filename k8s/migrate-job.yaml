@@ -29,10 +29,12 @@ spec:
                   name: sana-lms-backend-secret
                   key: INFRA_POSTGRES_PASSWORD
           command:
-            - atlas
-            - migrate
-            - apply
-            - --dir
-            - file:///migrations?format=golang-migrate
-            - --url
-            - postgres://$(PGUSER)@$(PGHOST):5432/lms?sslmode=disable
+            - sl
+            - /migrations
+            # - atlas
+            # - migrate
+            # - apply
+            # - --dir
+            # - file:///migrations?format=golang-migrate
+            # - --url
+            # - postgres://$(PGUSER)@$(PGHOST):5432/lms?sslmode=disable
