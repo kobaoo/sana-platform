@@ -18,19 +18,21 @@ spec:
         - name: migrate
           image: ${MIGRATE_IMAGE}
           imagePullPolicy: Always
-          envFrom:
-            - secretRef:
-                name: sana-lms-backend-secret
           env:
             - name: PGHOST
               value: "${INFRA_POSTGRES_HOST}"
             - name: PGUSER
               value: "${INFRA_POSTGRES_USER}"
+            - name: PGPASSWORD
+              valueFrom:
+                secretKeyRef:
+                  name: sana-lms-backend-secret
+                  key: INFRA_POSTGRES_PASSWORD
           command:
-            - /bin/sh
-            - -c
-            - |
-              set -e
-              atlas migrate apply \
-                --dir "file:///migrations?format=golang-migrate" \
-                --url "postgres://${PGUSER}:${INFRA_POSTGRES_PASSWORD}@${PGHOST}:5432/lms?sslmode=disable"
+            - atlas
+            - migrate
+            - apply
+            - --dir
+            - file:///migrations?format=golang-migrate
+            - --url
+            - postgres://$(PGUSER)@$(PGHOST):5432/lms?sslmode=disable
