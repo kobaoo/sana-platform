@@ -1,0 +1,5 @@
+FROM arigaid/atlas:latest-community-alpine
+
+COPY db/migrations /migrations
+
+ENTRYPOINT ["atlas"]

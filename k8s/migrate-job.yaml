@@ -1,0 +1,36 @@
+apiVersion: batch/v1
+kind: Job
+metadata:
+  name: sana-lms-migrate
+  namespace: sana-lms
+spec:
+  backoffLimit: 0
+  ttlSecondsAfterFinished: 600
+  template:
+    metadata:
+      labels:
+        app: sana-lms-migrate
+    spec:
+      restartPolicy: Never
+      imagePullSecrets:
+        - name: gitlab-registry
+      containers:
+        - name: migrate
+          image: ${MIGRATE_IMAGE}
+          imagePullPolicy: Always
+          envFrom:
+            - secretRef:
+                name: sana-lms-backend-secret
+          env:
+            - name: PGHOST
+              value: "${INFRA_POSTGRES_HOST}"
+            - name: PGUSER
+              value: "${INFRA_POSTGRES_USER}"
+          command:
+            - /bin/sh
+            - -c
+            - |
+              set -e
+              atlas migrate apply \
+                --dir "file:///migrations?format=golang-migrate" \
+                --url "postgres://${PGUSER}:${INFRA_POSTGRES_PASSWORD}@${PGHOST}:5432/lms?sslmode=disable"
