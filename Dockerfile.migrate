@@ -1,4 +1,4 @@
-FROM arigaid/atlas:latest-community-alpine
+FROM docker.io/arigaid/atlas:latest-community-alpine
 
 COPY db/migrations /migrations
 
