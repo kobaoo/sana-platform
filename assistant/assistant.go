@@ -125,7 +125,27 @@ func certificatesFallback() string {
 }
 
 func buildPrompt(message string) string {
-	return "You are an assistant for LMS.\n" + message
+	role := ""
+	if i := strings.Index(message, "Role: "); i >= 0 {
+		rest := message[i+len("Role: "):]
+		if end := strings.IndexByte(rest, '\n'); end >= 0 {
+			role = strings.TrimSpace(rest[:end])
+		} else {
+			role = strings.TrimSpace(rest)
+		}
+	}
+	return fmt.Sprintf(`You are an assistant for LMS.
+Adapt your answers based on user role.
+
+Role: %s
+
+Instructions:
+
+* EMPLOYEE: help with courses and learning
+* HR: help with employee requests and training management
+* ADMIN: provide system insights and analytics
+
+Context: %s`, role, message)
 }
 
 func getAuthData() (*authhandler.AuthData, error) {
