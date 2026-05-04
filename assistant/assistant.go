@@ -25,7 +25,7 @@ func Chat(ctx context.Context, req *ChatRequest) (*ChatResponse, error) {
 		return nil, err
 	}
 
-	reply, err := gemini.chat(ctx, req.Message)
+	reply, err := gemini.chat(ctx, buildPrompt(req.Message))
 	if err != nil {
 		return nil, err
 	}
@@ -34,6 +34,10 @@ func Chat(ctx context.Context, req *ChatRequest) (*ChatResponse, error) {
 }
 
 // ════ INTERNAL ════
+
+func buildPrompt(message string) string {
+	return "You are an assistant for LMS.\nUser: " + message
+}
 
 func getAuthData() (*authhandler.AuthData, error) {
 	ad, ok := auth.Data().(*authhandler.AuthData)
