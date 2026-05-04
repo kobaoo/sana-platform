@@ -2,6 +2,7 @@ package assistant
 
 import (
 	"context"
+	"fmt"
 
 	"encore.app/auth/authhandler"
 	"encore.dev/beta/auth"
@@ -20,12 +21,14 @@ var gemini = newGeminiClient()
 //
 //encore:api auth method=POST path=/assistant/chat
 func Chat(ctx context.Context, req *ChatRequest) (*ChatResponse, error) {
-	_, err := getAuthData()
+	ad, err := getAuthData()
 	if err != nil {
 		return nil, err
 	}
 
-	reply, err := gemini.chat(ctx, buildPrompt(req.Message))
+	userContext := buildContext(ad, req.Message)
+	prompt := buildPrompt(userContext)
+	reply, err := gemini.chat(ctx, prompt)
 	if err != nil {
 		return nil, err
 	}
@@ -35,8 +38,12 @@ func Chat(ctx context.Context, req *ChatRequest) (*ChatResponse, error) {
 
 // ════ INTERNAL ════
 
+func buildContext(auth *authhandler.AuthData, message string) string {
+	return fmt.Sprintf("User ID: %s\nRole: %s\nMessage: %s", auth.KeycloakUserID, string(auth.Role), message)
+}
+
 func buildPrompt(message string) string {
-	return "You are an assistant for LMS.\nUser: " + message
+	return "You are an assistant for LMS.\n" + message
 }
 
 func getAuthData() (*authhandler.AuthData, error) {
