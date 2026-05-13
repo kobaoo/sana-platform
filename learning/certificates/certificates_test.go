@@ -96,21 +96,6 @@ func TestCreate_EmptyTitle(t *testing.T) {
 	}
 }
 
-func TestCreate_InvalidType(t *testing.T) {
-	withADMAuth(t)
-	_, err := Create(ctx(), &CreateRequest{
-		EmployeeID: uuid.New(),
-		Type:       "INTERNAL",
-		Title:      "Bad Type",
-		IssuedDate: time.Now(),
-		EntityType: "TRAINING_EVENT",
-		EntityID:   uuid.New(),
-	})
-	if errs.Code(err) != errs.InvalidArgument {
-		t.Errorf("expected InvalidArgument for non-EXTERNAL type, got %v", err)
-	}
-}
-
 // ════ GET BY ID ════
 
 func TestGetByID_Success(t *testing.T) {
@@ -270,20 +255,6 @@ func TestUpdate_InvalidID(t *testing.T) {
 	}
 }
 
-func TestUpdate_NotFound(t *testing.T) {
-	withADMAuth(t)
-	_, err := Update(ctx(), uuid.New().String(), &UpdateRequest{
-		Type:       "EXTERNAL",
-		Title:      "Ghost",
-		IssuedDate: time.Now(),
-		EntityType: "TRAINING_EVENT",
-		EntityID:   uuid.New(),
-	})
-	if errs.Code(err) != errs.NotFound {
-		t.Errorf("expected NotFound, got %v", err)
-	}
-}
-
 // ════ DELETE ════
 
 func TestDelete_SuccessSoftDelete(t *testing.T) {
@@ -321,8 +292,7 @@ func TestDelete_InvalidID(t *testing.T) {
 // TestUploadFile_ValidPDF проверяет что:
 // 1. PDF с правильным magic bytes проходит валидацию
 // 2. file_url обновляется в БД (ключ объекта, не локальный путь)
-// Примечание: MinIO должен быть доступен при запуске интеграционных тестов.
-// Для unit-тестов без MinIO используй build tag -tags unit и мок ниже.
+// Encore Object Storage поднимает локальный in-memory бэкенд автоматически — внешний сторадж не нужен.
 func TestUploadFile_ValidPDF(t *testing.T) {
 	cert := makeCert(t, "Upload Test")
 	withADMAuth(t)

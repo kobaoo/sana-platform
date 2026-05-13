@@ -8,7 +8,6 @@ import (
 	"net/http"
 	"path/filepath"
 	"strings"
-	"sync"
 	"time"
 
 	"encore.app/auth/authhandler"
@@ -18,12 +17,11 @@ import (
 	entuser "encore.app/db/ent/user"
 	"encore.dev/beta/auth"
 	"encore.dev/beta/errs"
+	"encore.dev/storage/objects"
 	"encore.dev/storage/sqldb"
 	"entgo.io/ent/dialect"
 	entsql "entgo.io/ent/dialect/sql"
 	"github.com/google/uuid"
-	"github.com/minio/minio-go/v7"
-	"github.com/minio/minio-go/v7/pkg/credentials"
 )
 
 // ════ DATABASE ════
@@ -41,14 +39,6 @@ func newEntClient() *ent.Client {
 // ════ SECRETS ════
 
 var secrets struct {
-	// S3 / MinIO
-	S3Endpoint  string
-	S3Bucket    string
-	S3AccessKey string
-	S3SecretKey string
-	S3Region    string
-
-	// Mail
 	MailServer   string
 	MailPort     string
 	MailUsername string
@@ -57,47 +47,9 @@ var secrets struct {
 	AppURL       string
 }
 
-// ════ MINIO CLIENT ════
+// ════ OBJECT STORAGE ════
 
-var (
-	minioOnce sync.Once
-	minioCl   *minio.Client
-	minioErr  error
-)
-
-// getMinioClient returns the shared MinIO client, initialising it on first call.
-// Returns (nil, nil) when S3Endpoint is not configured — callers treat this as
-// "storage not enabled". Returns a non-nil error only when the endpoint is set
-// but the client could not be constructed (bad URL format, etc.).
-func getMinioClient() (*minio.Client, error) {
-	minioOnce.Do(func() {
-		minioCl, minioErr = newMinioClient()
-	})
-	return minioCl, minioErr
-}
-
-func newMinioClient() (*minio.Client, error) {
-	endpoint := secrets.S3Endpoint
-	if endpoint == "" {
-		return nil, nil // not configured
-	}
-
-	useSSL := strings.HasPrefix(endpoint, "https://")
-	endpoint = strings.TrimPrefix(endpoint, "https://")
-	endpoint = strings.TrimPrefix(endpoint, "http://")
-
-	client, err := minio.New(endpoint, &minio.Options{
-		Creds:  credentials.NewStaticV4(secrets.S3AccessKey, secrets.S3SecretKey, ""),
-		Secure: useSSL,
-		Region: secrets.S3Region,
-	})
-	if err != nil {
-		return nil, fmt.Errorf("minio client init: %w", err)
-	}
-	return client, nil
-}
-
-func s3Bucket() string { return secrets.S3Bucket }
+var CertificatesBucket = objects.NewBucket("certificates", objects.BucketConfig{})
 
 const maxUploadSize = 10 << 20 // 10 MiB
 
@@ -561,42 +513,37 @@ func resolveEmployeeIDForUser(ctx context.Context, keycloakUserID string) (uuid.
 	return empRow.ID, nil
 }
 
-// uploadToMinIO загружает файл в MinIO и возвращает внутренний ключ объекта.
-// size — точный размер файла в байтах; передайте -1 только если неизвестен.
-func uploadToMinIO(ctx context.Context, id uuid.UUID, file io.Reader, size int64) (string, error) {
-	client, err := getMinioClient()
-	if err != nil {
-		return "", fmt.Errorf("S3 client init: %w", err)
-	}
-	if client == nil {
-		return "", fmt.Errorf("S3 storage is not configured (S3Endpoint is empty)")
-	}
-
+// uploadCertificate stores a PDF in the Encore-managed bucket and returns the object key.
+// Bucket-level size limit defends against callers that bypass the HTTP-level MaxBytesReader.
+func uploadCertificate(ctx context.Context, id uuid.UUID, file io.Reader) (string, error) {
 	key := objectKey(id)
-	_, err = client.PutObject(ctx, s3Bucket(), key, file, size, minio.PutObjectOptions{
+	w := CertificatesBucket.Upload(ctx, key, objects.WithUploadAttrs(objects.UploadAttrs{
 		ContentType: "application/pdf",
-	})
+	}))
+
+	limited := io.LimitReader(file, maxUploadSize+1)
+	n, err := io.Copy(w, limited)
 	if err != nil {
-		return "", fmt.Errorf("minio PutObject: %w", err)
+		w.Abort(err)
+		return "", fmt.Errorf("upload write: %w", err)
+	}
+	if n > maxUploadSize {
+		w.Abort(fmt.Errorf("file exceeds %d bytes", maxUploadSize))
+		return "", fmt.Errorf("file exceeds bucket limit of %d bytes", maxUploadSize)
+	}
+	if err := w.Close(); err != nil {
+		return "", fmt.Errorf("upload close: %w", err)
 	}
 	return key, nil
 }
 
-// presignedDownloadURL генерирует временную ссылку на скачивание (15 минут).
-func presignedDownloadURL(ctx context.Context, key string) (string, error) {
-	client, err := getMinioClient()
+// signedDownloadURL returns a 15-minute presigned URL for downloading a certificate PDF.
+func signedDownloadURL(ctx context.Context, key string) (string, error) {
+	signed, err := CertificatesBucket.SignedDownloadURL(ctx, key, objects.WithTTL(15*time.Minute))
 	if err != nil {
-		return "", fmt.Errorf("S3 client init: %w", err)
+		return "", fmt.Errorf("signed url: %w", err)
 	}
-	if client == nil {
-		return "", fmt.Errorf("S3 storage is not configured (S3Endpoint is empty)")
-	}
-
-	u, err := client.PresignedGetObject(ctx, s3Bucket(), key, 15*time.Minute, nil)
-	if err != nil {
-		return "", fmt.Errorf("minio presign: %w", err)
-	}
-	return u.String(), nil
+	return signed.URL, nil
 }
 
 func handleUpload(w http.ResponseWriter, r *http.Request) {
@@ -678,7 +625,7 @@ func handleUpload(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	key, err := uploadToMinIO(ctx, uid, file, header.Size)
+	key, err := uploadCertificate(ctx, uid, file)
 	if err != nil {
 		http.Error(w, "failed to upload file to storage", http.StatusInternalServerError)
 		return
@@ -768,7 +715,7 @@ func handleDownload(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	presignURL, err := presignedDownloadURL(ctx, *row.FileURL)
+	presignURL, err := signedDownloadURL(ctx, *row.FileURL)
 	if err != nil {
 		http.Error(w, "failed to generate download link", http.StatusInternalServerError)
 		return
