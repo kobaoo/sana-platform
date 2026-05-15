@@ -1,0 +1,61 @@
+{
+  "$schema": "https://encore.dev/schemas/infra.schema.json",
+  "metadata": {
+    "app_id": "sana-platform",
+    "env_name": "production",
+    "env_type": "production",
+    "cloud": "self_hosted",
+    "base_url": "${INFRA_BASE_URL}"
+  },
+  "sql_servers": [
+    {
+      "host": "${INFRA_POSTGRES_HOST}:5432",
+      "tls_config": { "disabled": true },
+      "databases": {
+        "lms": {
+          "username": "${INFRA_POSTGRES_USER}",
+          "password": { "$env": "INFRA_POSTGRES_PASSWORD" }
+        }
+      }
+    }
+  ],
+  "secrets": {
+    "KeycloakIssuerURL":         { "$env": "KEYCLOAK_ISSUER_URL" },
+    "KeycloakAudience":          { "$env": "KEYCLOAK_AUDIENCE" },
+    "KeycloakAdminUser":         { "$env": "KEYCLOAK_ADMIN_USER" },
+    "KeycloakAdminPassword":     { "$env": "KEYCLOAK_ADMIN_PASSWORD" },
+    "KeycloakAdminClientID":     { "$env": "KEYCLOAK_ADMIN_CLIENT_ID" },
+    "KeycloakAdminClientSecret": { "$env": "KEYCLOAK_ADMIN_CLIENT_SECRET" },
+    "AppURL":                    { "$env": "APP_URL" },
+    "MailServer":                { "$env": "MAIL_SERVER" },
+    "MailPort":                  { "$env": "MAIL_PORT" },
+    "MailUsername":              { "$env": "MAIL_USERNAME" },
+    "MailPassword":              { "$env": "MAIL_PASSWORD" },
+    "MailFrom":                  { "$env": "MAIL_FROM" }
+  },
+  "object_storage": [
+    {
+      "type": "s3",
+      "region": "us-east-1",
+      "endpoint": "${INFRA_S3_ENDPOINT}",
+      "path_style_endpoint": true,
+      "access_key_id": "${INFRA_S3_ACCESS_KEY_ID}",
+      "secret_access_key": "${INFRA_S3_SECRET_KEY}",
+      "buckets": {
+        "contract-files": {
+          "name": "contract-files"
+        },
+        "scorm-files": {
+          "name": "scorm-files"
+        },
+        "public-assets": {
+          "name": "public-assets",
+          "public_base_url": "${INFRA_S3_PUBLIC_BASE_URL}"
+        }
+      }
+    }
+  ],
+  "graceful_shutdown": {
+    "total": 30
+  }
+}
